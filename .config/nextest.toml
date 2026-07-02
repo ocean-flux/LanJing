@@ -1,0 +1,3 @@
+[profile.default]
+timeout = "300s"
+failure-output = "always"

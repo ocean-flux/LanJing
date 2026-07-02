@@ -1,0 +1,6 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app_name": "LanJing",
+  "welcome": "Welcome to LanJing",
+  "nav_welcome": "Welcome"
+}

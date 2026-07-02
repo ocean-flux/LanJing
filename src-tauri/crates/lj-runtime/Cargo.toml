@@ -1,0 +1,23 @@
+[package]
+name = "lj-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "规则运行时引擎：规则执行、生命周期管理"
+
+[lints]
+workspace = true
+
+[dependencies]
+lj-core = { path = "../lj-core" }
+futures = { workspace = true }
+async-stream = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+uuid = { workspace = true }
+serde_json = { workspace = true }

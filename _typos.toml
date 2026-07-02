@@ -1,0 +1,24 @@
+[default]
+extend-ignore-re = [
+  "FORCE_HTTP_CLIENT_BUILD_FAILURE_ENV",
+  "CHALLENGE_REQUIRED",
+  "SESSION_HEADER_MISSING",
+  "REQUEST_HEADER_SENSITIVE_LITERAL",
+  "REQUEST_HEADER_SOURCE_UNSUPPORTED",
+]
+
+[default.extend-words]
+Lanjing = "Lanjing"
+tauri = "tauri"
+Legado = "Legado"
+Maccms10 = "Maccms10"
+rquickjs = "rquickjs"
+ferrous = "ferrous"
+opencc = "opencc"
+zh = "zh"
+serde = "serde"
+schemars = "schemars"
+binstall = "binstall"
+hakari = "hakari"
+llvm = "llvm"
+cancellationToken = "cancellationToken"

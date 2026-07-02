@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -e
+
+mise exec -- pnpm exec lint-staged
+mise exec -- pnpm run format:check

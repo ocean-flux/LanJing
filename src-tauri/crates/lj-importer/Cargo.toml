@@ -1,0 +1,18 @@
+[package]
+name = "lj-importer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "导入器：Legado 书源导入、校验与升级"
+
+[lints]
+workspace = true
+
+[dependencies]
+lj-core = { path = "../lj-core" }
+lj-compiler = { path = "../lj-compiler" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+uuid = { workspace = true }

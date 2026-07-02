@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- 统一外圆角裁切，确保四宫格填满画布且边缘完美 -->
+    <clipPath id="icon-clip">
+      <rect width="1024" height="1024" rx="220" />
+    </clipPath>
+
+    <style>
+      .block { width: 512; height: 512; }
+      .icon { stroke-linecap: round; stroke-linejoin: round; fill: none; }
+      .icon-w { stroke: #FFFFFF; stroke-width: 12; }
+      .icon-d { stroke: #1E2D3A; stroke-width: 12; }
+      .fill-d { fill: #1E2D3A; }
+      .fill-w { fill: #FFFFFF; }
+    </style>
+  </defs>
+
+  <g clip-path="url(#icon-clip)">
+
+    <!-- 1. 左上：小说 (Novel) - 深海蓝 -->
+    <rect x="0" y="0" width="512" height="512" fill="#243B4D" />
+    <g transform="translate(256, 256)">
+      <!-- 打开的书本，带微弧书脊 -->
+      <path class="icon icon-w" d="M-80 -70 Q-40 -90 0 -70 L0 70 Q-40 90 -80 70 Z" />
+      <path class="icon icon-w" d="M0 -70 Q40 -90 80 -70 L80 70 Q40 90 0 70" />
+      <line class="icon icon-w" x1="0" y1="-70" x2="0" y2="70" stroke-width="10" />
+    </g>
+
+    <!-- 2. 右上：漫画 (Image) - 雾蓝 -->
+    <rect x="512" y="0" width="512" height="512" fill="#A4C0CC" />
+    <g transform="translate(768, 256)">
+      <!-- 漫画分镜气泡，线条更硬朗 -->
+      <path class="icon icon-d"
+        d="M-90 -60 h180 a16 16 0 0 1 16 16 v80 a16 16 0 0 1 -16 16 h-50 l-26 26 v-26 h-104 a16 16 0 0 1 -16 -16 v-80 a16 16 0 0 1 16 -16 z" />
+      <line class="icon icon-d" x1="-50" y1="-20" x2="50" y2="-20" />
+      <line class="icon icon-d" x1="-50" y1="20" x2="40" y2="20" />
+    </g>
+
+    <!-- 3. 左下：音乐 (Audio) - 苔绿 -->
+    <rect x="0" y="512" width="512" height="512" fill="#5E826E" />
+    <g transform="translate(256, 768)">
+      <!-- 八分音符，符头饱满，符尾流畅 -->
+      <circle class="icon icon-w" cx="-24" cy="50" r="20" stroke-width="10" fill="#FFFFFF" />
+      <line class="icon icon-w" x1="-4" y1="50" x2="-4" y2="-60" stroke-width="10" />
+      <path class="icon icon-w" d="M-4 -60 Q36 -60 36 -20 Q36 20 -4 20" stroke-width="10" />
+    </g>
+
+    <!-- 4. 右下：影视 (Video) - 暖沙 -->
+    <rect x="512" y="512" width="512" height="512" fill="#D9C6AE" />
+    <g transform="translate(768, 768)">
+      <!-- 胶片框 -->
+      <rect class="icon icon-d" x="-100" y="-60" width="200" height="120" rx="16" stroke-width="10" />
+      <!-- 胶片孔（上下各6个） -->
+      <g class="fill-d">
+        <circle cx="-75" cy="-72" r="5" />
+        <circle cx="-45" cy="-72" r="5" />
+        <circle cx="-15" cy="-72" r="5" />
+        <circle cx="15" cy="-72" r="5" />
+        <circle cx="45" cy="-72" r="5" />
+        <circle cx="75" cy="-72" r="5" />
+        <circle cx="-75" cy="72" r="5" />
+        <circle cx="-45" cy="72" r="5" />
+        <circle cx="-15" cy="72" r="5" />
+        <circle cx="15" cy="72" r="5" />
+        <circle cx="45" cy="72" r="5" />
+        <circle cx="75" cy="72" r="5" />
+      </g>
+      <!-- 播放按钮 -->
+      <circle cx="0" cy="0" r="28" class="icon icon-d" fill="#D9C6AE" stroke-width="10" />
+      <polygon points="-10,-14 -10,14 16,0" class="fill-d" />
+    </g>
+
+  </g>
+</svg>

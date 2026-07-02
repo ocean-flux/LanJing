@@ -1,0 +1,35 @@
+_version: 1
+
+# Application messages
+app:
+  name: Lanjing
+  starting: Starting...
+  ready: Ready
+
+# Error messages
+error:
+  generic: An error occurred
+  network: Network connection failed
+  storage: Storage operation failed
+  permission: Permission denied
+
+# Notification messages
+notification:
+  update-available: Update available
+  task-completed: Task completed
+
+# Rule related
+rule:
+  error:
+    rule-id-payload-mismatch: The ruleId in the payload must match the target resource.
+
+# Diagnostic messages
+diagnostic:
+  graph-port-type-mismatch:
+    title: Graph port type mismatch
+    description: "Diagnostic code %{code}: Node port type does not match connection type, expected %{expected}, actual %{actual}."
+  unknown:
+    title: "Unknown diagnostic %{code}"
+    description: "Diagnostic code %{code} has no localized template."
+  fix:
+    insert-normalize-node: Insert normalize node

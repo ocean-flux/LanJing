@@ -1,0 +1,9 @@
+.svelte-kit/
+.tmp/
+.vscode/
+build/
+coverage/
+dist/
+node_modules/
+src-tauri/
+pnpm-lock.yaml

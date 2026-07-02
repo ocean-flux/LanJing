@@ -1,0 +1,6 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app_name": "览境",
+  "welcome": "欢迎使用览境",
+  "nav_welcome": "欢迎"
+}

@@ -1,0 +1,103 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/lj-core",
+  "crates/lj-compiler",
+  "crates/lj-runtime",
+  "crates/lj-node-http",
+  "crates/lj-node-js",
+  "crates/lj-node-extract",
+  "crates/lj-sandbox",
+  "crates/lj-importer",
+  "crates/lj-storage",
+]
+
+[lints]
+workspace = true
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "CC-BY-NC-SA-4.0"
+repository = "https://github.com/ocean-flux/lanjing"
+rust-version = "1.96"
+
+[workspace.lints]
+clippy.all = "deny"
+clippy.pedantic = "deny"
+
+[workspace.dependencies]
+tauri = "2.11.3"
+tauri-build = { version = "2.6.3", features = [] }
+tauri-plugin-dialog = "2.7.1"
+tauri-plugin-notification = "2.3.3"
+tauri-plugin-os = "2.3.2"
+tauri-plugin-single-instance = "2.4.2"
+tauri-plugin-window-state = "2.4.1"
+rusqlite = { version = "0.40.1", features = ["bundled"] }
+reqwest = { version = "0.13.4", features = ["cookies", "gzip", "brotli"] }
+cookie_store = "0.22.1"
+rquickjs = "0.12.0"
+sha2 = "0.11.0"
+async-trait = "0.1.89"
+wiremock = "0.6.5"
+tokio = { version = "1.52.3", features = ["full"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+async-stream = "0.3.6"
+futures = "0.3.32"
+uuid = { version = "1.23.4", features = ["v4", "serde"] }
+url = "2.5.8"
+hickory-resolver = { version = "0.25.2", features = ["tokio", "system-config"] }
+scraper = "0.27.0"
+xmloxide = "0.4.3"
+jsonpath-rust = "1.0.4"
+regex = "1.12.4"
+encoding_rs = "0.8.35"
+thiserror = "2.0.18"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+
+[package]
+name = "lanjing"
+version.workspace = true
+description = "Lanjing — cross-platform media discovery and reading workbench"
+authors = ["Lanjing Contributors"]
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "lanjing_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+tauri-plugin-notification = { workspace = true }
+tauri-plugin-opener = "2.5.4"
+tauri-plugin-os = { workspace = true }
+tauri-plugin-single-instance = { workspace = true }
+tauri-plugin-store = "2.4.3"
+tauri-plugin-window-state = { workspace = true }
+
+# Workspace crate
+lj-core = { path = "crates/lj-core" }
+lj-importer = { path = "crates/lj-importer" }
+lj-runtime = { path = "crates/lj-runtime" }
+lj-storage = { path = "crates/lj-storage" }
+lj-node-http = { path = "crates/lj-node-http" }
+lj-node-js = { path = "crates/lj-node-js" }
+lj-node-extract = { path = "crates/lj-node-extract" }
+url = { workspace = true }
+
+# 异步/流
+uuid = { workspace = true }
+futures = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
