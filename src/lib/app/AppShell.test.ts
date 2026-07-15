@@ -1,21 +1,58 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import AppShell from './AppShell.svelte';
+import type { ModeShellContract, PlatformCapabilities } from './shell-types';
 
-const defaultWidth = window.innerWidth;
-
-function setViewportWidth(width: number) {
-  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
+function desktopPlatform(overrides: Partial<PlatformCapabilities> = {}): PlatformCapabilities {
+  return {
+    kind: 'browser',
+    orientation: 'landscape',
+    viewportWidth: 1280,
+    viewportHeight: 800,
+    hover: 'hover',
+    pointer: 'fine',
+    keyboard: true,
+    touch: false,
+    windowControls: 'browser-preview',
+    ...overrides,
+  };
 }
 
-afterEach(() => {
-  setViewportWidth(defaultWidth);
-});
+function mobilePlatform(overrides: Partial<PlatformCapabilities> = {}): PlatformCapabilities {
+  return {
+    kind: 'android',
+    orientation: 'portrait',
+    viewportWidth: 390,
+    viewportHeight: 844,
+    hover: 'none',
+    pointer: 'coarse',
+    keyboard: false,
+    touch: true,
+    windowControls: 'browser-preview',
+    ...overrides,
+  };
+}
+
+function makeShell(overrides: Partial<ModeShellContract> = {}): ModeShellContract {
+  return {
+    productContext: 'realm',
+    mediaSpace: null,
+    foregroundActivity: { kind: 'browse', id: 'realm' },
+    presentation: 'normal',
+    platform: desktopPlatform(),
+    theme: {
+      mode: 'system',
+      reducedMotion: false,
+      reducedTransparency: false,
+    },
+    ambientAudio: null,
+    ...overrides,
+  };
+}
 
 describe('AppShell', () => {
   it('renders quiet desktop shell navigation and command search', async () => {
-    setViewportWidth(1280);
-    render(AppShell);
+    render(AppShell, { props: { shell: makeShell() } });
 
     const nav = screen.getByRole('navigation', { name: '主导航' });
     expect(nav.getAttribute('data-shell-rail')).toBe('expanded');
@@ -40,8 +77,13 @@ describe('AppShell', () => {
   });
 
   it('keeps mobile bottom nav accessible and separate from mini-player reservation', () => {
-    setViewportWidth(390);
-    render(AppShell);
+    render(AppShell, {
+      props: {
+        shell: makeShell({
+          platform: mobilePlatform(),
+        }),
+      },
+    });
 
     expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
     const bottomNav = screen.getByRole('navigation', { name: '底部主导航' });
@@ -56,7 +98,7 @@ describe('AppShell', () => {
   });
 
   it('exposes icon-only theme control without a second material-standard switch', async () => {
-    render(AppShell);
+    render(AppShell, { props: { shell: makeShell() } });
 
     const themeButton = screen.getByRole('button', { name: /切换主题模式/ });
     expect(themeButton.querySelector('svg')).toBeTruthy();
@@ -69,10 +111,38 @@ describe('AppShell', () => {
   });
 
   it('hides shell chrome in reader presentation', () => {
-    render(AppShell, { props: { presentation: 'reader' } });
+    render(AppShell, {
+      props: {
+        shell: makeShell({
+          presentation: 'reader',
+          foregroundActivity: { kind: 'reader', id: 'chapter-7' },
+          productContext: 'apps',
+          mediaSpace: 'novel',
+        }),
+      },
+    });
 
     expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: '底部主导航' })).toBeNull();
     expect(screen.queryByRole('banner')).toBeNull();
+  });
+
+  it('consumes shell contract only — chrome follows shell.platform not window size', () => {
+    // Window may be wide, but shell says mobile → bottom nav only.
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 1440,
+    });
+
+    render(AppShell, {
+      props: {
+        shell: makeShell({ platform: mobilePlatform() }),
+      },
+    });
+
+    expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
+    expect(screen.getByRole('navigation', { name: '底部主导航' })).toBeTruthy();
+    expect(screen.getByTestId('mode-shell').getAttribute('data-shell-mode')).toBe('mobile');
   });
 });

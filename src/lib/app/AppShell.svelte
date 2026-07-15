@@ -1,88 +1,34 @@
 <script lang="ts">
-  import { page } from '$app/state';
   import { AppLaunch } from '$lib/components/brand';
   import { Toaster } from '$lib/components/ui/sonner';
   import { m } from '$lib/i18n';
-  import { getMode } from '$lib/stores/theme.svelte';
   import type { Snippet } from 'svelte';
   import AppBottomNav from './AppBottomNav.svelte';
   import AppRail from './AppRail.svelte';
   import AppSearchOverlay from './AppSearchOverlay.svelte';
   import AppTitlebar from './AppTitlebar.svelte';
   import MiniPlayerSlot from './MiniPlayerSlot.svelte';
-  import {
-    resolvePlatformCapabilities,
-    resolveShellMode,
-    usesBottomNav,
-    usesDesktopRail,
-    usesIconRail,
-  } from './shell-mode';
-  import type {
-    AmbientAudioSession,
-    HoverKind,
-    ModeShellContract,
-    PointerKind,
-    ShellPresentationMode,
-    ShellRoute,
-  } from './shell-types';
+  import { resolveShellMode, usesBottomNav, usesDesktopRail, usesIconRail } from './shell-mode';
+  import type { ModeShellContract } from './shell-types';
 
   type Props = {
     children?: Snippet;
-    presentation?: ShellPresentationMode;
-    shell?: ModeShellContract;
+    /** Required product shell contract from ModeShell (single source of truth). */
+    shell: ModeShellContract;
   };
 
-  let { children, presentation = 'normal', shell }: Props = $props();
+  let { children, shell }: Props = $props();
   let showLaunch = $state(true);
   let searchOpen = $state(false);
-  let viewportWidth = $state(typeof window === 'undefined' ? 1280 : window.innerWidth);
-  let viewportHeight = $state(typeof window === 'undefined' ? 800 : window.innerHeight);
 
-  const hoverKind: HoverKind =
-    typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches ? 'hover' : 'none';
-  const pointerKind: PointerKind =
-    typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches
-      ? 'fine'
-      : 'coarse';
-  const fallbackPlatform = $derived(
-    resolvePlatformCapabilities({
-      width: viewportWidth,
-      height: viewportHeight,
-      hover: hoverKind,
-      pointer: pointerKind,
-    }),
-  );
-  const fallbackRoute = $derived.by<ShellRoute>(() => {
-    const pathname = page.url.pathname;
-    if (pathname.startsWith('/apps')) return 'apps';
-    if (pathname.startsWith('/sources')) return 'sources';
-    if (pathname.startsWith('/library')) return 'library';
-    return 'realm';
-  });
-  const fallbackAudio: AmbientAudioSession = null;
-  const shellState = $derived(
-    shell ?? {
-      productContext: fallbackRoute,
-      mediaSpace: null,
-      foregroundActivity: { kind: 'browse' as const, id: fallbackRoute },
-      presentation,
-      platform: fallbackPlatform,
-      theme: {
-        mode: getMode(),
-        reducedMotion: false,
-        reducedTransparency: false,
-      },
-      ambientAudio: fallbackAudio,
-    },
-  );
   const shellMode = $derived(
     resolveShellMode({
-      width: shellState.platform.viewportWidth,
-      hover: shellState.platform.hover,
-      pointer: shellState.platform.pointer,
+      width: shell.platform.viewportWidth,
+      hover: shell.platform.hover,
+      pointer: shell.platform.pointer,
     }),
   );
-  const activeRoute = $derived(shellState.productContext);
+  const activeRoute = $derived(shell.productContext);
   const contextLabel = $derived(
     activeRoute === 'apps'
       ? m.nav_apps()
@@ -93,40 +39,38 @@
           : m.nav_realm(),
   );
   const readerMode = $derived(
-    shellState.presentation === 'reader' || shellState.foregroundActivity.kind === 'reader',
+    shell.presentation === 'reader' || shell.foregroundActivity.kind === 'reader',
   );
-  const shellPresentation = $derived(readerMode ? 'reader' : shellState.presentation);
+  const shellPresentation = $derived(readerMode ? 'reader' : shell.presentation);
   const showRail = $derived(!readerMode && (usesIconRail(shellMode) || usesDesktopRail(shellMode)));
   const showTitlebar = $derived(
     !readerMode && shellMode !== 'mobile' && shellMode !== 'tablet-portrait',
   );
   const showBottomNav = $derived(!readerMode && usesBottomNav(shellMode));
   const miniPlayerState = $derived(
-    shellState.ambientAudio
+    shell.ambientAudio
       ? {
           reserved: true,
-          visible: shellState.ambientAudio.state === 'playing',
-          label: shellState.ambientAudio.label,
+          visible: shell.ambientAudio.state === 'playing',
+          label: shell.ambientAudio.label,
         }
       : { reserved: true, visible: false, label: m.mini_player_empty() },
   );
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} bind:innerHeight={viewportHeight} />
-
 <div
   class="relative grid h-[100dvh] min-w-0 grid-rows-[1fr] overflow-hidden bg-canvas text-ink"
   data-testid="mode-shell"
   data-route={activeRoute}
-  data-product-context={shellState.productContext}
-  data-media-space={shellState.mediaSpace ?? 'none'}
-  data-foreground-activity={`${shellState.foregroundActivity.kind}${shellState.foregroundActivity.id ? `:${shellState.foregroundActivity.id}` : ''}`}
+  data-product-context={shell.productContext}
+  data-media-space={shell.mediaSpace ?? 'none'}
+  data-foreground-activity={`${shell.foregroundActivity.kind}${shell.foregroundActivity.id ? `:${shell.foregroundActivity.id}` : ''}`}
   data-presentation={shellPresentation}
   data-shell-mode={shellMode}
-  data-platform={shellState.platform.kind}
-  data-orientation={shellState.platform.orientation}
-  data-theme-mode={shellState.theme.mode}
-  data-ambient-audio={shellState.ambientAudio?.state ?? 'none'}
+  data-platform={shell.platform.kind}
+  data-orientation={shell.platform.orientation}
+  data-theme-mode={shell.theme.mode}
+  data-ambient-audio={shell.ambientAudio?.state ?? 'none'}
 >
   <div class="relative z-10 flex min-h-0">
     {#if showRail}
@@ -138,8 +82,8 @@
         <AppTitlebar
           {contextLabel}
           compact={shellMode === 'tablet-landscape' || shellMode === 'narrow-desktop'}
-          nativeControlMode={shellState.platform.windowControls}
-          themeMode={shellState.theme.mode}
+          nativeControlMode={shell.platform.windowControls}
+          themeMode={shell.theme.mode}
           onsearch={() => (searchOpen = true)}
         />
       {/if}
