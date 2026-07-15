@@ -1,6 +1,5 @@
 name: 用户：问题反馈
 description: 反馈 LanJing 桌面端或移动端中可以稳定复现的问题
-title: ''
 labels:
   - bug
 body:

@@ -1,6 +1,5 @@
 name: 维护者：需求说明
 description: 把已确认的用户问题收敛为可拆分、可验证的需求说明
-title: ''
 labels:
   - enhancement
 body:

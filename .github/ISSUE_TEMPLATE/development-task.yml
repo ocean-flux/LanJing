@@ -1,6 +1,5 @@
 name: 维护者：开发任务
 description: 从需求说明中拆出可在一个工作上下文完成、可独立验证的纵向任务
-title: ''
 labels:
   - enhancement
 body:
