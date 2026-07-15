@@ -6,17 +6,17 @@ body:
   - type: markdown
     attributes:
       value: |
-        好的建议先讲使用场景和当前困难，再讲希望达到的效果。
+        好的建议会先说明使用场景和当前困难，再说明希望达到的效果。
         界面草图、交互设想和技术方案都可以补充，但不是必填项。
 
-        安全漏洞请走私密安全报告入口。单纯的使用求助或配置问题，请先查阅文档。
+        如涉及安全漏洞，请走「安全漏洞报告」入口。若只是使用求助或配置问题，请先查阅文档。
 
   - type: checkboxes
     id: before-proposing
     attributes:
       label: 提交前确认
       options:
-        - label: 已搜索现有议题，没有找到相同使用场景
+        - label: 我已搜索过现有议题，未发现相同使用场景
           required: true
         - label: 这不是安全漏洞，也不是单纯的使用求助
           required: true
@@ -25,8 +25,8 @@ body:
     id: situation
     attributes:
       label: 使用场景
-      description: 你在什么平台上，想完成什么事情？
-      placeholder: 我通常在 Android 平板阅读长篇小说，同时播放环境音乐……
+      description: 你在哪个平台上、想完成什么事情？
+      placeholder: 我通常在 Android 平板上阅读长篇小说，同时播放环境音乐……
     validations:
       required: true
 
@@ -34,7 +34,7 @@ body:
     id: problem
     attributes:
       label: 目前的困难
-      description: 现有体验哪里不顺、需要绕行，或导致什么结果？
+      description: 现有体验哪里不顺？是否需要绕行？造成了什么结果？
       placeholder: 切换到阅读器后……，所以我不得不……
     validations:
       required: true
@@ -43,7 +43,7 @@ body:
     id: outcome
     attributes:
       label: 希望达到的效果
-      description: 改善后你能够完成什么，怎样算真正解决。不必先指定界面或技术方案。
+      description: 改善之后，你希望能够完成什么？怎样才算真正解决？不必先指定界面或技术方案。
       placeholder: 希望在……时仍能……，并且……
     validations:
       required: true
@@ -66,16 +66,16 @@ body:
     id: workaround
     attributes:
       label: 现在如何处理（可选）
-      description: 有临时替代方法时请说明。
+      description: 若已有临时替代办法，请说明。
 
   - type: textarea
     id: idea
     attributes:
       label: 方案设想（可选）
-      description: 可补充交互想法、参考产品或替代办法。最终方案会结合多端产品边界评估。
+      description: 可补充交互想法、参考产品或其他替代办法。维护者会结合多端产品边界再评估。
 
   - type: textarea
     id: evidence
     attributes:
       label: 参考材料（可选）
-      description: 截图、录屏、原型或相关讨论。
+      description: 可附上截图、录屏、原型或相关讨论。
