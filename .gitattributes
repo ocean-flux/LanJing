@@ -1,0 +1,14 @@
+* text eol=lf
+
+# 二进制资源必须禁用换行规范化，否则 worktree/check out 可能破坏文件内容。
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.ico -text
+*.icns -text
+*.ttf -text
+*.otf -text
+*.woff -text
+*.woff2 -text

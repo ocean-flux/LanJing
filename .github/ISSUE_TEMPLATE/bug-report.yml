@@ -1,0 +1,133 @@
+name: 用户：问题反馈
+description: 反馈 LanJing 桌面端或移动端中可以稳定复现的问题
+title: ''
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        LanJing 是 Tauri 多端应用：桌面端包括 Windows、macOS、Linux，移动端包括 iOS、Android，不提供网页端。
+
+        请先描述你正在做什么、实际发生了什么，以及原本期待什么，不需要先判断技术原因。涉及令牌、私人地址、完整来源配置或可能包含隐私的日志时，请先脱敏。安全漏洞请使用私密安全报告入口。
+
+  - type: checkboxes
+    id: before-reporting
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有问题，没有找到相同反馈
+          required: true
+        - label: 每份反馈只描述一个可以独立处理的问题
+          required: true
+        - label: 我已删除截图、日志和配置中的隐私信息与凭据
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题概述
+      description: 说明你当时在做什么、问题出现在哪里，以及它如何影响使用。
+      placeholder: 我在……时，界面/阅读/播放……，导致……
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 如何复现
+      description: 从启动应用开始，写出别人能够照着完成的最短步骤。
+      value: |
+        1. 启动 LanJing
+        2. 进入……
+        3. 执行……
+        4. 出现……
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际表现
+      description: 写出最终看到或听到的结果，包括提示文字、界面状态、播放状态或错误信息。
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期表现
+      description: 写出你认为正确且可观察的结果，不需要提供技术方案。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 运行平台
+      options:
+        - 桌面端 / Windows
+        - 桌面端 / macOS
+        - 桌面端 / Linux
+        - 移动端 / iOS
+        - 移动端 / Android
+    validations:
+      required: true
+
+  - type: textarea
+    id: system-information
+    attributes:
+      label: 系统信息
+      description: 汇总系统、设备和应用版本。只有问题本身与布局有关时，才需要补充方向、缩放或可用空间。
+      value: |
+        系统版本：
+        设备型号：
+        应用版本或提交：
+        安装来源或构建方式：
+        其他相关信息：
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 问题发生在哪个区域
+      options:
+        - 启动与系统集成
+        - 全局导航与搜索
+        - 境场
+        - 资料库
+        - 小说空间
+        - 阅读器
+        - 音乐与播放
+        - 来源管理
+        - 规则工作室
+        - 文件、权限或原生能力
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: last-working
+    attributes:
+      label: 最近正常版本
+      description: 如果知道问题从哪个版本开始，请填写；不清楚可留空。
+
+  - type: textarea
+    id: media-context
+    attributes:
+      label: 媒体与来源情况
+      description: 仅在阅读、解析、下载或播放问题中填写。说明媒体类型、来源类型、问题阶段，以及是否只在某个资源上出现。不要粘贴未脱敏配置。
+      placeholder: 小说；本地测试来源；打开章节时；所有书籍均可复现
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 截图、录屏或脱敏日志
+      description: 添加能直接说明问题的证据。日志请保留问题前后的相关片段，不要上传密钥、私人地址或完整个人资料。
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 其他补充
+      description: 可以补充复现频率、临时绕过方式或不同系统上的对比；没有可留空。

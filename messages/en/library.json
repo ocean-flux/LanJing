@@ -1,0 +1,16 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "library_title": "Library",
+  "library_desc": "Favorites, history, and cache live here.",
+  "library_add_source_desc": "Connect media sources.",
+  "library_import_desc": "Import local media.",
+  "library_search_desc": "Find content from sources.",
+  "library_empty_title": "No resources in library",
+  "library_empty_next": "Add a source or import local media, then favorite, pin, or open real resources.",
+  "library_source_label": "Source: {name}",
+  "library_favorite": "Favorite",
+  "library_unfavorite": "Remove favorite",
+  "library_pin": "Pin",
+  "library_unpin": "Unpin",
+  "library_alternative_routes": "Explicit routes"
+}

@@ -1,0 +1,35 @@
+_version: 1
+
+# 应用级消息
+app:
+  name: 览境
+  starting: 正在启动...
+  ready: 就绪
+
+# 错误消息
+error:
+  generic: 发生错误
+  network: 网络连接失败
+  storage: 存储操作失败
+  permission: 权限不足
+
+# 通知消息
+notification:
+  update-available: 有可用更新
+  task-completed: 任务已完成
+
+# 规则相关
+rule:
+  error:
+    rule-id-payload-mismatch: 请求体中的 ruleId 必须与目标资源保持一致。
+
+# 诊断消息
+diagnostic:
+  graph-port-type-mismatch:
+    title: 图端口类型不匹配
+    description: "诊断代码 %{code}：节点端口类型与连接类型不一致，期望 %{expected}，实际 %{actual}。"
+  unknown:
+    title: "未知诊断 %{code}"
+    description: "诊断代码 %{code} 暂无本地化模板，请按机器代码排查。"
+  fix:
+    insert-normalize-node: 插入规范化节点

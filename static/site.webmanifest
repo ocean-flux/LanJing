@@ -1,0 +1,14 @@
+{
+  "name": "LanJing / 览境",
+  "short_name": "LanJing",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#1f2725",
+  "background_color": "#111715",
+  "display": "standalone"
+}

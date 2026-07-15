@@ -1,0 +1,18 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "realm_title_no_source": "构建你的媒体境场",
+  "realm_desc_no_source": "添加来源或导入文件，开始发现媒体。",
+  "realm_title_no_resource": "已添加来源，暂无媒体资源",
+  "realm_desc_no_resource": "来源已添加。搜索、发现或检查来源。",
+  "realm_summary_one_source": "已添加 1 个来源",
+  "realm_title_warning": "来源需要处理，境场仍可使用",
+  "realm_desc_warning": "问题只影响对应来源。",
+  "realm_summary_warning": "1 个来源需要处理",
+  "realm_source_status_hint": "来源状态提示",
+  "realm_brand": "LanJing 境场",
+  "realm_media_waiting": "媒体入口等待接入",
+  "realm_no_fake_shelves": "不显示假推荐；接入后再生成内容。",
+  "realm_portal_boundary": "境场边界",
+  "realm_horizon_line": "地平线",
+  "realm_offline_media_realm": "离线优先媒体境场"
+}

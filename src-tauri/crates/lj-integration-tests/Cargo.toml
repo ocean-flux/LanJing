@@ -1,0 +1,33 @@
+[package]
+name = "lj-integration-tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "跨 crate 集成测试：导入、执行和标准媒体资源图增量闭环"
+
+[lints]
+workspace = true
+
+[dependencies]
+lj-core = { path = "../lj-core" }
+lj-capability = { path = "../lj-capability" }
+lj-importer = { path = "../lj-importer" }
+lj-runtime = { path = "../lj-runtime" }
+lj-node-http = { path = "../lj-node-http" }
+lj-node-js = { path = "../lj-node-js" }
+lj-node-extract = { path = "../lj-node-extract" }
+lj-sandbox = { path = "../lj-sandbox" }
+lj-compiler = { path = "../lj-compiler" }
+
+tokio = { workspace = true }
+futures = { workspace = true }
+async-stream = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+wiremock = { workspace = true }

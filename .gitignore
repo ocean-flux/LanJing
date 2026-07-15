@@ -1,0 +1,72 @@
+# Miscellaneous
+*.class
+*.pyc
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Logs
+**/logs
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/lerna-debug.log*
+
+**/node_modules
+package-lock.json
+pnpm-lock.yaml
+bun.lock
+yarn.lock
+
+# Editor directories and files
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.VSCodeCounter
+.vscode/
+.ruff_cache/
+
+# Shared build / cache outputs
+.svelte-kit/
+build/
+coverage/
+target/
+.cache/
+**/dist/
+src/i18n/messages/**/*.js
+
+# paraglide
+src/lib/paraglide/
+project.inlang/cache/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Temp
+.tmp
+*tmp*
+.worktrees
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example

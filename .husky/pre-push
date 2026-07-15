@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -e
+
+cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml --workspace

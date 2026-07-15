@@ -1,0 +1,18 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "realm_title_no_source": "Build your media realm",
+  "realm_desc_no_source": "Add a source or import files to start.",
+  "realm_title_no_resource": "Source added, no media yet",
+  "realm_desc_no_resource": "Sources exist. Search, discover, or check them.",
+  "realm_summary_one_source": "1 source added",
+  "realm_title_warning": "Source needs attention, realm still works",
+  "realm_desc_warning": "The issue stays with that source.",
+  "realm_summary_warning": "1 source needs attention",
+  "realm_source_status_hint": "Source status note",
+  "realm_brand": "LanJing Realm",
+  "realm_media_waiting": "Media entries waiting",
+  "realm_no_fake_shelves": "No fake recommendations; content appears after connection.",
+  "realm_portal_boundary": "Realm boundary",
+  "realm_horizon_line": "Horizon line",
+  "realm_offline_media_realm": "Offline-first media realm"
+}

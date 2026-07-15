@@ -1,0 +1,16 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "library_title": "资料库",
+  "library_desc": "收藏、历史和缓存会在这里汇聚。",
+  "library_add_source_desc": "连接媒体来源。",
+  "library_import_desc": "导入本地媒体。",
+  "library_search_desc": "从来源中找回内容。",
+  "library_empty_title": "资料库还没有资源",
+  "library_empty_next": "先添加来源或导入本地媒体，再把真实资源收藏、固定或打开。",
+  "library_source_label": "来源：{name}",
+  "library_favorite": "收藏",
+  "library_unfavorite": "取消收藏",
+  "library_pin": "固定",
+  "library_unpin": "取消固定",
+  "library_alternative_routes": "明确关联线路"
+}

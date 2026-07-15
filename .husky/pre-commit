@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -e
+
+pnpm exec lint-staged
+pnpm run format:check:web
+cargo fmt --manifest-path src-tauri/Cargo.toml --all --check

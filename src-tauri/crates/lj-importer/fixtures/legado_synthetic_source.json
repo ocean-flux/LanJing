@@ -1,0 +1,51 @@
+{
+  "bookSourceComment": "//合成测试书源,非真实规则,无版权问题",
+  "bookSourceGroup": "测试源",
+  "bookSourceName": "测试书源",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://example.com",
+  "customButton": false,
+  "customOrder": 1,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "eventListener": false,
+  "exploreUrl": "@js:\nvar result=[];\nvar push=function(t,u,s){result.push({title:t,url:u,style:{layout_flexGrow:1,layout_flexBasisPercent:s}})};\n\npush('分类浏览',null,1);\nvar cats=[\n  ['玄幻','/xuanhuan?page={{page}}'],\n  ['都市','/dushi?page={{page}}'],\n  ['科幻','/kehuan?page={{page}}'],\n  ['历史','/lishi?page={{page}}']\n];\ncats.forEach(function(c){push(c[0],c[1],0.25)});\n\npush('排行榜',null,1);\npush('新书榜','/rank/new?page={{page}}',0.5);\npush('热门榜','/rank/hot?page={{page}}',0.5);\n\nJSON.stringify(result);",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36\"}",
+  "lastUpdateTime": "1700000000000",
+  "respondTime": 5000,
+  "ruleBookInfo": {
+    "author": "a[href*='/author/']@text",
+    "coverUrl": "figure img@src||img@src",
+    "intro": "div[itemprop='description']@text",
+    "kind": "ol li:nth-child(3) a@text",
+    "name": "h1@text",
+    "wordCount": "span:contains('万字')@text"
+  },
+  "ruleContent": {
+    "content": "#article-content@html",
+    "replaceRegex": "##<p>\\s*第\\d+章\\s+.*?</p>||请收藏本站"
+  },
+  "ruleExplore": {
+    "author": "p[itemprop='author']@text##\\|.*||a[href*='/author/']@text",
+    "bookList": "li[itemprop='mainEntity']||section ul li:has(a[href*='/book/'])",
+    "bookUrl": "a[itemprop='url']@href||a[href*='/book/']@href",
+    "coverUrl": "img[itemprop='image']@src||img@src",
+    "name": "h2[itemprop='name']@text||a[href*='/book/']@text"
+  },
+  "ruleSearch": {
+    "author": "p[itemprop='author']@text",
+    "bookList": "li[itemprop='mainEntity']",
+    "bookUrl": "a[itemprop='url']@href",
+    "coverUrl": "img[itemprop='image']@src",
+    "kind": "span[itemprop='genre']@text",
+    "name": "h2[itemprop='name']@text"
+  },
+  "ruleToc": {
+    "chapterList": "#full-catalog a[href*='/read/']",
+    "chapterName": "text##上次阅读",
+    "chapterUrl": "href"
+  },
+  "searchUrl": "/search?q={{key}}&page={{page}}",
+  "weight": 0
+}

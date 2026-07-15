@@ -1,0 +1,20 @@
+[package]
+name = "lj-node-js"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "JavaScript 节点：QuickJS 引擎集成与宿主 API"
+
+[lints]
+workspace = true
+
+[dependencies]
+lj-core = { path = "../lj-core" }
+lj-sandbox = { path = "../lj-sandbox" }
+rquickjs = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+futures = { workspace = true }
+async-stream = { workspace = true }
+serde_json = { workspace = true }
