@@ -6,16 +6,16 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 export type MaterialTransparency = 'standard' | 'low';
 
-/** L2 appearance pack id. Production ships only the default pack. */
+/** L2 气质包 id。生产仅默认包。 */
 export type AppearancePackId = 'paper-lantern-precision';
 
 /**
- * L2 Appearance pack seam: rebinds L1 role token values only.
- * Multi-pack UI is out of scope; production set accepts the default pack only.
+ * L2 Appearance pack 缝：只重绑 L1 角色 token 值。
+ * 多包 UI 不在范围；生产 `set` 仅接受默认包。
  */
 export type AppearancePack = {
   id: AppearancePackId;
-  /** Optional role → value map reserved for future packs. Default pack uses CSS. */
+  /** 预留：角色 → 值；默认包走 CSS，此表可空。 */
   tokens?: Readonly<Record<string, string>>;
 };
 
@@ -77,7 +77,7 @@ function applyTheme(theme: ResolvedTheme): void {
 
 function applyAppearancePack(pack: AppearancePack): void {
   if (!browser) return;
-  // Mark pack id only — L1 CSS variable names stay stable; packs rebind values later.
+  // 只标记 pack id；L1 CSS 变量名保持稳定，包只重绑值。
   document.documentElement.dataset.appearancePack = pack.id;
 }
 
@@ -230,9 +230,9 @@ export function setMaterialTransparency(value: MaterialTransparency): void {
 }
 
 /**
- * Apply effective material transparency for a11y without rewriting user preference.
- * System `prefers-reduced-transparency` (or explicit shell flag) forces solid surfaces;
- * when the flag clears, DOM restores the stored user preference.
+ * 按辅助偏好应用有效材质透明度，不改写用户存储偏好。
+ * 系统 `prefers-reduced-transparency`（或壳层标志）强制实色；
+ * 标志清除后 DOM 恢复已存储的用户偏好。
  */
 export function syncMaterialTransparencyForA11y(reducedTransparency: boolean): void {
   const effective: MaterialTransparency =

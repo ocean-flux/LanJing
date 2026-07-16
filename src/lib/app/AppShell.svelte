@@ -20,7 +20,7 @@
 
   type Props = {
     children?: Snippet;
-    /** Required product shell contract from ModeShell (single source of truth). */
+    /** ModeShell 下发的产品壳契约（唯一真相源）。 */
     shell: ModeShellContract;
   };
 
@@ -37,7 +37,7 @@
   let showLaunch = $state(initialShowLaunch);
   let searchOpen = $state(false);
 
-  // System reduce-transparency → solid material (dataset); restores stored pref when cleared.
+  // 系统减少透明度 → 实色材质（dataset）；标志清除后恢复已存用户偏好。
   $effect(() => {
     syncMaterialTransparencyForA11y(shell.theme.reducedTransparency);
   });

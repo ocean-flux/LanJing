@@ -18,7 +18,7 @@
 
   type Props = {
     children?: import('svelte').Snippet;
-    /** Highest-priority full contract override (tests / explicit injection). */
+    /** 最高优先完整契约覆盖（测试 / 显式注入）。 */
     shell?: ModeShellContract;
   };
 
@@ -26,7 +26,7 @@
   let viewportWidth = $state(typeof window === 'undefined' ? 1280 : window.innerWidth);
   let viewportHeight = $state(typeof window === 'undefined' ? 800 : window.innerHeight);
   let previousPathname = $state<string | undefined>(undefined);
-  // Live system a11y prefs — must rebind on media change so shell data-* / material stay honest.
+  // 系统 a11y 偏好需随 media change 重绑，保证壳层 data-* / 材质与系统一致。
   let reducedMotion = $state(
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
@@ -46,7 +46,7 @@
     resolvePlatformCapabilities({ width: viewportWidth, height: viewportHeight, hover, pointer }),
   );
 
-  // Pathname change clears activity override before render; ambientAudio stays owned by session.
+  // 路径变化时先清除活动覆盖再渲染；环境音频仍由会话拥有。
   $effect.pre(() => {
     const pathname = page.url.pathname;
     if (previousPathname !== undefined && previousPathname !== pathname) {
