@@ -18,7 +18,7 @@ pub enum ExtractRule {
         /// 正则清理(##regex##replacement)。
         regex_clean: Option<RegexClean>,
     },
-    /// XPath(xmloxide)。
+    /// `XPath` 选择器（xmloxide）。
     XPath {
         /// `XPath` 表达式。
         expression: String,
@@ -27,7 +27,7 @@ pub enum ExtractRule {
         /// 正则清理。
         regex_clean: Option<RegexClean>,
     },
-    /// JSONPath(jsonpath-rust)。
+    /// `JSONPath` 路径（jsonpath-rust）。
     JsonPath {
         /// `JSONPath` 路径。
         path: String,

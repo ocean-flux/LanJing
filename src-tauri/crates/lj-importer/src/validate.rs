@@ -221,7 +221,7 @@ fn node_kind_io(kind: &NodeKind) -> (Option<NodeDataVariant>, Option<NodeDataVar
             Some(NodeDataVariant::Json),
         ),
         NodeKind::Mapper => (Some(NodeDataVariant::Json), Some(NodeDataVariant::Delta)),
-        // Merge/Condition/Loop: any → any（stub）
+        // Merge/Condition/Loop：任意 → 任意（stub，未钉 IO）
         NodeKind::Merge | NodeKind::Condition | NodeKind::Loop => (None, None),
     }
 }

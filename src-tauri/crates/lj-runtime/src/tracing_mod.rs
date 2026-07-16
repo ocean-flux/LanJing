@@ -1,4 +1,4 @@
-//! tracing helpers.
+//! tracing 辅助：节点执行 span 等。
 
 use lj_capability::StandardIntent;
 use lj_core::node::Node;

@@ -78,7 +78,7 @@ mod tests {
             pattern: r"[[invalid".to_string(),
             replacement: String::new(),
         };
-        // invalid pattern not in cache → returns original text
+        // 非法 pattern 不入缓存 → 返回原文
         assert_eq!(apply_regex_clean("hello", &clean, &cache), "hello");
     }
 

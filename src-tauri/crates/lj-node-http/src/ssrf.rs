@@ -80,7 +80,7 @@ fn is_blocked_ipv4(ip: Ipv4Addr) -> bool {
         || ip.is_broadcast()
         // 0.0.0.0/8 — 未指定/本机地址范围(RFC 1122 Section 3.2.1.3)
         || octets[0] == 0
-        // CGNAT 100.64.0.0/10 (RFC 6598)
+        // CGNAT 100.64.0.0/10（RFC 6598）
         || (octets[0] == 100 && (octets[1] & 0xc0) == 0x40)
         // AWS 元数据端点
         || octets == [169, 254, 169, 254]
@@ -333,7 +333,7 @@ mod tests {
         ));
     }
 
-    // ── IPv4-mapped IPv6 ────────────────────────────────
+    // ── IPv4-mapped IPv6 段 ─────────────────────────────
 
     #[test]
     fn test_block_ipv4_mapped_loopback() {
@@ -362,7 +362,7 @@ mod tests {
         ));
     }
 
-    // ── IPv4-compatible IPv6 ────────────────────────────
+    // ── IPv4-compatible IPv6 段 ─────────────────────────
 
     #[test]
     fn test_block_ipv4_compatible() {
@@ -377,7 +377,7 @@ mod tests {
         assert!(is_blocked_ip(&"::0.0.0.0".parse::<IpAddr>().unwrap()));
     }
 
-    // ── validate_url_and_pin ────────────────────────────
+    // ── validate_url_and_pin 行为 ───────────────────────
 
     #[tokio::test]
     async fn test_validate_url_and_pin_blocked_host() {

@@ -1,3 +1,7 @@
+/**
+ * 壳层演示数据：境场状态、来源卡、媒体应用卡、迷你播放器槽。
+ * 仅 UI 占位，非真实库/规则数据。
+ */
 import { capabilities, type MediaAppKey } from '$lib/brand';
 import { m } from '$lib/i18n';
 import type {
@@ -31,6 +35,7 @@ const mediaActions: Record<MediaAppKey, string> = {
   local: m.media_local_action(),
 };
 
+/** 境场：尚无来源。 */
 export const noSourceRealmState: RealmState = {
   kind: 'no-source',
   title: m.realm_title_no_source(),
@@ -39,6 +44,7 @@ export const noSourceRealmState: RealmState = {
   secondaryAction: m.action_import_local(),
 };
 
+/** 境场：有来源但无资源。 */
 export const sourceNoResourceRealmState: RealmState = {
   kind: 'source-no-resource',
   title: m.realm_title_no_resource(),
@@ -48,6 +54,7 @@ export const sourceNoResourceRealmState: RealmState = {
   sourceSummary: m.realm_summary_one_source(),
 };
 
+/** 境场：来源告警。 */
 export const sourceWarningRealmState: RealmState = {
   kind: 'source-warning',
   title: m.realm_title_warning(),
@@ -57,6 +64,7 @@ export const sourceWarningRealmState: RealmState = {
   sourceSummary: m.realm_summary_warning(),
 };
 
+/** 演示用来源卡列表。 */
 export const demoSources: SourceCardState[] = [
   {
     id: 'demo-legado',
@@ -139,6 +147,7 @@ export const demoSources: SourceCardState[] = [
   },
 ];
 
+/** 媒体应用宫格演示卡。 */
 export const mediaAppCards: MediaAppCardState[] = Object.keys(mediaLabels).map((key) => {
   const appKey = key as MediaAppKey;
   return {
@@ -159,6 +168,7 @@ export const mediaAppCards: MediaAppCardState[] = Object.keys(mediaLabels).map((
   };
 });
 
+/** 迷你播放器槽演示态（占位、无真实播放）。 */
 export const miniPlayerSlot: MiniPlayerSlotState = {
   reserved: true,
   visible: false,

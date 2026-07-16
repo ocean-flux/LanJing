@@ -169,12 +169,12 @@ pub(crate) fn detail_field_rules(at: MaccmsFormat) -> HashMap<String, Vec<Extrac
             );
         }
         MaccmsFormat::Xml => {
-            // Maccms XML detail: <des><![CDATA[...]]></des>
+            // Maccms XML 详情：<des><![CDATA[...]]></des>
             insert_xml(&mut map, DESCRIPTION_FIELD, "des");
-            // Maccms XML detail: <dl><dd flag="hnyun"><![CDATA[...]]></dd>...</dl>
-            // playUrl: 取所有 dd 的 CDATA 内容，$$$ 拼接
+            // Maccms XML 详情：<dl><dd flag="hnyun"><![CDATA[...]]></dd>...</dl>
+            // playUrl：取所有 dd 的 CDATA，$$$ 拼接
             insert_xml(&mut map, PLAY_URL_FIELD, "dl/dd");
-            // playFrom: 取所有 dd 的 flag 属性，$$$ 拼接
+            // playFrom：取所有 dd 的 flag 属性，$$$ 拼接
             insert_xml_attr(&mut map, PLAY_FROM_FIELD, "dl/dd", "flag");
         }
     }

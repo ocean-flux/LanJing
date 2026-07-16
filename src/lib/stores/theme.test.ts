@@ -43,7 +43,7 @@ describe('theme preferences', () => {
 
     setMode('system');
     expect(getMode()).toBe('system');
-    // setup matchMedia defaults to light; explicit mode stays in storage as system
+    // setup 的 matchMedia 默认 light；显式 mode 在 storage 仍为 system
     expect(getCurrentTheme()).toBe('light');
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(localStorage.getItem('theme')).toBe('system');
@@ -55,7 +55,7 @@ describe('theme preferences', () => {
     expect(getCurrentTheme()).toBe('dark');
     expect(localStorage.getItem('theme')).toBe('dark');
 
-    // Re-assert: explicit dark does not collapse to system; resolve ignores OS path.
+    // 再断言：显式 dark 不塌成 system；resolve 不走 OS 路径。
     setMode('light');
     expect(getMode()).toBe('light');
     expect(getCurrentTheme()).toBe('light');
@@ -119,7 +119,7 @@ describe('theme preferences', () => {
     setAppearancePack({ id: 'paper-lantern-precision' });
     const before = getAppearancePack();
 
-    // Future multi-pack ids are reserved; production seam ignores them.
+    // 未来多 pack id 预留；生产缝忽略它们。
     setAppearancePack({ id: 'future-pack' as AppearancePack['id'] });
 
     expect(getAppearancePack()).toEqual(before);

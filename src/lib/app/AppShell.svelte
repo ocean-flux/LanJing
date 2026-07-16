@@ -101,7 +101,7 @@
       <AppRail active={activeRoute} compact={usesIconRail(shellMode)} />
     {/if}
 
-    <!-- flex-col so main keeps flex-1 whether titlebar/bottom slots mount -->
+    <!-- flex-col：无论 titlebar/bottom 槽是否挂载，main 都保持 flex-1 -->
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       {#if showTitlebar}
         <AppTitlebar

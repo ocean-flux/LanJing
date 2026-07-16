@@ -1,4 +1,4 @@
-//! Diesel row model。
+//! Diesel 行模型：规则 / 媒体等表的 Queryable / Insertable 结构。
 
 use diesel::{Insertable, Queryable, Selectable};
 

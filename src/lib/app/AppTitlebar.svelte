@@ -35,7 +35,7 @@
     dark: 'system',
   };
 
-  /** Test-only fallback when AppShell does not pass shell.platform.windowControls. */
+  /** 仅测试：AppShell 未传入 shell.platform.windowControls 时的回退。 */
   function resolveNativeControlModeFallback(): NativeWindowControlMode {
     if (typeof window === 'undefined') return 'browser-preview';
 
@@ -56,7 +56,7 @@
   const nativeControlMode = $derived(
     controlledNativeControlMode ?? resolveNativeControlModeFallback(),
   );
-  // Official frameless caption: HTML controls on Windows/Linux/browser; macOS uses system lights.
+  // 官方无边框标题：Windows/Linux/browser 用 HTML 控件；macOS 用系统交通灯。
   const showWindowControls = $derived(
     nativeControlMode === 'browser-preview' ||
       nativeControlMode === 'windows-overlay' ||
@@ -85,16 +85,16 @@
 
       await appWindow.close();
     } catch {
-      // Browser preview keeps visual affordance; Tauri owns real window actions.
+      // 浏览器预览只保留可视 affordance；真实窗口动作由 Tauri 接管。
     }
   }
 </script>
 
 <!--
-  Drag model (frameless):
-  - Only explicit drag zones carry data-tauri-drag-region (title + flex spacer).
-  - Header itself is NOT a drag region (avoids eating caption clicks).
-  - Interactive clusters use titlebar-no-drag so buttons never start a drag.
+  无边框拖拽模型：
+  - 仅显式拖拽区带 data-tauri-drag-region（标题 + flex 间隔）。
+  - header 本身不是拖拽区（避免吞掉标题控件点击）。
+  - 交互簇用 titlebar-no-drag，按钮永不启动拖拽。
 -->
 <header
   class={[

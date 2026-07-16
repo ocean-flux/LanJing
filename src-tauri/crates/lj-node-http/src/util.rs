@@ -31,7 +31,7 @@ pub fn render_url_template(
     // bookUrl/chapterUrl 假定为路径替换位置(如 /book/{{bookUrl}}),
     // 不适用于 query string 位置(如 ?url={{bookUrl}}),后者需 URL 编码。
     // Legado 规则中 bookUrl/chapterUrl 几乎总是路径替换,首刀场景 OK。
-    // Encoding them would break scheme/host/path separators.
+    // 若编码会破坏 scheme/host/path 分隔符。
     if let Some(bu) = book_url {
         url = url.replace("{{bookUrl}}", bu);
     }

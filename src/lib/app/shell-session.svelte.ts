@@ -1,5 +1,5 @@
-// Shell session ownership: ambient audio + optional foreground activity override.
-// Owned by ModeShell orchestration; survives route/platform noise until explicit clear or pathname change.
+// 壳层会话归属：环境音频 + 可选前台活动覆盖。
+// 由 ModeShell 编排持有；跨路由/平台抖动存活，直至显式清空或 pathname 变化。
 
 import type { AmbientAudioSession, ForegroundActivity } from './shell-types';
 
@@ -8,12 +8,12 @@ export type AmbientAudioSessionValue = NonNullable<AmbientAudioSession>;
 let ambientAudio = $state<AmbientAudioSession>(null);
 let activityOverride = $state<ForegroundActivity | null>(null);
 
-/** Current ambient audio session (null when none). */
+/** 当前环境音频会话；无会话时为 null。 */
 export function getAmbientAudio(): AmbientAudioSession {
   return ambientAudio;
 }
 
-/** Replace ambient audio session. Survives pathname/viewport changes until clear. */
+/** 替换环境音频会话；跨 pathname/视口变化保留，直至 clear。 */
 export function setAmbientAudio(session: AmbientAudioSessionValue): void {
   ambientAudio = {
     id: session.id,
@@ -23,17 +23,17 @@ export function setAmbientAudio(session: AmbientAudioSessionValue): void {
   };
 }
 
-/** Clear ambient audio session slot. */
+/** 清空环境音频会话槽位。 */
 export function clearAmbientAudio(): void {
   ambientAudio = null;
 }
 
-/** Explicit foreground activity override (reader/player session keep). */
+/** 显式前台活动覆盖（阅读器/播放器会话保活）。 */
 export function getActivityOverride(): ForegroundActivity | null {
   return activityOverride;
 }
 
-/** Set explicit foreground activity; kept across platform-only changes. */
+/** 设置显式前台活动；跨纯平台变化保留。 */
 export function setActivityOverride(activity: ForegroundActivity): void {
   activityOverride = {
     kind: activity.kind,
@@ -41,20 +41,20 @@ export function setActivityOverride(activity: ForegroundActivity): void {
   };
 }
 
-/** Clear explicit foreground activity override. */
+/** 清除显式前台活动覆盖。 */
 export function clearActivityOverride(): void {
   activityOverride = null;
 }
 
 /**
- * Pathname changed — single foreground activity must rebind to route default.
- * Ambient audio is intentionally not cleared here.
+ * pathname 已变——单一前台活动须回落到路由默认。
+ * 环境音频刻意不在此清空。
  */
 export function notifyPathnameChanged(): void {
   activityOverride = null;
 }
 
-/** Test helper: reset all session fields. */
+/** 测试辅助：重置全部会话字段。 */
 export function resetShellSession(): void {
   ambientAudio = null;
   activityOverride = null;

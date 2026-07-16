@@ -162,7 +162,7 @@ describe('ModeShell', () => {
     expect(screen.getByText('夜航')).toBeTruthy();
 
     setViewport(390, 844);
-    // Allow svelte:window bind to process resize
+    // 等 svelte:window 绑定处理 resize
     await Promise.resolve();
 
     shell = screen.getByTestId('mode-shell');
@@ -267,7 +267,7 @@ describe('ModeShell', () => {
       setViewport(1280, 800);
       render(ModeShell);
 
-      // Allow a11y media listeners to attach.
+      // 等 a11y media 监听挂上。
       await Promise.resolve();
 
       let shell = screen.getByTestId('mode-shell');
@@ -290,7 +290,7 @@ describe('ModeShell', () => {
       shell = screen.getByTestId('mode-shell');
       expect(shell.getAttribute('data-reduced-motion')).toBe('true');
       expect(shell.getAttribute('data-reduced-transparency')).toBe('true');
-      // Info / focus path still present under degrade.
+      // 降级后信息/焦点路径仍在。
       expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
       expect(screen.getByRole('main')).toBeTruthy();
     } finally {

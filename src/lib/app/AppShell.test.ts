@@ -65,7 +65,7 @@ function stubPerformanceNow(ms: number) {
 }
 
 beforeEach(() => {
-  // Default: fast cold start so chrome-only cases never flash launch overlay.
+  // 默认：快速冷启动，纯 chrome 用例不闪启动层。
   stubPerformanceNow(0);
   setMaterialTransparency('standard');
 });
@@ -97,7 +97,7 @@ describe('AppShell', () => {
 
     const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
     expect(titlebar.getAttribute('data-native-window-controls')).toBe('browser-preview');
-    // Drag only on explicit zones (title + spacer), not whole header (keeps caption clickable).
+    // 仅标题 + spacer 为拖拽区，整 header 不拖（标题控件可点）。
     expect(titlebar.hasAttribute('data-tauri-drag-region')).toBe(false);
     expect(titlebar.querySelectorAll('[data-tauri-drag-region]').length).toBeGreaterThan(1);
     expect(screen.getByRole('button', { name: '最小化窗口' })).toBeTruthy();
@@ -136,7 +136,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: '资料库' })).toBeTruthy();
     const miniPlayer = screen.getByRole('button', { name: '暂无播放内容' });
     expect(miniPlayer.getAttribute('data-mini-player')).toBe('reserved');
-    // Vertical order: main → mini-player slot → bottom nav (no cover).
+    // 纵向顺序：main → mini-player 槽 → 底栏（互不遮盖）。
     const main = screen.getByRole('main');
     expect(
       main.compareDocumentPosition(miniPlayer) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -144,7 +144,7 @@ describe('AppShell', () => {
     expect(
       miniPlayer.compareDocumentPosition(bottomNav) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    // Content column uses flex so main grows without titlebar row.
+    // 内容列用 flex，无 titlebar 时 main 仍可伸展。
     expect(main.className).toContain('flex-1');
     expect(main.parentElement?.className).toContain('flex-col');
   });
@@ -194,7 +194,7 @@ describe('AppShell', () => {
 
     const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
     expect(titlebar.getAttribute('data-native-window-controls')).toBe('windows-overlay');
-    // Frameless official caption: HTML controls always present for windows-overlay.
+    // 无边框官方标题：windows-overlay 下 HTML 控件始终存在。
     expect(screen.getByRole('button', { name: '最小化窗口' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '最大化或还原窗口' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '关闭窗口' })).toBeTruthy();
@@ -270,7 +270,7 @@ describe('AppShell', () => {
   });
 
   it('consumes shell contract only — chrome follows shell.platform not window size', () => {
-    // Window may be wide, but shell says mobile → bottom nav only.
+    // 窗口可很宽，但 shell 声明 mobile → 仅底栏。
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       writable: true,
@@ -302,16 +302,16 @@ describe('AppShell', () => {
       },
     });
 
-    // Let a11y material sync effect run.
+    // 等 a11y 材质同步 effect 跑完。
     await Promise.resolve();
 
     const root = screen.getByTestId('mode-shell');
     expect(root.getAttribute('data-reduced-motion')).toBe('true');
     expect(root.getAttribute('data-reduced-transparency')).toBe('true');
-    // Solid material without rewriting stored user pref.
+    // 实色材质，不改写已存用户偏好。
     expect(getMaterialTransparency()).toBe('standard');
     expect(document.documentElement.dataset.materialTransparency).toBe('low');
-    // Nav + accessible names remain under a11y degrade.
+    // a11y 降级时导航与可访问名仍在。
     expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
     expect(screen.getByRole('main')).toBeTruthy();
   });

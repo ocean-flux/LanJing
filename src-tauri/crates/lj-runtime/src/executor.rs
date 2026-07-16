@@ -166,11 +166,11 @@ impl GraphExecutor {
 
     /// 为 entry 节点创建输入 stream（按 `IntentInput` 注入）。
     ///
-    /// - `Query(s)` → `stream::once(NodeData::Raw(s))`
-    /// - `ItemId(s)` → `stream::once(NodeData::Raw(s))`
-    /// - `UnitId(s)` / `ActionId(s)` / `Page(s)` → `stream::once(NodeData::Raw(s))`
-    /// - `Opaque(v)` → `stream::once(NodeData::Json(v))`
-    /// - `None` → `stream::once(Raw(""))`（触发首个 processor 自产数据，如 Js 节点产分类列表）
+    /// - `Query(s)` → 单次 `NodeData::Raw(s)`
+    /// - `ItemId(s)` → 单次 `NodeData::Raw(s)`
+    /// - `UnitId` / `ActionId` / `Page` → 单次 `NodeData::Raw`
+    /// - `Opaque(v)` → 单次 `NodeData::Json(v)`
+    /// - `None` → 单次空 `Raw`（触发首个 processor 自产，如 Js 产分类列表）
     #[must_use]
     pub fn entry_input(segment: &SegmentSpec) -> BoxStream<'static, NodeData> {
         match &segment.input {

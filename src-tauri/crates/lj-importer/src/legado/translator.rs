@@ -104,7 +104,7 @@ pub(crate) fn translate_discover(
         to: http_node.node_id.clone(),
         condition_branch: None,
     });
-    // Http(output=HttpResponse) → Extract(input=HttpResponse)
+    // Http 输出 HttpResponse → Extract 输入 HttpResponse
     st.edges.push(Edge {
         from: http_node.node_id.clone(),
         to: extract_node.node_id.clone(),
@@ -252,7 +252,7 @@ pub(crate) fn translate_content(
 ///
 /// 连接顺序: search/discover Extract → detail Http → toc Http → content Http。
 pub(crate) fn connect_flow_edges(st: &mut IntentGraphState) {
-    // search/discover Extract → detail Http
+    // search/discover 的 Extract → detail 的 Http
     if let Some(ref from) = st.search_extract_id
         && let Some(ref to) = st.detail_http_id
     {
@@ -262,7 +262,7 @@ pub(crate) fn connect_flow_edges(st: &mut IntentGraphState) {
             condition_branch: None,
         });
     }
-    // detail Extract → toc Http
+    // detail 的 Extract → toc 的 Http
     if let Some(ref from) = st.detail_extract_id
         && let Some(ref to) = st.toc_http_id
     {
@@ -272,7 +272,7 @@ pub(crate) fn connect_flow_edges(st: &mut IntentGraphState) {
             condition_branch: None,
         });
     }
-    // toc Extract → content Http
+    // toc 的 Extract → content 的 Http
     if let Some(ref from) = st.toc_extract_id
         && let Some(ref to) = st.content_http_id
     {

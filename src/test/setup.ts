@@ -1,5 +1,5 @@
-// Shared Vitest setup for Svelte component tests.
-// @testing-library/svelte/vite handles setup and cleanup automatically.
+// Svelte 组件测试共用 Vitest setup。
+// 安装与清理由 @testing-library/svelte/vite 自动处理。
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

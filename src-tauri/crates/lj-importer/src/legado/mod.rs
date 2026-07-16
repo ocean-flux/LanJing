@@ -64,7 +64,7 @@ impl Importer<LegadoSourceJson> for LegadoImporter {
             content_mapper_id: None,
         };
 
-        // -- Search --
+        // -- 搜索 --
         if let Some(search_url_tpl) = &source.search_url {
             let full_search_url = format!("{base_url}{search_url_tpl}");
             st.http_target_urls.push(full_search_url.clone());
@@ -97,12 +97,12 @@ impl Importer<LegadoSourceJson> for LegadoImporter {
             st.search_mapper_id = Some(mapper_id);
         }
 
-        // -- Discover --
+        // -- 发现 --
         if let Some(explore_url) = &source.explore_url {
             translate_discover(explore_url, &headers, source.rule_explore.as_ref(), &mut st)?;
         }
 
-        // -- Detail --
+        // -- 详情 --
         if let Some(ref rule) = source.rule_book_info {
             translate_detail(rule, &headers, &mut st)?;
         }

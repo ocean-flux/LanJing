@@ -9,7 +9,7 @@
     animated?: boolean;
     label?: string;
     class?: string;
-    /** `ink` = shell mark (theme ink mask). `photo` = raw monogram PNG (launch/hero). */
+    /** `ink` = 壳层印记（主题 ink 蒙版）。`photo` = 原始 monogram PNG（启动/hero）。 */
     variant?: 'ink' | 'photo';
   };
 
@@ -60,7 +60,7 @@
     background: transparent;
   }
 
-  /* Quiet precision: monogram as ink silhouette — matches canvas/ink, no metal mud. */
+  /* 安静精密：monogram 作 ink 剪影，贴合 canvas/ink，避免金属脏感。 */
   .lanjing-mark-glyph {
     display: block;
     width: 100%;
