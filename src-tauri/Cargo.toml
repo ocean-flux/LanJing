@@ -37,8 +37,6 @@ tauri-plugin-notification = "2.3.3"
 tauri-plugin-os = "2.3.2"
 tauri-plugin-single-instance = "2.4.2"
 tauri-plugin-window-state = "2.4.1"
-tauri-plugin-system-symbols = "0.3.0"
-tauri-plugin-window-controls = "0.1.4"
 diesel = { version = "2.3.10", features = ["sqlite"] }
 diesel_migrations = "2.3.2"
 libsqlite3-sys = { version = "0.37.0", features = ["bundled"] }
@@ -97,9 +95,6 @@ tauri-plugin-os = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
 tauri-plugin-store = "2.4.3"
 tauri-plugin-window-state = { workspace = true }
-
-tauri-plugin-system-symbols = { workspace = true }
-tauri-plugin-window-controls = { workspace = true }
 # Workspace crate
 lj-core = { path = "crates/lj-core" }
 lj-capability = { path = "crates/lj-capability" }

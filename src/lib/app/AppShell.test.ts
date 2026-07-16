@@ -42,6 +42,7 @@ function makeShell(overrides: Partial<ModeShellContract> = {}): ModeShellContrac
     platform: desktopPlatform(),
     theme: {
       mode: 'system',
+      appearancePack: 'paper-lantern-precision',
       reducedMotion: false,
       reducedTransparency: false,
     },
@@ -67,6 +68,10 @@ describe('AppShell', () => {
       },
     });
 
+    const root = screen.getByTestId('mode-shell');
+    expect(root.getAttribute('data-theme-mode')).toBe('system');
+    expect(root.getAttribute('data-appearance-pack')).toBe('paper-lantern-precision');
+
     const nav = screen.getByRole('navigation', { name: '主导航' });
     expect(nav.getAttribute('data-shell-rail')).toBe('expanded');
     expect(screen.getByText('LanJing')).toBeTruthy();
@@ -74,7 +79,8 @@ describe('AppShell', () => {
 
     const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
     expect(titlebar.getAttribute('data-native-window-controls')).toBe('browser-preview');
-    expect(titlebar.hasAttribute('data-tauri-drag-region')).toBe(true);
+    // Drag only on explicit zones (title + spacer), not whole header (keeps caption clickable).
+    expect(titlebar.hasAttribute('data-tauri-drag-region')).toBe(false);
     expect(titlebar.querySelectorAll('[data-tauri-drag-region]').length).toBeGreaterThan(1);
     expect(screen.getByRole('button', { name: '最小化窗口' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '最大化或还原窗口' })).toBeTruthy();
@@ -170,8 +176,10 @@ describe('AppShell', () => {
 
     const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
     expect(titlebar.getAttribute('data-native-window-controls')).toBe('windows-overlay');
-    // Native caption comes from tauri-plugin-window-controls; HTML preview buttons stay hidden.
-    expect(screen.queryByRole('button', { name: '最小化窗口' })).toBeNull();
+    // Frameless official caption: HTML controls always present for windows-overlay.
+    expect(screen.getByRole('button', { name: '最小化窗口' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '最大化或还原窗口' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '关闭窗口' })).toBeTruthy();
   });
 
   it('keeps productContext when platform orientation/width changes navigation family', () => {

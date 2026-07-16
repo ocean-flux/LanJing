@@ -6,10 +6,6 @@
 mod commands;
 
 use tauri::Manager;
-use tauri_plugin_window_controls::WindowControlsExt;
-
-/// 与前端 `--shell-titlebar-height` 对齐的逻辑像素高度（桌面标题栏）。
-const TITLE_BAR_OVERLAY_HEIGHT: u32 = 44;
 
 /// 构建并运行 Tauri 应用。
 ///
@@ -25,27 +21,12 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .plugin(tauri_plugin_system_symbols::init())
-        .plugin(tauri_plugin_window_controls::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
             }
         }))
         .setup(|app| {
-            // Windows：启用原生 caption overlay（最小化/最大化/关闭 + Win11 snap）。
-            // 非 Windows 上 `WindowControlsExt` 为 no-op。
-            if let Some(window) = app.get_webview_window("main") {
-                window
-                    .set_title_bar_height(TITLE_BAR_OVERLAY_HEIGHT)
-                    .map_err(|error| {
-                        Box::<dyn std::error::Error>::from(format!("set title bar height: {error}"))
-                    })?;
-                window.set_title_bar_overlay(true).map_err(|error| {
-                    Box::<dyn std::error::Error>::from(format!("enable title bar overlay: {error}"))
-                })?;
-            }
-
             // 在应用数据目录下创建 SQLite 数据库
             let data_dir = app.path().app_data_dir().expect("获取应用数据目录失败");
             std::fs::create_dir_all(&data_dir).expect("创建应用数据目录失败");

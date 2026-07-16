@@ -68,12 +68,12 @@ function resolvePlatformKind(userAgent: string): PlatformKind {
 
 function resolveWindowControls(kind: PlatformKind, tauri: boolean): NativeWindowControlMode {
   if (!tauri) return 'browser-preview';
-  // macOS: system traffic lights + Overlay title bar (tauri.conf).
+  // macOS: traffic lights via Overlay title bar (tauri.conf); no HTML caption strip.
   if (kind === 'macos') return 'macos-overlay';
-  // Windows: tauri-plugin-window-controls injects native caption buttons.
-  if (kind === 'windows') return 'windows-overlay';
-  // Linux and others: keep system window decorations.
-  return 'system-decorated';
+  // Windows / Linux: frameless window + AppTitlebar HTML caption (official window API).
+  // `windows-overlay` means custom chrome with in-app controls, not a third-party plugin.
+  if (kind === 'windows' || kind === 'linux') return 'windows-overlay';
+  return 'windows-overlay';
 }
 
 export function resolvePlatformCapabilities(input: PlatformInput): PlatformCapabilities {
