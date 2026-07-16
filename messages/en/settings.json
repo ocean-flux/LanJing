@@ -2,9 +2,13 @@
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "settings_open": "Open settings",
   "settings_title": "Settings",
+  "settings_shortcuts": "Shortcuts",
   "settings_appearance": "Appearance",
-  "settings_mode_label": "Light / dark",
+  "settings_mode_label": "Appearance mode",
   "settings_theme_label": "Theme",
   "settings_theme_inkstone": "Inkstone",
-  "settings_theme_cinnabar": "Cinnabar"
+  "settings_theme_cinnabar": "Cinnabar",
+  "settings_language": "Language",
+  "settings_lang_zh": "中文",
+  "settings_lang_en": "English"
 }

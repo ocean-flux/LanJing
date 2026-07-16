@@ -2,9 +2,13 @@
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "settings_open": "打开设置",
   "settings_title": "设置",
+  "settings_shortcuts": "快捷",
   "settings_appearance": "外观",
   "settings_mode_label": "明暗",
   "settings_theme_label": "主题",
   "settings_theme_inkstone": "墨砚精密",
-  "settings_theme_cinnabar": "冷银朱"
+  "settings_theme_cinnabar": "冷银朱",
+  "settings_language": "语言",
+  "settings_lang_zh": "中文",
+  "settings_lang_en": "English"
 }
