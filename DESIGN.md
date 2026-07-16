@@ -118,22 +118,33 @@ components:
 
 **Creative North Star: "The Adaptive Frame"**
 
-LanJing is a product UI system for a local cross-media workbench. The Adaptive Frame is the constant: product orientation, navigation grammar, and semantic color roles stay stable while media spaces may change density, atmosphere, and chrome. Themes may be swapped later; **roles** (`canvas`, `ink`, `lantern`, `reader-*`, `media-void`) are the contract, not any one hex romance.
+LanJing is a product UI system for a local cross-media workbench. The Adaptive Frame is the constant: product orientation, navigation grammar, and semantic color roles stay stable. **Shell chrome is premium by quiet precision** — not by heavy atmosphere. **Immersion is modal**: novel/music/reader/player may change paper, void, and density **inside the content surface**; rail, titlebar, and bottom nav keep the same grammar and role names.
 
-Personality is calm, craft-minded, and continuous — quiet precision with **less decorative whitespace**. Prefer useful density over sparse marketing air. Surfaces are paper-warm neutrals with a single lantern accent used sparingly. Reader and media consumption get their own canvas roles so immersion does not hijack the shell.
+Default appearance pack: **纸灯精密 (Paper-Lantern Precision)** — warm-paper neutrals, copper lantern accent ≤~10% mass, compact controls, tonal elevation. Themes may later rebind hex via L2 packs; **roles** (`canvas`, `ink`, `lantern`, `reader-*`, `media-void`) are the contract, not any one hex romance.
 
 The system rejects generic SaaS dashboard kits, content-farm feed noise, scraper-tool chrome, multi-player focus fights, and production UIs stuffed with fake fullness. Motion exists for state, not page theatre. Reduced motion and reduced transparency remain fully operable.
 
 **Key Characteristics:**
 
-- Semantic roles first; multi-theme later without rewriting IA
-- Restrained lantern accent (primary actions, selection, focus) on tonal neutrals
+- **Shell / mode split:** chrome = quiet precision; mode content = allowed immersion
+- Semantic roles first; L2 appearance packs rebind values only
+- Restrained lantern accent (primary actions, selection, focus)
 - Outfit for chrome/UI; Source Serif 4 for long reading; JetBrains Mono for code/rules
 - Tonal elevation (surface-1/2/3 + hairline); shadows only on controls/dialogs
-- Adaptive shell metrics (rail, bottom nav, safe area, mini-player) over one fluid layout
-- Quiet density: compact controls, tight section rhythm, no empty hero air in app chrome
+- Adaptive shell metrics (rail, bottom nav, safe area, mini-player)
+- Quiet density in chrome; reading may open measure/line-height without bloating nav
 
-**Agent taste gate (product register):** Before shipping UI, reject outputs that would pass a marketing “premium landing” checklist but fail this product one: oversized hero padding in app chrome, gradient text, side-stripe cards, decorative glass, Inter-as-brand, Lucide used as decoration only, multi-card identical grids as discovery default, or motion that does not change state. Prefer Linear/Books-like calm tools over Awwwards portfolio energy.
+**Theme layers (implement against these names):**
+
+| Layer | Responsibility |
+| ----- | -------------- |
+| L0 | `light` / `dark` / `system` on `documentElement` |
+| L1 | CSS variables for semantic roles (this file’s palette) |
+| L2 | Optional pack id rebinding L1 (default pack only in production until a multi-pack task) |
+| L3 | Mode-scoped presentation tokens for main/reader/player — never rename L1 |
+| Reader prefs | Independent of L0; paper/white/gray/dark/black etc. |
+
+**Agent taste gate (product register):** Reject marketing-landing “premium” that fights this system: oversized hero padding in app chrome, gradient text, side-stripe cards, decorative glass on shell, Inter-as-brand, Lucide as pure decoration, identical card grids as default discovery, shell mood filters, neon media-void as global chrome. Prefer precision tools (Linear/Books calm) over Awwwards portfolio energy. Immersive hero treatments belong in **mode content**, not in the global frame.
 
 ## 2. Colors
 
@@ -165,11 +176,15 @@ Warm-neutral canvas with a single copper-lantern accent. Light and dark share ro
 
 ### Named Rules
 
-**The Role Stability Rule.** Themes may re-skin hex values; they must not invent parallel meanings for `canvas` / `ink` / `lantern` / `reader-*`. Future multi-theme configuration rebinds roles, never forks a second shell language.
+**The Role Stability Rule.** Themes may re-skin hex values (L2); they must not invent parallel meanings for `canvas` / `ink` / `lantern` / `reader-*`. Multi-pack configuration rebinds values, never forks a second shell language.
 
 **The One Lantern Rule.** Lantern appears for primary action, selection, and focus affordance — roughly ≤10% of a screen’s color mass. If the page looks orange, lantern is overused.
 
 **The Honest Empty Rule.** Prefer `media-void` + real copy over stock photos or fabricated shelves.
+
+**The Quiet Shell Rule.** Rail, titlebar, bottom nav, and command chrome stay low-atmosphere. Do not apply full-bleed media tints, heavy blur stacks, or cinematic gradients to shell chrome to “feel immersive.”
+
+**The Modal Immersion Rule.** Atmosphere (reader paper, album hero, void stage) applies inside `main` / reader / player surfaces. Leaving a mode restores shell-default L1 presentation without sticky mood on global nav.
 
 ## 3. Typography
 
@@ -242,12 +257,12 @@ Handfeel: **quiet and precise**, compact padding, fewer empty bands. shadcn-svel
 
 ### Navigation (Adaptive Frame)
 
-- **Desktop expanded rail:** ~220px, canvas ground, hairline right edge.
+- **Desktop expanded rail:** ~220px, canvas ground, hairline right edge — precision tool, not a mood panel.
 - **Icon rail / tablet:** ~64–72px metrics via CSS vars.
 - **Mobile:** bottom nav ~64px + `safe-area-inset-bottom`; never covered by mini-player reservation.
-- **Titlebar:** ~40–44px; native window control modes from shell platform contract.
-- **Active/hover:** soft lantern tint, not loud fill blocks.
-- **Reader presentation:** shell chrome recedes (`motion-reader-recede`); no dual primary navs.
+- **Titlebar:** ~40–44px; native window control modes from shell platform contract (`windows-overlay` / `macos-overlay` / …).
+- **Active/hover:** soft lantern tint, not loud fill blocks or media-tint takeover.
+- **Reader presentation:** shell chrome recedes (`motion-reader-recede`); no dual primary navs; immersion is the reader surface, not a restyled rail.
 
 ### Mini-player / ambient strip
 
@@ -280,3 +295,6 @@ Handfeel: **quiet and precise**, compact padding, fewer empty bands. shadcn-svel
 - **Don't** put display/serif type in buttons, tabs, or dense data.
 - **Don't** invent a second color system beside the semantic roles for “just this page.”
 - **Don't** inflate whitespace to look “premium” while hiding information density users need.
+- **Don't** put heavy atmosphere (cinematic gradients, full media tint, decorative glass stacks) on shell chrome.
+- **Don't** make L0 light/dark a different information architecture than each other.
+- **Don't** ship multiple L2 packs in production until a dedicated multi-pack task; keep the AppearancePack seam typed and default-only.

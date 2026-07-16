@@ -28,7 +28,9 @@ A rule-driven local cross-media workbench: rules supply standard data; LanJing s
 
 ## Brand Personality
 
-Calm, craft-minded, continuous. Voice is precise and quiet, never hype. The interface should feel like a trustworthy immersion: a variable picture frame that holds media without shouting, with session continuity across spaces.
+Calm, craft-minded, continuous. Voice is precise and quiet, never hype.
+
+**Split feel (critical):** the **shell is premium by quiet precision** — fine hairlines, compact controls, restrained material, no atmospheric filter on chrome. **Immersion lives inside media modes** (reader paper, cover density, player stage), not by dressing the global frame as a mood board. The Adaptive Frame stays legible; content surfaces may deepen atmosphere.
 
 ## Anti-references
 
@@ -40,11 +42,27 @@ Calm, craft-minded, continuous. Voice is precise and quiet, never hype. The inte
 
 ## Design Principles
 
-1. **Frame holds media, media does not fight the frame** — global orientation stays legible while media spaces may change density and atmosphere.
-2. **One foreground, optional ambient** — a single activity owns attention; ambient audio may continue only when it does not seize focus.
-3. **One library truth** — media spaces project the shared library; they never own a second copy of favorites, history, or progress.
-4. **Honest emptiness** — no fabricated recommendations or filled shells; empty states name the real next step.
-5. **Local-first continuity** — platform, orientation, and route changes must not casually reset theme preference, reading place, or ambient session.
+1. **Frame holds media, media does not fight the frame** — global orientation stays legible while media spaces may change density and atmosphere **on the content surface only**.
+2. **Shell premium ≠ shell atmosphere** — advanced feel comes from precision and craft in chrome, not from heavy mood, neon, or decorative glass on rail/titlebar/bottom nav.
+3. **Immersion is modal** — novel/music/reader/player may deepen paper, void, and density inside main; they must not rewrite primary nav grammar or semantic role names.
+4. **One foreground, optional ambient** — a single activity owns attention; ambient audio may continue only when it does not seize focus.
+5. **One library truth** — media spaces project the shared library; they never own a second copy of favorites, history, or progress.
+6. **Honest emptiness** — no fabricated recommendations or filled shells; empty states name the real next step.
+7. **Local-first continuity** — platform, orientation, and route changes must not casually reset theme preference, reading place, or ambient session.
+
+## Theme & Appearance Model
+
+| Layer | What | Production now |
+| ----- | ---- | -------------- |
+| **L0 Appearance mode** | `light` \| `dark` \| `system` | Required; user explicit choice beats system |
+| **L1 Semantic roles** | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever |
+| **L2 Appearance pack** | Rebind L1 hex/material only; one IA | **API reserved**; default pack only: **纸灯精密 Paper-Lantern Precision** |
+| **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode | Allowed as presentation, not a second shell language |
+| **Reader prefs** | Independent colorScheme/font/size/… | Independent of L0; survives app theme changes |
+
+**Default pack character:** warm-paper neutrals + copper lantern accent at ≤~10% mass; quiet precision chrome; not cool-SaaS gray, not media-neon void as the global shell.
+
+**Out of scope until a dedicated task:** shipping multiple user-selectable L2 packs, full theme marketplace, per-source skins.
 
 ## Accessibility & Inclusion
 
@@ -58,11 +76,11 @@ Visual source of truth: root `PRODUCT.md` + `DESIGN.md` (+ `.impeccable/design.j
 
 **Register dials (product, not marketing):**
 
-| Dial | Value | Meaning |
-| ---- | ----- | ------- |
-| Variance | 4–5 | Consistent shell grammar; media spaces vary atmosphere, not IA |
-| Motion | 3–4 | State / feedback only; no page theatre |
-| Density | 6–7 | Quiet density; less empty chrome air; content packs tighter than landing pages |
+| Dial     | Shell chrome | Content / mode surfaces                                      |
+| -------- | ------------ | ------------------------------------------------------------ |
+| Variance | 3–4          | 5–6 atmosphere on content only; IA still shared              |
+| Motion   | 3            | 3–4 state feedback; immersive modes may use reader page cues |
+| Density  | 6–7          | 5–7; reading may open line-height, chrome stays compact      |
 
 **Skill routing when UI changes:**
 
