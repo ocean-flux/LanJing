@@ -33,7 +33,7 @@
     </div>
 
     <div class="launch-mark">
-      <LanJingMark width={96} height={72} animated />
+      <LanJingMark width={96} height={72} animated variant="photo" />
     </div>
 
     <div class="launch-copy">

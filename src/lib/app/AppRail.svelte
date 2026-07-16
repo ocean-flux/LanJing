@@ -38,22 +38,21 @@
   <a
     href={resolve('/')}
     class={[
-      'motion-dock-wake inline-flex h-10 shrink-0 items-center rounded-xl text-ink outline-none transition-colors hover:bg-lantern-soft focus-visible:bg-lantern-soft',
+      'motion-dock-wake inline-flex h-10 shrink-0 items-center rounded-xl text-ink outline-none transition-colors hover:bg-surface-3 focus-visible:bg-surface-3',
       compact ? 'w-10 justify-center' : 'w-full justify-start gap-3 px-2',
     ]}
     aria-label={m.realm_brand()}
   >
-    <span class="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-[0.7rem]">
-      <img
-        src={asset('/brand/lanjing-app-icon.png')}
-        alt=""
-        class="h-full w-full object-contain"
-        aria-hidden="true"
-      />
+    <span
+      class="brand-monogram inline-flex h-7 w-7 shrink-0 items-center justify-center"
+      style:--mark-url={`url(${asset('/brand/icon.png')})`}
+      aria-hidden="true"
+    >
+      <span class="brand-monogram-glyph"></span>
     </span>
     {#if !compact}
       <span class="min-w-0">
-        <span class="block truncate text-sm font-semibold">LanJing</span>
+        <span class="block truncate text-sm font-semibold tracking-tight">LanJing</span>
         <span class="block truncate text-[0.68rem] text-ink-muted">{m.nav_main()}</span>
       </span>
     {/if}
@@ -109,3 +108,21 @@
     {/if}
   </a>
 </nav>
+
+<style>
+  .brand-monogram-glyph {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background-color: var(--ink);
+    opacity: 0.88;
+    -webkit-mask-image: var(--mark-url);
+    mask-image: var(--mark-url);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+</style>

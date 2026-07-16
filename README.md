@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="static/brand/lanjing-app-icon.png" width="120" alt="LanJing app icon" />
+<img src="static/brand/icon.png" width="120" alt="LanJing icon" />
 
 # LanJing / 览境
 
