@@ -162,14 +162,15 @@ describe('AppShell', () => {
         shell: makeShell({
           platform: desktopPlatform({
             kind: 'windows',
-            windowControls: 'system-decorated',
+            windowControls: 'windows-overlay',
           }),
         }),
       },
     });
 
     const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
-    expect(titlebar.getAttribute('data-native-window-controls')).toBe('system-decorated');
+    expect(titlebar.getAttribute('data-native-window-controls')).toBe('windows-overlay');
+    // Native caption comes from tauri-plugin-window-controls; HTML preview buttons stay hidden.
     expect(screen.queryByRole('button', { name: '最小化窗口' })).toBeNull();
   });
 
@@ -199,7 +200,7 @@ describe('AppShell', () => {
           orientation: 'landscape',
           viewportWidth: 1280,
           viewportHeight: 800,
-          windowControls: 'system-decorated',
+          windowControls: 'windows-overlay',
         }),
       },
     });

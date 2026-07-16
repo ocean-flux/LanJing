@@ -91,7 +91,7 @@ describe('ModeShell', () => {
           pointer: 'fine',
           keyboard: true,
           touch: false,
-          windowControls: 'system-decorated',
+          windowControls: 'windows-overlay',
         },
       },
     });
@@ -123,7 +123,7 @@ describe('ModeShell', () => {
         pointer: 'fine',
         keyboard: true,
         touch: false,
-        windowControls: 'system-decorated',
+        windowControls: 'windows-overlay',
       },
       theme: { ...contract.theme, mode: 'light' },
     };
@@ -208,7 +208,7 @@ describe('ModeShell', () => {
           pointer: 'fine',
           keyboard: true,
           touch: false,
-          windowControls: 'system-decorated',
+          windowControls: 'windows-overlay',
         },
         ambientAudio: null,
       },

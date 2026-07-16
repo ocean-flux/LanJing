@@ -51,3 +51,23 @@ Calm, craft-minded, continuous. Voice is precise and quiet, never hype. The inte
 Target WCAG 2.2 AA for interactive product surfaces: text contrast ≥ 4.5:1 (large text ≥ 3:1), visible focus, full keyboard paths on desktop, touch-complete paths on mobile.
 
 Reduced motion and reduced transparency are first-class product capabilities: core tasks remain complete with equivalent information hierarchy when those preferences are on. Reader and media surfaces must not rely on motion or translucency alone to convey state.
+
+## Design System Routing (for agents)
+
+Visual source of truth: root `PRODUCT.md` + `DESIGN.md` (+ `.impeccable/design.json`). Trellis frontend tasks must load these before shaping UI.
+
+**Register dials (product, not marketing):**
+
+| Dial | Value | Meaning |
+| ---- | ----- | ------- |
+| Variance | 4–5 | Consistent shell grammar; media spaces vary atmosphere, not IA |
+| Motion | 3–4 | State / feedback only; no page theatre |
+| Density | 6–7 | Quiet density; less empty chrome air; content packs tighter than landing pages |
+
+**Skill routing when UI changes:**
+
+1. Always: `PRODUCT.md`, `DESIGN.md`, `.trellis/spec/frontend/*`, domain context if media.
+2. Primary craft: project `impeccable` skill with **product** register (`reference/product.md`); platform `adaptive` → also respect iOS/Android notes when chrome is native-adjacent.
+3. Implementation helpers: `tailwind`, `svelte-core-bestpractices`, `svelte-code-writer`.
+4. Do **not** default to landing/agency skills (`design-taste-frontend`, `high-end-visual-design`, `gpt-taste`, imagegen web/mobile landing packs) for app shell, library, reader, or player work — those skills optimize marketing variance and macro-whitespace that fight Adaptive Frame density.
+5. Use marketing/image skills only when the task is explicitly brand/marketing surface.

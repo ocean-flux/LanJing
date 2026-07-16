@@ -44,7 +44,7 @@
 
     if (!tauri) return 'browser-preview';
     if (platform.includes('mac')) return 'macos-overlay';
-    if (platform.includes('win')) return 'system-decorated';
+    if (platform.includes('win')) return 'windows-overlay';
     return 'system-decorated';
   }
 

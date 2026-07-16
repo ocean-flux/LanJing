@@ -66,7 +66,7 @@ describe('resolveShellMode', () => {
       orientation: 'landscape',
       keyboard: true,
       touch: false,
-      windowControls: 'system-decorated',
+      windowControls: 'windows-overlay',
     });
   });
 });

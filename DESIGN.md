@@ -133,6 +133,8 @@ The system rejects generic SaaS dashboard kits, content-farm feed noise, scraper
 - Adaptive shell metrics (rail, bottom nav, safe area, mini-player) over one fluid layout
 - Quiet density: compact controls, tight section rhythm, no empty hero air in app chrome
 
+**Agent taste gate (product register):** Before shipping UI, reject outputs that would pass a marketing “premium landing” checklist but fail this product one: oversized hero padding in app chrome, gradient text, side-stripe cards, decorative glass, Inter-as-brand, Lucide used as decoration only, multi-card identical grids as discovery default, or motion that does not change state. Prefer Linear/Books-like calm tools over Awwwards portfolio energy.
+
 ## 2. Colors
 
 Warm-neutral canvas with a single copper-lantern accent. Light and dark share roles; dark deepens canvas toward cool charcoal while ink flips to warm paper.

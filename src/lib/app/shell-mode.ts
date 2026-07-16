@@ -68,8 +68,11 @@ function resolvePlatformKind(userAgent: string): PlatformKind {
 
 function resolveWindowControls(kind: PlatformKind, tauri: boolean): NativeWindowControlMode {
   if (!tauri) return 'browser-preview';
+  // macOS: system traffic lights + Overlay title bar (tauri.conf).
   if (kind === 'macos') return 'macos-overlay';
-  if (kind === 'windows') return 'system-decorated';
+  // Windows: tauri-plugin-window-controls injects native caption buttons.
+  if (kind === 'windows') return 'windows-overlay';
+  // Linux and others: keep system window decorations.
   return 'system-decorated';
 }
 
