@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_APPEARANCE_PACK,
   DEFAULT_APPEARANCE_PACK_ID,
   DEFAULT_MATERIAL_TRANSPARENCY,
   DEFAULT_TEXT_READER_THEME,
@@ -106,23 +105,31 @@ describe('theme preferences', () => {
   });
 
   it('marks default L2 appearance pack on the document element', () => {
-    expect(DEFAULT_APPEARANCE_PACK_ID).toBe('paper-lantern-precision');
-    expect(getAppearancePack()).toEqual(DEFAULT_APPEARANCE_PACK);
-    expect(document.documentElement.dataset.appearancePack).toBe('paper-lantern-precision');
+    expect(DEFAULT_APPEARANCE_PACK_ID).toBe('inkstone-precision');
+    expect(getAppearancePack().id).toBe('inkstone-precision');
+    expect(document.documentElement.dataset.appearancePack).toBe('inkstone-precision');
 
-    setAppearancePack({ id: 'paper-lantern-precision' });
-    expect(getAppearancePack().id).toBe('paper-lantern-precision');
-    expect(document.documentElement.dataset.appearancePack).toBe('paper-lantern-precision');
+    setAppearancePack({ id: 'inkstone-precision' });
+    expect(getAppearancePack().id).toBe('inkstone-precision');
+    expect(document.documentElement.dataset.appearancePack).toBe('inkstone-precision');
   });
 
-  it('no-ops non-default appearance packs in production', () => {
-    setAppearancePack({ id: 'paper-lantern-precision' });
-    const before = getAppearancePack();
+  it('switches to cold-cinnabar builtin pack and maps legacy paper-lantern id', () => {
+    setAppearancePack({ id: 'cold-cinnabar' });
+    expect(getAppearancePack().id).toBe('cold-cinnabar');
+    expect(document.documentElement.dataset.appearancePack).toBe('cold-cinnabar');
+    expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#c45a3c');
 
-    // 未来多 pack id 预留；生产缝忽略它们。
+    setAppearancePack({ id: 'paper-lantern-precision' as AppearancePack['id'] });
+    expect(getAppearancePack().id).toBe('inkstone-precision');
+    expect(document.documentElement.dataset.appearancePack).toBe('inkstone-precision');
+  });
+
+  it('maps unknown appearance packs to default inkstone', () => {
+    setAppearancePack({ id: 'inkstone-precision' });
     setAppearancePack({ id: 'future-pack' as AppearancePack['id'] });
 
-    expect(getAppearancePack()).toEqual(before);
+    expect(getAppearancePack().id).toBe('inkstone-precision');
     expect(document.documentElement.dataset.appearancePack).toBe(DEFAULT_APPEARANCE_PACK_ID);
   });
 

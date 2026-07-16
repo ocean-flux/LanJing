@@ -1,21 +1,32 @@
-// 主题 store：支持 light / dark / system 三种模式
-// 使用 Svelte 5 runes（.svelte.ts 中 $state 可用于模块顶层）
+// 主题 store：L0 light/dark/system + L2 内置 appearance pack（墨砚默认 / 冷银朱）
 import { browser } from '$app/environment';
+import {
+  APPEARANCE_PACK_TOKENS,
+  DEFAULT_APPEARANCE_PACK_ID,
+  normalizeAppearancePackId,
+  type AppearancePackId,
+  type AppearanceTokenMap,
+} from './appearance-packs';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 export type MaterialTransparency = 'standard' | 'low';
 
-/** L2 气质包 id。生产仅默认包。 */
-export type AppearancePackId = 'paper-lantern-precision';
+export type { AppearancePackId } from './appearance-packs';
+export {
+  BUILTIN_APPEARANCE_PACK_IDS,
+  DEFAULT_APPEARANCE_PACK_ID,
+  LEGACY_APPEARANCE_PACK_MAP,
+  normalizeAppearancePackId,
+} from './appearance-packs';
 
 /**
- * L2 Appearance pack 缝：只重绑 L1 角色 token 值。
- * 多包 UI 不在范围；生产 `set` 仅接受默认包。
+ * L2 Appearance pack：内置墨砚 / 冷银朱；只重绑 L1 角色值。
+ * 无用户自定义商店；纸灯 id 经 normalize 映射到默认墨砚。
  */
 export type AppearancePack = {
   id: AppearancePackId;
-  /** 预留：角色 → 值；默认包走 CSS，此表可空。 */
+  /** 预留覆盖；内置包主色表在 appearance-packs.ts */
   tokens?: Readonly<Record<string, string>>;
 };
 
@@ -31,10 +42,9 @@ export type TextReaderThemePreference = {
 };
 
 const STORAGE_KEY = 'theme';
+const APPEARANCE_PACK_STORAGE_KEY = 'appearance-pack';
 const TEXT_READER_THEME_STORAGE_KEY = 'text-reader-theme';
 const MATERIAL_TRANSPARENCY_STORAGE_KEY = 'material-transparency';
-
-export const DEFAULT_APPEARANCE_PACK_ID: AppearancePackId = 'paper-lantern-precision';
 
 export const DEFAULT_APPEARANCE_PACK: AppearancePack = {
   id: DEFAULT_APPEARANCE_PACK_ID,
@@ -59,6 +69,13 @@ function readStoredMode(): ThemeMode {
   return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
 }
 
+function readStoredAppearancePackId(): AppearancePackId {
+  if (!browser) return DEFAULT_APPEARANCE_PACK_ID;
+  const stored = localStorage.getItem(APPEARANCE_PACK_STORAGE_KEY);
+  if (!stored) return DEFAULT_APPEARANCE_PACK_ID;
+  return normalizeAppearancePackId(stored);
+}
+
 function readSystemTheme(): ResolvedTheme {
   if (!browser) return 'light';
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -75,10 +92,28 @@ function applyTheme(theme: ResolvedTheme): void {
   document.documentElement.classList.toggle('dark', theme === 'dark');
 }
 
-function applyAppearancePack(pack: AppearancePack): void {
+function writePackTokens(tokens: AppearanceTokenMap): void {
   if (!browser) return;
-  // 只标记 pack id；L1 CSS 变量名保持稳定，包只重绑值。
-  document.documentElement.dataset.appearancePack = pack.id;
+  const root = document.documentElement;
+  for (const [key, value] of Object.entries(tokens) as [keyof AppearanceTokenMap, string][]) {
+    root.style.setProperty(key, value);
+  }
+}
+
+function applyAppearancePack(pack: AppearancePack, resolved: ResolvedTheme): void {
+  if (!browser) return;
+  const id = normalizeAppearancePackId(pack.id);
+  document.documentElement.dataset.appearancePack = id;
+  const table = APPEARANCE_PACK_TOKENS[id][resolved];
+  writePackTokens(table);
+  // 用户 tokens 覆盖（预留）
+  if (pack.tokens) {
+    for (const [key, value] of Object.entries(pack.tokens)) {
+      if (key.startsWith('--') && typeof value === 'string') {
+        document.documentElement.style.setProperty(key, value);
+      }
+    }
+  }
 }
 
 function applyMaterialTransparency(value: MaterialTransparency): void {
@@ -143,12 +178,18 @@ function persistMaterialTransparency(value: MaterialTransparency): void {
   localStorage.setItem(MATERIAL_TRANSPARENCY_STORAGE_KEY, value);
 }
 
-// 模块级 $state：单例，全应用共享
+function persistAppearancePackId(id: AppearancePackId): void {
+  if (!browser) return;
+  localStorage.setItem(APPEARANCE_PACK_STORAGE_KEY, id);
+}
+
 const initialMode = readStoredMode();
 const initialResolved = resolveTheme(initialMode);
 const initialTextReaderTheme = readStoredTextReaderTheme();
 const initialMaterialTransparency = readStoredMaterialTransparency();
-const initialAppearancePack = DEFAULT_APPEARANCE_PACK;
+const initialAppearancePack: AppearancePack = {
+  id: readStoredAppearancePackId(),
+};
 
 let _mode = $state<ThemeMode>(initialMode);
 let _currentTheme = $state<ResolvedTheme>(initialResolved);
@@ -156,21 +197,19 @@ let _textReaderTheme = $state<TextReaderThemePreference>(initialTextReaderTheme)
 let _materialTransparency = $state<MaterialTransparency>(initialMaterialTransparency);
 let _appearancePack = $state<AppearancePack>(initialAppearancePack);
 
-// 初始应用到 DOM
 applyTheme(initialResolved);
-applyAppearancePack(initialAppearancePack);
+applyAppearancePack(initialAppearancePack, initialResolved);
 applyMaterialTransparency(initialMaterialTransparency);
 
-// 统一的同步逻辑：持久化、重新解析、应用到 DOM
 function syncMode(value: ThemeMode): void {
   _mode = value;
   if (browser) localStorage.setItem(STORAGE_KEY, value);
   const resolved = resolveTheme(value);
   _currentTheme = resolved;
   applyTheme(resolved);
+  applyAppearancePack(_appearancePack, resolved);
 }
 
-// 监听系统主题变化，仅在 system 模式下同步 currentTheme 与 DOM
 if (browser) {
   const media = window.matchMedia('(prefers-color-scheme: dark)');
   media.addEventListener('change', (event) => {
@@ -178,6 +217,7 @@ if (browser) {
     const resolved: ResolvedTheme = event.matches ? 'dark' : 'light';
     _currentTheme = resolved;
     applyTheme(resolved);
+    applyAppearancePack(_appearancePack, resolved);
   });
 }
 
@@ -240,7 +280,7 @@ export function syncMaterialTransparencyForA11y(reducedTransparency: boolean): v
   applyMaterialTransparency(effective);
 }
 
-/** 读取当前 L2 Appearance pack（生产仅默认包） */
+/** 读取当前 L2 Appearance pack */
 export function getAppearancePack(): AppearancePack {
   return {
     id: _appearancePack.id,
@@ -250,13 +290,18 @@ export function getAppearancePack(): AppearancePack {
 
 /**
  * 设置 L2 Appearance pack。
- * 生产仅接受默认包 `paper-lantern-precision`；其它 id 为 no-op，预留给后续多包任务。
+ * 接受内置 `inkstone-precision` / `cold-cinnabar`；历史纸灯 id 映射为墨砚；未知 id no-op。
  */
-export function setAppearancePack(pack: AppearancePack): void {
-  if (pack.id !== DEFAULT_APPEARANCE_PACK_ID) return;
+export function setAppearancePack(
+  pack: AppearancePack | { id: string; tokens?: AppearancePack['tokens'] },
+): void {
+  // 未知 id / 历史纸灯 → 默认墨砚；内置冷银朱可切换
+  const normalized = normalizeAppearancePackId(pack.id);
+
   _appearancePack = {
-    id: pack.id,
+    id: normalized,
     ...(pack.tokens ? { tokens: { ...pack.tokens } } : {}),
   };
-  applyAppearancePack(_appearancePack);
+  persistAppearancePackId(normalized);
+  applyAppearancePack(_appearancePack, _currentTheme);
 }

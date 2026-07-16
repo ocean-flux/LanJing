@@ -2,31 +2,34 @@
 name: LanJing / 览境
 description: Adaptive-frame local media workbench — semantic surfaces, lantern accent, quiet density
 colors:
-  canvas: '#f5f4f1'
+  canvas: '#f4f5f5'
   canvas-elevated: '#ffffff'
-  ink: '#1f1e1c'
-  ink-muted: '#706b64'
-  ink-subtle: '#8a847c'
+  ink: '#171a1b'
+  ink-muted: '#5c6568'
+  ink-subtle: '#7a8488'
   surface-1: '#ffffff'
-  surface-2: '#faf9f6'
-  surface-3: '#f0efea'
-  hairline: '#1f1e1c1a'
-  lantern: '#c2683a'
-  lantern-strong: '#9a4e2c'
-  lantern-hover: '#8a4624'
-  lantern-soft: '#c2683a24'
-  lantern-tint: '#eee0d7'
-  on-lantern: '#fdf8f1'
-  reader-canvas: '#f4efe4'
+  surface-2: '#f7f8f8'
+  surface-3: '#eef0f0'
+  hairline: '#171a1b1a'
+  lantern: '#2a6f7a'
+  lantern-strong: '#1d5560'
+  lantern-hover: '#174850'
+  lantern-soft: '#2a6f7a24'
+  lantern-tint: '#dce8ea'
+  on-lantern: '#f4fbfc'
+  reader-canvas: '#f3efe6'
   reader-ink: '#211e1a'
-  media-void: '#e3e1dc'
+  media-void: '#e2e6e7'
   positive: '#557d59'
   warning: '#9f6d1e'
   danger: '#b83f4e'
-  canvas-dark: '#141417'
-  ink-dark: '#e8e6e1'
-  surface-1-dark: '#1b1b1f'
-  lantern-dark-ring: '#c2683a57'
+  canvas-dark: '#0e1214'
+  ink-dark: '#e6eceb'
+  surface-1-dark: '#151a1c'
+  lantern-dark: '#5fa8b4'
+  lantern-dark-ring: '#5fa8b457'
+  cold-cinnabar-lantern: '#c45a3c'
+  cold-cinnabar-strong: '#9a3f2a'
 typography:
   ui:
     fontFamily: "Outfit, Inter, ui-sans-serif, system-ui, 'Microsoft YaHei', sans-serif"
@@ -120,7 +123,7 @@ components:
 
 LanJing is a product UI system for a local cross-media workbench. The Adaptive Frame is the constant: product orientation, navigation grammar, and semantic color roles stay stable. **Shell chrome is premium by quiet precision** — not by heavy atmosphere. **Immersion is modal**: novel/music/reader/player may change paper, void, and density **inside the content surface**; rail, titlebar, and bottom nav keep the same grammar and role names.
 
-Default appearance pack: **纸灯精密 (Paper-Lantern Precision)** — warm-paper neutrals, copper lantern accent ≤~10% mass, compact controls, tonal elevation. Themes may later rebind hex via L2 packs; **roles** (`canvas`, `ink`, `lantern`, `reader-*`, `media-void`) are the contract, not any one hex romance.
+Default appearance pack: **墨砚精密 (Inkstone Precision)** — near-neutral canvas, teal-ink lantern accent ≤~10% mass, compact controls, tonal elevation. Second built-in pack **冷银朱 (Cold Cinnabar)** rebinds the same L1 roles to silver neutrals + cinnabar accent. Legacy `paper-lantern-precision` maps to inkstone. **Roles** (`canvas`, `ink`, `lantern`, `reader-*`, `media-void`) are the contract, not any one hex romance.
 
 The system rejects generic SaaS dashboard kits, content-farm feed noise, scraper-tool chrome, multi-player focus fights, and production UIs stuffed with fake fullness. Motion exists for state, not page theatre. Reduced motion and reduced transparency remain fully operable.
 
@@ -148,11 +151,11 @@ The system rejects generic SaaS dashboard kits, content-farm feed noise, scraper
 
 ## 2. Colors
 
-Warm-neutral canvas with a single copper-lantern accent. Light and dark share roles; dark deepens canvas toward cool charcoal while ink flips to warm paper.
+Near-neutral canvas with a single teal-ink lantern accent (default pack). Light and dark share roles; dark deepens canvas toward cool charcoal; reader paper stays slightly warmer than shell chrome.
 
 ### Primary
 
-- **Lantern** (`#c2683a`): brand warmth; soft fills (`lantern-soft`), tints, and hover glows — not full-bleed backgrounds.
+- **Lantern** (`#2a6f7a` default inkstone; `#c45a3c` cold-cinnabar): primary accent; soft fills (`lantern-soft`), tints, and focus — not full-bleed backgrounds.
 - **Lantern Strong** (`#9a4e2c`): primary button / high-emphasis action fill (`primary`).
 - **Lantern Hover** (`#8a4624`): pressed/hover deepen on lantern actions.
 - **On Lantern** (`#fdf8f1`): text/icon on lantern fills.
@@ -297,4 +300,4 @@ Handfeel: **quiet and precise**, compact padding, fewer empty bands. shadcn-svel
 - **Don't** inflate whitespace to look “premium” while hiding information density users need.
 - **Don't** put heavy atmosphere (cinematic gradients, full media tint, decorative glass stacks) on shell chrome.
 - **Don't** make L0 light/dark a different information architecture than each other.
-- **Don't** ship multiple L2 packs in production until a dedicated multi-pack task; keep the AppearancePack seam typed and default-only.
+- **Don't** invent a second shell language beside L1 roles; built-in packs only rebind hex (default inkstone + cold-cinnabar data). No user theme marketplace in this phase.

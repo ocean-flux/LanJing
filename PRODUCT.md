@@ -52,17 +52,19 @@ Calm, craft-minded, continuous. Voice is precise and quiet, never hype.
 
 ## Theme & Appearance Model
 
-| Layer                  | What                                                              | Production now                                                            |
-| ---------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **L0 Appearance mode** | `light` \| `dark` \| `system`                                     | Required; user explicit choice beats system                               |
-| **L1 Semantic roles**  | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever                                   |
-| **L2 Appearance pack** | Rebind L1 hex/material only; one IA                               | **API reserved**; default pack only: **纸灯精密 Paper-Lantern Precision** |
-| **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode            | Allowed as presentation, not a second shell language                      |
-| **Reader prefs**       | Independent colorScheme/font/size/…                               | Independent of L0; survives app theme changes                             |
+| Layer                  | What                                                              | Production now                                                                                                         |
+| ---------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **L0 Appearance mode** | `light` \| `dark` \| `system`                                     | Required; user explicit choice beats system                                                                            |
+| **L1 Semantic roles**  | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever                                                                                |
+| **L2 Appearance pack** | Rebind L1 hex/material only; one IA                               | Default **墨砚精密 `inkstone-precision`**; second built-in **冷银朱 `cold-cinnabar`** (data/API; settings UI optional) |
+| **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode            | Allowed as presentation, not a second shell language                                                                   |
+| **Reader prefs**       | Independent colorScheme/font/size/…                               | Independent of L0; survives app theme changes                                                                          |
 
-**Default pack character:** warm-paper neutrals + copper lantern accent at ≤~10% mass; quiet precision chrome; not cool-SaaS gray, not media-neon void as the global shell.
+**Default pack character:** near-neutral canvas + teal-ink lantern accent at ≤~10% mass; quiet precision chrome; reader paper slightly warmer than shell; not cream+copper dual-warm, not media-neon void as global shell.
 
-**Out of scope until a dedicated task:** shipping multiple user-selectable L2 packs, full theme marketplace, per-source skins.
+**Legacy:** `paper-lantern-precision` maps to default inkstone; not an official option.
+
+**Out of scope for now:** user-authored theme marketplace, cloud sync, per-source skins, cover-derived shell tint.
 
 ## Accessibility & Inclusion
 

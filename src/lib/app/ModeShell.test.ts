@@ -27,7 +27,7 @@ const contract: ModeShellContract = {
   },
   theme: {
     mode: 'dark',
-    appearancePack: 'paper-lantern-precision',
+    appearancePack: 'inkstone-precision',
     reducedMotion: false,
     reducedTransparency: false,
   },
@@ -69,7 +69,7 @@ describe('ModeShell', () => {
     expect(shell.getAttribute('data-platform')).toBe('android');
     expect(shell.getAttribute('data-orientation')).toBe('portrait');
     expect(shell.getAttribute('data-theme-mode')).toBe('dark');
-    expect(shell.getAttribute('data-appearance-pack')).toBe('paper-lantern-precision');
+    expect(shell.getAttribute('data-appearance-pack')).toBe('inkstone-precision');
     expect(shell.getAttribute('data-ambient-audio')).toBe('paused');
     expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
   });
@@ -104,7 +104,7 @@ describe('ModeShell', () => {
     expect(shell.getAttribute('data-orientation')).toBe('landscape');
     expect(shell.getAttribute('data-foreground-activity')).toBe('reader:chapter-7');
     expect(shell.getAttribute('data-theme-mode')).toBe('dark');
-    expect(shell.getAttribute('data-appearance-pack')).toBe('paper-lantern-precision');
+    expect(shell.getAttribute('data-appearance-pack')).toBe('inkstone-precision');
     expect(shell.getAttribute('data-ambient-audio')).toBe('paused');
   });
 
