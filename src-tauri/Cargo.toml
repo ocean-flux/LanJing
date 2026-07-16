@@ -93,7 +93,7 @@ tauri-plugin-notification = { workspace = true }
 tauri-plugin-opener = "2.5.4"
 tauri-plugin-os = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
-tauri-plugin-store = "2.4.3"
+tauri-plugin-svelte = "3"
 tauri-plugin-window-state = { workspace = true }
 # Workspace crate
 lj-core = { path = "crates/lj-core" }

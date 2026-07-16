@@ -3,6 +3,7 @@ import {
   DEFAULT_APPEARANCE_PACK_ID,
   DEFAULT_MATERIAL_TRANSPARENCY,
   DEFAULT_TEXT_READER_THEME,
+  WEB_PREFERENCES_STORAGE_KEY,
   getAppearancePack,
   getCurrentTheme,
   getMaterialTransparency,
@@ -18,6 +19,16 @@ import {
   type AppearancePack,
 } from './theme.svelte';
 
+function readWebPrefs(): { mode?: string; appearancePackId?: string } {
+  const raw = localStorage.getItem(WEB_PREFERENCES_STORAGE_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as { mode?: string; appearancePackId?: string };
+  } catch {
+    return {};
+  }
+}
+
 describe('theme preferences', () => {
   it('keeps light, dark, and system mode reflected on the document element', () => {
     setMode('light');
@@ -25,40 +36,40 @@ describe('theme preferences', () => {
     expect(getCurrentTheme()).toBe('light');
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(localStorage.getItem('theme')).toBe('light');
+    expect(readWebPrefs().mode).toBe('light');
 
     setMode('dark');
     expect(getMode()).toBe('dark');
     expect(getCurrentTheme()).toBe('dark');
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('theme')).toBe('dark');
+    expect(readWebPrefs().mode).toBe('dark');
 
     toggle();
     expect(getMode()).toBe('light');
     expect(getCurrentTheme()).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(localStorage.getItem('theme')).toBe('light');
+    expect(readWebPrefs().mode).toBe('light');
 
     setMode('system');
     expect(getMode()).toBe('system');
     // setup 的 matchMedia 默认 light；显式 mode 在 storage 仍为 system
     expect(getCurrentTheme()).toBe('light');
     expect(document.documentElement.dataset.theme).toBe('light');
-    expect(localStorage.getItem('theme')).toBe('system');
+    expect(readWebPrefs().mode).toBe('system');
   });
 
   it('keeps explicit L0 mode preferred over system preference in storage and resolve path', () => {
     setMode('dark');
     expect(getMode()).toBe('dark');
     expect(getCurrentTheme()).toBe('dark');
-    expect(localStorage.getItem('theme')).toBe('dark');
+    expect(readWebPrefs().mode).toBe('dark');
 
     // 再断言：显式 dark 不塌成 system；resolve 不走 OS 路径。
     setMode('light');
     expect(getMode()).toBe('light');
     expect(getCurrentTheme()).toBe('light');
-    expect(localStorage.getItem('theme')).toBe('light');
+    expect(readWebPrefs().mode).toBe('light');
     expect(getMode()).not.toBe('system');
   });
 

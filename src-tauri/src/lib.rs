@@ -19,7 +19,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_store::Builder::default().build())
+        // 主题/偏好：@tauri-store/svelte 后端（替换官方 plugin-store）
+        .plugin(tauri_plugin_svelte::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {

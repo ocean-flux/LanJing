@@ -1,5 +1,7 @@
-// 主题 store：L0 light/dark/system + L2 内置 appearance pack（墨砚默认 / 冷银朱）
+// 主题偏好：L0 + L2 pack + 阅读器 + 材质。
+// 桌面：@tauri-store/svelte RuneStore 落盘；Web/Vitest：localStorage 回退（不在模块顶层 new RuneStore）。
 import { browser } from '$app/environment';
+import { isTauri } from '@tauri-apps/api/core';
 import {
   APPEARANCE_PACK_TOKENS,
   DEFAULT_APPEARANCE_PACK_ID,
@@ -22,11 +24,10 @@ export {
 
 /**
  * L2 Appearance pack：内置墨砚 / 冷银朱；只重绑 L1 角色值。
- * 无用户自定义商店；纸灯 id 经 normalize 映射到默认墨砚。
+ * 纸灯 id 经 normalize 映射到默认墨砚。
  */
 export type AppearancePack = {
   id: AppearancePackId;
-  /** 预留覆盖；内置包主色表在 appearance-packs.ts */
   tokens?: Readonly<Record<string, string>>;
 };
 
@@ -41,10 +42,20 @@ export type TextReaderThemePreference = {
   pageMode: 'scroll' | 'paged';
 };
 
-const STORAGE_KEY = 'theme';
-const APPEARANCE_PACK_STORAGE_KEY = 'appearance-pack';
-const TEXT_READER_THEME_STORAGE_KEY = 'text-reader-theme';
-const MATERIAL_TRANSPARENCY_STORAGE_KEY = 'material-transparency';
+/** 持久化偏好状态形状（RuneStore / localStorage 共用） */
+export type ThemePreferenceState = {
+  mode: ThemeMode;
+  appearancePackId: AppearancePackId;
+  materialTransparency: MaterialTransparency;
+  textReaderTheme: TextReaderThemePreference;
+};
+
+const LEGACY_MODE_KEY = 'theme';
+const LEGACY_PACK_KEY = 'appearance-pack';
+const LEGACY_READER_KEY = 'text-reader-theme';
+const LEGACY_MATERIAL_KEY = 'material-transparency';
+/** Web/测试回退键；桌面由 RuneStore 文件承担 */
+export const WEB_PREFERENCES_STORAGE_KEY = 'lanjing-preferences-v1';
 
 export const DEFAULT_APPEARANCE_PACK: AppearancePack = {
   id: DEFAULT_APPEARANCE_PACK_ID,
@@ -63,63 +74,19 @@ export const DEFAULT_TEXT_READER_THEME: TextReaderThemePreference = {
 
 export const DEFAULT_MATERIAL_TRANSPARENCY: MaterialTransparency = 'standard';
 
-function readStoredMode(): ThemeMode {
-  if (!browser) return 'system';
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+export const DEFAULT_THEME_PREFERENCE_STATE: ThemePreferenceState = {
+  mode: 'system',
+  appearancePackId: DEFAULT_APPEARANCE_PACK_ID,
+  materialTransparency: DEFAULT_MATERIAL_TRANSPARENCY,
+  textReaderTheme: { ...DEFAULT_TEXT_READER_THEME },
+};
+
+function isThemeMode(value: unknown): value is ThemeMode {
+  return value === 'light' || value === 'dark' || value === 'system';
 }
 
-function readStoredAppearancePackId(): AppearancePackId {
-  if (!browser) return DEFAULT_APPEARANCE_PACK_ID;
-  const stored = localStorage.getItem(APPEARANCE_PACK_STORAGE_KEY);
-  if (!stored) return DEFAULT_APPEARANCE_PACK_ID;
-  return normalizeAppearancePackId(stored);
-}
-
-function readSystemTheme(): ResolvedTheme {
-  if (!browser) return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function resolveTheme(mode: ThemeMode): ResolvedTheme {
-  return mode === 'system' ? readSystemTheme() : mode;
-}
-
-function applyTheme(theme: ResolvedTheme): void {
-  if (!browser) return;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.style.colorScheme = theme;
-  document.documentElement.classList.toggle('dark', theme === 'dark');
-}
-
-function writePackTokens(tokens: AppearanceTokenMap): void {
-  if (!browser) return;
-  const root = document.documentElement;
-  for (const [key, value] of Object.entries(tokens) as [keyof AppearanceTokenMap, string][]) {
-    root.style.setProperty(key, value);
-  }
-}
-
-function applyAppearancePack(pack: AppearancePack, resolved: ResolvedTheme): void {
-  if (!browser) return;
-  const id = normalizeAppearancePackId(pack.id);
-  document.documentElement.dataset.appearancePack = id;
-  const table = APPEARANCE_PACK_TOKENS[id][resolved];
-  writePackTokens(table);
-  // 用户 tokens 覆盖（预留）
-  if (pack.tokens) {
-    for (const [key, value] of Object.entries(pack.tokens)) {
-      if (key.startsWith('--') && typeof value === 'string') {
-        document.documentElement.style.setProperty(key, value);
-      }
-    }
-  }
-}
-
-function applyMaterialTransparency(value: MaterialTransparency): void {
-  if (!browser) return;
-  document.documentElement.dataset.materialTransparency = value;
-  document.documentElement.classList.toggle('low-transparency', value === 'low');
+function isMaterial(value: unknown): value is MaterialTransparency {
+  return value === 'standard' || value === 'low';
 }
 
 function isTextReaderTheme(value: unknown): value is TextReaderThemePreference {
@@ -147,83 +114,243 @@ function isTextReaderTheme(value: unknown): value is TextReaderThemePreference {
   );
 }
 
-function readStoredTextReaderTheme(): TextReaderThemePreference {
-  if (!browser) return DEFAULT_TEXT_READER_THEME;
+function migrateLegacyLocalStorage(): Partial<ThemePreferenceState> {
+  if (!browser) return {};
+  const next: Partial<ThemePreferenceState> = {};
+
+  const mode = localStorage.getItem(LEGACY_MODE_KEY);
+  if (isThemeMode(mode)) next.mode = mode;
+
+  const pack = localStorage.getItem(LEGACY_PACK_KEY);
+  if (pack) next.appearancePackId = normalizeAppearancePackId(pack);
+
+  const material = localStorage.getItem(LEGACY_MATERIAL_KEY);
+  if (isMaterial(material)) next.materialTransparency = material;
 
   try {
-    const stored = localStorage.getItem(TEXT_READER_THEME_STORAGE_KEY);
-    if (!stored) return DEFAULT_TEXT_READER_THEME;
-
-    const parsed: unknown = JSON.parse(stored);
-    return isTextReaderTheme(parsed) ? parsed : DEFAULT_TEXT_READER_THEME;
+    const raw = localStorage.getItem(LEGACY_READER_KEY);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (isTextReaderTheme(parsed)) next.textReaderTheme = parsed;
+    }
   } catch {
-    return DEFAULT_TEXT_READER_THEME;
+    /* ignore */
+  }
+
+  return next;
+}
+
+function readWebFallback(): Partial<ThemePreferenceState> {
+  if (!browser) return {};
+  try {
+    const raw = localStorage.getItem(WEB_PREFERENCES_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    const o = parsed as Record<string, unknown>;
+    const next: Partial<ThemePreferenceState> = {};
+    if (isThemeMode(o.mode)) next.mode = o.mode;
+    if (typeof o.appearancePackId === 'string') {
+      next.appearancePackId = normalizeAppearancePackId(o.appearancePackId);
+    }
+    if (isMaterial(o.materialTransparency)) next.materialTransparency = o.materialTransparency;
+    if (isTextReaderTheme(o.textReaderTheme)) next.textReaderTheme = o.textReaderTheme;
+    return next;
+  } catch {
+    return {};
   }
 }
 
-function persistTextReaderTheme(value: TextReaderThemePreference): void {
-  if (!browser) return;
-  localStorage.setItem(TEXT_READER_THEME_STORAGE_KEY, JSON.stringify(value));
+function buildInitialState(): ThemePreferenceState {
+  const legacy = migrateLegacyLocalStorage();
+  const web = readWebFallback();
+  return {
+    mode: web.mode ?? legacy.mode ?? DEFAULT_THEME_PREFERENCE_STATE.mode,
+    appearancePackId: normalizeAppearancePackId(
+      web.appearancePackId ?? legacy.appearancePackId ?? DEFAULT_APPEARANCE_PACK_ID,
+    ),
+    materialTransparency:
+      web.materialTransparency ?? legacy.materialTransparency ?? DEFAULT_MATERIAL_TRANSPARENCY,
+    textReaderTheme: {
+      ...DEFAULT_TEXT_READER_THEME,
+      ...(web.textReaderTheme ?? legacy.textReaderTheme ?? {}),
+    },
+  };
 }
 
-function readStoredMaterialTransparency(): MaterialTransparency {
-  if (!browser) return DEFAULT_MATERIAL_TRANSPARENCY;
+/** 运行时偏好（权威内存态）；Tauri 启动后与 RuneStore 双向同步 */
+const prefs = $state<ThemePreferenceState>(buildInitialState());
 
-  const stored = localStorage.getItem(MATERIAL_TRANSPARENCY_STORAGE_KEY);
-  return stored === 'standard' || stored === 'low' ? stored : DEFAULT_MATERIAL_TRANSPARENCY;
-}
-
-function persistMaterialTransparency(value: MaterialTransparency): void {
-  if (!browser) return;
-  localStorage.setItem(MATERIAL_TRANSPARENCY_STORAGE_KEY, value);
-}
-
-function persistAppearancePackId(id: AppearancePackId): void {
-  if (!browser) return;
-  localStorage.setItem(APPEARANCE_PACK_STORAGE_KEY, id);
-}
-
-const initialMode = readStoredMode();
-const initialResolved = resolveTheme(initialMode);
-const initialTextReaderTheme = readStoredTextReaderTheme();
-const initialMaterialTransparency = readStoredMaterialTransparency();
-const initialAppearancePack: AppearancePack = {
-  id: readStoredAppearancePackId(),
+type PreferenceRuneStore = {
+  state: ThemePreferenceState;
+  start: () => Promise<void>;
 };
 
-let _mode = $state<ThemeMode>(initialMode);
-let _currentTheme = $state<ResolvedTheme>(initialResolved);
-let _textReaderTheme = $state<TextReaderThemePreference>(initialTextReaderTheme);
-let _materialTransparency = $state<MaterialTransparency>(initialMaterialTransparency);
-let _appearancePack = $state<AppearancePack>(initialAppearancePack);
+let tauriRune: PreferenceRuneStore | null = null;
+let _currentTheme = $state<ResolvedTheme>('light');
+let _started = false;
 
-applyTheme(initialResolved);
-applyAppearancePack(initialAppearancePack, initialResolved);
-applyMaterialTransparency(initialMaterialTransparency);
+function readSystemTheme(): ResolvedTheme {
+  if (!browser) return 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
-function syncMode(value: ThemeMode): void {
-  _mode = value;
-  if (browser) localStorage.setItem(STORAGE_KEY, value);
-  const resolved = resolveTheme(value);
+function resolveTheme(mode: ThemeMode): ResolvedTheme {
+  return mode === 'system' ? readSystemTheme() : mode;
+}
+
+function applyTheme(theme: ResolvedTheme): void {
+  if (!browser) return;
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+}
+
+function writePackTokens(tokens: AppearanceTokenMap): void {
+  if (!browser) return;
+  const root = document.documentElement;
+  for (const [key, value] of Object.entries(tokens) as [keyof AppearanceTokenMap, string][]) {
+    root.style.setProperty(key, value);
+  }
+}
+
+function applyAppearancePackId(id: AppearancePackId, resolved: ResolvedTheme): void {
+  if (!browser) return;
+  const normalized = normalizeAppearancePackId(id);
+  document.documentElement.dataset.appearancePack = normalized;
+  writePackTokens(APPEARANCE_PACK_TOKENS[normalized][resolved]);
+}
+
+function applyMaterialTransparency(value: MaterialTransparency): void {
+  if (!browser) return;
+  document.documentElement.dataset.materialTransparency = value;
+  document.documentElement.classList.toggle('low-transparency', value === 'low');
+}
+
+function applyAllFromPreferenceState(): void {
+  prefs.appearancePackId = normalizeAppearancePackId(prefs.appearancePackId);
+  const resolved = resolveTheme(prefs.mode);
   _currentTheme = resolved;
   applyTheme(resolved);
-  applyAppearancePack(_appearancePack, resolved);
+  applyAppearancePackId(prefs.appearancePackId, resolved);
+  applyMaterialTransparency(prefs.materialTransparency);
+}
+
+function persistWebFallback(): void {
+  if (!browser) return;
+  localStorage.setItem(
+    WEB_PREFERENCES_STORAGE_KEY,
+    JSON.stringify({
+      mode: prefs.mode,
+      appearancePackId: prefs.appearancePackId,
+      materialTransparency: prefs.materialTransparency,
+      textReaderTheme: prefs.textReaderTheme,
+    }),
+  );
+}
+
+function clearLegacyKeys(): void {
+  if (!browser) return;
+  localStorage.removeItem(LEGACY_MODE_KEY);
+  localStorage.removeItem(LEGACY_PACK_KEY);
+  localStorage.removeItem(LEGACY_READER_KEY);
+  localStorage.removeItem(LEGACY_MATERIAL_KEY);
+}
+
+function syncPrefsToTauriRune(): void {
+  if (!tauriRune) return;
+  tauriRune.state.mode = prefs.mode;
+  tauriRune.state.appearancePackId = prefs.appearancePackId;
+  tauriRune.state.materialTransparency = prefs.materialTransparency;
+  tauriRune.state.textReaderTheme = { ...prefs.textReaderTheme };
+}
+
+function afterStateMutation(): void {
+  applyAllFromPreferenceState();
+  if (tauriRune) {
+    syncPrefsToTauriRune();
+  } else {
+    persistWebFallback();
+  }
+}
+
+/**
+ * 启动偏好持久化：Tauri 惰性创建 RuneStore 并 start；Web 写 localStorage。
+ * 幂等；布局 onMount 应 await 一次。
+ */
+export async function startThemePreferences(): Promise<void> {
+  if (!browser) {
+    applyAllFromPreferenceState();
+    return;
+  }
+
+  applyAllFromPreferenceState();
+
+  if (_started) return;
+  _started = true;
+
+  if (isTauri()) {
+    try {
+      const { RuneStore } = await import('@tauri-store/svelte');
+      const rune = new RuneStore<ThemePreferenceState>(
+        'lanjing-preferences',
+        {
+          mode: prefs.mode,
+          appearancePackId: prefs.appearancePackId,
+          materialTransparency: prefs.materialTransparency,
+          textReaderTheme: { ...prefs.textReaderTheme },
+        },
+        {
+          autoStart: false,
+          saveOnChange: true,
+          saveStrategy: 'debounce',
+          saveInterval: 250,
+          syncStrategy: 'debounce',
+          syncInterval: 250,
+        },
+      );
+      await rune.start();
+      // 磁盘态覆盖内存（并规范化 pack id）
+      prefs.mode = isThemeMode(rune.state.mode) ? rune.state.mode : prefs.mode;
+      prefs.appearancePackId = normalizeAppearancePackId(
+        typeof rune.state.appearancePackId === 'string'
+          ? rune.state.appearancePackId
+          : prefs.appearancePackId,
+      );
+      if (isMaterial(rune.state.materialTransparency)) {
+        prefs.materialTransparency = rune.state.materialTransparency;
+      }
+      if (isTextReaderTheme(rune.state.textReaderTheme)) {
+        prefs.textReaderTheme = { ...rune.state.textReaderTheme };
+      }
+      tauriRune = rune;
+      applyAllFromPreferenceState();
+      clearLegacyKeys();
+    } catch (error) {
+      console.warn('[theme] RuneStore 启动失败，回退 localStorage', error);
+      persistWebFallback();
+    }
+  } else {
+    persistWebFallback();
+  }
 }
 
 if (browser) {
+  applyAllFromPreferenceState();
+
   const media = window.matchMedia('(prefers-color-scheme: dark)');
   media.addEventListener('change', (event) => {
-    if (_mode !== 'system') return;
+    if (prefs.mode !== 'system') return;
     const resolved: ResolvedTheme = event.matches ? 'dark' : 'light';
     _currentTheme = resolved;
     applyTheme(resolved);
-    applyAppearancePack(_appearancePack, resolved);
+    applyAppearancePackId(prefs.appearancePackId, resolved);
   });
 }
 
 /** 读取当前主题模式 */
 export function getMode(): ThemeMode {
-  return _mode;
+  return prefs.mode;
 }
 
 /** 读取当前已解析主题 */
@@ -233,75 +360,65 @@ export function getCurrentTheme(): ResolvedTheme {
 
 /** 设置主题模式 */
 export function setMode(value: ThemeMode): void {
-  syncMode(value);
+  prefs.mode = value;
+  afterStateMutation();
 }
 
 /** 在 light / dark 之间切换（基于当前已解析主题） */
 export function toggle(): void {
-  syncMode(_currentTheme === 'dark' ? 'light' : 'dark');
+  setMode(_currentTheme === 'dark' ? 'light' : 'dark');
 }
 
 /** 读取文本阅读器主题 */
 export function getTextReaderTheme(): TextReaderThemePreference {
-  return { ..._textReaderTheme };
+  return { ...prefs.textReaderTheme };
 }
 
 /** 整体替换文本阅读器主题 */
 export function setTextReaderTheme(value: TextReaderThemePreference): void {
-  _textReaderTheme = { ...value };
-  persistTextReaderTheme(_textReaderTheme);
+  prefs.textReaderTheme = { ...value };
+  afterStateMutation();
 }
 
 /** 局部更新文本阅读器主题 */
 export function updateTextReaderTheme(patch: Partial<TextReaderThemePreference>): void {
-  setTextReaderTheme({ ..._textReaderTheme, ...patch });
+  setTextReaderTheme({ ...prefs.textReaderTheme, ...patch });
 }
 
 /** 读取材质透明度 */
 export function getMaterialTransparency(): MaterialTransparency {
-  return _materialTransparency;
+  return prefs.materialTransparency;
 }
 
 /** 设置材质透明度 */
 export function setMaterialTransparency(value: MaterialTransparency): void {
-  _materialTransparency = value;
-  applyMaterialTransparency(value);
-  persistMaterialTransparency(value);
+  prefs.materialTransparency = value;
+  afterStateMutation();
 }
 
 /**
  * 按辅助偏好应用有效材质透明度，不改写用户存储偏好。
- * 系统 `prefers-reduced-transparency`（或壳层标志）强制实色；
- * 标志清除后 DOM 恢复已存储的用户偏好。
  */
 export function syncMaterialTransparencyForA11y(reducedTransparency: boolean): void {
   const effective: MaterialTransparency =
-    reducedTransparency || _materialTransparency === 'low' ? 'low' : 'standard';
+    reducedTransparency || prefs.materialTransparency === 'low' ? 'low' : 'standard';
   applyMaterialTransparency(effective);
 }
 
 /** 读取当前 L2 Appearance pack */
 export function getAppearancePack(): AppearancePack {
   return {
-    id: _appearancePack.id,
-    ...(_appearancePack.tokens ? { tokens: { ..._appearancePack.tokens } } : {}),
+    id: normalizeAppearancePackId(prefs.appearancePackId),
   };
 }
 
 /**
  * 设置 L2 Appearance pack。
- * 接受内置 `inkstone-precision` / `cold-cinnabar`；历史纸灯 id 映射为墨砚；未知 id no-op。
+ * 内置墨砚/冷银朱；历史纸灯与未知 id → 默认墨砚。
  */
 export function setAppearancePack(
   pack: AppearancePack | { id: string; tokens?: AppearancePack['tokens'] },
 ): void {
-  // 未知 id / 历史纸灯 → 默认墨砚；内置冷银朱可切换
-  const normalized = normalizeAppearancePackId(pack.id);
-
-  _appearancePack = {
-    id: normalized,
-    ...(pack.tokens ? { tokens: { ...pack.tokens } } : {}),
-  };
-  persistAppearancePackId(normalized);
-  applyAppearancePack(_appearancePack, _currentTheme);
+  prefs.appearancePackId = normalizeAppearancePackId(pack.id);
+  afterStateMutation();
 }
