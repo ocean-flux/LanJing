@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import { getMode } from '$lib/stores/theme.svelte';
+  import { getAppearancePack, getMode } from '$lib/stores/theme.svelte';
   import AppShell from './AppShell.svelte';
   import {
     resolveForegroundActivity,
@@ -60,6 +60,7 @@
       platform,
       theme: {
         mode: getMode(),
+        appearancePack: getAppearancePack().id,
         reducedMotion:
           typeof window !== 'undefined' &&
           window.matchMedia('(prefers-reduced-motion: reduce)').matches,

@@ -31,6 +31,8 @@ export type PlatformCapabilities = {
 
 export type ShellThemeState = {
   mode: 'light' | 'dark' | 'system';
+  /** L2 appearance pack id; production always default `paper-lantern-precision`. */
+  appearancePack: 'paper-lantern-precision';
   reducedMotion: boolean;
   reducedTransparency: boolean;
 };

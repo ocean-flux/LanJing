@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_APPEARANCE_PACK,
+  DEFAULT_APPEARANCE_PACK_ID,
   DEFAULT_MATERIAL_TRANSPARENCY,
   DEFAULT_TEXT_READER_THEME,
+  getAppearancePack,
   getCurrentTheme,
   getMaterialTransparency,
   getMode,
   getTextReaderTheme,
+  setAppearancePack,
   setMaterialTransparency,
   setMode,
   setTextReaderTheme,
   toggle,
   updateTextReaderTheme,
+  type AppearancePack,
 } from './theme.svelte';
 
 describe('theme preferences', () => {
@@ -20,23 +25,43 @@ describe('theme preferences', () => {
     expect(getCurrentTheme()).toBe('light');
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(localStorage.getItem('theme')).toBe('light');
 
     setMode('dark');
     expect(getMode()).toBe('dark');
     expect(getCurrentTheme()).toBe('dark');
     expect(document.documentElement.dataset.theme).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(localStorage.getItem('theme')).toBe('dark');
 
     toggle();
     expect(getMode()).toBe('light');
     expect(getCurrentTheme()).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(localStorage.getItem('theme')).toBe('light');
 
     setMode('system');
     expect(getMode()).toBe('system');
+    // setup matchMedia defaults to light; explicit mode stays in storage as system
     expect(getCurrentTheme()).toBe('light');
     expect(document.documentElement.dataset.theme).toBe('light');
+    expect(localStorage.getItem('theme')).toBe('system');
   });
+
+  it('keeps explicit L0 mode preferred over system preference in storage and resolve path', () => {
+    setMode('dark');
+    expect(getMode()).toBe('dark');
+    expect(getCurrentTheme()).toBe('dark');
+    expect(localStorage.getItem('theme')).toBe('dark');
+
+    // Re-assert: explicit dark does not collapse to system; resolve ignores OS path.
+    setMode('light');
+    expect(getMode()).toBe('light');
+    expect(getCurrentTheme()).toBe('light');
+    expect(localStorage.getItem('theme')).toBe('light');
+    expect(getMode()).not.toBe('system');
+  });
+
   it('keeps text reader defaults readable and independent', () => {
     expect(DEFAULT_TEXT_READER_THEME).toMatchObject({
       colorScheme: 'paper',
@@ -57,6 +82,47 @@ describe('theme preferences', () => {
       colorScheme: 'dark',
       fontSize: 20,
     });
+  });
+
+  it('keeps text reader theme when L0 app mode changes', () => {
+    setTextReaderTheme({
+      ...DEFAULT_TEXT_READER_THEME,
+      colorScheme: 'black',
+      fontSize: 22,
+      pageMode: 'paged',
+    });
+
+    setMode('light');
+    setMode('dark');
+    setMode('system');
+
+    expect(getTextReaderTheme()).toMatchObject({
+      colorScheme: 'black',
+      fontSize: 22,
+      pageMode: 'paged',
+      fontFamily: 'serif',
+    });
+  });
+
+  it('marks default L2 appearance pack on the document element', () => {
+    expect(DEFAULT_APPEARANCE_PACK_ID).toBe('paper-lantern-precision');
+    expect(getAppearancePack()).toEqual(DEFAULT_APPEARANCE_PACK);
+    expect(document.documentElement.dataset.appearancePack).toBe('paper-lantern-precision');
+
+    setAppearancePack({ id: 'paper-lantern-precision' });
+    expect(getAppearancePack().id).toBe('paper-lantern-precision');
+    expect(document.documentElement.dataset.appearancePack).toBe('paper-lantern-precision');
+  });
+
+  it('no-ops non-default appearance packs in production', () => {
+    setAppearancePack({ id: 'paper-lantern-precision' });
+    const before = getAppearancePack();
+
+    // Future multi-pack ids are reserved; production seam ignores them.
+    setAppearancePack({ id: 'future-pack' as AppearancePack['id'] });
+
+    expect(getAppearancePack()).toEqual(before);
+    expect(document.documentElement.dataset.appearancePack).toBe(DEFAULT_APPEARANCE_PACK_ID);
   });
 
   it('stores material transparency as a narrow two-option preference', () => {

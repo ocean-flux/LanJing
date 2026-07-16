@@ -70,6 +70,7 @@
   data-platform={shell.platform.kind}
   data-orientation={shell.platform.orientation}
   data-theme-mode={shell.theme.mode}
+  data-appearance-pack={shell.theme.appearancePack}
   data-ambient-audio={shell.ambientAudio?.state ?? 'none'}
 >
   <div class="relative z-10 flex min-h-0">

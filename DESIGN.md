@@ -136,13 +136,13 @@ The system rejects generic SaaS dashboard kits, content-farm feed noise, scraper
 
 **Theme layers (implement against these names):**
 
-| Layer | Responsibility |
-| ----- | -------------- |
-| L0 | `light` / `dark` / `system` on `documentElement` |
-| L1 | CSS variables for semantic roles (this file’s palette) |
-| L2 | Optional pack id rebinding L1 (default pack only in production until a multi-pack task) |
-| L3 | Mode-scoped presentation tokens for main/reader/player — never rename L1 |
-| Reader prefs | Independent of L0; paper/white/gray/dark/black etc. |
+| Layer        | Responsibility                                                                          |
+| ------------ | --------------------------------------------------------------------------------------- |
+| L0           | `light` / `dark` / `system` on `documentElement`                                        |
+| L1           | CSS variables for semantic roles (this file’s palette)                                  |
+| L2           | Optional pack id rebinding L1 (default pack only in production until a multi-pack task) |
+| L3           | Mode-scoped presentation tokens for main/reader/player — never rename L1                |
+| Reader prefs | Independent of L0; paper/white/gray/dark/black etc.                                     |
 
 **Agent taste gate (product register):** Reject marketing-landing “premium” that fights this system: oversized hero padding in app chrome, gradient text, side-stripe cards, decorative glass on shell, Inter-as-brand, Lucide as pure decoration, identical card grids as default discovery, shell mood filters, neon media-void as global chrome. Prefer precision tools (Linear/Books calm) over Awwwards portfolio energy. Immersive hero treatments belong in **mode content**, not in the global frame.
 

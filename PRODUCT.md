@@ -52,13 +52,13 @@ Calm, craft-minded, continuous. Voice is precise and quiet, never hype.
 
 ## Theme & Appearance Model
 
-| Layer | What | Production now |
-| ----- | ---- | -------------- |
-| **L0 Appearance mode** | `light` \| `dark` \| `system` | Required; user explicit choice beats system |
-| **L1 Semantic roles** | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever |
-| **L2 Appearance pack** | Rebind L1 hex/material only; one IA | **API reserved**; default pack only: **纸灯精密 Paper-Lantern Precision** |
-| **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode | Allowed as presentation, not a second shell language |
-| **Reader prefs** | Independent colorScheme/font/size/… | Independent of L0; survives app theme changes |
+| Layer                  | What                                                              | Production now                                                            |
+| ---------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **L0 Appearance mode** | `light` \| `dark` \| `system`                                     | Required; user explicit choice beats system                               |
+| **L1 Semantic roles**  | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever                                   |
+| **L2 Appearance pack** | Rebind L1 hex/material only; one IA                               | **API reserved**; default pack only: **纸灯精密 Paper-Lantern Precision** |
+| **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode            | Allowed as presentation, not a second shell language                      |
+| **Reader prefs**       | Independent colorScheme/font/size/…                               | Independent of L0; survives app theme changes                             |
 
 **Default pack character:** warm-paper neutrals + copper lantern accent at ≤~10% mass; quiet precision chrome; not cool-SaaS gray, not media-neon void as the global shell.
 
