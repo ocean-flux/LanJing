@@ -97,16 +97,16 @@
 </script>
 
 <section class="grid min-h-full gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-  <div class="surface-panel media-void relative min-h-[560px] overflow-hidden p-5 md:p-8">
-    <div class="relative flex min-h-[500px] flex-col justify-between gap-10">
-      <div class="max-w-5xl py-8 md:py-12">
-        <p class="text-sm font-semibold text-muted-foreground">{m.nav_library()}</p>
+  <div class="surface-panel media-void relative min-h-[320px] overflow-hidden p-5 md:p-6">
+    <div class="relative flex min-h-[280px] flex-col justify-between gap-8">
+      <div class="max-w-3xl py-4 md:py-6">
+        <p class="text-sm font-medium text-muted-foreground">{m.nav_library()}</p>
         <h1
-          class="mt-4 max-w-4xl text-balance text-5xl font-semibold tracking-[-0.055em] text-foreground md:text-7xl xl:text-8xl"
+          class="mt-2 max-w-2xl text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl"
         >
           {m.library_title()}
         </h1>
-        <p class="mt-6 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
           {m.library_desc()}
         </p>
       </div>

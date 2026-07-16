@@ -18,10 +18,20 @@
   };
 
   const navItems: NavItem[] = [
-    { key: 'realm', label: m.nav_realm(), href: '/', supporting: m.nav_realm() },
-    { key: 'apps', label: m.nav_apps(), href: '/apps', supporting: m.nav_apps() },
-    { key: 'sources', label: m.nav_sources(), href: '/sources', supporting: m.nav_sources() },
-    { key: 'library', label: m.nav_library(), href: '/library', supporting: m.nav_library() },
+    { key: 'realm', label: m.nav_realm(), href: '/', supporting: m.nav_realm_supporting() },
+    { key: 'apps', label: m.nav_apps(), href: '/apps', supporting: m.nav_apps_supporting() },
+    {
+      key: 'sources',
+      label: m.nav_sources(),
+      href: '/sources',
+      supporting: m.nav_sources_supporting(),
+    },
+    {
+      key: 'library',
+      label: m.nav_library(),
+      href: '/library',
+      supporting: m.nav_library_supporting(),
+    },
   ];
 
   let { active = 'realm', compact = false }: Props = $props();

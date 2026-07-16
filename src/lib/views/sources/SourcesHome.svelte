@@ -27,10 +27,10 @@
 </script>
 
 <section class="mx-auto flex max-w-[var(--content-max-width)] flex-col gap-5 py-4">
-  <div class="surface-panel p-6">
-    <p class="text-sm font-semibold text-muted-foreground">{m.nav_sources()}</p>
-    <h1 class="mt-3 text-3xl font-semibold tracking-tight md:text-5xl">{m.sources_title()}</h1>
-    <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">{m.sources_desc()}</p>
+  <div class="surface-panel p-5 md:p-6">
+    <p class="text-sm font-medium text-muted-foreground">{m.nav_sources()}</p>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">{m.sources_title()}</h1>
+    <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{m.sources_desc()}</p>
   </div>
 
   <AddSourcePanel />

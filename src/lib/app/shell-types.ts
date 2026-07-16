@@ -3,6 +3,7 @@
  * 不含实现；字段名与 DOM data-* / 测试断言对齐。
  */
 import type { CapabilityKey, MediaAppKey } from '$lib/brand';
+import type { AppearancePackId } from '$lib/stores/appearance-packs';
 
 /** 主导航四境路由键。 */
 export type ShellRoute = 'realm' | 'apps' | 'sources' | 'library';
@@ -43,8 +44,8 @@ export type PlatformCapabilities = {
 /** 壳主题状态（L0 模式 + L2 pack + a11y 标志）。 */
 export type ShellThemeState = {
   mode: 'light' | 'dark' | 'system';
-  /** L2 气质包 id；生产恒为默认 `paper-lantern-precision`。 */
-  appearancePack: 'paper-lantern-precision';
+  /** L2 气质包 id；默认 `inkstone-precision`，亦可为内置 `cold-cinnabar`。 */
+  appearancePack: AppearancePackId;
   reducedMotion: boolean;
   reducedTransparency: boolean;
 };
@@ -143,7 +144,12 @@ export type TextReaderThemePreference = {
   pageMode: 'scroll' | 'paged';
 };
 
-/** 迷你播放器槽：占位 vs 可见内容。 */
+/**
+ * 迷你播放器槽。
+ * - reserved：是否占布局高度（含无会话时的纯座位）
+ * - visible：是否渲染可交互条（有 ambient 会话）
+ * - label：会话文案；座位态可忽略
+ */
 export type MiniPlayerSlotState = {
   reserved: boolean;
   visible: boolean;

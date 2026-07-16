@@ -96,18 +96,19 @@
         {/if}
       </div>
 
-      <div class="max-w-5xl py-10 md:py-16">
-        <p class="text-sm font-semibold text-muted-foreground">{m.realm_offline_media_realm()}</p>
+      <div class="max-w-3xl py-4 md:py-6">
+        <p class="text-sm font-medium text-muted-foreground">{m.realm_offline_media_realm()}</p>
+        <!-- 产品字阶：工作台标题，非营销 landing hero -->
         <h1
-          class="mt-4 max-w-4xl text-balance text-5xl font-semibold tracking-[-0.055em] text-foreground md:text-7xl xl:text-8xl"
+          class="mt-2 max-w-2xl text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl"
         >
           {state.title}
         </h1>
-        <p class="mt-6 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
           {state.description}
         </p>
 
-        <div class="mt-10 flex flex-wrap gap-3">
+        <div class="mt-6 flex flex-wrap gap-3">
           {#each actions as action, index (action)}
             <a
               href={resolve(actionPath(action) as '/')}

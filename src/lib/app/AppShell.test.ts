@@ -44,7 +44,7 @@ function makeShell(overrides: Partial<ModeShellContract> = {}): ModeShellContrac
     platform: desktopPlatform(),
     theme: {
       mode: 'system',
-      appearancePack: 'paper-lantern-precision',
+      appearancePack: 'inkstone-precision',
       reducedMotion: false,
       reducedTransparency: false,
     },
@@ -88,7 +88,7 @@ describe('AppShell', () => {
 
     const root = screen.getByTestId('mode-shell');
     expect(root.getAttribute('data-theme-mode')).toBe('system');
-    expect(root.getAttribute('data-appearance-pack')).toBe('paper-lantern-precision');
+    expect(root.getAttribute('data-appearance-pack')).toBe('inkstone-precision');
 
     const nav = screen.getByRole('navigation', { name: '主导航' });
     expect(nav.getAttribute('data-shell-rail')).toBe('expanded');
@@ -112,7 +112,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: '导入本地文件' })).toBeTruthy();
   });
 
-  it('keeps mobile bottom nav accessible and separate from mini-player reservation', () => {
+  it('keeps mobile bottom nav accessible and separate from mini-player reservation', async () => {
     render(AppShell, {
       props: {
         shell: makeShell({
@@ -134,10 +134,21 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: '应用' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '来源' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '资料库' })).toBeTruthy();
-    const miniPlayer = screen.getByRole('button', { name: '暂无播放内容' });
-    expect(miniPlayer.getAttribute('data-mini-player')).toBe('reserved');
+    // 移动无 titlebar：底栏搜索是全局搜索入口。
+    const mobileSearch = screen.getByRole('button', { name: '打开全局搜索' });
+    expect(mobileSearch.closest('[data-bottom-nav]')).toBeTruthy();
+    await fireEvent.click(mobileSearch);
+    expect(screen.getByRole('dialog', { name: '全局搜索' })).toBeTruthy();
+
+    // 无 ambient：纯座位，非幽灵按钮。
+    const miniPlayer = document.querySelector('[data-mini-player="seat"]');
+    expect(miniPlayer).toBeInstanceOf(HTMLElement);
+    expect(screen.queryByRole('button', { name: '暂无播放内容' })).toBeNull();
     // 纵向顺序：main → mini-player 槽 → 底栏（互不遮盖）。
     const main = screen.getByRole('main');
+    if (!(miniPlayer instanceof HTMLElement)) {
+      throw new Error('expected mini-player seat element');
+    }
     expect(
       main.compareDocumentPosition(miniPlayer) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -147,6 +158,35 @@ describe('AppShell', () => {
     // 内容列用 flex，无 titlebar 时 main 仍可伸展。
     expect(main.className).toContain('flex-1');
     expect(main.parentElement?.className).toContain('flex-col');
+  });
+
+  it('shows interactive mini-player only when ambient audio session exists', () => {
+    render(AppShell, {
+      props: {
+        shell: makeShell({
+          ambientAudio: {
+            id: 'ambient-1',
+            state: 'paused',
+            focus: 'ambient',
+            label: '雨声',
+          },
+        }),
+      },
+    });
+
+    const miniPlayer = screen.getByRole('button', { name: '当前播放' });
+    expect(miniPlayer.getAttribute('data-mini-player')).toBe('active');
+    expect(screen.getByText('雨声')).toBeTruthy();
+    expect(document.querySelector('[data-mini-player="seat"]')).toBeNull();
+  });
+
+  it('uses distinct supporting copy on expanded rail', () => {
+    render(AppShell, { props: { shell: makeShell() } });
+
+    expect(screen.getByText('发现与入口')).toBeTruthy();
+    expect(screen.getByText('跨媒体套件')).toBeTruthy();
+    expect(screen.getByText('供给健康')).toBeTruthy();
+    expect(screen.getByText('收藏与缓存')).toBeTruthy();
   });
 
   it('never shows rail and bottom primary nav together', () => {
@@ -294,7 +334,7 @@ describe('AppShell', () => {
         shell: makeShell({
           theme: {
             mode: 'system',
-            appearancePack: 'paper-lantern-precision',
+            appearancePack: 'inkstone-precision',
             reducedMotion: true,
             reducedTransparency: true,
           },

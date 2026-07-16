@@ -68,14 +68,15 @@
     !readerMode && shellMode !== 'mobile' && shellMode !== 'tablet-portrait',
   );
   const showBottomNav = $derived(!readerMode && usesBottomNav(shellMode));
+  // 无环境音频：仅高度座位；有会话（播/停）才露出可交互条。
   const miniPlayerState = $derived(
     shell.ambientAudio
       ? {
           reserved: true,
-          visible: shell.ambientAudio.state === 'playing',
+          visible: true,
           label: shell.ambientAudio.label,
         }
-      : { reserved: true, visible: false, label: m.mini_player_empty() },
+      : { reserved: true, visible: false, label: m.mini_player_reserved() },
   );
 </script>
 
@@ -129,7 +130,11 @@
       </main>
 
       <MiniPlayerSlot state={miniPlayerState} presentation={shellPresentation} />
-      <AppBottomNav active={activeRoute} hidden={!showBottomNav} />
+      <AppBottomNav
+        active={activeRoute}
+        hidden={!showBottomNav}
+        onsearch={() => (searchOpen = true)}
+      />
     </div>
   </div>
 </div>

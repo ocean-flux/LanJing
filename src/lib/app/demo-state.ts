@@ -168,9 +168,9 @@ export const mediaAppCards: MediaAppCardState[] = Object.keys(mediaLabels).map((
   };
 });
 
-/** 迷你播放器槽演示态（占位、无真实播放）。 */
+/** 迷你播放器槽演示态：无会话纯座位。 */
 export const miniPlayerSlot: MiniPlayerSlotState = {
   reserved: true,
   visible: false,
-  label: m.mini_player_empty(),
+  label: m.mini_player_reserved(),
 };
