@@ -29,7 +29,7 @@
 
 <nav
   class={[
-    'motion-reader-recede hidden min-h-0 shrink-0 border-r border-hairline bg-canvas px-3 py-3 md:flex md:flex-col',
+    'motion-reader-recede flex min-h-0 shrink-0 flex-col border-r border-hairline bg-canvas px-3 py-3',
     compact ? 'w-(--shell-rail-tablet-width) items-center' : 'w-(--shell-rail-expanded-width)',
   ]}
   aria-label={m.nav_main()}

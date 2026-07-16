@@ -50,18 +50,30 @@ function makeShell(overrides: Partial<ModeShellContract> = {}): ModeShellContrac
   };
 }
 
+function primaryNavs() {
+  return {
+    rail: screen.queryByRole('navigation', { name: '主导航' }),
+    bottom: screen.queryByRole('navigation', { name: '底部主导航' }),
+  };
+}
+
 describe('AppShell', () => {
   it('renders quiet desktop shell navigation and command search', async () => {
-    render(AppShell, { props: { shell: makeShell() } });
+    render(AppShell, {
+      props: {
+        shell: makeShell({
+          platform: desktopPlatform({ windowControls: 'browser-preview' }),
+        }),
+      },
+    });
 
     const nav = screen.getByRole('navigation', { name: '主导航' });
     expect(nav.getAttribute('data-shell-rail')).toBe('expanded');
     expect(screen.getByText('LanJing')).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: '底部主导航' })).toBeNull();
 
     const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
-    expect(['browser-preview', 'system-decorated', 'macos-overlay', 'windows-overlay']).toContain(
-      titlebar.getAttribute('data-native-window-controls'),
-    );
+    expect(titlebar.getAttribute('data-native-window-controls')).toBe('browser-preview');
     expect(titlebar.hasAttribute('data-tauri-drag-region')).toBe(true);
     expect(titlebar.querySelectorAll('[data-tauri-drag-region]').length).toBeGreaterThan(1);
     expect(screen.getByRole('button', { name: '最小化窗口' })).toBeTruthy();
@@ -86,15 +98,118 @@ describe('AppShell', () => {
     });
 
     expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
+    expect(screen.queryByRole('banner')).toBeNull();
     const bottomNav = screen.getByRole('navigation', { name: '底部主导航' });
     expect(bottomNav.getAttribute('data-bottom-nav')).toBe('visible');
+    expect(bottomNav.className).toContain('pb-(--shell-bottom-safe-padding)');
+    expect(bottomNav.className).toContain(
+      'min-h-[calc(var(--shell-bottom-nav-height)+var(--shell-bottom-safe-padding))]',
+    );
+    expect(bottomNav.className).not.toContain('md:hidden');
     expect(screen.getByRole('link', { name: '境场' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '应用' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '来源' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '资料库' })).toBeTruthy();
+    const miniPlayer = screen.getByRole('button', { name: '暂无播放内容' });
+    expect(miniPlayer.getAttribute('data-mini-player')).toBe('reserved');
+    // Vertical order: main → mini-player slot → bottom nav (no cover).
+    const main = screen.getByRole('main');
     expect(
-      screen.getByRole('button', { name: '暂无播放内容' }).getAttribute('data-mini-player'),
-    ).toBe('reserved');
+      main.compareDocumentPosition(miniPlayer) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      miniPlayer.compareDocumentPosition(bottomNav) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Content column uses flex so main grows without titlebar row.
+    expect(main.className).toContain('flex-1');
+    expect(main.parentElement?.className).toContain('flex-col');
+  });
+
+  it('never shows rail and bottom primary nav together', () => {
+    const cases: PlatformCapabilities[] = [
+      desktopPlatform(),
+      mobilePlatform(),
+      desktopPlatform({
+        viewportWidth: 1100,
+        hover: 'hover',
+        pointer: 'fine',
+      }),
+      mobilePlatform({
+        viewportWidth: 900,
+        viewportHeight: 1200,
+        orientation: 'portrait',
+      }),
+      mobilePlatform({
+        viewportWidth: 1100,
+        viewportHeight: 700,
+        orientation: 'landscape',
+      }),
+    ];
+
+    for (const platform of cases) {
+      const { unmount } = render(AppShell, {
+        props: { shell: makeShell({ platform }) },
+      });
+      const { rail, bottom } = primaryNavs();
+      expect(Boolean(rail) && Boolean(bottom)).toBe(false);
+      unmount();
+    }
+  });
+
+  it('passes shell.platform.windowControls through titlebar without local override', () => {
+    render(AppShell, {
+      props: {
+        shell: makeShell({
+          platform: desktopPlatform({
+            kind: 'windows',
+            windowControls: 'system-decorated',
+          }),
+        }),
+      },
+    });
+
+    const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
+    expect(titlebar.getAttribute('data-native-window-controls')).toBe('system-decorated');
+    expect(screen.queryByRole('button', { name: '最小化窗口' })).toBeNull();
+  });
+
+  it('keeps productContext when platform orientation/width changes navigation family', () => {
+    const base = makeShell({
+      productContext: 'library',
+      foregroundActivity: { kind: 'browse', id: 'library' },
+      platform: mobilePlatform({
+        orientation: 'portrait',
+        viewportWidth: 390,
+        viewportHeight: 844,
+      }),
+    });
+
+    const { rerender } = render(AppShell, { props: { shell: base } });
+    const root = screen.getByTestId('mode-shell');
+    expect(root.getAttribute('data-product-context')).toBe('library');
+    expect(root.getAttribute('data-shell-mode')).toBe('mobile');
+    expect(primaryNavs().bottom).toBeTruthy();
+    expect(primaryNavs().rail).toBeNull();
+
+    rerender({
+      shell: {
+        ...base,
+        platform: desktopPlatform({
+          kind: 'windows',
+          orientation: 'landscape',
+          viewportWidth: 1280,
+          viewportHeight: 800,
+          windowControls: 'system-decorated',
+        }),
+      },
+    });
+
+    expect(root.getAttribute('data-product-context')).toBe('library');
+    expect(root.getAttribute('data-shell-mode')).toBe('desktop');
+    expect(root.getAttribute('data-orientation')).toBe('landscape');
+    expect(primaryNavs().rail).toBeTruthy();
+    expect(primaryNavs().bottom).toBeNull();
+    expect(screen.getByRole('main')).toBeTruthy();
   });
 
   it('exposes icon-only theme control without a second material-standard switch', async () => {

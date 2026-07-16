@@ -35,16 +35,14 @@
     dark: 'system',
   };
 
-  function isTauriRuntime() {
-    if (typeof window === 'undefined') return false;
+  /** Test-only fallback when AppShell does not pass shell.platform.windowControls. */
+  function resolveNativeControlModeFallback(): NativeWindowControlMode {
+    if (typeof window === 'undefined') return 'browser-preview';
 
-    return '__TAURI_INTERNALS__' in window || navigator.userAgent.toLowerCase().includes('tauri');
-  }
+    const platform = navigator.userAgent.toLowerCase();
+    const tauri = '__TAURI_INTERNALS__' in window || platform.includes('tauri');
 
-  function resolveNativeControlMode(): NativeWindowControlMode {
-    const platform = typeof navigator === 'undefined' ? '' : navigator.userAgent.toLowerCase();
-
-    if (!isTauriRuntime()) return 'browser-preview';
+    if (!tauri) return 'browser-preview';
     if (platform.includes('mac')) return 'macos-overlay';
     if (platform.includes('win')) return 'system-decorated';
     return 'system-decorated';
@@ -56,7 +54,10 @@
     if (currentMode === 'dark') return m.theme_mode_dark();
     return m.theme_mode_system();
   });
-  const nativeControlMode = $derived(controlledNativeControlMode ?? resolveNativeControlMode());
+  // Production path: AppShell always supplies shell.platform.windowControls.
+  const nativeControlMode = $derived(
+    controlledNativeControlMode ?? resolveNativeControlModeFallback(),
+  );
   const showPreviewControls = $derived(nativeControlMode === 'browser-preview');
   const titlebarControlLeft = $derived(nativeControlMode === 'macos-overlay' ? '86px' : '0px');
   const titlebarControlRight = $derived(nativeControlMode === 'windows-overlay' ? '138px' : '0px');

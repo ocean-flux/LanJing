@@ -28,7 +28,7 @@
 
 {#if !hidden}
   <nav
-    class="motion-reader-recede flex min-h-[calc(var(--shell-bottom-nav-height)+var(--shell-bottom-safe-padding))] shrink-0 items-start justify-around border-t border-hairline bg-canvas px-2 pb-(--shell-bottom-safe-padding) pt-2 md:hidden"
+    class="motion-reader-recede flex min-h-[calc(var(--shell-bottom-nav-height)+var(--shell-bottom-safe-padding))] shrink-0 items-start justify-around border-t border-hairline bg-canvas px-2 pb-(--shell-bottom-safe-padding) pt-2"
     aria-label={m.nav_bottom()}
     data-bottom-nav="visible"
   >

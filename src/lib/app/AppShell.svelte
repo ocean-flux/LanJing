@@ -77,7 +77,8 @@
       <AppRail active={activeRoute} compact={usesIconRail(shellMode)} />
     {/if}
 
-    <div class="grid min-h-0 min-w-0 flex-1 grid-rows-[auto_1fr_auto_auto]">
+    <!-- flex-col so main keeps flex-1 whether titlebar/bottom slots mount -->
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       {#if showTitlebar}
         <AppTitlebar
           {contextLabel}
@@ -90,7 +91,7 @@
 
       <main
         class={[
-          'min-h-0 overflow-auto scroll-smooth motion-reduce:scroll-auto',
+          'min-h-0 flex-1 overflow-auto scroll-smooth motion-reduce:scroll-auto',
           readerMode
             ? 'bg-transparent px-0 py-0'
             : 'bg-canvas px-[var(--page-padding-mobile)] py-4 md:px-[var(--page-padding-tablet)] md:py-5 xl:px-[var(--page-padding-desktop)] xl:py-6',
