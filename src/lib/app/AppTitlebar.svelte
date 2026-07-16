@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Monitor, Moon, Search, Sun } from '@lucide/svelte';
+  import { Monitor, Moon, Search, Settings, Sun } from '@lucide/svelte';
+  import { resolve } from '$app/paths';
   import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';
   import { getMode, setMode, type ThemeMode } from '$lib/stores/theme.svelte';
@@ -133,6 +134,16 @@
       >
         <Search size={14} strokeWidth={1.75} aria-hidden="true" />
         <span class="hidden sm:inline">{m.search()}</span>
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        class="motion-nav-capsule grid h-8 w-8 place-items-center rounded-md p-0 text-ink-muted hover:bg-surface-3 hover:text-ink"
+        aria-label={m.settings_open()}
+        title={m.settings()}
+        href={resolve('/settings' as '/')}
+      >
+        <Settings size={15} strokeWidth={1.75} aria-hidden="true" />
       </Button>
       <Button
         type="button"

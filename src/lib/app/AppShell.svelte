@@ -1,5 +1,6 @@
 <script lang="ts">
   import { browser } from '$app/environment';
+  import { page } from '$app/state';
   import { AppLaunch } from '$lib/components/brand';
   import { Toaster } from '$lib/components/ui/sonner';
   import { m } from '$lib/i18n';
@@ -50,14 +51,18 @@
     }),
   );
   const activeRoute = $derived(shell.productContext);
+  // 设置非四境：titlebar 文案单独覆盖，不扩 ShellRoute
+  const isSettingsRoute = $derived(page.url.pathname.startsWith('/settings'));
   const contextLabel = $derived(
-    activeRoute === 'apps'
-      ? m.nav_apps()
-      : activeRoute === 'sources'
-        ? m.nav_sources()
-        : activeRoute === 'library'
-          ? m.nav_library()
-          : m.nav_realm(),
+    isSettingsRoute
+      ? m.settings()
+      : activeRoute === 'apps'
+        ? m.nav_apps()
+        : activeRoute === 'sources'
+          ? m.nav_sources()
+          : activeRoute === 'library'
+            ? m.nav_library()
+            : m.nav_realm(),
   );
   const readerMode = $derived(
     shell.presentation === 'reader' || shell.foregroundActivity.kind === 'reader',

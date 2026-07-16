@@ -1,0 +1,10 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "settings_open": "打开设置",
+  "settings_title": "设置",
+  "settings_appearance": "外观",
+  "settings_theme_label": "主题",
+  "settings_pack_label": "色系",
+  "settings_pack_inkstone": "墨砚精密",
+  "settings_pack_cinnabar": "冷银朱"
+}

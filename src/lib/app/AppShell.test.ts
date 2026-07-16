@@ -104,6 +104,8 @@ describe('AppShell', () => {
     expect(screen.getByRole('button', { name: '最大化或还原窗口' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '关闭窗口' })).toBeTruthy();
 
+    expect(screen.getByRole('link', { name: '打开设置' })).toBeTruthy();
+
     await fireEvent.click(screen.getByRole('button', { name: '打开全局搜索' }));
 
     expect(screen.getByRole('dialog', { name: '全局搜索' })).toBeTruthy();
@@ -134,9 +136,10 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: '应用' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '来源' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '资料库' })).toBeTruthy();
-    // 移动无 titlebar：底栏搜索是全局搜索入口。
+    // 移动无 titlebar：底栏搜索 + 设置入口。
     const mobileSearch = screen.getByRole('button', { name: '打开全局搜索' });
     expect(mobileSearch.closest('[data-bottom-nav]')).toBeTruthy();
+    expect(screen.getByRole('link', { name: '打开设置' })).toBeTruthy();
     await fireEvent.click(mobileSearch);
     expect(screen.getByRole('dialog', { name: '全局搜索' })).toBeTruthy();
 

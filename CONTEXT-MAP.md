@@ -2,7 +2,7 @@
 
 ## Contexts
 
-- [产品体验](./docs/contexts/product-experience/CONTEXT.md) — 定义跨媒体发现、媒体空间、资料库与消费活动
+- [产品体验](./docs/contexts/product-experience/CONTEXT.md) — 定义跨媒体发现、媒体空间、资料库、消费活动与应用设置（本地偏好，非媒体空间）
 - [规则系统](./docs/contexts/rule-system/CONTEXT.md) — 定义来源规则、标准意图、媒体资源模型与规则编辑语义
 
 ## Relationships

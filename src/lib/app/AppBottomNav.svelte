@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Boxes, Compass, Database, Radio, Search } from '@lucide/svelte';
+  import { Boxes, Compass, Database, Radio, Search, Settings } from '@lucide/svelte';
   import { m } from '$lib/i18n';
   import type { ShellRoute } from './shell-types';
 
@@ -63,5 +63,14 @@
       <Search size={18} aria-hidden="true" />
       <span>{m.search()}</span>
     </button>
+    <a
+      href={resolve('/settings' as '/')}
+      class="motion-nav-capsule inline-flex min-h-11 min-w-12 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.72rem] font-medium text-ink-muted outline-none transition-colors hover:bg-lantern-soft hover:text-ink focus-visible:bg-lantern-soft focus-visible:text-ink motion-reduce:transform-none sm:min-w-14 sm:px-2"
+      aria-label={m.settings_open()}
+      data-bottom-nav-settings
+    >
+      <Settings size={18} aria-hidden="true" />
+      <span>{m.settings()}</span>
+    </a>
   </nav>
 {/if}
