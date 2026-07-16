@@ -1,12 +1,19 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import { AppLaunch } from '$lib/components/brand';
   import { Toaster } from '$lib/components/ui/sonner';
   import { m } from '$lib/i18n';
+  import { syncMaterialTransparencyForA11y } from '$lib/stores/theme.svelte';
   import type { Snippet } from 'svelte';
   import AppBottomNav from './AppBottomNav.svelte';
   import AppRail from './AppRail.svelte';
   import AppSearchOverlay from './AppSearchOverlay.svelte';
   import AppTitlebar from './AppTitlebar.svelte';
+  import {
+    markColdLaunchSessionShown,
+    readColdLaunchSessionShown,
+    shouldShowColdLaunch,
+  } from './cold-launch';
   import MiniPlayerSlot from './MiniPlayerSlot.svelte';
   import { resolveShellMode, usesBottomNav, usesDesktopRail, usesIconRail } from './shell-mode';
   import type { ModeShellContract } from './shell-types';
@@ -18,8 +25,22 @@
   };
 
   let { children, shell }: Props = $props();
-  let showLaunch = $state(true);
+
+  const initialShowLaunch = shouldShowColdLaunch({
+    now: typeof performance !== 'undefined' ? performance.now() : 0,
+    sessionShown: browser ? readColdLaunchSessionShown(sessionStorage) : false,
+  });
+  if (initialShowLaunch && browser) {
+    markColdLaunchSessionShown(sessionStorage);
+  }
+
+  let showLaunch = $state(initialShowLaunch);
   let searchOpen = $state(false);
+
+  // System reduce-transparency → solid material (dataset); restores stored pref when cleared.
+  $effect(() => {
+    syncMaterialTransparencyForA11y(shell.theme.reducedTransparency);
+  });
 
   const shellMode = $derived(
     resolveShellMode({
@@ -71,6 +92,8 @@
   data-orientation={shell.platform.orientation}
   data-theme-mode={shell.theme.mode}
   data-appearance-pack={shell.theme.appearancePack}
+  data-reduced-motion={shell.theme.reducedMotion ? 'true' : 'false'}
+  data-reduced-transparency={shell.theme.reducedTransparency ? 'true' : 'false'}
   data-ambient-audio={shell.ambientAudio?.state ?? 'none'}
 >
   <div class="relative z-10 flex min-h-0">
@@ -112,5 +135,11 @@
 </div>
 
 <AppSearchOverlay open={searchOpen} hasSources={false} onclose={() => (searchOpen = false)} />
-<AppLaunch visible={showLaunch} durationMs={1800} oncomplete={() => (showLaunch = false)} />
+<AppLaunch
+  visible={showLaunch}
+  durationMs={1800}
+  oncomplete={() => {
+    showLaunch = false;
+  }}
+/>
 <Toaster />

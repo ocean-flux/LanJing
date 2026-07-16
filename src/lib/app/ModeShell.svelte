@@ -26,6 +26,14 @@
   let viewportWidth = $state(typeof window === 'undefined' ? 1280 : window.innerWidth);
   let viewportHeight = $state(typeof window === 'undefined' ? 800 : window.innerHeight);
   let previousPathname = $state<string | undefined>(undefined);
+  // Live system a11y prefs — must rebind on media change so shell data-* / material stay honest.
+  let reducedMotion = $state(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
+  let reducedTransparency = $state(
+    typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-transparency: reduce)').matches,
+  );
 
   const hover =
     typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches ? 'hover' : 'none';
@@ -47,6 +55,30 @@
     previousPathname = pathname;
   });
 
+  $effect(() => {
+    if (typeof window === 'undefined') return;
+
+    const motionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const transparencyMq = window.matchMedia('(prefers-reduced-transparency: reduce)');
+
+    const syncMotion = () => {
+      reducedMotion = motionMq.matches;
+    };
+    const syncTransparency = () => {
+      reducedTransparency = transparencyMq.matches;
+    };
+
+    syncMotion();
+    syncTransparency();
+    motionMq.addEventListener('change', syncMotion);
+    transparencyMq.addEventListener('change', syncTransparency);
+
+    return () => {
+      motionMq.removeEventListener('change', syncMotion);
+      transparencyMq.removeEventListener('change', syncTransparency);
+    };
+  });
+
   const orchestratedShell = $derived.by<ModeShellContract>(() => {
     const pathname = page.url.pathname;
     const override = getActivityOverride();
@@ -61,12 +93,8 @@
       theme: {
         mode: getMode(),
         appearancePack: getAppearancePack().id,
-        reducedMotion:
-          typeof window !== 'undefined' &&
-          window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-        reducedTransparency:
-          typeof window !== 'undefined' &&
-          window.matchMedia('(prefers-reduced-transparency: reduce)').matches,
+        reducedMotion,
+        reducedTransparency,
       },
       ambientAudio: getAmbientAudio(),
     };

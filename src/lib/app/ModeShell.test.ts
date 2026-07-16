@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ModeShell from './ModeShell.svelte';
 import {
   getActivityOverride,
@@ -221,5 +221,84 @@ describe('ModeShell', () => {
     expect(shell.getAttribute('data-foreground-activity')).toBe('browse:realm');
     expect(shell.getAttribute('data-presentation')).toBe('normal');
     expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
+  });
+
+  it('updates reduced motion/transparency data attrs when system media queries change', async () => {
+    type Listener = (event: MediaQueryListEvent) => void;
+    const mediaLists = new Map<
+      string,
+      MediaQueryList & { matches: boolean; listeners: Set<Listener> }
+    >();
+    const originalMatchMedia = window.matchMedia;
+
+    const matchMediaMock = vi.fn((query: string): MediaQueryList => {
+      const existing = mediaLists.get(query);
+      if (existing) return existing;
+
+      const entry = {
+        matches: false,
+        media: query,
+        onchange: null,
+        listeners: new Set<Listener>(),
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+          entry.listeners.add(listener as Listener);
+        },
+        removeEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
+          entry.listeners.delete(listener as Listener);
+        },
+        dispatchEvent: () => false,
+      };
+      mediaLists.set(
+        query,
+        entry as MediaQueryList & { matches: boolean; listeners: Set<Listener> },
+      );
+      return entry as MediaQueryList;
+    });
+
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: matchMediaMock,
+    });
+
+    try {
+      setViewport(1280, 800);
+      render(ModeShell);
+
+      // Allow a11y media listeners to attach.
+      await Promise.resolve();
+
+      let shell = screen.getByTestId('mode-shell');
+      expect(shell.getAttribute('data-reduced-motion')).toBe('false');
+      expect(shell.getAttribute('data-reduced-transparency')).toBe('false');
+
+      const fire = (query: string, matches: boolean) => {
+        const list = mediaLists.get(query);
+        if (!list) return;
+        list.matches = matches;
+        for (const listener of list.listeners) {
+          listener({ matches, media: query } as MediaQueryListEvent);
+        }
+      };
+
+      fire('(prefers-reduced-motion: reduce)', true);
+      fire('(prefers-reduced-transparency: reduce)', true);
+      await Promise.resolve();
+
+      shell = screen.getByTestId('mode-shell');
+      expect(shell.getAttribute('data-reduced-motion')).toBe('true');
+      expect(shell.getAttribute('data-reduced-transparency')).toBe('true');
+      // Info / focus path still present under degrade.
+      expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
+      expect(screen.getByRole('main')).toBeTruthy();
+    } finally {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      });
+    }
   });
 });

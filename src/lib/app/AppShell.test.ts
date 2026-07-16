@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getMaterialTransparency, setMaterialTransparency } from '$lib/stores/theme.svelte';
 import AppShell from './AppShell.svelte';
+import { COLD_LAUNCH_SESSION_KEY, COLD_LAUNCH_THRESHOLD_MS } from './cold-launch';
 import type { ModeShellContract, PlatformCapabilities } from './shell-types';
 
 function desktopPlatform(overrides: Partial<PlatformCapabilities> = {}): PlatformCapabilities {
@@ -57,6 +59,22 @@ function primaryNavs() {
     bottom: screen.queryByRole('navigation', { name: '底部主导航' }),
   };
 }
+
+function stubPerformanceNow(ms: number) {
+  vi.spyOn(performance, 'now').mockReturnValue(ms);
+}
+
+beforeEach(() => {
+  // Default: fast cold start so chrome-only cases never flash launch overlay.
+  stubPerformanceNow(0);
+  setMaterialTransparency('standard');
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  sessionStorage.removeItem(COLD_LAUNCH_SESSION_KEY);
+  setMaterialTransparency('standard');
+});
 
 describe('AppShell', () => {
   it('renders quiet desktop shell navigation and command search', async () => {
@@ -268,5 +286,68 @@ describe('AppShell', () => {
     expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
     expect(screen.getByRole('navigation', { name: '底部主导航' })).toBeTruthy();
     expect(screen.getByTestId('mode-shell').getAttribute('data-shell-mode')).toBe('mobile');
+  });
+
+  it('exposes reduced-motion and reduced-transparency on shell root', async () => {
+    render(AppShell, {
+      props: {
+        shell: makeShell({
+          theme: {
+            mode: 'system',
+            appearancePack: 'paper-lantern-precision',
+            reducedMotion: true,
+            reducedTransparency: true,
+          },
+        }),
+      },
+    });
+
+    // Let a11y material sync effect run.
+    await Promise.resolve();
+
+    const root = screen.getByTestId('mode-shell');
+    expect(root.getAttribute('data-reduced-motion')).toBe('true');
+    expect(root.getAttribute('data-reduced-transparency')).toBe('true');
+    // Solid material without rewriting stored user pref.
+    expect(getMaterialTransparency()).toBe('standard');
+    expect(document.documentElement.dataset.materialTransparency).toBe('low');
+    // Nav + accessible names remain under a11y degrade.
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
+    expect(screen.getByRole('main')).toBeTruthy();
+  });
+
+  it('marks reduced flags false when shell a11y prefs are off', () => {
+    render(AppShell, { props: { shell: makeShell() } });
+
+    const root = screen.getByTestId('mode-shell');
+    expect(root.getAttribute('data-reduced-motion')).toBe('false');
+    expect(root.getAttribute('data-reduced-transparency')).toBe('false');
+  });
+
+  it('skips launch visual when cold start is under threshold', () => {
+    stubPerformanceNow(COLD_LAUNCH_THRESHOLD_MS - 40);
+
+    render(AppShell, { props: { shell: makeShell() } });
+
+    expect(screen.queryByRole('region', { name: 'LanJing 启动动画' })).toBeNull();
+    expect(sessionStorage.getItem(COLD_LAUNCH_SESSION_KEY)).toBeNull();
+  });
+
+  it('shows launch visual only on slow cold start and records session', () => {
+    stubPerformanceNow(COLD_LAUNCH_THRESHOLD_MS + 50);
+
+    render(AppShell, { props: { shell: makeShell() } });
+
+    expect(screen.getByRole('region', { name: 'LanJing 启动动画' })).toBeTruthy();
+    expect(sessionStorage.getItem(COLD_LAUNCH_SESSION_KEY)).toBe('1');
+  });
+
+  it('does not replay launch when session already recorded a show', () => {
+    sessionStorage.setItem(COLD_LAUNCH_SESSION_KEY, '1');
+    stubPerformanceNow(COLD_LAUNCH_THRESHOLD_MS + 500);
+
+    render(AppShell, { props: { shell: makeShell() } });
+
+    expect(screen.queryByRole('region', { name: 'LanJing 启动动画' })).toBeNull();
   });
 });

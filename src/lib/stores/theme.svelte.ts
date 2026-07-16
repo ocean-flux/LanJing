@@ -229,6 +229,17 @@ export function setMaterialTransparency(value: MaterialTransparency): void {
   persistMaterialTransparency(value);
 }
 
+/**
+ * Apply effective material transparency for a11y without rewriting user preference.
+ * System `prefers-reduced-transparency` (or explicit shell flag) forces solid surfaces;
+ * when the flag clears, DOM restores the stored user preference.
+ */
+export function syncMaterialTransparencyForA11y(reducedTransparency: boolean): void {
+  const effective: MaterialTransparency =
+    reducedTransparency || _materialTransparency === 'low' ? 'low' : 'standard';
+  applyMaterialTransparency(effective);
+}
+
 /** 读取当前 L2 Appearance pack（生产仅默认包） */
 export function getAppearancePack(): AppearancePack {
   return {

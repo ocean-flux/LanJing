@@ -13,6 +13,7 @@ import {
   setMaterialTransparency,
   setMode,
   setTextReaderTheme,
+  syncMaterialTransparencyForA11y,
   toggle,
   updateTextReaderTheme,
   type AppearancePack,
@@ -137,5 +138,29 @@ describe('theme preferences', () => {
     expect(getMaterialTransparency()).toBe('standard');
     expect(document.documentElement.dataset.materialTransparency).toBe('standard');
     expect(document.documentElement.classList.contains('low-transparency')).toBe(false);
+  });
+
+  it('forces solid material for reduced transparency without rewriting stored preference', () => {
+    setMaterialTransparency('standard');
+    expect(getMaterialTransparency()).toBe('standard');
+
+    syncMaterialTransparencyForA11y(true);
+    expect(getMaterialTransparency()).toBe('standard');
+    expect(document.documentElement.dataset.materialTransparency).toBe('low');
+    expect(document.documentElement.classList.contains('low-transparency')).toBe(true);
+
+    syncMaterialTransparencyForA11y(false);
+    expect(getMaterialTransparency()).toBe('standard');
+    expect(document.documentElement.dataset.materialTransparency).toBe('standard');
+    expect(document.documentElement.classList.contains('low-transparency')).toBe(false);
+  });
+
+  it('keeps low material effective when a11y flag clears but user chose low', () => {
+    setMaterialTransparency('low');
+    syncMaterialTransparencyForA11y(true);
+    syncMaterialTransparencyForA11y(false);
+
+    expect(getMaterialTransparency()).toBe('low');
+    expect(document.documentElement.dataset.materialTransparency).toBe('low');
   });
 });
