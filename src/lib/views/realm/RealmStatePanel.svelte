@@ -75,124 +75,117 @@
   }
 </script>
 
-<section
-  class="grid min-h-full gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_390px]"
->
-  <div class="surface-panel media-void relative min-h-[560px] overflow-hidden p-5 md:p-8">
-    <div class="relative flex min-h-[500px] flex-col justify-between gap-10">
-      <div class="flex items-center justify-between gap-4">
-        <div class="inline-flex items-center gap-3 text-muted-foreground">
-          <span
-            class="grid h-10 w-10 place-items-center rounded-xl border border-border bg-surface-1"
-          >
-            <LanJingMark width={30} height={23} label="LanJing" />
-          </span>
-          <span class="text-sm font-medium tracking-wide">{m.realm_brand()}</span>
-        </div>
-
-        {#if state.sourceSummary}
-          <div
-            class="inline-flex items-center gap-2 rounded-full border border-border bg-surface-1 px-3 py-2 text-xs text-muted-foreground"
-          >
-            <Activity size={14} aria-hidden="true" />
-            {state.sourceSummary}
-          </div>
-        {/if}
-      </div>
-
-      <div class="max-w-3xl py-4 md:py-6">
-        <p class="text-sm font-medium text-muted-foreground">{m.realm_offline_media_realm()}</p>
-        <!-- 产品字阶：工作台标题，非营销 landing hero -->
-        <h1
-          class="mt-2 max-w-2xl text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl"
+<!-- 全宽 denselist 节奏：无 560 高 marketing 卡、无双栏卡堆 -->
+<section class="flex w-full flex-col gap-3" data-testid="realm-state-panel">
+  <header class="flex flex-wrap items-start justify-between gap-3 border-b border-hairline pb-2">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2 text-ink-muted">
+        <span
+          class="grid h-8 w-8 place-items-center rounded-lg border border-hairline bg-surface-1"
         >
-          {state.title}
-        </h1>
-        <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-          {state.description}
-        </p>
-
-        <div class="mt-6 flex flex-wrap gap-3">
-          {#each actions as action, index (action)}
-            <a
-              href={resolve(actionPath(action) as '/')}
-              class={[
-                'motion-dock-wake inline-flex min-h-11 items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold',
-                index === 0
-                  ? 'lantern-action'
-                  : 'border border-border bg-surface-1 text-foreground hover:bg-accent',
-              ]}
-            >
-              {#if action === m.action_search_content()}
-                <Search size={16} aria-hidden="true" />
-              {:else if action === m.action_import_local() || action === m.action_add_source()}
-                <FolderPlus size={16} aria-hidden="true" />
-              {:else if action === m.action_view_source_status()}
-                <ShieldAlert size={16} aria-hidden="true" />
-              {:else}
-                <ArrowRight size={16} aria-hidden="true" />
-              {/if}
-              {action}
-            </a>
-          {/each}
-        </div>
+          <LanJingMark width={24} height={18} label="LanJing" />
+        </span>
+        <span class="text-xs font-medium tracking-wide">{m.realm_brand()}</span>
       </div>
-
-      <p class="max-w-xl text-sm text-muted-foreground">{m.realm_no_fake_shelves()}</p>
+      <p class="mt-2 text-xs font-medium text-ink-muted">{m.realm_offline_media_realm()}</p>
+      <h1 class="mt-1 text-base font-semibold tracking-tight text-ink sm:text-lg">
+        {state.title}
+      </h1>
+      <p class="mt-1 max-w-prose text-xs leading-5 text-ink-muted sm:text-sm">
+        {state.description}
+      </p>
     </div>
+    {#if state.sourceSummary}
+      <div
+        class="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface-1 px-2.5 py-1 text-xs text-ink-muted"
+      >
+        <Activity size={14} aria-hidden="true" />
+        {state.sourceSummary}
+      </div>
+    {/if}
+  </header>
+
+  <div class="flex flex-wrap gap-2">
+    {#each actions as action, index (action)}
+      <a
+        href={resolve(actionPath(action) as '/')}
+        class={[
+          'motion-dock-wake inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          index === 0
+            ? 'lantern-action'
+            : 'border border-hairline bg-surface-1 text-ink hover:bg-surface-3',
+        ]}
+      >
+        {#if action === m.action_search_content()}
+          <Search size={15} aria-hidden="true" />
+        {:else if action === m.action_import_local() || action === m.action_add_source()}
+          <FolderPlus size={15} aria-hidden="true" />
+        {:else if action === m.action_view_source_status()}
+          <ShieldAlert size={15} aria-hidden="true" />
+        {:else}
+          <ArrowRight size={15} aria-hidden="true" />
+        {/if}
+        {action}
+      </a>
+    {/each}
   </div>
 
-  <aside class="grid content-start gap-4">
-    <div class="surface-panel p-5">
-      <h2 class="text-sm font-semibold">{m.realm_media_waiting()}</h2>
-      <p class="mt-2 text-xs leading-5 text-muted-foreground">{m.realm_no_fake_shelves()}</p>
+  <p class="text-xs text-ink-subtle">{m.realm_no_fake_shelves()}</p>
 
-      <div class="mt-5 grid gap-3">
+  <div class="grid gap-3 lg:grid-cols-2">
+    <section class="border-t border-hairline pt-2" aria-labelledby="realm-media-waiting">
+      <h2 id="realm-media-waiting" class="text-sm font-semibold text-ink">
+        {m.realm_media_waiting()}
+      </h2>
+      <p class="mt-1 text-xs leading-5 text-ink-muted">{m.realm_no_fake_shelves()}</p>
+      <div class="mt-2 grid gap-1">
         {#each actions as action, index (action)}
           <a
             href={resolve(actionPath(action) as '/')}
             class={[
-              'motion-nav-capsule flex items-start gap-4 rounded-2xl border border-border bg-background/45 p-4 text-left',
-              index === 0 ? 'ring-1 ring-inset ring-lantern/25' : 'hover:bg-accent',
+              'motion-nav-capsule flex items-start gap-2 rounded-lg px-2 py-2 text-left outline-none hover:bg-lantern-soft focus-visible:shadow-[var(--focus-ring)]',
+              index === 0 && 'bg-lantern-soft/40',
             ]}
           >
             <span
-              class="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-surface-2 text-foreground"
+              class="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-hairline bg-surface-2 text-ink"
             >
               {#if action === m.action_search_content()}
-                <Search size={16} aria-hidden="true" />
+                <Search size={14} aria-hidden="true" />
               {:else if action === m.action_import_local() || action === m.action_add_source()}
-                <FolderPlus size={16} aria-hidden="true" />
+                <FolderPlus size={14} aria-hidden="true" />
               {:else if action === m.action_view_source_status()}
-                <ShieldAlert size={16} aria-hidden="true" />
+                <ShieldAlert size={14} aria-hidden="true" />
               {:else}
-                <ArrowRight size={16} aria-hidden="true" />
+                <ArrowRight size={14} aria-hidden="true" />
               {/if}
             </span>
             <span class="min-w-0">
-              <span class="block text-sm font-semibold">{action}</span>
-              <span class="mt-1 block text-xs leading-5 text-muted-foreground">
+              <span class="block text-sm font-medium text-ink">{action}</span>
+              <span class="mt-0.5 block text-xs leading-5 text-ink-subtle">
                 {m.realm_no_fake_shelves()}
               </span>
             </span>
           </a>
         {/each}
       </div>
-    </div>
+    </section>
 
-    <div class="surface-panel p-5">
-      <h2 class="text-sm font-semibold">{m.realm_source_status_hint()}</h2>
-      <p class="mt-2 text-xs leading-5 text-muted-foreground">{m.realm_media_waiting()}</p>
+    <section class="border-t border-hairline pt-2" aria-labelledby="realm-source-status">
+      <h2 id="realm-source-status" class="text-sm font-semibold text-ink">
+        {m.realm_source_status_hint()}
+      </h2>
+      <p class="mt-1 text-xs leading-5 text-ink-muted">{m.realm_media_waiting()}</p>
 
       {#if sourceWarnings.length > 0}
-        <div class="mt-4 grid gap-3">
+        <div class="mt-2 grid gap-1.5">
           {#each sourceWarnings as source (source.id)}
-            <div class="rounded-xl border border-border bg-background/45 p-3 text-sm">
+            <div class="rounded-lg border border-hairline px-3 py-2 text-sm">
               <div class="flex items-start justify-between gap-3">
-                <span class="block font-semibold">{source.name}</span>
+                <span class="block font-medium text-ink">{source.name}</span>
                 <span
                   class={[
-                    'rounded-full px-2 py-1 text-[0.68rem] font-medium',
+                    'rounded-full px-2 py-0.5 text-[0.68rem] font-medium',
                     source.status === 'failed'
                       ? 'bg-warning/15 text-warning'
                       : 'bg-warning/10 text-warning',
@@ -201,31 +194,31 @@
                   {sourceStatusLabel(source.status)}
                 </span>
               </div>
-              <span class="mt-1 block text-muted-foreground">{source.summary}</span>
+              <span class="mt-1 block text-xs text-ink-muted">{source.summary}</span>
             </div>
           {/each}
         </div>
       {:else if sources.length === 0}
-        <div class="media-void mt-4 rounded-2xl p-4 text-sm">
-          <p class="font-semibold text-foreground">{m.realm_title_no_source()}</p>
-          <p class="mt-1 text-muted-foreground">{m.realm_desc_no_source()}</p>
+        <div class="media-void mt-2 rounded-lg px-3 py-3 text-sm">
+          <p class="font-medium text-ink">{m.realm_title_no_source()}</p>
+          <p class="mt-1 text-xs text-ink-muted">{m.realm_desc_no_source()}</p>
         </div>
       {:else}
-        <div class="mt-4 grid gap-2">
+        <div class="mt-2 grid gap-1">
           {#each sources.slice(0, 3) as source (source.id)}
             <div
-              class="flex items-center justify-between gap-4 rounded-xl border border-border bg-background/45 px-3 py-2 text-sm"
+              class="flex items-center justify-between gap-3 border-b border-hairline px-1 py-2 text-sm last:border-b-0"
             >
               <span class="min-w-0">
-                <span class="block font-semibold text-foreground">{source.name}</span>
-                <span class="mt-0.5 block text-xs text-muted-foreground">{source.summary}</span>
+                <span class="block font-medium text-ink">{source.name}</span>
+                <span class="mt-0.5 block text-xs text-ink-subtle">{source.summary}</span>
               </span>
               <span
                 class={[
-                  'rounded-full px-2 py-1 text-[0.68rem] font-medium',
+                  'rounded-full px-2 py-0.5 text-[0.68rem] font-medium',
                   source.status === 'ready'
                     ? 'bg-positive/15 text-positive'
-                    : 'bg-surface-2 text-muted-foreground',
+                    : 'bg-surface-2 text-ink-muted',
                 ]}
               >
                 {sourceStatusLabel(source.status)}
@@ -234,6 +227,6 @@
           {/each}
         </div>
       {/if}
-    </div>
-  </aside>
+    </section>
+  </div>
 </section>

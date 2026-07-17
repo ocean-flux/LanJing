@@ -213,12 +213,12 @@
       "css": ".ds-panel{padding:20px;border:1px solid var(--hairline,rgb(23 26 27 / 0.1));border-radius:20px;background:var(--surface-1,#fff);box-shadow:0 1px 0 rgb(255 255 255 / 0.56) inset;color:var(--ink,#171a1b)}.ds-panel-title{margin:0 0 8px;font:600 1rem/1.4 Outfit,system-ui,sans-serif}.ds-panel-body{margin:0;font:400 0.875rem/1.5 Outfit,system-ui,sans-serif;color:var(--ink-muted,#5c6568)}"
     },
     {
-      "name": "Shell Nav Item",
+      "name": "Shell Spine Icon",
       "kind": "nav",
       "refersTo": "nav-rail",
-      "description": "Adaptive Frame rail link; soft lantern active.",
-      "html": "<a class=\"ds-nav-item ds-nav-item-active\" href=\"#\">境场</a>",
-      "css": ".ds-nav-item{display:flex;align-items:center;height:40px;padding:0 12px;border-radius:12px;color:var(--ink,#171a1b);font:500 0.875rem/1.3 Outfit,system-ui,sans-serif;text-decoration:none}.ds-nav-item:hover{background:var(--lantern-soft,rgb(42 111 122 / 0.14))}.ds-nav-item-active{background:var(--lantern-soft,rgb(42 111 122 / 0.14));color:var(--lantern-strong,#1d5560)}.ds-nav-item:focus-visible{outline:none;box-shadow:0 0 0 2px rgb(29 85 96 / 0.24)}"
+      "description": "48px icon spine: four realms + settings; labels via title only; soft lantern active.",
+      "html": "<a class=\"ds-spine-item ds-spine-item-active\" href=\"#\" title=\"境场\" aria-label=\"境场\"></a>",
+      "css": ".ds-spine-item{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;color:var(--ink-muted,#5c6568);text-decoration:none}.ds-spine-item:hover{background:var(--lantern-soft,rgb(42 111 122 / 0.14));color:var(--ink,#171a1b)}.ds-spine-item-active{background:var(--lantern-soft,rgb(42 111 122 / 0.14));color:var(--ink,#171a1b)}.ds-spine-item:focus-visible{outline:none;box-shadow:0 0 0 2px rgb(29 85 96 / 0.24)}"
     },
     {
       "name": "Status Chip",
@@ -231,14 +231,14 @@
   ],
   "narrative": {
     "northStar": "The Adaptive Frame",
-    "overview": "Shell chrome is premium by quiet precision; immersion is modal on content surfaces. Default pack Inkstone Precision; Cold Cinnabar is built-in color data. L0 light/dark/system, L1 semantic roles, L2 packs rebind values only.",
+    "overview": "Shell chrome is premium by quiet precision; immersion is modal on content surfaces. Desktop 48px icon spine (collapsible, left-edge restore) + minimal titlebar; mobile bottom four realms. L0 light/dark/system; L2 dual-track themes (light face / dark face, no auto-invert). Settings denselist only for mode/theme/locale.",
     "keyCharacteristics": [
-      "Semantic roles first; built-in packs rebind values without rewriting IA",
+      "Semantic roles first; built-in themes rebind values without rewriting IA",
       "Restrained lantern accent on tonal neutrals",
       "Outfit for chrome; Source Serif 4 for reading; JetBrains Mono for code",
       "Tonal elevation; shadows only on controls/dialogs",
-      "Adaptive shell metrics over one fluid layout",
-      "Quiet density: compact controls, less empty shell air"
+      "48px spine rail + bottom nav metrics; full-width home content",
+      "Quiet density: compact controls, denselist settings, less empty shell air"
     ],
     "rules": [
       {

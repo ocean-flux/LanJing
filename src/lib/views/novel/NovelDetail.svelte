@@ -14,55 +14,54 @@
   ];
 </script>
 
-<section class="mx-auto flex max-w-[var(--content-detail-max-width)] flex-col gap-5 py-4">
-  <div class="surface-panel relative overflow-hidden p-6 md:p-8">
-    <div class="relative grid gap-6 md:grid-cols-[220px_1fr]">
-      <div
-        class="media-void grid aspect-[3/4] place-items-center rounded-[1.75rem] text-muted-foreground shadow-surface-panel"
-        aria-label={m.novel_detail_title()}
-      >
-        <BookOpen size={48} aria-hidden="true" />
-      </div>
-      <div class="self-center">
-        <p class="text-sm font-semibold text-muted-foreground">{m.novel_title()}</p>
-        <h1 class="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-balance md:text-6xl">
-          {m.novel_detail_title()}
-        </h1>
-        <p class="mt-3 text-sm text-muted-foreground">{m.novel_detail_meta()}</p>
-        <p class="mt-5 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {m.novel_detail_desc()}
-        </p>
-        <div class="mt-7 flex flex-wrap gap-3">
-          <a
-            href={resolve('/apps/novel/read' as '/')}
-            class="motion-nav-capsule inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-          >
-            <Play size={16} aria-hidden="true" />
-            {m.action_open_reader()}
-          </a>
-          <a
-            href="#novel-directory"
-            class="motion-nav-capsule inline-flex min-h-11 items-center gap-2 rounded-full border border-border/70 bg-background/70 px-5 text-sm font-semibold hover:bg-accent"
-          >
-            <ListTree size={16} aria-hidden="true" />
-            {m.novel_toc_title()}
-          </a>
-        </div>
+<section class="flex w-full flex-col gap-4">
+  <!-- 紧凑详情头：无 6xl hero / 大 surface-panel -->
+  <header class="grid gap-4 border-b border-hairline pb-4 sm:grid-cols-[120px_1fr] sm:gap-5">
+    <div
+      class="media-void grid aspect-[3/4] max-h-40 place-items-center rounded-xl text-ink-muted sm:max-h-none"
+      aria-label={m.novel_detail_title()}
+    >
+      <BookOpen size={32} aria-hidden="true" />
+    </div>
+    <div class="min-w-0 self-center">
+      <p class="text-xs font-medium text-ink-muted">{m.novel_title()}</p>
+      <h1 class="mt-1 text-xl font-semibold tracking-tight text-ink sm:text-2xl">
+        {m.novel_detail_title()}
+      </h1>
+      <p class="mt-1 text-xs text-ink-subtle">{m.novel_detail_meta()}</p>
+      <p class="mt-2 max-w-prose text-sm leading-6 text-ink-muted">{m.novel_detail_desc()}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <a
+          href={resolve('/apps/novel/read' as '/')}
+          class="motion-nav-capsule inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          <Play size={15} aria-hidden="true" />
+          {m.action_open_reader()}
+        </a>
+        <a
+          href="#novel-directory"
+          class="motion-nav-capsule inline-flex min-h-10 items-center gap-2 rounded-lg border border-hairline px-4 text-sm font-medium text-ink hover:bg-surface-3"
+        >
+          <ListTree size={15} aria-hidden="true" />
+          {m.novel_toc_title()}
+        </a>
       </div>
     </div>
-  </div>
+  </header>
 
   <div class="grid gap-4 md:grid-cols-2">
-    <section id="novel-directory" class="surface-panel p-5" aria-labelledby="novel-toc-title">
-      <ListTree class="mb-4" size={20} aria-hidden="true" />
-      <h2 id="novel-toc-title" class="text-xl font-semibold">{m.novel_toc_title()}</h2>
-      <p class="mt-3 text-sm leading-6 text-muted-foreground">{m.novel_toc_desc()}</p>
-      <ol class="mt-5 grid gap-1.5">
+    <section id="novel-directory" aria-labelledby="novel-toc-title">
+      <h2 id="novel-toc-title" class="flex items-center gap-2 text-sm font-semibold text-ink">
+        <ListTree size={16} aria-hidden="true" />
+        {m.novel_toc_title()}
+      </h2>
+      <p class="mt-1 text-xs leading-5 text-ink-muted">{m.novel_toc_desc()}</p>
+      <ol class="mt-2 grid gap-0.5 border-t border-hairline">
         {#each chapters as chapter (chapter.index)}
           <li>
             <a
               href={resolve('/apps/novel/read' as '/')}
-              class="motion-nav-capsule flex min-h-10 items-center justify-between rounded-md px-3 text-sm text-ink-muted hover:bg-lantern-soft hover:text-ink"
+              class="motion-nav-capsule flex min-h-10 items-center justify-between border-b border-hairline px-1 text-sm text-ink-muted hover:bg-lantern-soft hover:text-ink"
             >
               <span>{m.novel_chapter({ index: chapter.index, title: chapter.title })}</span>
               <span aria-hidden="true">→</span>
@@ -71,15 +70,18 @@
         {/each}
       </ol>
     </section>
-    <section class="surface-panel p-5" aria-labelledby="novel-reader-entry-title">
-      <Play class="mb-4" size={20} aria-hidden="true" />
-      <h2 id="novel-reader-entry-title" class="text-xl font-semibold">
+    <section aria-labelledby="novel-reader-entry-title">
+      <h2
+        id="novel-reader-entry-title"
+        class="flex items-center gap-2 text-sm font-semibold text-ink"
+      >
+        <Play size={16} aria-hidden="true" />
         {m.novel_read_entry_title()}
       </h2>
-      <p class="mt-3 text-sm leading-6 text-muted-foreground">{m.novel_read_entry_desc()}</p>
+      <p class="mt-1 text-xs leading-5 text-ink-muted">{m.novel_read_entry_desc()}</p>
       <a
         href={resolve('/apps/novel/read' as '/')}
-        class="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+        class="mt-3 inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
       >
         {m.action_open_reader()}
       </a>

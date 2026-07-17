@@ -6,10 +6,15 @@ import {
   WEB_PREFERENCES_STORAGE_KEY,
   getAppearancePack,
   getCurrentTheme,
+  getDarkThemeId,
+  getLightThemeId,
   getMaterialTransparency,
   getMode,
   getTextReaderTheme,
+  resolveThemeIdForFace,
   setAppearancePack,
+  setDarkThemeId,
+  setLightThemeId,
   setMaterialTransparency,
   setMode,
   setTextReaderTheme,
@@ -18,12 +23,23 @@ import {
   updateTextReaderTheme,
   type AppearancePack,
 } from './theme.svelte';
+import { BUILTIN_APPEARANCE_PACK_IDS } from './appearance-packs';
 
-function readWebPrefs(): { mode?: string; appearancePackId?: string } {
+function readWebPrefs(): {
+  mode?: string;
+  appearancePackId?: string;
+  lightThemeId?: string;
+  darkThemeId?: string;
+} {
   const raw = localStorage.getItem(WEB_PREFERENCES_STORAGE_KEY);
   if (!raw) return {};
   try {
-    return JSON.parse(raw) as { mode?: string; appearancePackId?: string };
+    return JSON.parse(raw) as {
+      mode?: string;
+      appearancePackId?: string;
+      lightThemeId?: string;
+      darkThemeId?: string;
+    };
   } catch {
     return {};
   }
@@ -146,22 +162,64 @@ describe('theme preferences', () => {
     expect(document.documentElement.dataset.appearancePack).toBe('inkstone-precision');
   });
 
-  it('keeps builtin primary action text at AA contrast across modes', () => {
-    for (const [mode, appearancePack] of [
-      ['light', 'inkstone-precision'],
-      ['dark', 'inkstone-precision'],
-      ['light', 'cold-cinnabar'],
-      ['dark', 'cold-cinnabar'],
-    ] as const) {
-      setMode(mode);
-      setAppearancePack({ id: appearancePack });
+  it('keeps primary action text at AA contrast across every theme face', () => {
+    for (const themeId of BUILTIN_APPEARANCE_PACK_IDS) {
+      for (const face of ['light', 'dark'] as const) {
+        setMode(face);
+        if (face === 'light') setLightThemeId(themeId);
+        else setDarkThemeId(themeId);
 
-      const root = document.documentElement;
-      const primary = root.style.getPropertyValue('--lantern-strong').trim();
-      const onPrimary = root.style.getPropertyValue('--on-lantern').trim();
+        const root = document.documentElement;
+        const primary = root.style.getPropertyValue('--lantern-strong').trim();
+        const onPrimary = root.style.getPropertyValue('--on-lantern').trim();
 
-      expect(contrastRatio(primary, onPrimary)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(primary, onPrimary), `${themeId}/${face}`).toBeGreaterThanOrEqual(4.5);
+      }
     }
+  });
+
+  it('allows independent light and dark theme tracks', () => {
+    setLightThemeId('inkstone-precision');
+    setDarkThemeId('cold-cinnabar');
+    expect(getLightThemeId()).toBe('inkstone-precision');
+    expect(getDarkThemeId()).toBe('cold-cinnabar');
+
+    setMode('light');
+    expect(getAppearancePack().id).toBe('inkstone-precision');
+    expect(document.documentElement.dataset.appearancePack).toBe('inkstone-precision');
+    expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#2a6f7a');
+
+    setMode('dark');
+    expect(getAppearancePack().id).toBe('cold-cinnabar');
+    expect(document.documentElement.dataset.appearancePack).toBe('cold-cinnabar');
+    // 冷银朱暗面 lantern 为手搓值，非亮面反相
+    expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#d4785a');
+
+    const stored = readWebPrefs();
+    expect(stored.lightThemeId).toBe('inkstone-precision');
+    expect(stored.darkThemeId).toBe('cold-cinnabar');
+  });
+
+  it('resolves theme id for face without mixing tracks', () => {
+    expect(resolveThemeIdForFace('light', 'inkstone-precision', 'cold-cinnabar')).toBe(
+      'inkstone-precision',
+    );
+    expect(resolveThemeIdForFace('dark', 'inkstone-precision', 'cold-cinnabar')).toBe(
+      'cold-cinnabar',
+    );
+  });
+
+  it('migrates legacy single appearancePackId to both tracks', () => {
+    localStorage.setItem(
+      WEB_PREFERENCES_STORAGE_KEY,
+      JSON.stringify({ mode: 'light', appearancePackId: 'cold-cinnabar' }),
+    );
+    // 通过 setAppearancePack 兼容路径验证双轨同值
+    setAppearancePack({ id: 'cold-cinnabar' });
+    expect(getLightThemeId()).toBe('cold-cinnabar');
+    expect(getDarkThemeId()).toBe('cold-cinnabar');
+    expect(readWebPrefs().lightThemeId).toBe('cold-cinnabar');
+    expect(readWebPrefs().darkThemeId).toBe('cold-cinnabar');
   });
 
   it('switches to cold-cinnabar builtin pack and maps legacy paper-lantern id', () => {

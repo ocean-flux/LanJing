@@ -1,4 +1,4 @@
-// 主题偏好：L0 + L2 pack + 阅读器 + 材质。
+// 主题偏好：L0 明暗 + 双轨主题（亮/暗分选）+ 阅读器 + 材质。
 // 桌面：@tauri-store/svelte RuneStore 落盘；Web/Vitest：localStorage 回退（不在模块顶层 new RuneStore）。
 import { browser } from '$app/environment';
 import { isTauri } from '@tauri-apps/api/core';
@@ -14,6 +14,9 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 export type MaterialTransparency = 'standard' | 'low';
 
+/** 产品层「主题」id；代码可与 appearance pack id 同构。 */
+export type ThemeId = AppearancePackId;
+
 export type { AppearancePackId } from './appearance-packs';
 export {
   BUILTIN_APPEARANCE_PACK_IDS,
@@ -25,6 +28,7 @@ export {
 /**
  * L2 Appearance pack：内置墨砚 / 冷银朱；只重绑 L1 角色值。
  * 纸灯 id 经 normalize 映射到默认墨砚。
+ * 兼容读：当前 resolved 面所用主题。
  */
 export type AppearancePack = {
   id: AppearancePackId;
@@ -42,9 +46,16 @@ export type TextReaderThemePreference = {
   pageMode: 'scroll' | 'paged';
 };
 
-/** 持久化偏好状态形状（RuneStore / localStorage 共用） */
+/**
+ * 持久化偏好。
+ * lightThemeId / darkThemeId：解析为亮/暗面时分别取用的手搓主题 face。
+ * appearancePackId：兼容字段，始终同步为当前 resolved 主题（旧存储迁移源）。
+ */
 export type ThemePreferenceState = {
   mode: ThemeMode;
+  lightThemeId: ThemeId;
+  darkThemeId: ThemeId;
+  /** @deprecated 兼容读/写；迁移后与 resolved 轨主题同步 */
   appearancePackId: AppearancePackId;
   materialTransparency: MaterialTransparency;
   textReaderTheme: TextReaderThemePreference;
@@ -76,6 +87,8 @@ export const DEFAULT_MATERIAL_TRANSPARENCY: MaterialTransparency = 'standard';
 
 export const DEFAULT_THEME_PREFERENCE_STATE: ThemePreferenceState = {
   mode: 'system',
+  lightThemeId: DEFAULT_APPEARANCE_PACK_ID,
+  darkThemeId: DEFAULT_APPEARANCE_PACK_ID,
   appearancePackId: DEFAULT_APPEARANCE_PACK_ID,
   materialTransparency: DEFAULT_MATERIAL_TRANSPARENCY,
   textReaderTheme: { ...DEFAULT_TEXT_READER_THEME },
@@ -114,6 +127,27 @@ function isTextReaderTheme(value: unknown): value is TextReaderThemePreference {
   );
 }
 
+/** 从旧单 pack 或分轨字段解析亮/暗主题 id。 */
+function resolveTrackThemeIds(source: {
+  lightThemeId?: unknown;
+  darkThemeId?: unknown;
+  appearancePackId?: unknown;
+}): { lightThemeId: ThemeId; darkThemeId: ThemeId } {
+  const legacyPack =
+    typeof source.appearancePackId === 'string'
+      ? normalizeAppearancePackId(source.appearancePackId)
+      : DEFAULT_APPEARANCE_PACK_ID;
+  const light =
+    typeof source.lightThemeId === 'string'
+      ? normalizeAppearancePackId(source.lightThemeId)
+      : legacyPack;
+  const dark =
+    typeof source.darkThemeId === 'string'
+      ? normalizeAppearancePackId(source.darkThemeId)
+      : legacyPack;
+  return { lightThemeId: light, darkThemeId: dark };
+}
+
 function migrateLegacyLocalStorage(): Partial<ThemePreferenceState> {
   if (!browser) return {};
   const next: Partial<ThemePreferenceState> = {};
@@ -122,7 +156,12 @@ function migrateLegacyLocalStorage(): Partial<ThemePreferenceState> {
   if (isThemeMode(mode)) next.mode = mode;
 
   const pack = localStorage.getItem(LEGACY_PACK_KEY);
-  if (pack) next.appearancePackId = normalizeAppearancePackId(pack);
+  if (pack) {
+    const id = normalizeAppearancePackId(pack);
+    next.appearancePackId = id;
+    next.lightThemeId = id;
+    next.darkThemeId = id;
+  }
 
   const material = localStorage.getItem(LEGACY_MATERIAL_KEY);
   if (isMaterial(material)) next.materialTransparency = material;
@@ -150,9 +189,10 @@ function readWebFallback(): Partial<ThemePreferenceState> {
     const o = parsed as Record<string, unknown>;
     const next: Partial<ThemePreferenceState> = {};
     if (isThemeMode(o.mode)) next.mode = o.mode;
-    if (typeof o.appearancePackId === 'string') {
-      next.appearancePackId = normalizeAppearancePackId(o.appearancePackId);
-    }
+    const tracks = resolveTrackThemeIds(o);
+    next.lightThemeId = tracks.lightThemeId;
+    next.darkThemeId = tracks.darkThemeId;
+    next.appearancePackId = tracks.lightThemeId;
     if (isMaterial(o.materialTransparency)) next.materialTransparency = o.materialTransparency;
     if (isTextReaderTheme(o.textReaderTheme)) next.textReaderTheme = o.textReaderTheme;
     return next;
@@ -164,11 +204,16 @@ function readWebFallback(): Partial<ThemePreferenceState> {
 function buildInitialState(): ThemePreferenceState {
   const legacy = migrateLegacyLocalStorage();
   const web = readWebFallback();
+  const tracks = resolveTrackThemeIds({
+    lightThemeId: web.lightThemeId ?? legacy.lightThemeId,
+    darkThemeId: web.darkThemeId ?? legacy.darkThemeId,
+    appearancePackId: web.appearancePackId ?? legacy.appearancePackId ?? DEFAULT_APPEARANCE_PACK_ID,
+  });
   return {
     mode: web.mode ?? legacy.mode ?? DEFAULT_THEME_PREFERENCE_STATE.mode,
-    appearancePackId: normalizeAppearancePackId(
-      web.appearancePackId ?? legacy.appearancePackId ?? DEFAULT_APPEARANCE_PACK_ID,
-    ),
+    lightThemeId: tracks.lightThemeId,
+    darkThemeId: tracks.darkThemeId,
+    appearancePackId: tracks.lightThemeId,
     materialTransparency:
       web.materialTransparency ?? legacy.materialTransparency ?? DEFAULT_MATERIAL_TRANSPARENCY,
     textReaderTheme: {
@@ -199,6 +244,17 @@ function resolveTheme(mode: ThemeMode): ResolvedTheme {
   return mode === 'system' ? readSystemTheme() : mode;
 }
 
+/** 按已解析明暗面选用对应轨主题 id（禁止从另一面算法反相）。 */
+export function resolveThemeIdForFace(
+  resolved: ResolvedTheme,
+  lightThemeId: ThemeId,
+  darkThemeId: ThemeId,
+): ThemeId {
+  return resolved === 'dark'
+    ? normalizeAppearancePackId(darkThemeId)
+    : normalizeAppearancePackId(lightThemeId);
+}
+
 function applyTheme(theme: ResolvedTheme): void {
   if (!browser) return;
   document.documentElement.dataset.theme = theme;
@@ -214,9 +270,10 @@ function writePackTokens(tokens: AppearanceTokenMap): void {
   }
 }
 
-function applyAppearancePackId(id: AppearancePackId, resolved: ResolvedTheme): void {
+/** 应用指定主题的手搓 light/dark face token。 */
+function applyThemeFace(themeId: ThemeId, resolved: ResolvedTheme): void {
   if (!browser) return;
-  const normalized = normalizeAppearancePackId(id);
+  const normalized = normalizeAppearancePackId(themeId);
   document.documentElement.dataset.appearancePack = normalized;
   writePackTokens(APPEARANCE_PACK_TOKENS[normalized][resolved]);
 }
@@ -228,11 +285,15 @@ function applyMaterialTransparency(value: MaterialTransparency): void {
 }
 
 function applyAllFromPreferenceState(): void {
-  prefs.appearancePackId = normalizeAppearancePackId(prefs.appearancePackId);
+  prefs.lightThemeId = normalizeAppearancePackId(prefs.lightThemeId);
+  prefs.darkThemeId = normalizeAppearancePackId(prefs.darkThemeId);
   const resolved = resolveTheme(prefs.mode);
   _currentTheme = resolved;
+  const activeThemeId = resolveThemeIdForFace(resolved, prefs.lightThemeId, prefs.darkThemeId);
+  // 兼容 getter：当前生效主题写回 appearancePackId
+  prefs.appearancePackId = activeThemeId;
   applyTheme(resolved);
-  applyAppearancePackId(prefs.appearancePackId, resolved);
+  applyThemeFace(activeThemeId, resolved);
   applyMaterialTransparency(prefs.materialTransparency);
 }
 
@@ -242,6 +303,9 @@ function persistWebFallback(): void {
     WEB_PREFERENCES_STORAGE_KEY,
     JSON.stringify({
       mode: prefs.mode,
+      lightThemeId: prefs.lightThemeId,
+      darkThemeId: prefs.darkThemeId,
+      // 兼容旧读路径
       appearancePackId: prefs.appearancePackId,
       materialTransparency: prefs.materialTransparency,
       textReaderTheme: prefs.textReaderTheme,
@@ -260,6 +324,8 @@ function clearLegacyKeys(): void {
 function syncPrefsToTauriRune(): void {
   if (!tauriRune) return;
   tauriRune.state.mode = prefs.mode;
+  tauriRune.state.lightThemeId = prefs.lightThemeId;
+  tauriRune.state.darkThemeId = prefs.darkThemeId;
   tauriRune.state.appearancePackId = prefs.appearancePackId;
   tauriRune.state.materialTransparency = prefs.materialTransparency;
   tauriRune.state.textReaderTheme = { ...prefs.textReaderTheme };
@@ -296,6 +362,8 @@ export async function startThemePreferences(): Promise<void> {
         'lanjing-preferences',
         {
           mode: prefs.mode,
+          lightThemeId: prefs.lightThemeId,
+          darkThemeId: prefs.darkThemeId,
           appearancePackId: prefs.appearancePackId,
           materialTransparency: prefs.materialTransparency,
           textReaderTheme: { ...prefs.textReaderTheme },
@@ -310,13 +378,11 @@ export async function startThemePreferences(): Promise<void> {
         },
       );
       await rune.start();
-      // 磁盘态覆盖内存（并规范化 pack id）
+      // 磁盘态覆盖内存（并规范化双轨主题）
       prefs.mode = isThemeMode(rune.state.mode) ? rune.state.mode : prefs.mode;
-      prefs.appearancePackId = normalizeAppearancePackId(
-        typeof rune.state.appearancePackId === 'string'
-          ? rune.state.appearancePackId
-          : prefs.appearancePackId,
-      );
+      const tracks = resolveTrackThemeIds(rune.state as ThemePreferenceState);
+      prefs.lightThemeId = tracks.lightThemeId;
+      prefs.darkThemeId = tracks.darkThemeId;
       if (isMaterial(rune.state.materialTransparency)) {
         prefs.materialTransparency = rune.state.materialTransparency;
       }
@@ -343,8 +409,10 @@ if (browser) {
     if (prefs.mode !== 'system') return;
     const resolved: ResolvedTheme = event.matches ? 'dark' : 'light';
     _currentTheme = resolved;
+    const activeThemeId = resolveThemeIdForFace(resolved, prefs.lightThemeId, prefs.darkThemeId);
+    prefs.appearancePackId = activeThemeId;
     applyTheme(resolved);
-    applyAppearancePackId(prefs.appearancePackId, resolved);
+    applyThemeFace(activeThemeId, resolved);
   });
 }
 
@@ -367,6 +435,28 @@ export function setMode(value: ThemeMode): void {
 /** 在 light / dark 之间切换（基于当前已解析主题） */
 export function toggle(): void {
   setMode(_currentTheme === 'dark' ? 'light' : 'dark');
+}
+
+/** 亮面选用主题 */
+export function getLightThemeId(): ThemeId {
+  return normalizeAppearancePackId(prefs.lightThemeId);
+}
+
+/** 设置亮面主题（仅影响 resolved=light 时的 face） */
+export function setLightThemeId(id: string): void {
+  prefs.lightThemeId = normalizeAppearancePackId(id);
+  afterStateMutation();
+}
+
+/** 暗面选用主题 */
+export function getDarkThemeId(): ThemeId {
+  return normalizeAppearancePackId(prefs.darkThemeId);
+}
+
+/** 设置暗面主题（仅影响 resolved=dark 时的 face） */
+export function setDarkThemeId(id: string): void {
+  prefs.darkThemeId = normalizeAppearancePackId(id);
+  afterStateMutation();
 }
 
 /** 读取文本阅读器主题 */
@@ -405,20 +495,23 @@ export function syncMaterialTransparencyForA11y(reducedTransparency: boolean): v
   applyMaterialTransparency(effective);
 }
 
-/** 读取当前 L2 Appearance pack */
+/**
+ * 读取当前 resolved 面所用主题（兼容旧 getAppearancePack）。
+ */
 export function getAppearancePack(): AppearancePack {
   return {
-    id: normalizeAppearancePackId(prefs.appearancePackId),
+    id: resolveThemeIdForFace(_currentTheme, prefs.lightThemeId, prefs.darkThemeId),
   };
 }
 
 /**
- * 设置 L2 Appearance pack。
- * 内置墨砚/冷银朱；历史纸灯与未知 id → 默认墨砚。
+ * 兼容：将亮/暗两轨同时设为同一主题 id（旧「单 pack」语义）。
  */
 export function setAppearancePack(
   pack: AppearancePack | { id: string; tokens?: AppearancePack['tokens'] },
 ): void {
-  prefs.appearancePackId = normalizeAppearancePackId(pack.id);
+  const id = normalizeAppearancePackId(pack.id);
+  prefs.lightThemeId = id;
+  prefs.darkThemeId = id;
   afterStateMutation();
 }

@@ -157,9 +157,8 @@
   --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.56) inset, 0 4px 12px rgb(0 0 0 / 0.08);
   --surface-dialog-shadow: 0 16px 40px rgb(0 0 0 / 0.18);
   --surface-ring: 0 0 0 1px var(--hairline) inset;
-  --shell-rail-width: 72px;
-  --shell-rail-expanded-width: 220px;
-  --shell-rail-tablet-width: 64px;
+  /* 窄图标脊 48px；废弃肥栏 expanded token */
+  --shell-rail-width: 48px;
   --shell-titlebar-height: 44px;
   --shell-titlebar-compact-height: 40px;
   --shell-bottom-nav-height: 64px;

@@ -121,17 +121,28 @@ export function resolveShellMode({ width, hover, pointer }: ShellModeInput): She
   return 'desktop';
 }
 
-/** 是否使用底部主导航。 */
-export function usesBottomNav(mode: ShellMode): boolean {
-  return mode === 'mobile' || mode === 'tablet-portrait';
+/** 主导航 chrome 族：桌面脊 vs 移动底栏（互斥）。 */
+export type PrimaryChromeFamily = 'rail' | 'bottom';
+
+/**
+ * 由壳断点解析主导航族。
+ * mobile / tablet-portrait → bottom；其余 → rail。
+ */
+export function resolvePrimaryChromeFamily(mode: ShellMode): PrimaryChromeFamily {
+  return mode === 'mobile' || mode === 'tablet-portrait' ? 'bottom' : 'rail';
 }
 
-/** 是否使用图标轨（窄桌面 / 横屏平板）。 */
-export function usesIconRail(mode: ShellMode): boolean {
-  return mode === 'tablet-landscape' || mode === 'narrow-desktop';
+/** 设置路由：非四境，不点亮 productContext active。 */
+export function isSettingsPathname(pathname: string): boolean {
+  return pathname.startsWith('/settings');
 }
 
-/** 是否使用展开桌面轨。 */
-export function usesDesktopRail(mode: ShellMode): boolean {
-  return mode === 'desktop';
+/**
+ * 四境 active：设置路径清空，避免第五境误读。
+ */
+export function resolveActivePrimaryRoute(
+  pathname: string,
+  productContext: ProductContext,
+): ProductContext | undefined {
+  return isSettingsPathname(pathname) ? undefined : productContext;
 }

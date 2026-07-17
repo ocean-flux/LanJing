@@ -1,13 +1,5 @@
 <script lang="ts">
-  import Monitor from '@lucide/svelte/icons/monitor';
-  import Moon from '@lucide/svelte/icons/moon';
-  import Search from '@lucide/svelte/icons/search';
-  import Settings from '@lucide/svelte/icons/settings';
-  import Sun from '@lucide/svelte/icons/sun';
-  import { resolve } from '$app/paths';
-  import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';
-  import { getMode, setMode, type ThemeMode } from '$lib/stores/theme.svelte';
   import type { NativeWindowControlMode } from './shell-types';
 
   type WindowAction = 'minimize' | 'toggle-maximize' | 'close';
@@ -15,8 +7,6 @@
     contextLabel?: string;
     compact?: boolean;
     nativeControlMode?: NativeWindowControlMode;
-    themeMode?: ThemeMode;
-    onsearch?: () => void;
   };
 
   const titlebarMessages = m as typeof m & {
@@ -30,15 +20,7 @@
     contextLabel = m.nav_realm(),
     compact = false,
     nativeControlMode: controlledNativeControlMode,
-    themeMode: controlledThemeMode,
-    onsearch,
   }: Props = $props();
-
-  const nextMode: Record<ThemeMode, ThemeMode> = {
-    system: 'light',
-    light: 'dark',
-    dark: 'system',
-  };
 
   /** 仅测试：AppShell 未传入 shell.platform.windowControls 时的回退。 */
   function resolveNativeControlModeFallback(): NativeWindowControlMode {
@@ -52,12 +34,6 @@
     return 'windows-overlay';
   }
 
-  const currentMode = $derived(controlledThemeMode ?? getMode());
-  const modeLabel = $derived.by(() => {
-    if (currentMode === 'light') return m.theme_mode_light();
-    if (currentMode === 'dark') return m.theme_mode_dark();
-    return m.theme_mode_system();
-  });
   const nativeControlMode = $derived(
     controlledNativeControlMode ?? resolveNativeControlModeFallback(),
   );
@@ -68,10 +44,6 @@
       nativeControlMode === 'system-decorated',
   );
   const titlebarControlLeft = $derived(nativeControlMode === 'macos-overlay' ? '86px' : '0px');
-
-  function cycleThemeMode() {
-    setMode(nextMode[currentMode]);
-  }
 
   async function runWindowAction(action: WindowAction) {
     try {
@@ -96,10 +68,9 @@
 </script>
 
 <!--
-  无边框拖拽模型：
-  - 仅显式拖拽区带 data-tauri-drag-region（标题 + flex 间隔）。
-  - header 本身不是拖拽区（避免吞掉标题控件点击）。
-  - 交互簇用 titlebar-no-drag，按钮永不启动拖拽。
+  极简 titlebar：上下文 + 窗控。
+  无搜索 / 设置 / 主题循环（设置页专责）。
+  拖拽：仅 data-tauri-drag-region 区；控件簇 no-drag。
 -->
 <header
   class={[
@@ -122,51 +93,9 @@
       data-tauri-drag-region
     >
       <div class="min-w-0 font-medium text-ink-muted" data-tauri-drag-region>
-        <span class="truncate" data-tauri-drag-region>览境 / {contextLabel}</span>
+        <span class="truncate" data-tauri-drag-region>{m.app_name()} / {contextLabel}</span>
       </div>
       <div class="min-h-full min-w-4 flex-1 self-stretch" data-tauri-drag-region></div>
-    </div>
-
-    <div class="titlebar-no-drag relative z-10 flex shrink-0 items-center gap-1 pr-1">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        class="motion-command-lens h-8 rounded-md border-hairline bg-surface-1 px-2.5 text-ink-muted hover:bg-surface-3 hover:text-ink"
-        aria-label={m.search_open()}
-        onclick={onsearch}
-      >
-        <Search size={14} strokeWidth={1.75} aria-hidden="true" />
-        <span class="hidden sm:inline">{m.search()}</span>
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        class="motion-nav-capsule grid h-8 w-8 place-items-center rounded-md p-0 text-ink-muted hover:bg-surface-3 hover:text-ink"
-        aria-label={m.settings_open()}
-        title={m.settings()}
-        href={resolve('/settings' as '/')}
-      >
-        <Settings size={15} strokeWidth={1.75} aria-hidden="true" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        class="motion-nav-capsule grid h-8 w-8 place-items-center rounded-md p-0 text-ink-muted hover:bg-surface-3 hover:text-ink"
-        aria-label={m.theme_mode_toggle({ mode: modeLabel })}
-        title={m.theme_mode_toggle({ mode: modeLabel })}
-        onclick={cycleThemeMode}
-      >
-        {#if currentMode === 'light'}
-          <Sun size={15} strokeWidth={1.75} aria-hidden="true" />
-        {:else if currentMode === 'dark'}
-          <Moon size={15} strokeWidth={1.75} aria-hidden="true" />
-        {:else}
-          <Monitor size={15} strokeWidth={1.75} aria-hidden="true" />
-        {/if}
-        <span class="sr-only">{modeLabel}</span>
-      </Button>
     </div>
   </div>
 

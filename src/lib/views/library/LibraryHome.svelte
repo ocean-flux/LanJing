@@ -100,134 +100,118 @@
   }
 </script>
 
-<section class="grid min-h-full gap-4 py-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-  <div class="surface-panel media-void relative min-h-[320px] overflow-hidden p-5 md:p-6">
-    <div class="relative flex min-h-[280px] flex-col justify-between gap-8">
-      <div class="max-w-3xl py-4 md:py-6">
-        <p class="text-sm font-medium text-muted-foreground">{m.nav_library()}</p>
-        <h1
-          class="mt-2 max-w-2xl text-balance text-2xl font-semibold tracking-tight text-foreground md:text-3xl"
-        >
-          {m.library_title()}
-        </h1>
-        <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-          {m.library_desc()}
-        </p>
-      </div>
+<section class="flex w-full flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-4">
+  <div class="min-w-0">
+    <header
+      class="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-hairline pb-2"
+    >
+      <h1 class="text-base font-semibold tracking-tight text-ink">{m.library_title()}</h1>
+      <p class="max-w-prose text-xs text-ink-muted">{m.library_desc()}</p>
+    </header>
 
-      {#if loading}
-        <p class="text-sm text-muted-foreground" role="status">{m.library_desc()}</p>
-      {:else if items.length > 0}
-        <div class="grid gap-3" aria-label={m.library_title()}>
-          {#each items as entry, index (entry.item.id)}
-            <article
-              class="surface-control grid gap-4 rounded-xl border border-border bg-background/55 p-4 md:grid-cols-[minmax(0,1fr)_auto]"
-              data-resource-id={entry.item.id}
-            >
-              <div class="min-w-0">
-                <h2 class="truncate text-base font-semibold text-foreground">{entry.item.title}</h2>
-                {#if entry.item.subtitle}
-                  <p class="mt-1 text-sm text-muted-foreground">{entry.item.subtitle}</p>
-                {/if}
-                {#if entry.source}
-                  <p class="mt-2 text-xs text-muted-foreground">
-                    {m.library_source_label({ name: entry.source.title })}
-                  </p>
-                {/if}
-                {#if entry.state.progress}
-                  <p class="mt-2 text-xs text-muted-foreground">
-                    {entry.state.progress.position}{#if entry.state.progress.total !== null}
-                      / {entry.state.progress.total}
-                    {/if}
-                  </p>
-                {/if}
-                {#if entry.alternativeRoutes.length > 0}
-                  <p class="mt-2 text-xs text-muted-foreground">
-                    {m.library_alternative_routes()}: {entry.alternativeRoutes
-                      .map((route) => route.title)
-                      .join('、')}
-                  </p>
-                {/if}
-              </div>
-              <div class="flex items-start gap-2">
-                <button
-                  type="button"
-                  class="grid h-9 w-9 place-items-center rounded-md border border-border hover:bg-accent"
-                  aria-label={entry.state.favorite ? m.library_unfavorite() : m.library_favorite()}
-                  aria-pressed={entry.state.favorite}
-                  onclick={() => toggleState(index, 'favorite')}
-                >
-                  <Star
-                    size={16}
-                    fill={entry.state.favorite ? 'currentColor' : 'none'}
-                    aria-hidden="true"
-                  />
-                </button>
-                <button
-                  type="button"
-                  class="grid h-9 w-9 place-items-center rounded-md border border-border hover:bg-accent"
-                  aria-label={entry.state.pinned ? m.library_unpin() : m.library_pin()}
-                  aria-pressed={entry.state.pinned}
-                  onclick={() => toggleState(index, 'pinned')}
-                >
-                  <Pin
-                    size={16}
-                    fill={entry.state.pinned ? 'currentColor' : 'none'}
-                    aria-hidden="true"
-                  />
-                </button>
-              </div>
-            </article>
-          {/each}
-        </div>
-      {:else}
-        <div
-          class="grid gap-3 rounded-xl border border-dashed border-border bg-background/30 p-5"
-          role="status"
-        >
-          <h2 class="text-base font-semibold text-foreground">{m.library_empty_title()}</h2>
-          <p class="text-sm leading-6 text-muted-foreground">{m.library_empty_next()}</p>
-        </div>
-      {/if}
-
-      {#if loadError}
-        <p class="text-xs text-muted-foreground" role="status">{m.library_empty_next()}</p>
-      {/if}
-      {#if stateError}
-        <p class="text-xs text-destructive" role="alert">{m.library_empty_next()}</p>
-      {/if}
-    </div>
-  </div>
-
-  <aside class="grid content-start gap-4">
-    <div class="surface-panel p-5">
-      <h2 class="text-sm font-semibold">{m.library_title()}</h2>
-      <p class="mt-2 text-xs leading-5 text-muted-foreground">{m.library_desc()}</p>
-
-      <div class="mt-5 grid gap-2">
-        {#each actions as action (action.kind)}
-          <a
-            href={resolve(action.path as '/')}
-            class="surface-control flex items-start gap-3 rounded-xl px-3 py-2 text-sm hover:bg-accent"
+    {#if loading}
+      <p class="text-sm text-ink-muted" role="status">{m.library_desc()}</p>
+    {:else if items.length > 0}
+      <div class="grid gap-2" aria-label={m.library_title()}>
+        {#each items as entry, index (entry.item.id)}
+          <article
+            class="grid gap-3 border-b border-hairline py-2 md:grid-cols-[minmax(0,1fr)_auto]"
+            data-resource-id={entry.item.id}
           >
-            <span
-              class="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border bg-surface-1 text-foreground"
-            >
-              {#if action.kind === 'add-source'}
-                <Plus size={15} aria-hidden="true" />
-              {:else if action.kind === 'import-local'}
-                <Download size={15} aria-hidden="true" />
-              {:else}
-                <Search size={15} aria-hidden="true" />
+            <div class="min-w-0">
+              <h2 class="truncate text-sm font-semibold text-ink">{entry.item.title}</h2>
+              {#if entry.item.subtitle}
+                <p class="mt-0.5 text-xs text-ink-muted">{entry.item.subtitle}</p>
               {/if}
-            </span>
-            <span class="min-w-0">
-              <span class="block font-medium text-foreground">{action.label}</span>
-              <span class="mt-1 block text-xs leading-5 text-muted-foreground">{action.desc}</span>
-            </span>
-          </a>
+              {#if entry.source}
+                <p class="mt-1 text-xs text-ink-subtle">
+                  {m.library_source_label({ name: entry.source.title })}
+                </p>
+              {/if}
+              {#if entry.state.progress}
+                <p class="mt-1 text-xs text-ink-subtle">
+                  {entry.state.progress.position}{#if entry.state.progress.total !== null}
+                    / {entry.state.progress.total}
+                  {/if}
+                </p>
+              {/if}
+              {#if entry.alternativeRoutes.length > 0}
+                <p class="mt-1 text-xs text-ink-subtle">
+                  {m.library_alternative_routes()}: {entry.alternativeRoutes
+                    .map((route) => route.title)
+                    .join('、')}
+                </p>
+              {/if}
+            </div>
+            <div class="flex items-start gap-1">
+              <button
+                type="button"
+                class="grid h-9 w-9 place-items-center rounded-md text-ink-muted hover:bg-lantern-soft hover:text-ink"
+                aria-label={entry.state.favorite ? m.library_unfavorite() : m.library_favorite()}
+                aria-pressed={entry.state.favorite}
+                onclick={() => toggleState(index, 'favorite')}
+              >
+                <Star
+                  size={16}
+                  fill={entry.state.favorite ? 'currentColor' : 'none'}
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                type="button"
+                class="grid h-9 w-9 place-items-center rounded-md text-ink-muted hover:bg-lantern-soft hover:text-ink"
+                aria-label={entry.state.pinned ? m.library_unpin() : m.library_pin()}
+                aria-pressed={entry.state.pinned}
+                onclick={() => toggleState(index, 'pinned')}
+              >
+                <Pin
+                  size={16}
+                  fill={entry.state.pinned ? 'currentColor' : 'none'}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          </article>
         {/each}
       </div>
+    {:else}
+      <div class="border border-dashed border-hairline px-3 py-4" role="status">
+        <h2 class="text-sm font-semibold text-ink">{m.library_empty_title()}</h2>
+        <p class="mt-1 text-xs leading-5 text-ink-muted">{m.library_empty_next()}</p>
+      </div>
+    {/if}
+
+    {#if loadError}
+      <p class="mt-2 text-xs text-ink-muted" role="status">{m.library_empty_next()}</p>
+    {/if}
+    {#if stateError}
+      <p class="mt-2 text-xs text-danger" role="alert">{m.library_empty_next()}</p>
+    {/if}
+  </div>
+
+  <aside class="border-t border-hairline pt-2 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+    <p class="mb-2 text-xs font-medium text-ink-muted">{m.library_title()}</p>
+    <div class="grid gap-1">
+      {#each actions as action (action.kind)}
+        <a
+          href={resolve(action.path as '/')}
+          class="flex items-start gap-2 rounded-lg px-2 py-2 text-sm text-ink-muted outline-none hover:bg-lantern-soft hover:text-ink focus-visible:shadow-[var(--focus-ring)]"
+        >
+          <span class="grid h-8 w-8 shrink-0 place-items-center text-ink-muted">
+            {#if action.kind === 'add-source'}
+              <Plus size={15} aria-hidden="true" />
+            {:else if action.kind === 'import-local'}
+              <Download size={15} aria-hidden="true" />
+            {:else}
+              <Search size={15} aria-hidden="true" />
+            {/if}
+          </span>
+          <span class="min-w-0">
+            <span class="block font-medium text-ink">{action.label}</span>
+            <span class="mt-0.5 block text-xs leading-5 text-ink-subtle">{action.desc}</span>
+          </span>
+        </a>
+      {/each}
     </div>
   </aside>
 </section>

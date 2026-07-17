@@ -31,29 +31,32 @@
 
 <article
   class={[
-    'surface-panel motion-dock-wake p-5 transition-colors',
+    'motion-dock-wake rounded-xl border border-hairline bg-surface-1 p-3 transition-colors',
     source.status === 'failed' && 'border-danger/45 bg-danger/10',
     source.status === 'partial' && 'border-warning/45 bg-warning/10',
   ]}
   data-tone={attention ? 'attention' : 'calm'}
 >
-  <div class="flex flex-wrap items-start justify-between gap-3">
-    <div>
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+  <div class="flex flex-wrap items-start justify-between gap-2">
+    <div class="min-w-0">
+      <p class="text-[0.68rem] font-medium uppercase tracking-wide text-ink-subtle">
         {source.kind}
       </p>
-      <h2 class="mt-2 text-xl font-semibold">{source.name}</h2>
+      <h2 class="mt-0.5 text-sm font-semibold text-ink">{source.name}</h2>
     </div>
     <span
-      class={['rounded-full border px-3 py-1 text-xs font-semibold', statusTone[source.status]]}
+      class={[
+        'rounded-full border px-2 py-0.5 text-[0.68rem] font-medium',
+        statusTone[source.status],
+      ]}
     >
       {statusLabels[source.status]}
     </span>
   </div>
 
-  <p class="mt-4 text-sm leading-6 text-muted-foreground">{source.summary}</p>
+  <p class="mt-2 text-xs leading-5 text-ink-muted">{source.summary}</p>
 
-  <div class="mt-4 flex flex-wrap gap-2" aria-label={m.sources_capabilities()}>
+  <div class="mt-2 flex flex-wrap gap-1.5" aria-label={m.sources_capabilities()}>
     {#each capabilities as capability (capability.key)}
       <CapabilityChip
         capability={capability.key}
@@ -62,25 +65,25 @@
     {/each}
   </div>
 
-  <dl class="mt-5 grid gap-2 text-sm sm:grid-cols-2">
+  <dl class="mt-2 grid gap-1.5 text-xs sm:grid-cols-2">
     {#each source.trustFacts as fact (fact.label)}
-      <div class="surface-control rounded-2xl p-3">
-        <dt class="text-xs text-muted-foreground">{fact.label}</dt>
-        <dd class="mt-1 font-medium">{fact.value}</dd>
+      <div class="rounded-lg border border-hairline bg-surface-2 px-2 py-1.5">
+        <dt class="text-[0.68rem] text-ink-subtle">{fact.label}</dt>
+        <dd class="mt-0.5 font-medium text-ink">{fact.value}</dd>
       </div>
     {/each}
   </dl>
 
-  <div class="mt-5 flex flex-wrap gap-2">
+  <div class="mt-2 flex flex-wrap gap-1.5">
     {#each source.actions as action (action)}
-      <Button type="button" variant="outline" class="rounded-full bg-background/70">
+      <Button type="button" variant="outline" size="sm" class="h-8 rounded-lg text-xs">
         {action}
       </Button>
     {/each}
   </div>
 
   {#if source.checkedAt}
-    <p class="mt-4 text-xs text-muted-foreground">
+    <p class="mt-2 text-[0.68rem] text-ink-subtle">
       {m.sources_checked_at({ time: source.checkedAt })}
     </p>
   {/if}

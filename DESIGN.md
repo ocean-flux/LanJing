@@ -106,7 +106,7 @@ components:
   nav-rail:
     backgroundColor: '{colors.canvas}'
     textColor: '{colors.ink}'
-    width: '220px'
+    width: '48px'
   input-default:
     backgroundColor: '{colors.canvas}'
     textColor: '{colors.ink}'
@@ -121,7 +121,7 @@ components:
 
 **Creative North Star: "The Adaptive Frame"**
 
-LanJing is a product UI system for a local cross-media workbench. The Adaptive Frame is the constant: product orientation, navigation grammar, and semantic color roles stay stable. **Shell chrome is premium by quiet precision** — not by heavy atmosphere. **Immersion is modal**: novel/music/reader/player may change paper, void, and density **inside the content surface**; rail, titlebar, and bottom nav keep the same grammar and role names.
+LanJing is a product UI system for a local cross-media workbench. The Adaptive Frame is the constant: product orientation, navigation grammar, and semantic color roles stay stable. **Shell chrome is premium by quiet precision** — not by heavy atmosphere. **Immersion is modal**: novel/music/reader/player may change paper, void, and density **inside the content surface**; spine rail, minimal titlebar, and bottom nav keep the same grammar and role names.
 
 Default appearance pack: **墨砚精密 (Inkstone Precision)** — near-neutral canvas, teal-ink lantern accent ≤~10% mass, compact controls, tonal elevation. Second built-in pack **冷银朱 (Cold Cinnabar)** rebinds the same L1 roles to silver neutrals + cinnabar accent. Legacy `paper-lantern-precision` maps to inkstone. **Roles** (`canvas`, `ink`, `lantern`, `reader-*`, `media-void`) are the contract, not any one hex romance.
 
@@ -134,18 +134,18 @@ The system rejects generic SaaS dashboard kits, content-farm feed noise, scraper
 - Restrained lantern accent (primary actions, selection, focus)
 - Outfit for chrome/UI; Source Serif 4 for long reading; JetBrains Mono for code/rules
 - Tonal elevation (surface-1/2/3 + hairline); shadows only on controls/dialogs
-- Adaptive shell metrics (rail, bottom nav, safe area, mini-player)
+- Adaptive shell metrics (48px spine rail, bottom nav, safe area, mini-player)
 - Quiet density in chrome; reading may open measure/line-height without bloating nav
 
 **Theme layers (implement against these names):**
 
-| Layer        | Responsibility                                                                          |
-| ------------ | --------------------------------------------------------------------------------------- |
-| L0           | `light` / `dark` / `system` on `documentElement`                                        |
-| L1           | CSS variables for semantic roles (this file’s palette)                                  |
-| L2           | Built-in pack id rebinds L1; production supports inkstone + cold-cinnabar             |
-| L3           | Mode-scoped presentation tokens for main/reader/player — never rename L1                |
-| Reader prefs | Independent of L0; paper/white/gray/dark/black etc.                                     |
+| Layer        | Responsibility                                                            |
+| ------------ | ------------------------------------------------------------------------- |
+| L0           | `light` / `dark` / `system` on `documentElement`                          |
+| L1           | CSS variables for semantic roles (this file’s palette)                    |
+| L2           | Built-in pack id rebinds L1; production supports inkstone + cold-cinnabar |
+| L3           | Mode-scoped presentation tokens for main/reader/player — never rename L1  |
+| Reader prefs | Independent of L0; paper/white/gray/dark/black etc.                       |
 
 **Agent taste gate (product register):** Reject marketing-landing “premium” that fights this system: oversized hero padding in app chrome, gradient text, side-stripe cards, decorative glass on shell, Inter-as-brand, Lucide as pure decoration, identical card grids as default discovery, shell mood filters, neon media-void as global chrome. Prefer precision tools (Linear/Books calm) over Awwwards portfolio energy. Immersive hero treatments belong in **mode content**, not in the global frame.
 
@@ -185,7 +185,7 @@ Near-neutral canvas with a single teal-ink lantern accent (default pack). Light 
 
 **The Honest Empty Rule.** Prefer `media-void` + real copy over stock photos or fabricated shelves.
 
-**The Quiet Shell Rule.** Rail, titlebar, bottom nav, and command chrome stay low-atmosphere. Do not apply full-bleed media tints, heavy blur stacks, or cinematic gradients to shell chrome to “feel immersive.”
+**The Quiet Shell Rule.** Spine rail, titlebar, bottom nav, and command chrome stay low-atmosphere. Do not apply full-bleed media tints, heavy blur stacks, or cinematic gradients to shell chrome to “feel immersive.”
 
 **The Modal Immersion Rule.** Atmosphere (reader paper, album hero, void stage) applies inside `main` / reader / player surfaces. Leaving a mode restores shell-default L1 presentation without sticky mood on global nav.
 
@@ -260,12 +260,12 @@ Handfeel: **quiet and precise**, compact padding, fewer empty bands. shadcn-svel
 
 ### Navigation (Adaptive Frame)
 
-- **Desktop expanded rail:** ~220px, canvas ground, hairline right edge — precision tool, not a mood panel.
-- **Icon rail / tablet:** ~64–72px metrics via CSS vars.
-- **Mobile:** bottom nav ~64px + `safe-area-inset-bottom`; never covered by mini-player reservation.
-- **Titlebar:** ~40–44px; native window control modes from shell platform contract (`windows-overlay` / `macos-overlay` / …).
+- **Desktop spine rail:** ~48px; four realms + settings entry + collapse; labels via tooltip/flyout only (never expands to 220px text rail). Collapsed: zero width; **left-edge hover hit restores**.
+- **Mobile:** context toolbar (settings) + bottom nav ~64px + `safe-area-inset-bottom`; never covered by mini-player reservation.
+- **Titlebar:** ~40–44px; **context + window controls only** — no search/settings/theme cycle on desktop.
 - **Active/hover:** soft lantern tint, not loud fill blocks or media-tint takeover.
 - **Reader presentation:** shell chrome recedes (`motion-reader-recede`); no dual primary navs; immersion is the reader surface, not a restyled rail.
+- **Settings:** not a fifth realm; realms un-current on `/settings`; theme/mode only on settings denselist.
 
 ### Mini-player / ambient strip
 
@@ -281,7 +281,7 @@ Handfeel: **quiet and precise**, compact padding, fewer empty bands. shadcn-svel
 
 - **Do** bind UI to semantic roles (`canvas`, `ink`, `lantern`, `reader-*`) so multi-theme can rebind later.
 - **Do** keep one primary lantern action per region; use ghost/outline for the rest.
-- **Do** preserve Adaptive Frame metrics (rail, bottom nav, safe area, mini-player) across breakpoints.
+- **Do** preserve Adaptive Frame metrics (spine rail, bottom nav, safe area, mini-player) across breakpoints.
 - **Do** use Source Serif only on reader/long-form surfaces.
 - **Do** honor `prefers-reduced-motion` and reduced transparency with full task completion.
 - **Do** pack shell chrome tightly; spend space on media content, not empty hero padding in app chrome.

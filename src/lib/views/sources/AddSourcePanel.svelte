@@ -45,35 +45,39 @@
   let selected = $state<Entry>(entries[0]);
 </script>
 
-<section class="surface-panel p-5" aria-labelledby="add-source-title">
-  <div class="flex flex-wrap items-start justify-between gap-3">
-    <div>
-      <h2 id="add-source-title" class="text-2xl font-semibold">{m.sources_add_title()}</h2>
-      <p class="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+<section class="border border-hairline bg-surface-1 p-3" aria-labelledby="add-source-title">
+  <div class="flex flex-wrap items-start justify-between gap-2">
+    <div class="min-w-0">
+      <h2 id="add-source-title" class="text-sm font-semibold text-ink">{m.sources_add_title()}</h2>
+      <p class="mt-1 max-w-prose text-xs leading-5 text-ink-muted">
         {m.sources_add_desc()}
       </p>
     </div>
-    <Button type="button" class="rounded-full">
+    <Button type="button" size="sm" class="rounded-lg">
       {m.action_import_local()}
     </Button>
   </div>
 
-  <div class="mt-5 grid gap-3 md:grid-cols-5" role="list" aria-label={m.sources_title()}>
+  <div
+    class="mt-3 grid gap-1.5 sm:grid-cols-2 md:grid-cols-5"
+    role="list"
+    aria-label={m.sources_title()}
+  >
     {#each entries as entry (entry.key)}
       <Button
         type="button"
         variant={selected.key === entry.key ? 'secondary' : 'outline'}
-        class="motion-nav-capsule h-auto min-h-16 flex-col items-start justify-center rounded-2xl bg-background/60 p-3 text-left text-sm hover:bg-accent"
+        class="motion-nav-capsule h-auto min-h-11 flex-col items-start justify-center rounded-lg px-2 py-2 text-left text-xs hover:bg-surface-3"
         aria-pressed={selected.key === entry.key}
         onclick={() => (selected = entry)}
       >
-        <span class="block font-semibold">{entry.label}</span>
+        <span class="block font-medium">{entry.label}</span>
       </Button>
     {/each}
   </div>
 
-  <div class="surface-control mt-5 p-4 text-sm" role="status">
-    <span class="font-semibold">{m.sources_precheck({ label: selected.label })}</span>
-    <p class="mt-1 text-muted-foreground">{selected.result}</p>
+  <div class="mt-3 border border-hairline bg-surface-2 px-3 py-2 text-xs" role="status">
+    <span class="font-medium text-ink">{m.sources_precheck({ label: selected.label })}</span>
+    <p class="mt-0.5 text-ink-muted">{selected.result}</p>
   </div>
 </section>

@@ -43,7 +43,7 @@ Calm, craft-minded, continuous. Voice is precise and quiet, never hype.
 ## Design Principles
 
 1. **Frame holds media, media does not fight the frame** — global orientation stays legible while media spaces may change density and atmosphere **on the content surface only**.
-2. **Shell premium ≠ shell atmosphere** — advanced feel comes from precision and craft in chrome, not from heavy mood, neon, or decorative glass on rail/titlebar/bottom nav.
+2. **Shell premium ≠ shell atmosphere** — advanced feel comes from precision and craft in chrome, not from heavy mood, neon, or decorative glass on spine rail/titlebar/bottom nav.
 3. **Immersion is modal** — novel/music/reader/player may deepen paper, void, and density inside main; they must not rewrite primary nav grammar or semantic role names.
 4. **One foreground, optional ambient** — a single activity owns attention; ambient audio may continue only when it does not seize focus.
 5. **One library truth** — media spaces project the shared library; they never own a second copy of favorites, history, or progress.
@@ -52,17 +52,19 @@ Calm, craft-minded, continuous. Voice is precise and quiet, never hype.
 
 ## Theme & Appearance Model
 
-| Layer                  | What                                                              | Production now                                                                                                         |
-| ---------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **L0 Appearance mode** | `light` \| `dark` \| `system`                                     | Required; user explicit choice beats system                                                                            |
-| **L1 Semantic roles**  | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever                                                                                |
-| **L2 Appearance pack** | Rebind L1 hex/material only; one IA                               | Default **墨砚精密 `inkstone-precision`**; second built-in **冷银朱 `cold-cinnabar`**；设置页可切换                                              |
-| **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode            | Allowed as presentation, not a second shell language                                                                   |
-| **Reader prefs**       | Independent colorScheme/font/size/…                               | Independent of L0; survives app theme changes                                                                          |
+| Layer                  | What                                                              | Production now                                                                                                                                                                                                                                                     |
+| ---------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **L0 Appearance mode** | `light` \| `dark` \| `system`                                     | Required; user explicit choice beats system                                                                                                                                                                                                                        |
+| **L1 Semantic roles**  | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever                                                                                                                                                                                                                            |
+| **L2 Theme (faces)**   | Rebind L1 hex/material only; one IA                               | Product copy: **主题**. Built-in **墨砚精密** / **冷银朱**. User picks **light-face theme** and **dark-face theme** separately in settings; `system` mode resolves OS face then applies that track. No auto-invert. Legacy single pack id migrates to both tracks. |
+| **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode            | Allowed as presentation, not a second shell language                                                                                                                                                                                                               |
+| **Reader prefs**       | Independent colorScheme/font/size/…                               | Independent of L0; survives app theme changes                                                                                                                                                                                                                      |
 
-**Default pack character:** near-neutral canvas + teal-ink lantern accent at ≤~10% mass; quiet precision chrome; reader paper slightly warmer than shell; not cream+copper dual-warm, not media-neon void as global shell.
+**Default theme character:** near-neutral canvas + teal-ink lantern accent at ≤~10% mass; quiet precision chrome; reader paper slightly warmer than shell; not cream+copper dual-warm, not media-neon void as global shell.
 
-**Legacy:** `paper-lantern-precision` maps to default inkstone; not an official option.
+**Legacy:** `paper-lantern-precision` and single `appearancePackId` storage map to inkstone on both tracks; not official UI labels.
+
+**Shell chrome (current):** desktop **48px icon spine** (four realms + settings entry, collapsible; left-edge hover restores); **minimal titlebar** (context + window controls only — no search/settings/theme cycle); mobile context toolbar + four-realm bottom nav; reader hides ordinary chrome. List/home content uses full main width (not magazine-narrow columns).
 
 **Out of scope for now:** user-authored theme marketplace, cloud sync, per-source skins, cover-derived shell tint.
 

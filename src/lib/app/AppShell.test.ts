@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getMaterialTransparency, setMaterialTransparency } from '$lib/stores/theme.svelte';
 import AppShell from './AppShell.svelte';
 import { COLD_LAUNCH_SESSION_KEY, COLD_LAUNCH_THRESHOLD_MS } from './cold-launch';
+import { RAIL_COLLAPSED_STORAGE_KEY } from './shell-rail-preference';
 import type { ModeShellContract, PlatformCapabilities } from './shell-types';
 
 function desktopPlatform(overrides: Partial<PlatformCapabilities> = {}): PlatformCapabilities {
@@ -73,11 +74,12 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   sessionStorage.removeItem(COLD_LAUNCH_SESSION_KEY);
+  localStorage.removeItem(RAIL_COLLAPSED_STORAGE_KEY);
   setMaterialTransparency('standard');
 });
 
 describe('AppShell', () => {
-  it('renders quiet desktop shell navigation and command search', async () => {
+  it('renders quiet desktop spine rail and minimal titlebar', () => {
     render(AppShell, {
       props: {
         shell: makeShell({
@@ -89,29 +91,26 @@ describe('AppShell', () => {
     const root = screen.getByTestId('mode-shell');
     expect(root.getAttribute('data-theme-mode')).toBe('system');
     expect(root.getAttribute('data-appearance-pack')).toBe('inkstone-precision');
+    expect(root.getAttribute('data-chrome-family')).toBe('rail');
 
     const nav = screen.getByRole('navigation', { name: '主导航' });
-    expect(nav.getAttribute('data-shell-rail')).toBe('expanded');
-    expect(screen.getByText('LanJing')).toBeTruthy();
+    expect(nav.getAttribute('data-shell-rail')).toBe('spine');
     expect(screen.queryByRole('navigation', { name: '底部主导航' })).toBeNull();
+
+    // 四境 + 脊上设置；无文案副标题、无 titlebar 工具簇
+    expect(screen.getByRole('link', { name: '境场' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: '打开设置' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '收起侧栏' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '打开全局搜索' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /切换主题模式/ })).toBeNull();
 
     const titlebar = screen.getByRole('banner', { name: '窗口标题栏：境场' });
     expect(titlebar.getAttribute('data-native-window-controls')).toBe('browser-preview');
-    // 仅标题 + spacer 为拖拽区，整 header 不拖（标题控件可点）。
     expect(titlebar.hasAttribute('data-tauri-drag-region')).toBe(false);
-    expect(titlebar.querySelectorAll('[data-tauri-drag-region]').length).toBeGreaterThan(1);
+    expect(titlebar.querySelectorAll('[data-tauri-drag-region]').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: '最小化窗口' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '最大化或还原窗口' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '关闭窗口' })).toBeTruthy();
-
-    expect(screen.getByRole('link', { name: '打开设置' })).toBeTruthy();
-
-    await fireEvent.click(screen.getByRole('button', { name: '打开全局搜索' }));
-
-    expect(screen.getByRole('dialog', { name: '全局搜索' })).toBeTruthy();
-    expect(screen.getAllByText('暂无来源。先添加来源或导入文件。').length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: '添加来源' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: '导入本地文件' })).toBeTruthy();
   });
 
   it('keeps mobile bottom nav accessible and separate from mini-player reservation', async () => {
@@ -136,12 +135,11 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: '应用' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '来源' })).toBeTruthy();
     expect(screen.getByRole('link', { name: '资料库' })).toBeTruthy();
-    // 移动无 titlebar：底栏搜索 + 设置入口。
-    const mobileSearch = screen.getByRole('button', { name: '打开全局搜索' });
-    expect(mobileSearch.closest('[data-bottom-nav]')).toBeTruthy();
-    expect(screen.getByRole('link', { name: '打开设置' })).toBeTruthy();
-    await fireEvent.click(mobileSearch);
-    expect(screen.getByRole('dialog', { name: '全局搜索' })).toBeTruthy();
+    // 移动：顶栏设置；底栏仅四境，无搜索入口
+    const settingsLink = screen.getByRole('link', { name: '打开设置' });
+    expect(settingsLink.closest('[data-mobile-toolbar]')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '打开全局搜索' })).toBeNull();
+    expect(bottomNav.querySelectorAll('a')).toHaveLength(4);
 
     // 无 ambient：纯座位，非幽灵按钮。
     const miniPlayer = document.querySelector('[data-mini-player="seat"]');
@@ -181,15 +179,6 @@ describe('AppShell', () => {
     expect(miniPlayer.getAttribute('data-mini-player')).toBe('active');
     expect(screen.getByText('雨声')).toBeTruthy();
     expect(document.querySelector('[data-mini-player="seat"]')).toBeNull();
-  });
-
-  it('uses distinct supporting copy on expanded rail', () => {
-    render(AppShell, { props: { shell: makeShell() } });
-
-    expect(screen.getByText('发现与入口')).toBeTruthy();
-    expect(screen.getByText('跨媒体套件')).toBeTruthy();
-    expect(screen.getByText('供给健康')).toBeTruthy();
-    expect(screen.getByText('收藏与缓存')).toBeTruthy();
   });
 
   it('never shows rail and bottom primary nav together', () => {
@@ -282,19 +271,6 @@ describe('AppShell', () => {
     expect(screen.getByRole('main')).toBeTruthy();
   });
 
-  it('exposes icon-only theme control without a second material-standard switch', async () => {
-    render(AppShell, { props: { shell: makeShell() } });
-
-    const themeButton = screen.getByRole('button', { name: /切换主题模式/ });
-    expect(themeButton.querySelector('svg')).toBeTruthy();
-    expect(screen.getByRole('button', { name: '最小化窗口' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /切换界面透明度/ })).toBeNull();
-
-    await fireEvent.click(themeButton);
-
-    expect(screen.getByRole('button', { name: /切换主题模式/ })).toBeTruthy();
-  });
-
   it('hides shell chrome in reader presentation', () => {
     render(AppShell, {
       props: {
@@ -310,6 +286,35 @@ describe('AppShell', () => {
     expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: '底部主导航' })).toBeNull();
     expect(screen.queryByRole('banner')).toBeNull();
+  });
+
+  it('collapses desktop spine then restores via left-edge hit', async () => {
+    render(AppShell, {
+      props: {
+        shell: makeShell({
+          platform: desktopPlatform({ windowControls: 'browser-preview' }),
+        }),
+      },
+    });
+
+    const root = screen.getByTestId('mode-shell');
+    expect(root.getAttribute('data-rail-collapsed')).toBe('false');
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
+
+    await fireEvent.click(screen.getByRole('button', { name: '收起侧栏' }));
+
+    expect(root.getAttribute('data-rail-collapsed')).toBe('true');
+    expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
+    expect(localStorage.getItem(RAIL_COLLAPSED_STORAGE_KEY)).toBe('1');
+
+    const edge = document.querySelector('[data-shell-rail-edge]');
+    expect(edge).toBeInstanceOf(HTMLElement);
+    if (!(edge instanceof HTMLElement)) throw new Error('expected rail edge hit');
+    await fireEvent.pointerEnter(edge);
+
+    expect(root.getAttribute('data-rail-collapsed')).toBe('false');
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeTruthy();
+    expect(localStorage.getItem(RAIL_COLLAPSED_STORAGE_KEY)).toBe('0');
   });
 
   it('consumes shell contract only — chrome follows shell.platform not window size', () => {

@@ -11,6 +11,7 @@
   let { state = noSourceRealmState, sources = [] }: Props = $props();
 </script>
 
-<div class="mx-auto min-h-full max-w-[var(--content-max-width)]">
+<!-- 全宽轻量：与 denselist 节奏对齐，不居中窄杂志栏 -->
+<div class="min-h-full w-full max-w-none">
   <RealmStatePanel {state} {sources} />
 </div>

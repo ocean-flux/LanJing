@@ -26,26 +26,27 @@
   const disabledSources = $derived(sortedSources.filter((s) => s.status === 'disabled'));
 </script>
 
-<section class="mx-auto flex max-w-[var(--content-max-width)] flex-col gap-5 py-4">
-  <div class="surface-panel p-5 md:p-6">
-    <p class="text-sm font-medium text-muted-foreground">{m.nav_sources()}</p>
-    <h1 class="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">{m.sources_title()}</h1>
-    <p class="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{m.sources_desc()}</p>
-  </div>
+<section class="flex w-full flex-col gap-3" aria-label={m.sources_title()}>
+  <header class="flex flex-wrap items-baseline justify-between gap-2 border-b border-hairline pb-2">
+    <h1 class="text-base font-semibold tracking-tight text-ink">{m.sources_title()}</h1>
+    <p class="max-w-prose text-xs text-ink-muted">{m.sources_desc()}</p>
+  </header>
 
   <AddSourcePanel />
 
   {#if sortedSources.length === 0}
     <section
-      class="surface-panel border-dashed p-8 text-center"
+      class="border border-dashed border-hairline px-4 py-6 text-center"
       aria-labelledby="sources-empty-title"
     >
-      <h2 id="sources-empty-title" class="text-xl font-semibold">{m.sources_empty_title()}</h2>
-      <p class="mt-2 text-sm text-muted-foreground">{m.sources_empty_desc()}</p>
+      <h2 id="sources-empty-title" class="text-sm font-semibold text-ink">
+        {m.sources_empty_title()}
+      </h2>
+      <p class="mt-1 text-xs text-ink-muted">{m.sources_empty_desc()}</p>
     </section>
   {:else}
     {#if failedSources.length > 0}
-      <section class="grid gap-4" aria-label={m.status_failed()}>
+      <section class="grid gap-3" aria-label={m.status_failed()}>
         {#each failedSources as source (source.id)}
           <SourceCard {source} attention />
         {/each}
@@ -53,7 +54,7 @@
     {/if}
 
     {#if partialSources.length > 0}
-      <section class="grid gap-4" aria-label={m.status_partial()}>
+      <section class="grid gap-3" aria-label={m.status_partial()}>
         {#each partialSources as source (source.id)}
           <SourceCard {source} attention />
         {/each}
@@ -61,7 +62,7 @@
     {/if}
 
     {#if readySources.length > 0}
-      <section class="grid gap-4 lg:grid-cols-2" aria-label={m.status_ready()}>
+      <section class="grid gap-3 lg:grid-cols-2" aria-label={m.status_ready()}>
         {#each readySources as source (source.id)}
           <SourceCard {source} />
         {/each}
@@ -69,7 +70,7 @@
     {/if}
 
     {#if uncheckedSources.length > 0}
-      <section class="grid gap-4 lg:grid-cols-2" aria-label={m.status_unchecked()}>
+      <section class="grid gap-3 lg:grid-cols-2" aria-label={m.status_unchecked()}>
         {#each uncheckedSources as source (source.id)}
           <SourceCard {source} />
         {/each}
@@ -77,7 +78,7 @@
     {/if}
 
     {#if disabledSources.length > 0}
-      <section class="grid gap-4 lg:grid-cols-2 opacity-70" aria-label={m.status_disabled()}>
+      <section class="grid gap-3 opacity-70 lg:grid-cols-2" aria-label={m.status_disabled()}>
         {#each disabledSources as source (source.id)}
           <SourceCard {source} />
         {/each}

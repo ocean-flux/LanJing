@@ -4,33 +4,18 @@
   import Compass from '@lucide/svelte/icons/compass';
   import Database from '@lucide/svelte/icons/database';
   import Radio from '@lucide/svelte/icons/radio';
-  import Search from '@lucide/svelte/icons/search';
-  import Settings from '@lucide/svelte/icons/settings';
   import { m } from '$lib/i18n';
+  import { getPrimaryNavigationItems } from './shell-navigation';
   import type { ShellRoute } from './shell-types';
 
-  type ShellHref = '/' | '/apps' | '/sources' | '/library';
-  type NavItem = {
-    key: ShellRoute;
-    label: string;
-    href: ShellHref;
-  };
-
   type Props = {
-    active?: ShellRoute;
+    /** 四境当前项；设置路由时 undefined */
+    active?: ShellRoute | undefined;
     hidden?: boolean;
-    /** 与 titlebar 共用：打开全局搜索（移动无 titlebar 时的唯一入口）。 */
-    onsearch?: () => void;
   };
 
-  const navItems: NavItem[] = [
-    { key: 'realm', label: m.nav_realm(), href: '/' },
-    { key: 'apps', label: m.nav_apps(), href: '/apps' },
-    { key: 'sources', label: m.nav_sources(), href: '/sources' },
-    { key: 'library', label: m.nav_library(), href: '/library' },
-  ];
-
-  let { active = 'realm', hidden = false, onsearch }: Props = $props();
+  let { active, hidden = false }: Props = $props();
+  const navItems = $derived(getPrimaryNavigationItems());
 </script>
 
 {#if !hidden}
@@ -58,24 +43,5 @@
         <span>{item.label}</span>
       </a>
     {/each}
-    <button
-      type="button"
-      class="motion-command-lens inline-flex min-h-11 min-w-12 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.72rem] font-medium text-ink-muted outline-none transition-colors hover:bg-lantern-soft hover:text-ink focus-visible:bg-lantern-soft focus-visible:text-ink motion-reduce:transform-none sm:min-w-14 sm:px-2"
-      aria-label={m.search_open()}
-      data-bottom-nav-search
-      onclick={() => onsearch?.()}
-    >
-      <Search size={18} aria-hidden="true" />
-      <span>{m.search()}</span>
-    </button>
-    <a
-      href={resolve('/settings' as '/')}
-      class="motion-nav-capsule inline-flex min-h-11 min-w-12 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[0.72rem] font-medium text-ink-muted outline-none transition-colors hover:bg-lantern-soft hover:text-ink focus-visible:bg-lantern-soft focus-visible:text-ink motion-reduce:transform-none sm:min-w-14 sm:px-2"
-      aria-label={m.settings_open()}
-      data-bottom-nav-settings
-    >
-      <Settings size={18} aria-hidden="true" />
-      <span>{m.settings()}</span>
-    </a>
   </nav>
 {/if}

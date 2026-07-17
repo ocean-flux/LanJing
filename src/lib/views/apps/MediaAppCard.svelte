@@ -24,28 +24,30 @@
 
 <article
   class={[
-    'surface-panel group/card motion-dock-wake relative overflow-hidden p-5 transition-colors',
-    lead && 'lg:col-span-2 lg:min-h-80',
-    selected && 'border-primary/60 bg-primary/10',
+    'group/card motion-dock-wake relative overflow-hidden rounded-xl border border-hairline bg-surface-1 p-3 transition-colors',
+    lead && 'sm:col-span-2',
+    selected && 'border-lantern/50 bg-lantern-soft/30',
   ]}
   data-lead={lead}
 >
-  <div class="relative flex h-full flex-col">
-    <div class="flex items-start justify-between gap-4">
-      <MediaAppIcon name={app.key} size={lead ? 58 : 44} active={app.status !== 'unconnected'} />
+  <div class="relative flex h-full flex-col gap-2">
+    <div class="flex items-start justify-between gap-3">
+      <MediaAppIcon name={app.key} size={lead ? 40 : 32} active={app.status !== 'unconnected'} />
       <span
-        class="surface-control rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground"
+        class="rounded-full border border-hairline bg-surface-2 px-2 py-0.5 text-[0.68rem] font-medium text-ink-muted"
       >
         {statusLabels[app.status]}
       </span>
     </div>
 
-    <h2 class={['mt-5 font-semibold tracking-tight', lead ? 'text-3xl md:text-4xl' : 'text-2xl']}>
+    <h2
+      class={['font-semibold tracking-tight text-ink', lead ? 'text-base sm:text-lg' : 'text-sm']}
+    >
       {app.label}
     </h2>
-    <p class="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">{app.description}</p>
+    <p class="max-w-prose text-xs leading-5 text-ink-muted">{app.description}</p>
 
-    <div class="mt-auto pt-5">
+    <div class="mt-auto pt-2">
       {#if app.href}
         <a
           href={resolve(app.href as '/')}

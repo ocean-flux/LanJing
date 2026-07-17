@@ -42,5 +42,8 @@
   "theme_transparency_low": "Low transparency",
   "mini_player_current": "Now playing",
   "mini_player_empty": "Nothing playing",
-  "mini_player_reserved": "Player seat reserved"
+  "mini_player_reserved": "Player seat reserved",
+  "rail_collapse": "Collapse sidebar",
+  "rail_expand_edge": "Expand sidebar",
+  "mobile_settings": "Settings"
 }

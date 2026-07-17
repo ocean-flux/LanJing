@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isSettingsPathname,
+  resolveActivePrimaryRoute,
   resolveForegroundActivity,
   resolveMediaSpace,
   resolvePlatformCapabilities,
+  resolvePrimaryChromeFamily,
   resolveProductContext,
   resolveShellMode,
-  usesBottomNav,
-  usesDesktopRail,
-  usesIconRail,
 } from './shell-mode';
 
 describe('resolveShellMode', () => {
@@ -21,12 +21,14 @@ describe('resolveShellMode', () => {
     expect(resolveShellMode(input)).toBe(expected);
   });
 
-  it('keeps nav families distinct', () => {
-    expect(usesBottomNav('mobile')).toBe(true);
-    expect(usesBottomNav('tablet-portrait')).toBe(true);
-    expect(usesIconRail('tablet-landscape')).toBe(true);
-    expect(usesIconRail('narrow-desktop')).toBe(true);
-    expect(usesDesktopRail('desktop')).toBe(true);
+  it.each([
+    ['mobile', 'bottom'],
+    ['tablet-portrait', 'bottom'],
+    ['tablet-landscape', 'rail'],
+    ['narrow-desktop', 'rail'],
+    ['desktop', 'rail'],
+  ] as const)('maps shell mode %s to chrome family %s', (mode, family) => {
+    expect(resolvePrimaryChromeFamily(mode)).toBe(family);
   });
 
   it('resolves product context, media space, and one foreground activity from route', () => {
@@ -34,6 +36,14 @@ describe('resolveShellMode', () => {
     expect(resolveMediaSpace('/apps/novel/read/7')).toBe('novel');
     expect(resolveForegroundActivity('/apps/novel/read/7')).toEqual({ kind: 'reader' });
     expect(resolveForegroundActivity('/apps/music')).toEqual({ kind: 'browse', id: 'music' });
+  });
+
+  it('clears primary realm active on settings pathname', () => {
+    expect(isSettingsPathname('/settings')).toBe(true);
+    expect(isSettingsPathname('/settings/theme')).toBe(true);
+    expect(isSettingsPathname('/library')).toBe(false);
+    expect(resolveActivePrimaryRoute('/settings', 'library')).toBeUndefined();
+    expect(resolveActivePrimaryRoute('/library', 'library')).toBe('library');
   });
 
   it('keeps platform capabilities explicit across orientation changes', () => {

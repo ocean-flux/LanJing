@@ -1,21 +1,23 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
-  import BookOpen from '@lucide/svelte/icons/book-open';
-  import Boxes from '@lucide/svelte/icons/boxes';
-  import Database from '@lucide/svelte/icons/database';
-  import Radio from '@lucide/svelte/icons/radio';
+  import Languages from '@lucide/svelte/icons/languages';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Sun from '@lucide/svelte/icons/sun';
   import { getLocale, locales, m, setLocale, type Locale } from '$lib/i18n';
   import {
-    getAppearancePack,
+    getDarkThemeId,
+    getLightThemeId,
     getMode,
-    setAppearancePack,
+    setDarkThemeId,
+    setLightThemeId,
     setMode,
-    type AppearancePackId,
+    type ThemeId,
     type ThemeMode,
   } from '$lib/stores/theme.svelte';
 
   let mode = $state<ThemeMode>(getMode());
-  let themeId = $state<AppearancePackId>(getAppearancePack().id);
+  let lightThemeId = $state<ThemeId>(getLightThemeId());
+  let darkThemeId = $state<ThemeId>(getDarkThemeId());
   let locale = $state<Locale>(
     (locales as readonly string[]).includes(getLocale()) ? (getLocale() as Locale) : 'zh-CN',
   );
@@ -25,9 +27,14 @@
     setMode(next);
   }
 
-  function chooseTheme(next: AppearancePackId) {
-    themeId = next;
-    setAppearancePack({ id: next });
+  function chooseLightTheme(next: ThemeId) {
+    lightThemeId = next;
+    setLightThemeId(next);
+  }
+
+  function chooseDarkTheme(next: ThemeId) {
+    darkThemeId = next;
+    setDarkThemeId(next);
   }
 
   function chooseLocale(next: Locale) {
@@ -37,41 +44,31 @@
     setLocale(next);
   }
 
-  const modeOptions: { id: ThemeMode; label: () => string }[] = [
-    { id: 'light', label: () => m.theme_mode_light() },
-    { id: 'dark', label: () => m.theme_mode_dark() },
-    { id: 'system', label: () => m.theme_mode_system() },
+  const modeOptions: {
+    id: ThemeMode;
+    label: () => string;
+    icon: typeof Sun;
+  }[] = [
+    { id: 'light', label: () => m.theme_mode_light(), icon: Sun },
+    { id: 'dark', label: () => m.theme_mode_dark(), icon: Moon },
+    { id: 'system', label: () => m.theme_mode_system(), icon: Monitor },
   ];
 
   const themeOptions: {
-    id: AppearancePackId;
+    id: ThemeId;
     label: () => string;
-    core: string;
-    ring: string;
+    stone: string;
   }[] = [
     {
       id: 'inkstone-precision',
       label: () => m.settings_theme_inkstone(),
-      core: '#f4f5f5',
-      ring: '#2a6f7a',
+      stone: '#2a6f7a',
     },
     {
       id: 'cold-cinnabar',
       label: () => m.settings_theme_cinnabar(),
-      core: '#f2f2f0',
-      ring: '#c45a3c',
+      stone: '#c45a3c',
     },
-  ];
-
-  const shortcuts: {
-    href: '/' | '/sources' | '/library' | '/apps' | '/apps/novel';
-    label: () => string;
-    icon: typeof Database;
-  }[] = [
-    { href: '/sources', label: () => m.nav_sources(), icon: Radio },
-    { href: '/library', label: () => m.nav_library(), icon: Database },
-    { href: '/apps', label: () => m.nav_apps(), icon: Boxes },
-    { href: '/apps/novel', label: () => m.nav_novel(), icon: BookOpen },
   ];
 
   const langOptions: { id: Locale; label: () => string }[] = [
@@ -80,115 +77,159 @@
   ];
 </script>
 
-<section class="w-full" data-testid="settings-home" aria-label={m.settings_title()}>
-  <div class="overflow-hidden rounded-lg border border-hairline bg-surface-1">
-    <!-- 快捷入口：密排 icon+字 -->
-    <div class="border-b border-hairline px-3 py-2">
-      <p class="mb-1.5 text-[0.7rem] font-medium tracking-wide text-ink-muted">
-        {m.settings_shortcuts()}
-      </p>
-      <div class="grid grid-cols-4 gap-1">
-        {#each shortcuts as item (item.href)}
-          {@const Icon = item.icon}
-          <a
-            href={resolve(item.href as '/')}
-            class="motion-nav-capsule flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-md px-1 text-ink-muted outline-none transition-colors hover:bg-lantern-soft hover:text-ink focus-visible:bg-lantern-soft focus-visible:text-ink"
-          >
-            <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
-            <span class="truncate text-[0.65rem] font-medium leading-none">{item.label()}</span>
-          </a>
-        {/each}
+<!-- 墨台 denselist：无页内 H1、无 stage 卡、无快捷四格 -->
+<section class="w-full max-w-none" data-testid="settings-home" aria-label={m.settings_title()}>
+  <div class="border-t border-hairline">
+    <!-- 明暗模式 -->
+    <div
+      class="grid min-h-11 grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-2 border-b border-hairline py-1"
+    >
+      <div class="grid h-7 w-7 place-items-center text-ink-muted" aria-hidden="true">
+        <Sun size={18} strokeWidth={1.75} />
       </div>
-    </div>
-
-    <!-- 外观 -->
-    <div class="border-b border-hairline px-3 py-1.5">
-      <p class="text-[0.7rem] font-medium tracking-wide text-ink-muted">
-        {m.settings_appearance()}
-      </p>
-    </div>
-
-    <div class="flex items-center justify-between gap-3 border-b border-hairline px-3 py-2">
-      <span class="shrink-0 text-[0.8125rem] font-medium text-ink">{m.settings_mode_label()}</span>
+      <div class="min-w-0 text-[0.8125rem] font-medium text-ink" id="settings-mode-label">
+        {m.settings_mode_label()}
+      </div>
       <div
-        class="inline-flex max-w-[min(100%,18rem)] flex-1 rounded-md border border-hairline bg-surface-3 p-px sm:flex-none"
-        role="group"
-        aria-label={m.settings_mode_label()}
+        class="inline-flex rounded-lg border border-hairline bg-surface-3 p-0.5"
+        role="radiogroup"
+        aria-labelledby="settings-mode-label"
       >
         {#each modeOptions as opt (opt.id)}
+          {@const Icon = opt.icon}
           <button
             type="button"
+            role="radio"
             class={[
-              'motion-nav-capsule min-h-7 flex-1 rounded-[5px] px-2 text-[0.75rem] font-medium outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:min-h-11',
+              'motion-nav-capsule grid h-8 w-9 place-items-center rounded-md outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11',
               mode === opt.id
                 ? 'bg-surface-1 text-ink shadow-[var(--surface-panel-shadow)]'
                 : 'text-ink-muted hover:text-ink',
             ]}
-            aria-pressed={mode === opt.id}
+            aria-checked={mode === opt.id}
+            aria-label={opt.label()}
+            title={opt.label()}
             onclick={() => chooseMode(opt.id)}
           >
-            {opt.label()}
+            <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
           </button>
         {/each}
       </div>
     </div>
 
-    <div class="flex items-center justify-between gap-3 border-b border-hairline px-3 py-2">
-      <span class="shrink-0 text-[0.8125rem] font-medium text-ink">{m.settings_theme_label()}</span>
+    <!-- 亮色主题 -->
+    <div
+      class="grid min-h-11 grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-2 border-b border-hairline py-1"
+    >
+      <div class="grid h-7 w-7 place-items-center text-ink-muted" aria-hidden="true">
+        <span class="size-3.5 rounded-full border border-hairline bg-lantern"></span>
+      </div>
+      <div class="min-w-0 text-[0.8125rem] font-medium text-ink" id="settings-light-theme-label">
+        {m.settings_theme_light_label()}
+      </div>
       <div
-        class="flex flex-wrap justify-end gap-1.5"
-        role="group"
-        aria-label={m.settings_theme_label()}
+        class="flex items-center gap-1.5"
+        role="radiogroup"
+        aria-labelledby="settings-light-theme-label"
       >
         {#each themeOptions as opt (opt.id)}
-          {@const selected = themeId === opt.id}
+          {@const selected = lightThemeId === opt.id}
           <button
             type="button"
+            role="radio"
             class={[
-              'motion-nav-capsule inline-flex min-h-8 items-center gap-2 rounded-md border px-2 py-1 outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:min-h-11',
-              selected
-                ? 'border-lantern/35 bg-lantern-soft'
-                : 'border-hairline bg-canvas hover:bg-surface-2',
+              'relative grid size-7 place-items-center rounded-full border-2 outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:size-11',
+              selected ? 'border-lantern' : 'border-transparent',
             ]}
-            aria-pressed={selected}
+            aria-checked={selected}
             aria-label={opt.label()}
-            onclick={() => chooseTheme(opt.id)}
+            title={opt.label()}
+            onclick={() => chooseLightTheme(opt.id)}
           >
             <span
-              class={[
-                'relative inline-flex size-6 shrink-0 items-center justify-center rounded-full',
-                selected && 'ring-2 ring-lantern/30 ring-offset-1 ring-offset-surface-1',
-              ]}
-              style:background={opt.ring}
+              class="absolute inset-[3px] rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)]"
+              style:background={opt.stone}
               aria-hidden="true"
             >
-              <span class="size-2.5 rounded-full border border-black/5" style:background={opt.core}
+              <span
+                class="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-canvas"
               ></span>
             </span>
-            <span class="text-[0.75rem] font-medium text-ink">{opt.label()}</span>
           </button>
         {/each}
       </div>
     </div>
 
-    <!-- 语言 -->
-    <div class="flex items-center justify-between gap-3 px-3 py-2">
-      <span class="shrink-0 text-[0.8125rem] font-medium text-ink">{m.settings_language()}</span>
+    <!-- 暗色主题 -->
+    <div
+      class="grid min-h-11 grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-2 border-b border-hairline py-1"
+    >
+      <div class="grid h-7 w-7 place-items-center text-ink-muted" aria-hidden="true">
+        <Moon size={18} strokeWidth={1.75} />
+      </div>
+      <div class="min-w-0 text-[0.8125rem] font-medium text-ink" id="settings-dark-theme-label">
+        {m.settings_theme_dark_label()}
+      </div>
       <div
-        class="inline-flex rounded-md border border-hairline bg-surface-3 p-px"
-        role="group"
-        aria-label={m.settings_language()}
+        class="flex items-center gap-1.5"
+        role="radiogroup"
+        aria-labelledby="settings-dark-theme-label"
       >
-        {#each langOptions as opt (opt.id)}
+        {#each themeOptions as opt (opt.id)}
+          {@const selected = darkThemeId === opt.id}
           <button
             type="button"
+            role="radio"
             class={[
-              'motion-nav-capsule min-h-7 rounded-[5px] px-2.5 text-[0.75rem] font-medium outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:min-h-11',
-              locale === opt.id
-                ? 'bg-surface-1 text-ink shadow-[var(--surface-panel-shadow)]'
-                : 'text-ink-muted hover:text-ink',
+              'relative grid size-7 place-items-center rounded-full border-2 outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:size-11',
+              selected ? 'border-lantern' : 'border-transparent',
             ]}
-            aria-pressed={locale === opt.id}
+            aria-checked={selected}
+            aria-label={opt.label()}
+            title={opt.label()}
+            onclick={() => chooseDarkTheme(opt.id)}
+          >
+            <span
+              class="absolute inset-[3px] rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)]"
+              style:background={opt.stone}
+              aria-hidden="true"
+            >
+              <span
+                class="absolute left-1/2 top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-canvas"
+              ></span>
+            </span>
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    <!-- 界面语言 -->
+    <div
+      class="grid min-h-11 grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-2 border-b border-hairline py-1"
+    >
+      <div class="grid h-7 w-7 place-items-center text-ink-muted" aria-hidden="true">
+        <Languages size={18} strokeWidth={1.75} />
+      </div>
+      <div class="min-w-0 text-[0.8125rem] font-medium text-ink" id="settings-lang-label">
+        {m.settings_language()}
+      </div>
+      <div
+        class="inline-flex items-baseline text-[0.8125rem]"
+        role="radiogroup"
+        aria-labelledby="settings-lang-label"
+      >
+        {#each langOptions as opt, index (opt.id)}
+          <button
+            type="button"
+            role="radio"
+            class={[
+              'motion-nav-capsule px-1 py-1 font-medium outline-none focus-visible:rounded-sm focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-2',
+              index > 0 && 'ml-2 border-l border-hairline pl-2',
+              locale === opt.id
+                ? 'font-bold text-lantern-strong'
+                : 'text-ink-subtle hover:text-ink',
+            ]}
+            aria-checked={locale === opt.id}
             onclick={() => chooseLocale(opt.id)}
           >
             {opt.label()}
