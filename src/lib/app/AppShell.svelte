@@ -68,7 +68,10 @@
     shell.presentation === 'reader' || shell.foregroundActivity.kind === 'reader',
   );
   const shellPresentation = $derived(readerMode ? 'reader' : shell.presentation);
-  const showRail = $derived(!readerMode && (usesIconRail(shellMode) || usesDesktopRail(shellMode)));
+  // 设置页：隐藏侧栏，拉宽偏好列表；titlebar 仍显示「设置」
+  const showRail = $derived(
+    !readerMode && !isSettingsRoute && (usesIconRail(shellMode) || usesDesktopRail(shellMode)),
+  );
   const showTitlebar = $derived(
     !readerMode && shellMode !== 'mobile' && shellMode !== 'tablet-portrait',
   );
@@ -124,10 +127,19 @@
           'min-h-0 flex-1 overflow-auto scroll-smooth motion-reduce:scroll-auto',
           readerMode
             ? 'bg-transparent px-0 py-0'
-            : 'bg-canvas px-[var(--page-padding-mobile)] py-4 md:px-[var(--page-padding-tablet)] md:py-5 xl:px-[var(--page-padding-desktop)] xl:py-6',
+            : isSettingsRoute
+              ? 'bg-canvas px-3 py-2 md:px-4 md:py-3'
+              : 'bg-canvas px-[var(--page-padding-mobile)] py-4 md:px-[var(--page-padding-tablet)] md:py-5 xl:px-[var(--page-padding-desktop)] xl:py-6',
         ]}
       >
-        <div class={[!readerMode && 'mx-auto w-full max-w-[var(--content-max-width)]']}>
+        <div
+          class={[
+            !readerMode &&
+              (isSettingsRoute
+                ? 'mx-auto w-full max-w-xl'
+                : 'mx-auto w-full max-w-[var(--content-max-width)]'),
+          ]}
+        >
           {#if children}
             {@render children()}
           {/if}

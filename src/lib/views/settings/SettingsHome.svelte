@@ -1,6 +1,9 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { BookOpen, Boxes, Database, Radio } from '@lucide/svelte';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import Boxes from '@lucide/svelte/icons/boxes';
+  import Database from '@lucide/svelte/icons/database';
+  import Radio from '@lucide/svelte/icons/radio';
   import { getLocale, locales, m, setLocale, type Locale } from '$lib/i18n';
   import {
     getAppearancePack,
@@ -77,9 +80,7 @@
   ];
 </script>
 
-<section class="w-full max-w-2xl" data-testid="settings-home">
-  <h1 class="mb-2 text-base font-semibold tracking-tight text-ink">{m.settings_title()}</h1>
-
+<section class="w-full" data-testid="settings-home" aria-label={m.settings_title()}>
   <div class="overflow-hidden rounded-lg border border-hairline bg-surface-1">
     <!-- 快捷入口：密排 icon+字 -->
     <div class="border-b border-hairline px-3 py-2">
