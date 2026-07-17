@@ -131,7 +131,7 @@ const cinnabarDark = {
   '--lantern-hover': '#b04e33',
   '--lantern-soft': 'rgb(212 120 90 / 0.18)',
   '--lantern-tint': '#2a1c18',
-  '--on-lantern': '#1a0c08',
+  '--on-lantern': '#140806',
   '--media-void': '#1e1f24',
   '--reader-canvas': '#1b1714',
   '--reader-ink': '#d8d2c4',

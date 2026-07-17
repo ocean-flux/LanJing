@@ -29,6 +29,27 @@ function readWebPrefs(): { mode?: string; appearancePackId?: string } {
   }
 }
 
+function relativeLuminance(hex: string): number {
+  const channels = hex.match(/[a-f\d]{2}/gi);
+  if (!channels || channels.length !== 3) {
+    throw new Error(`Expected six-digit hex color, received ${hex}`);
+  }
+
+  const [red, green, blue] = channels.map((channel) => {
+    const normalized = Number.parseInt(channel, 16) / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4);
+  });
+
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+function contrastRatio(first: string, second: string): number {
+  const [lighter, darker] = [relativeLuminance(first), relativeLuminance(second)].sort(
+    (left, right) => right - left,
+  );
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
 describe('theme preferences', () => {
   it('keeps light, dark, and system mode reflected on the document element', () => {
     setMode('light');
@@ -125,7 +146,26 @@ describe('theme preferences', () => {
     expect(document.documentElement.dataset.appearancePack).toBe('inkstone-precision');
   });
 
+  it('keeps builtin primary action text at AA contrast across modes', () => {
+    for (const [mode, appearancePack] of [
+      ['light', 'inkstone-precision'],
+      ['dark', 'inkstone-precision'],
+      ['light', 'cold-cinnabar'],
+      ['dark', 'cold-cinnabar'],
+    ] as const) {
+      setMode(mode);
+      setAppearancePack({ id: appearancePack });
+
+      const root = document.documentElement;
+      const primary = root.style.getPropertyValue('--lantern-strong').trim();
+      const onPrimary = root.style.getPropertyValue('--on-lantern').trim();
+
+      expect(contrastRatio(primary, onPrimary)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it('switches to cold-cinnabar builtin pack and maps legacy paper-lantern id', () => {
+    setMode('light');
     setAppearancePack({ id: 'cold-cinnabar' });
     expect(getAppearancePack().id).toBe('cold-cinnabar');
     expect(document.documentElement.dataset.appearancePack).toBe('cold-cinnabar');

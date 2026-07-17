@@ -156,22 +156,22 @@ Near-neutral canvas with a single teal-ink lantern accent (default pack). Light 
 ### Primary
 
 - **Lantern** (`#2a6f7a` default inkstone; `#c45a3c` cold-cinnabar): primary accent; soft fills (`lantern-soft`), tints, and focus — not full-bleed backgrounds.
-- **Lantern Strong** (`#9a4e2c`): primary button / high-emphasis action fill (`primary`).
-- **Lantern Hover** (`#8a4624`): pressed/hover deepen on lantern actions.
-- **On Lantern** (`#fdf8f1`): text/icon on lantern fills.
+- **Lantern Strong** (`#1d5560` default inkstone; `#9a3f2a` cold-cinnabar): primary button / high-emphasis action fill (`primary`).
+- **Lantern Hover** (`#174850` default inkstone; `#853625` cold-cinnabar): pressed/hover deepen on lantern actions.
+- **On Lantern** (`#f4fbfc` inkstone light / `#071416` inkstone dark; `#fff8f2` cold-cinnabar light / `#140806` cold-cinnabar dark): text/icon on lantern fills.
 
 ### Neutral
 
-- **Canvas** (`#f5f4f1` light / `#141417` dark): app shell ground.
-- **Ink** (`#1f1e1c` / `#e8e6e1`): primary text.
-- **Ink Muted / Subtle** (`#706b64`, `#8a847c` and dark peers): secondary labels; keep contrast honest — do not fade body copy into decoration.
-- **Surface 1/2/3**: panel ladder (`#ffffff` → `#faf9f6` → `#f0efea` light; dark `#1b1b1f` → `#222327` → `#2b2c31`).
-- **Hairline**: low-alpha ink borders (`rgb(31 30 28 / 0.1)` light).
+- **Canvas** (`#f4f5f5` light / `#0e1214` dark): app shell ground.
+- **Ink** (`#171a1b` / `#e6eceb`): primary text.
+- **Ink Muted / Subtle** (`#5c6568`, `#7a8488` and dark peers): secondary labels; keep contrast honest — do not fade body copy into decoration.
+- **Surface 1/2/3**: panel ladder (`#ffffff` → `#f7f8f8` → `#eef0f0` light; dark `#151a1c` → `#1b2224` → `#242c2e`).
+- **Hairline**: low-alpha ink borders (`rgb(23 26 27 / 0.1)` light).
 
 ### Reader & media
 
-- **Reader Canvas / Ink** (`#f4efe4` / `#211e1a` light): immersive text reading, independent of shell theme when reader prefs demand it.
-- **Media Void** (`#e3e1dc` light / `#23262d` dark): empty media placeholders without fake art.
+- **Reader Canvas / Ink** (`#f3efe6` / `#211e1a` light): immersive text reading, independent of shell theme when reader prefs demand it.
+- **Media Void** (`#e2e6e7` light / `#1a2224` dark): empty media placeholders without fake art.
 
 ### Semantic status
 
@@ -181,7 +181,7 @@ Near-neutral canvas with a single teal-ink lantern accent (default pack). Light 
 
 **The Role Stability Rule.** Themes may re-skin hex values (L2); they must not invent parallel meanings for `canvas` / `ink` / `lantern` / `reader-*`. Multi-pack configuration rebinds values, never forks a second shell language.
 
-**The One Lantern Rule.** Lantern appears for primary action, selection, and focus affordance — roughly ≤10% of a screen’s color mass. If the page looks orange, lantern is overused.
+**The One Lantern Rule.** Lantern appears for primary action, selection, and focus affordance — roughly ≤10% of a screen’s color mass. If the accent dominates the page, lantern is overused.
 
 **The Honest Empty Rule.** Prefer `media-void` + real copy over stock photos or fabricated shelves.
 
@@ -220,7 +220,7 @@ Depth is **tonal first, shadow second**. Panels step through `surface-1` → `su
 - **Panel inset** (`0 1px 0 rgb(255 255 255 / 0.56) inset` light): quiet paper edge on panels.
 - **Control** (`inset highlight + 0 4px 12px rgb(0 0 0 / 0.08)`): raised controls.
 - **Dialog** (`0 16px 40px rgb(0 0 0 / 0.18)` light / stronger on dark): modal lift only.
-- **Focus ring** (`0 0 0 2px rgb(154 78 44 / 0.24)`): lantern-tinted focus, always visible.
+- **Focus ring** (`0 0 0 2px rgb(29 85 96 / 0.24)`): lantern-tinted focus, always visible.
 
 ### Material
 
