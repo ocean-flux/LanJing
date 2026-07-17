@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Download, Pin, Plus, Search, Star } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
+  import Pin from '@lucide/svelte/icons/pin';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Search from '@lucide/svelte/icons/search';
+  import Star from '@lucide/svelte/icons/star';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n';
   import { loadLibraryProjection, updateLibraryEntry } from './library-api';

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { dev } from '$app/environment';
-  import { ArrowLeft, ArrowRight } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import type { PrototypePalette, PrototypeVariant } from './prototype-fixtures';
   import { paletteOptions, variantNames } from './prototype-fixtures';
 

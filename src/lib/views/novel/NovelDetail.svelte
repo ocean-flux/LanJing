@@ -1,6 +1,8 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { BookOpen, ListTree, Play } from '@lucide/svelte';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import ListTree from '@lucide/svelte/icons/list-tree';
+  import Play from '@lucide/svelte/icons/play';
   import { m } from '$lib/i18n';
 
   const chapters = [

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { BookOpen, FilePlus, Search } from '@lucide/svelte';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import FilePlus from '@lucide/svelte/icons/file-plus';
+  import Search from '@lucide/svelte/icons/search';
   import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';
 </script>

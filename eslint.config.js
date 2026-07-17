@@ -11,6 +11,9 @@ export default defineConfig([
     ignores: [
       '.svelte-kit/**',
       '.tmp/**',
+      '.agents/**',
+      '.pi/**',
+      '.trellis/**',
       'build/**',
       '.opencode/**',
       '.vscode/**',
@@ -35,6 +38,23 @@ export default defineConfig([
     },
     rules: {
       'no-console': 'off',
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@lucide/svelte',
+              message:
+                '请从 @lucide/svelte/icons/<icon> 单图标导入；根入口会显著拖慢 Svelte/Vitest 转换。',
+            },
+            {
+              name: '@lucide/svelte/icons',
+              message:
+                '请从 @lucide/svelte/icons/<icon> 单图标导入；icons 入口仍会加载完整图标索引。',
+            },
+          ],
+        },
+      ],
     },
   },
   {

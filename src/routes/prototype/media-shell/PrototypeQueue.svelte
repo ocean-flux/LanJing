@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { GripVertical, Pause, Play, X } from '@lucide/svelte';
+  import GripVertical from '@lucide/svelte/icons/grip-vertical';
+  import Pause from '@lucide/svelte/icons/pause';
+  import Play from '@lucide/svelte/icons/play';
+  import X from '@lucide/svelte/icons/x';
   import { prefersReducedMotion } from 'svelte/motion';
   import { fade, fly } from 'svelte/transition';
   import { tracks, type PrototypeAudioState } from './prototype-fixtures';

@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { ListMusic, Music2, Pause, Play, Volume2, X } from '@lucide/svelte';
+  import ListMusic from '@lucide/svelte/icons/list-music';
+  import Music2 from '@lucide/svelte/icons/music-2';
+  import Pause from '@lucide/svelte/icons/pause';
+  import Play from '@lucide/svelte/icons/play';
+  import Volume2 from '@lucide/svelte/icons/volume-2';
+  import X from '@lucide/svelte/icons/x';
   import {
     ambientTrack,
     type PrototypeAudioState,

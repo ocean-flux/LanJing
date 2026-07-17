@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { BookOpen, Boxes, Compass, Database, Radio } from '@lucide/svelte';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import Boxes from '@lucide/svelte/icons/boxes';
+  import Compass from '@lucide/svelte/icons/compass';
+  import Database from '@lucide/svelte/icons/database';
+  import Radio from '@lucide/svelte/icons/radio';
   import { asset, resolve } from '$app/paths';
   import { m } from '$lib/i18n';
   import type { ShellRoute } from './shell-types';

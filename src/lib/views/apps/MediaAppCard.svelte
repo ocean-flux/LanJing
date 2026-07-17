@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { ArrowRight } from '@lucide/svelte';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
   import { MediaAppIcon } from '$lib/components/brand';
   import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';

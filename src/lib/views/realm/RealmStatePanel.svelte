@@ -1,6 +1,10 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Activity, ArrowRight, FolderPlus, Search, ShieldAlert } from '@lucide/svelte';
+  import Activity from '@lucide/svelte/icons/activity';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import FolderPlus from '@lucide/svelte/icons/folder-plus';
+  import Search from '@lucide/svelte/icons/search';
+  import ShieldAlert from '@lucide/svelte/icons/shield-alert';
   import { LanJingMark } from '$lib/components/brand';
   import { m } from '$lib/i18n';
   import type { RealmState, SourceCardState } from '$lib/app/shell-types';

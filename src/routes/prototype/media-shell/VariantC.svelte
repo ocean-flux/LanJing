@@ -1,16 +1,14 @@
 <script lang="ts">
-  import {
-    ArrowLeft,
-    BookOpen,
-    Command,
-    Compass,
-    Disc3,
-    Moon,
-    Play,
-    Search,
-    Sun,
-    X,
-  } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import Command from '@lucide/svelte/icons/command';
+  import Compass from '@lucide/svelte/icons/compass';
+  import Disc3 from '@lucide/svelte/icons/disc-3';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Play from '@lucide/svelte/icons/play';
+  import Search from '@lucide/svelte/icons/search';
+  import Sun from '@lucide/svelte/icons/sun';
+  import X from '@lucide/svelte/icons/x';
   import { prefersReducedMotion } from 'svelte/motion';
   import { fade, fly, scale } from 'svelte/transition';
   import ContinuousMediaBar from './ContinuousMediaBar.svelte';

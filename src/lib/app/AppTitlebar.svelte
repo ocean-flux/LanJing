@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { Monitor, Moon, Search, Settings, Sun } from '@lucide/svelte';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Search from '@lucide/svelte/icons/search';
+  import Settings from '@lucide/svelte/icons/settings';
+  import Sun from '@lucide/svelte/icons/sun';
   import { resolve } from '$app/paths';
   import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';

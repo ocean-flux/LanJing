@@ -33,6 +33,8 @@ export default defineConfig({
     },
   },
   test: {
+    // 前端套件只收集 src；.pi 扩展使用 node:test，不能混入 Vitest。
+    include: ['src/**/*.test.ts'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
   },

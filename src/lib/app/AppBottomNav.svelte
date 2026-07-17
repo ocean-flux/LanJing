@@ -1,6 +1,11 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Boxes, Compass, Database, Radio, Search, Settings } from '@lucide/svelte';
+  import Boxes from '@lucide/svelte/icons/boxes';
+  import Compass from '@lucide/svelte/icons/compass';
+  import Database from '@lucide/svelte/icons/database';
+  import Radio from '@lucide/svelte/icons/radio';
+  import Search from '@lucide/svelte/icons/search';
+  import Settings from '@lucide/svelte/icons/settings';
   import { m } from '$lib/i18n';
   import type { ShellRoute } from './shell-types';
 

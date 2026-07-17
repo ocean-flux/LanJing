@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Search, X } from '@lucide/svelte';
+  import Search from '@lucide/svelte/icons/search';
+  import X from '@lucide/svelte/icons/x';
   import { Button } from '$lib/components/ui/button';
   import * as Dialog from '$lib/components/ui/dialog';
   import { Input } from '$lib/components/ui/input';
