@@ -56,7 +56,7 @@ Calm, craft-minded, continuous. Voice is precise and quiet, never hype.
 | ---------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **L0 Appearance mode** | `light` \| `dark` \| `system`                                     | Required; user explicit choice beats system                                                                            |
 | **L1 Semantic roles**  | `canvas` / `ink` / `lantern` / `reader-*` / `media-void` / status | Required contract; names stable forever                                                                                |
-| **L2 Appearance pack** | Rebind L1 hex/material only; one IA                               | Default **墨砚精密 `inkstone-precision`**; second built-in **冷银朱 `cold-cinnabar`** (data/API; settings UI optional) |
+| **L2 Appearance pack** | Rebind L1 hex/material only; one IA                               | Default **墨砚精密 `inkstone-precision`**; second built-in **冷银朱 `cold-cinnabar`**；设置页可切换                                              |
 | **L3 Mode atmosphere** | Content-surface density/paper/void inside a media mode            | Allowed as presentation, not a second shell language                                                                   |
 | **Reader prefs**       | Independent colorScheme/font/size/…                               | Independent of L0; survives app theme changes                                                                          |
 

@@ -143,7 +143,7 @@ The system rejects generic SaaS dashboard kits, content-farm feed noise, scraper
 | ------------ | --------------------------------------------------------------------------------------- |
 | L0           | `light` / `dark` / `system` on `documentElement`                                        |
 | L1           | CSS variables for semantic roles (this file’s palette)                                  |
-| L2           | Optional pack id rebinding L1 (default pack only in production until a multi-pack task) |
+| L2           | Built-in pack id rebinds L1; production supports inkstone + cold-cinnabar             |
 | L3           | Mode-scoped presentation tokens for main/reader/player — never rename L1                |
 | Reader prefs | Independent of L0; paper/white/gray/dark/black etc.                                     |
 

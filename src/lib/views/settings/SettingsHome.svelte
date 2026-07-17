@@ -119,7 +119,7 @@
           <button
             type="button"
             class={[
-              'motion-nav-capsule min-h-7 flex-1 rounded-[5px] px-2 text-[0.75rem] font-medium outline-none transition-colors focus-visible:shadow-[var(--focus-ring)]',
+              'motion-nav-capsule min-h-7 flex-1 rounded-[5px] px-2 text-[0.75rem] font-medium outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:min-h-11',
               mode === opt.id
                 ? 'bg-surface-1 text-ink shadow-[var(--surface-panel-shadow)]'
                 : 'text-ink-muted hover:text-ink',
@@ -145,7 +145,7 @@
           <button
             type="button"
             class={[
-              'motion-nav-capsule inline-flex min-h-8 items-center gap-2 rounded-md border px-2 py-1 outline-none transition-colors focus-visible:shadow-[var(--focus-ring)]',
+              'motion-nav-capsule inline-flex min-h-8 items-center gap-2 rounded-md border px-2 py-1 outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:min-h-11',
               selected
                 ? 'border-lantern/35 bg-lantern-soft'
                 : 'border-hairline bg-canvas hover:bg-surface-2',
@@ -183,7 +183,7 @@
           <button
             type="button"
             class={[
-              'motion-nav-capsule min-h-7 rounded-[5px] px-2.5 text-[0.75rem] font-medium outline-none transition-colors focus-visible:shadow-[var(--focus-ring)]',
+              'motion-nav-capsule min-h-7 rounded-[5px] px-2.5 text-[0.75rem] font-medium outline-none transition-colors focus-visible:shadow-[var(--focus-ring)] [@media(pointer:coarse)]:min-h-11',
               locale === opt.id
                 ? 'bg-surface-1 text-ink shadow-[var(--surface-panel-shadow)]'
                 : 'text-ink-muted hover:text-ink',
