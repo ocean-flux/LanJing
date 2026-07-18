@@ -1,8 +1,8 @@
 //! JSON 提取 — 用 `jsonpath-rust` 引擎按 `JSONPath` 提取字段。
 
 use jsonpath_rust::JsonPath;
-use lj_core::extract_rule::{ExtractRule, ExtractType};
-use lj_core::node_data::NodeData;
+use lj_rule_model::{ExtractRule, ExtractType};
+use lj_runtime::NodeData;
 use serde_json::Value;
 
 use crate::regex_extract::{RegexCache, apply_regex_clean};
@@ -190,7 +190,7 @@ fn value_to_text(value: &Value) -> String {
 /// 可选应用 `regex_clean`。
 fn apply_clean(
     text: &str,
-    clean: Option<&lj_core::extract_rule::RegexClean>,
+    clean: Option<&lj_rule_model::RegexClean>,
     regex_cache: &RegexCache,
 ) -> String {
     match clean {

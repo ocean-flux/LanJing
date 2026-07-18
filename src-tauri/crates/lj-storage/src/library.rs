@@ -1,6 +1,6 @@
 //! 共享资料库状态与标准媒体资源图投影。
 
-use lj_core::media::{MediaGraphDelta, MediaResourceId};
+use lj_media::{MediaGraphDelta, MediaResourceId};
 use serde::{Deserialize, Serialize};
 
 /// 用户对单个标准媒体资源持有的进度。

@@ -1,20 +1,20 @@
 //! 本体规则导入器 — `LanJing` 节点图 JSON 直通反序列化及验证。
 
-use lj_core::error::CoreError;
-use lj_core::node::Graph;
-use lj_core::sandbox::Sandbox;
-use lj_core::traits::{ImportPreview, Importer};
+use lj_rule_model::{Error, PolicyCapabilities, SystemCapabilities};
+use lj_runtime::Graph;
+
+use crate::preview::ImportPreview;
 
 /// 原生图导入器:直通 `Graph` + 标准意图契约验证。
 pub struct NativeImporter;
 
-impl Importer<Graph> for NativeImporter {
+impl NativeImporter {
     /// 直通: `Graph` 已是最终形态,只需验证 + 收集预览信息。
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::GraphValidation` 当图结构不符合默认 schema。
-    fn import(&self, graph: Graph) -> Result<ImportPreview, CoreError> {
+    /// 返回 `Error::GraphValidation` 当图结构不符合默认 schema。
+    pub fn import(&self, graph: Graph) -> Result<ImportPreview, Error> {
         crate::validate::validate_graph(&graph)?;
 
         let node_count = graph.nodes.len();
@@ -56,9 +56,9 @@ impl Importer<Graph> for NativeImporter {
             node_count,
             edge_count,
             js_block_count: js_sources.len(),
-            sandbox: Sandbox {
+            sandbox: PolicyCapabilities {
                 network: true,
-                system: lj_core::sandbox::SystemCapabilities::default(),
+                system: SystemCapabilities::default(),
             },
             http_target_urls,
             js_sources,

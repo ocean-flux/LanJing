@@ -2,8 +2,8 @@
 //!
 //! 使用 `scraper` 引擎按 CSS 选择器提取字段，支持回退链和列表模式。
 
-use lj_core::extract_rule::ExtractRule;
-use lj_core::node_data::NodeData;
+use lj_rule_model::ExtractRule;
+use lj_runtime::NodeData;
 
 use crate::html;
 use crate::regex_extract::RegexCache;
@@ -233,7 +233,7 @@ fn extract_field_opt_element(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lj_core::extract_rule::ExtractType;
+    use lj_rule_model::ExtractType;
 
     #[test]
     fn test_try_extract_fallback_first_wins() {

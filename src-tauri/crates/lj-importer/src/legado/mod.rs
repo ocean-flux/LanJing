@@ -9,15 +9,16 @@ pub mod types;
 use std::collections::HashMap;
 
 use lj_capability::{IntentExport, StandardIntent};
-use lj_core::error::CoreError;
-use lj_core::extract_rule::ExpectedDataType;
-use lj_core::node::{Edge, Graph, MapperOutputKind, SourceId};
-use lj_core::sandbox::Sandbox;
+use lj_rule_model::Error;
+use lj_rule_model::ExpectedDataType;
+use lj_rule_model::PolicyCapabilities;
+use lj_runtime::{Edge, Graph, MapperOutputKind, SourceId};
 
-use lj_core::mapper_vocab::ITEM_IDENTITY_FIELDS;
+use lj_rule_model::mapper_vocab::ITEM_IDENTITY_FIELDS;
 #[cfg(test)]
-use lj_core::node::{NodeKind, NodeSpec};
-use lj_core::traits::{ImportPreview, Importer};
+use lj_runtime::{NodeKind, NodeSpec};
+
+use crate::preview::ImportPreview;
 
 pub use translator::compute_import_hash;
 pub use types::LegadoSourceJson;
@@ -33,8 +34,13 @@ use translator::{
 /// 将 `Legado` 书源 JSON 翻译为 `LanJing` 节点图。
 pub struct LegadoImporter;
 
-impl Importer<LegadoSourceJson> for LegadoImporter {
-    fn import(&self, source: LegadoSourceJson) -> Result<ImportPreview, CoreError> {
+impl LegadoImporter {
+    /// 导入 Legado 书源。
+    ///
+    /// # Errors
+    ///
+    /// 规则解析或图验证失败时返回错误。
+    pub fn import(&self, source: LegadoSourceJson) -> Result<ImportPreview, Error> {
         let source_id = SourceId(uuid::Uuid::new_v4());
         let headers = parse_headers(source.header.as_deref())?;
         let base_url = source.book_source_url.trim_end_matches('/').to_string();
@@ -182,9 +188,9 @@ impl Importer<LegadoSourceJson> for LegadoImporter {
             node_count: graph.nodes.len(),
             edge_count: graph.edges.len(),
             js_block_count: st.js_sources.len(),
-            sandbox: Sandbox {
+            sandbox: PolicyCapabilities {
                 network: true,
-                system: lj_core::sandbox::SystemCapabilities::default(),
+                system: lj_rule_model::SystemCapabilities::default(),
             },
             http_target_urls: st.http_target_urls,
             js_sources: st.js_sources,

@@ -3,15 +3,15 @@
 use std::collections::BTreeMap;
 use std::fmt::Write;
 
+use crate::graph::{Graph, MapperOutputKind, MapperSpec};
+use crate::node_data::NodeData;
+use crate::processor::ExecutionContext;
 use lj_capability::{IntentInput, StandardIntent};
-use lj_core::media::{
+use lj_media::{
     MediaAction, MediaAsset, MediaAssetKind, MediaAssetLocator, MediaCollection, MediaGraphDelta,
     MediaItem, MediaResourceId, MediaUnit, ResourceCompleteness, SourceProfile, item_resource_id,
     parse_item_resource_id, parse_unit_resource_id, unit_resource_id,
 };
-use lj_core::node::{Graph, MapperOutputKind, MapperSpec};
-use lj_core::node_data::NodeData;
-use lj_core::traits::ExecutionContext;
 use serde_json::Value;
 
 use crate::mapper_fields::{

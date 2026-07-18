@@ -3,7 +3,7 @@
 //! 解析 Legado 规则字符串(`@text`/`@href`/`||`/`##regex##`)为 `ExtractRule`。
 //! 纯函数，无 IO。
 
-use lj_core::extract_rule::{ExtractRule, ExtractType, RegexClean};
+use lj_rule_model::{ExtractRule, ExtractType, RegexClean};
 
 use crate::error::CompilerError;
 

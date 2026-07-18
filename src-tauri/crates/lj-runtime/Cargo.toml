@@ -10,8 +10,9 @@ description = "规则运行时引擎：规则执行、生命周期管理"
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
+lj-rule-model = { path = "../lj-rule-model" }
 lj-capability = { path = "../lj-capability" }
+lj-media = { path = "../lj-media" }
 futures = { workspace = true }
 async-stream = { workspace = true }
 tokio = { workspace = true }

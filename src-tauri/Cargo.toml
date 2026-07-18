@@ -2,14 +2,13 @@
 resolver = "2"
 members = [
   "crates/lj-capability",
-  "crates/lj-core",
+  "crates/lj-rule-model",
   "crates/lj-media",
   "crates/lj-compiler",
   "crates/lj-runtime",
   "crates/lj-node-http",
   "crates/lj-node-js",
   "crates/lj-node-extract",
-  "crates/lj-sandbox",
   "crates/lj-importer",
   "crates/lj-integration-tests",
   "crates/lj-storage",
@@ -96,8 +95,9 @@ tauri-plugin-single-instance = { workspace = true }
 tauri-plugin-svelte = "3"
 tauri-plugin-window-state = { workspace = true }
 # Workspace crate
-lj-core = { path = "crates/lj-core" }
+lj-rule-model = { path = "crates/lj-rule-model" }
 lj-capability = { path = "crates/lj-capability" }
+lj-media = { path = "crates/lj-media" }
 lj-importer = { path = "crates/lj-importer" }
 lj-runtime = { path = "crates/lj-runtime" }
 lj-storage = { path = "crates/lj-storage" }

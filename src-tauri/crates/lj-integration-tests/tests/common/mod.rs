@@ -5,15 +5,15 @@
 use std::collections::HashMap;
 
 use futures::StreamExt;
-use lj_core::media::MediaGraphDelta;
-use lj_core::node::{Graph, NodeKind};
-use lj_core::node_data::NodeData;
-use lj_core::sandbox::{Sandbox, SystemCapabilities};
-use lj_core::traits::{ExecutionContext, Executor, NodeProcessor, SegmentSpec};
+use lj_media::MediaGraphDelta;
 use lj_node_extract::processor::ExtractNodeProcessor;
 use lj_node_http::processor::HttpNodeProcessor;
 use lj_node_js::processor::JsNodeProcessor;
+use lj_rule_model::{PolicyCapabilities, SystemCapabilities};
+use lj_runtime::NodeData;
 use lj_runtime::executor::GraphExecutor;
+use lj_runtime::{ExecutionContext, NodeProcessor, SegmentSpec};
+use lj_runtime::{Graph, NodeKind};
 
 /// 初始化 `tracing` subscriber（幂等，多次调用安全）。
 ///
@@ -44,7 +44,7 @@ pub fn build_processors() -> HashMap<NodeKind, Box<dyn NodeProcessor>> {
 pub fn make_ctx(base_url: &str, trace_id: &str) -> ExecutionContext {
     ExecutionContext {
         cookies: HashMap::new(),
-        caps: Sandbox {
+        caps: PolicyCapabilities {
             network: true,
             system: SystemCapabilities::default(),
         },
@@ -63,7 +63,7 @@ pub async fn execute_and_collect(
     let ctx = make_ctx(base_url, trace_id);
     let processors = build_processors();
     let executor = GraphExecutor::new();
-    let output = executor.execute(graph, segment, &ctx, &processors);
+    let output = executor.execute(graph, &segment, &ctx, &processors);
     output.map(|(_id, data)| data).collect().await
 }
 

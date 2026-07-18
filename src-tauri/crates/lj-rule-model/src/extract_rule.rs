@@ -1,4 +1,4 @@
-//! 提取规则 — 规则语法解析的 IR(中间表示)。
+//! 提取规则 — 规则语法解析的 IR（中间表示）。
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// 字段提取规则表（字段名 → 规则列表），显式 `RandomState` 避免 `implicit_hasher`。
 pub type FieldRules = HashMap<String, Vec<ExtractRule>, std::collections::hash_map::RandomState>;
 
-/// 提取规则(闭集 enum，lj-compiler 解析规则字符串产出)。
+/// 提取规则(闭集 enum，compiler 解析规则字符串产出)。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExtractRule {
     /// CSS 选择器(scraper)。
@@ -86,7 +86,7 @@ pub struct ExtractSpec {
     pub field_rules: HashMap<String, Vec<ExtractRule>>,
     /// 预期数据类型(HTML/XML/JSON，决定用哪个解析器)。
     pub expected_type: ExpectedDataType,
-    /// 产出目标类型——决定 Extract 节点产出哪种 `NodeData` 变体。
+    /// 产出目标类型——决定 Extract 节点产出哪种中间记录。
     /// 导入器填入，处理器按此分发提取逻辑。
     #[serde(default)]
     pub output_target: OutputTarget,

@@ -2,9 +2,8 @@
 
 use std::fs;
 
-use lj_core::node::NodeKind;
-use lj_core::traits::Importer;
 use lj_importer::legado::{LegadoImporter, LegadoSourceJson};
+use lj_runtime::NodeKind;
 
 #[test]
 fn import_synthetic_source() {

@@ -3,13 +3,12 @@
 use std::collections::HashMap;
 
 use lj_capability::{IntentExport, StandardIntent};
-use lj_core::endpoint::{HttpMethod, HttpSpec};
-use lj_core::extract_rule::{ExpectedDataType, ExtractSpec};
-use lj_core::node::{
+use lj_importer::native::NativeImporter;
+use lj_rule_model::{ExpectedDataType, ExtractSpec};
+use lj_rule_model::{HttpMethod, HttpSpec};
+use lj_runtime::{
     Edge, Graph, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec, SourceId,
 };
-use lj_core::traits::Importer;
-use lj_importer::native::NativeImporter;
 use uuid::Uuid;
 
 #[test]
@@ -33,7 +32,7 @@ fn native_import_round_trip() {
         rules: Vec::new(),
         field_rules: HashMap::new(),
         expected_type: ExpectedDataType::Html,
-        output_target: lj_core::extract_rule::OutputTarget::default(),
+        output_target: lj_rule_model::OutputTarget::default(),
     };
 
     let nodes = vec![

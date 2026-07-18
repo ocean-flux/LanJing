@@ -5,11 +5,11 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use crate::graph::{Edge, Graph, Node, NodeId, NodeKind};
+use crate::node_data::NodeData;
+use crate::processor::{ExecutionContext, NodeProcessor, SegmentSpec};
 use futures::stream::{self, BoxStream, StreamExt};
 use lj_capability::{IntentInput, StandardIntent};
-use lj_core::node::{Edge, Graph, Node, NodeId, NodeKind};
-use lj_core::node_data::NodeData;
-use lj_core::traits::{ExecutionContext, Executor, NodeProcessor, SegmentSpec};
 use tracing;
 use uuid;
 
@@ -201,11 +201,12 @@ impl Default for GraphExecutor {
     }
 }
 
-impl Executor for GraphExecutor {
-    fn execute<'a>(
+impl GraphExecutor {
+    /// 按段执行图。
+    pub fn execute<'a>(
         &'a self,
         graph: &'a Graph,
-        segment: SegmentSpec,
+        segment: &'a SegmentSpec,
         ctx: &'a ExecutionContext,
         processors: &'a HashMap<NodeKind, Box<dyn NodeProcessor>>,
     ) -> BoxStream<'a, (NodeId, NodeData)> {
@@ -220,7 +221,7 @@ impl Executor for GraphExecutor {
         let sorted = self.topological_sort(&nodes, &graph.edges);
 
         // 创建 entry 输入 stream
-        let entry_stream: BoxStream<'static, NodeData> = Self::entry_input(&segment);
+        let entry_stream: BoxStream<'static, NodeData> = Self::entry_input(segment);
 
         // 线性链，每个节点的 output 串联为下游 input，NodeData::Error 透传。
         // 消费 sorted 所有权：'a Node 直接来自 graph，不依赖局部 Vec 的生命周期

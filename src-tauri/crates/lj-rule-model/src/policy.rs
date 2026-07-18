@@ -1,10 +1,10 @@
-//! 沙箱能力 — JS 执行沙箱的 capability 声明(ADR-0008)。
+//! 能力与策略 DTO — 可序列化 policy 合同。
 
 use serde::{Deserialize, Serialize};
 
-/// 系统级沙箱能力(文件系统/环境变量/进程)。
+/// 系统级沙箱能力（文件系统/环境变量/进程）。
 ///
-/// 与 `Sandbox.network` 分开以不超过 clippy `struct_excessive_bools` 阈值。
+/// 与 `PolicyCapabilities.network` 分开以不超过 clippy `struct_excessive_bools` 阈值。
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct SystemCapabilities {
     /// 是否允许文件系统访问。
@@ -15,16 +15,16 @@ pub struct SystemCapabilities {
     pub process: bool,
 }
 
-/// 沙箱能力配置(首刀全 bool，partial override 推迟)。
+/// 策略能力配置（安装 grant / 执行沙箱边界）。
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct Sandbox {
+pub struct PolicyCapabilities {
     /// 是否允许网络请求。
     pub network: bool,
-    /// 系统级能力(fs/env/process)。
+    /// 系统级能力（fs/env/process）。
     pub system: SystemCapabilities,
 }
 
-/// 能力类别枚举(用于 `CapabilityBlocked` 错误)。
+/// 能力类别枚举（用于 `CapabilityBlocked` 错误）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Capability {
     /// 网络。

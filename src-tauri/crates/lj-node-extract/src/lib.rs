@@ -13,4 +13,4 @@ pub mod processor;
 pub mod regex_extract;
 pub mod xml;
 
-pub use lj_core::extract_rule::FieldRules;
+pub use lj_rule_model::FieldRules;

@@ -2,9 +2,9 @@
 
 use std::collections::HashSet;
 
-use lj_core::error::CoreError;
-use lj_core::node::{Graph, MapperOutputKind, Node, NodeId, NodeKind};
-use lj_core::node_data::NodeDataVariant;
+use lj_rule_model::Error;
+use lj_runtime::NodeDataVariant;
+use lj_runtime::{Graph, MapperOutputKind, Node, NodeId, NodeKind};
 
 /// 验证图结构是否合法（三层校验）。
 ///
@@ -15,8 +15,8 @@ use lj_core::node_data::NodeDataVariant;
 ///
 /// # Errors
 ///
-/// 返回 `CoreError::GraphValidation` 当图结构不合法。
-pub fn validate_graph(graph: &Graph) -> Result<(), CoreError> {
+/// 返回 `Error::GraphValidation` 当图结构不合法。
+pub fn validate_graph(graph: &Graph) -> Result<(), Error> {
     // ===== 1. 结构校验 =====
     validate_structure(graph)?;
 
@@ -30,20 +30,20 @@ pub fn validate_graph(graph: &Graph) -> Result<(), CoreError> {
 }
 
 /// 结构校验：边目标节点存在 + 子例程无递归引用。
-fn validate_structure(graph: &Graph) -> Result<(), CoreError> {
+fn validate_structure(graph: &Graph) -> Result<(), Error> {
     // 构建节点 ID 集合，O(1) 查找
     let node_ids: HashSet<&NodeId> = graph.nodes.iter().map(|n| &n.node_id).collect();
 
     // 边 from/to 节点必须存在
     for edge in &graph.edges {
         if !node_ids.contains(&edge.from) {
-            return Err(CoreError::GraphValidation(format!(
+            return Err(Error::GraphValidation(format!(
                 "边 from 节点 {} 不存在",
                 edge.from.0
             )));
         }
         if !node_ids.contains(&edge.to) {
-            return Err(CoreError::GraphValidation(format!(
+            return Err(Error::GraphValidation(format!(
                 "边 to 节点 {} 不存在",
                 edge.to.0
             )));
@@ -53,9 +53,7 @@ fn validate_structure(graph: &Graph) -> Result<(), CoreError> {
     // 子例程递归引用检查（简单：子图不能含与父同 ID 的子例程）
     for (sub_id, sub_graph) in &graph.subroutines {
         if sub_graph.subroutines.contains_key(sub_id) {
-            return Err(CoreError::GraphValidation(
-                "子例程不能递归引用自身".to_string(),
-            ));
+            return Err(Error::GraphValidation("子例程不能递归引用自身".to_string()));
         }
     }
 
@@ -63,7 +61,7 @@ fn validate_structure(graph: &Graph) -> Result<(), CoreError> {
 }
 
 /// I/O 校验：边类型匹配（`from.output_type` == `to.input_type`）。
-fn validate_io(graph: &Graph) -> Result<(), CoreError> {
+fn validate_io(graph: &Graph) -> Result<(), Error> {
     for edge in &graph.edges {
         // 结构校验已保证节点存在，这里安全 unwrap 不可能触发；
         // 但为防御性编程仍用 find + ok_or_else
@@ -72,15 +70,13 @@ fn validate_io(graph: &Graph) -> Result<(), CoreError> {
             .iter()
             .find(|n| n.node_id == edge.from)
             .ok_or_else(|| {
-                CoreError::GraphValidation(format!("边 from 节点 {} 不存在", edge.from.0))
+                Error::GraphValidation(format!("边 from 节点 {} 不存在", edge.from.0))
             })?;
         let to_node = graph
             .nodes
             .iter()
             .find(|n| n.node_id == edge.to)
-            .ok_or_else(|| {
-                CoreError::GraphValidation(format!("边 to 节点 {} 不存在", edge.to.0))
-            })?;
+            .ok_or_else(|| Error::GraphValidation(format!("边 to 节点 {} 不存在", edge.to.0)))?;
 
         check_edge_type(from_node, to_node)?;
     }
@@ -89,13 +85,13 @@ fn validate_io(graph: &Graph) -> Result<(), CoreError> {
 }
 
 /// 标准意图契约校验：`intent_exports` 声明的 Flow 入口和 Mapper 输出节点存在且可达。
-fn validate_contract(graph: &Graph) -> Result<(), CoreError> {
+fn validate_contract(graph: &Graph) -> Result<(), Error> {
     let node_ids: HashSet<&NodeId> = graph.nodes.iter().map(|n| &n.node_id).collect();
 
     for (intent, entry) in &graph.intent_exports {
         let flow_entry = NodeId(entry.flow_entry);
         if !node_ids.contains(&flow_entry) {
-            return Err(CoreError::GraphValidation(format!(
+            return Err(Error::GraphValidation(format!(
                 "标准意图 {:?} 的 Flow 入口节点 {} 不存在于图中",
                 intent, entry.flow_entry
             )));
@@ -107,7 +103,7 @@ fn validate_contract(graph: &Graph) -> Result<(), CoreError> {
             .iter()
             .find(|node| node.node_id == mapper_output)
         else {
-            return Err(CoreError::GraphValidation(format!(
+            return Err(Error::GraphValidation(format!(
                 "标准意图 {:?} 的 Mapper 输出节点 {} 不存在于图中",
                 intent, entry.mapper_output
             )));
@@ -116,7 +112,7 @@ fn validate_contract(graph: &Graph) -> Result<(), CoreError> {
 
         let reachable = bfs_reachable(graph, &flow_entry);
         if !reachable.contains(&mapper_output) {
-            return Err(CoreError::GraphValidation(format!(
+            return Err(Error::GraphValidation(format!(
                 "标准意图 {:?} 的 Mapper 输出节点 {} 无法从 Flow 入口 {} 到达",
                 intent, entry.mapper_output, entry.flow_entry
             )));
@@ -129,15 +125,15 @@ fn validate_contract(graph: &Graph) -> Result<(), CoreError> {
 fn validate_mapper_spec(
     intent: lj_capability::StandardIntent,
     mapper_node: &Node,
-) -> Result<(), CoreError> {
+) -> Result<(), Error> {
     if mapper_node.spec.kind != NodeKind::Mapper {
-        return Err(CoreError::GraphValidation(format!(
+        return Err(Error::GraphValidation(format!(
             "标准意图 {:?} 的 Mapper 输出节点 {} 不是 Mapper 节点",
             intent, mapper_node.node_id.0
         )));
     }
     let Some(spec) = &mapper_node.spec.mapper else {
-        return Err(CoreError::GraphValidation(format!(
+        return Err(Error::GraphValidation(format!(
             "标准意图 {:?} 的 Mapper 输出节点 {} 缺少 Mapper spec",
             intent, mapper_node.node_id.0
         )));
@@ -148,7 +144,7 @@ fn validate_mapper_spec(
             .iter()
             .any(|field| field.trim().is_empty())
     {
-        return Err(CoreError::GraphValidation(format!(
+        return Err(Error::GraphValidation(format!(
             "标准意图 {:?} 的 Mapper 输出节点 {} 缺少稳定资源 ID 字段",
             intent, mapper_node.node_id.0
         )));
@@ -164,7 +160,7 @@ fn validate_mapper_spec(
         lj_capability::StandardIntent::ResolveAsset => MapperOutputKind::Assets,
     };
     if spec.output != expected {
-        return Err(CoreError::GraphValidation(format!(
+        return Err(Error::GraphValidation(format!(
             "标准意图 {:?} 的 Mapper 输出类型 {:?} 不匹配，期望 {:?}",
             intent, spec.output, expected
         )));
@@ -193,7 +189,7 @@ fn bfs_reachable(graph: &Graph, start: &NodeId) -> HashSet<NodeId> {
 }
 
 /// 检查边类型匹配：`from.output_type` == `to.input_type`。
-fn check_edge_type(from_node: &Node, to_node: &Node) -> Result<(), CoreError> {
+fn check_edge_type(from_node: &Node, to_node: &Node) -> Result<(), Error> {
     let (_, from_output) = node_kind_io(&from_node.spec.kind);
     let (to_input, _) = node_kind_io(&to_node.spec.kind);
 
@@ -202,7 +198,7 @@ fn check_edge_type(from_node: &Node, to_node: &Node) -> Result<(), CoreError> {
         && let Some(from_output) = from_output
         && from_output != to_input
     {
-        return Err(CoreError::GraphValidation(format!(
+        return Err(Error::GraphValidation(format!(
             "边类型不匹配: {:?}(output={:?}) → {:?}(input={:?})",
             from_node.spec.kind, from_output, to_node.spec.kind, to_input,
         )));
@@ -230,9 +226,9 @@ fn node_kind_io(kind: &NodeKind) -> (Option<NodeDataVariant>, Option<NodeDataVar
 mod tests {
     use super::*;
     use lj_capability::{IntentExport, StandardIntent};
-    use lj_core::endpoint::{HttpMethod, HttpSpec};
-    use lj_core::extract_rule::{ExpectedDataType, ExtractSpec};
-    use lj_core::node::{Edge, MapperSpec, NodeKind, NodeSpec, SourceId, SubroutineId};
+    use lj_rule_model::{ExpectedDataType, ExtractSpec};
+    use lj_rule_model::{HttpMethod, HttpSpec};
+    use lj_runtime::{Edge, MapperSpec, NodeKind, NodeSpec, SourceId, SubroutineId};
     use std::collections::HashMap;
     use uuid::Uuid;
 
@@ -273,7 +269,7 @@ mod tests {
                     rules: vec![],
                     field_rules: HashMap::new(),
                     expected_type: ExpectedDataType::Html,
-                    output_target: lj_core::extract_rule::OutputTarget::Media,
+                    output_target: lj_rule_model::OutputTarget::Media,
                 }),
                 mapper: None,
             },
@@ -287,7 +283,7 @@ mod tests {
             spec: NodeSpec {
                 kind: NodeKind::Js,
                 http: None,
-                js: Some(lj_core::node::JsSpec {
+                js: Some(lj_runtime::JsSpec {
                     code: "var x = 1;".to_string(),
                 }),
                 extract: None,

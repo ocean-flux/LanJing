@@ -4,19 +4,19 @@
 
 use std::collections::HashMap;
 
-use lj_core::endpoint::{HttpMethod, HttpSpec};
+use lj_rule_model::{HttpMethod, HttpSpec};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 use lj_compiler::legado_parser::parse_legado_rule;
-use lj_core::error::CoreError;
-use lj_core::extract_rule::{ExpectedDataType, ExtractRule, ExtractSpec, FieldRules, OutputTarget};
-use lj_core::mapper_vocab::{
+use lj_rule_model::Error;
+use lj_rule_model::mapper_vocab::{
     ASSET_IDENTITY_FIELDS, BOOK_URL_TEMPLATE_VAR, CHAPTER_URL_TEMPLATE_VAR,
     DISCOVERY_ACTION_IDENTITY_FIELDS, DISCOVERY_SECTION_IDENTITY_FIELDS, ITEM_IDENTITY_FIELDS,
     UNIT_IDENTITY_FIELDS,
 };
-use lj_core::node::{Edge, JsSpec, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec};
+use lj_rule_model::{ExpectedDataType, ExtractRule, ExtractSpec, FieldRules, OutputTarget};
+use lj_runtime::{Edge, JsSpec, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec};
 
 use super::types::{RuleBookInfo, RuleContent, RuleExplore, RuleSearch, RuleToc};
 
@@ -76,7 +76,7 @@ pub(crate) fn translate_discover(
     headers: &HashMap<String, String>,
     rule: Option<&RuleExplore>,
     st: &mut IntentGraphState,
-) -> Result<(), CoreError> {
+) -> Result<(), Error> {
     let js_code = extract_js_code(explore_url);
     st.js_sources.push(js_code.clone());
 
@@ -146,7 +146,7 @@ pub(crate) fn translate_detail(
     rule: &RuleBookInfo,
     headers: &HashMap<String, String>,
     st: &mut IntentGraphState,
-) -> Result<(), CoreError> {
+) -> Result<(), Error> {
     let (detail_rules, detail_field_rules) = collect_book_info_rules(Some(rule))?;
     let (http_node, extract_node) = build_http_extract_pair(
         &format!("{{{{{BOOK_URL_TEMPLATE_VAR}}}}}"),
@@ -181,7 +181,7 @@ pub(crate) fn translate_toc(
     rule: &RuleToc,
     headers: &HashMap<String, String>,
     st: &mut IntentGraphState,
-) -> Result<(), CoreError> {
+) -> Result<(), Error> {
     let (toc_rules, toc_field_rules) = collect_toc_rules(Some(rule))?;
     let (http_node, extract_node) = build_http_extract_pair_with_target(
         &format!("{{{{{BOOK_URL_TEMPLATE_VAR}}}}}"),
@@ -217,7 +217,7 @@ pub(crate) fn translate_content(
     rule: &RuleContent,
     headers: &HashMap<String, String>,
     st: &mut IntentGraphState,
-) -> Result<(), CoreError> {
+) -> Result<(), Error> {
     let (content_rules, content_field_rules) = collect_content_rules(Some(rule))?;
     let (http_node, extract_node) = build_http_extract_pair_with_target(
         &format!("{{{{{CHAPTER_URL_TEMPLATE_VAR}}}}}"),
@@ -418,13 +418,13 @@ fn extract_js_code(explore_url: &str) -> String {
 ///
 /// # Errors
 ///
-/// 返回 `CoreError::Import` 当 header JSON 格式无效。
-pub(crate) fn parse_headers(header: Option<&str>) -> Result<HashMap<String, String>, CoreError> {
+/// 返回 `Error::Import` 当 header JSON 格式无效。
+pub(crate) fn parse_headers(header: Option<&str>) -> Result<HashMap<String, String>, Error> {
     match header {
         None => Ok(HashMap::new()),
         Some(s) if s.trim().is_empty() => Ok(HashMap::new()),
         Some(s) => {
-            serde_json::from_str(s).map_err(|e| CoreError::Import(format!("解析 header 失败: {e}")))
+            serde_json::from_str(s).map_err(|e| Error::Import(format!("解析 header 失败: {e}")))
         }
     }
 }
@@ -433,14 +433,12 @@ pub(crate) fn parse_headers(header: Option<&str>) -> Result<HashMap<String, Stri
 ///
 /// # Errors
 ///
-/// 规则字符串语法错误时返回 `CoreError::Import`。
-fn parse_rule_field(field: Option<&String>) -> Result<Vec<ExtractRule>, CoreError> {
+/// 规则字符串语法错误时返回 `Error::Import`。
+fn parse_rule_field(field: Option<&String>) -> Result<Vec<ExtractRule>, Error> {
     match field {
         None => Ok(Vec::new()),
         Some(s) if s.trim().is_empty() => Ok(Vec::new()),
-        Some(s) => {
-            parse_legado_rule(s).map_err(|e| CoreError::Import(format!("规则解析失败: {e}")))
-        }
+        Some(s) => parse_legado_rule(s).map_err(|e| Error::Import(format!("规则解析失败: {e}"))),
     }
 }
 
@@ -450,7 +448,7 @@ macro_rules! collect_rules {
         if let Some(r) = $rule {
             $( rules.extend(parse_rule_field(r.$field.as_ref())?); )+
         }
-        Ok::<Vec<ExtractRule>, CoreError>(rules)
+        Ok::<Vec<ExtractRule>, Error>(rules)
     }};
 }
 
@@ -464,7 +462,7 @@ fn collect_list_field_rules(
     book_url: Option<&String>,
     cover_url: Option<&String>,
     kind: Option<&String>,
-) -> Result<(Vec<ExtractRule>, FieldRules), CoreError> {
+) -> Result<(Vec<ExtractRule>, FieldRules), Error> {
     let mut field_rules: FieldRules = FieldRules::new();
     let mut book_list_rules: Vec<ExtractRule> = Vec::new();
     if let Some(f) = book_list {
@@ -483,7 +481,7 @@ fn collect_list_field_rules(
 /// 收集 Search 来源规则段，返回 (`bookList_rules`, `field_rules`)。
 pub(crate) fn collect_search_rules(
     rule: Option<&RuleSearch>,
-) -> Result<(Vec<ExtractRule>, FieldRules), CoreError> {
+) -> Result<(Vec<ExtractRule>, FieldRules), Error> {
     match rule {
         None => Ok((Vec::new(), HashMap::new())),
         Some(r) => collect_list_field_rules(
@@ -500,7 +498,7 @@ pub(crate) fn collect_search_rules(
 /// 收集 Explore 来源规则段，返回 (`bookList_rules`, `field_rules`)。
 pub(crate) fn collect_explore_rules(
     rule: Option<&RuleExplore>,
-) -> Result<(Vec<ExtractRule>, FieldRules), CoreError> {
+) -> Result<(Vec<ExtractRule>, FieldRules), Error> {
     match rule {
         None => Ok((Vec::new(), HashMap::new())),
         Some(r) => collect_list_field_rules(
@@ -517,7 +515,7 @@ pub(crate) fn collect_explore_rules(
 /// 收集 `bookInfo` 来源规则段(单值模式，`field_rules` 为空)。
 pub(crate) fn collect_book_info_rules(
     rule: Option<&RuleBookInfo>,
-) -> Result<(Vec<ExtractRule>, FieldRules), CoreError> {
+) -> Result<(Vec<ExtractRule>, FieldRules), Error> {
     let rules = collect_rules!(rule, name, author, cover_url, intro, kind, word_count)?;
     Ok((rules, HashMap::new()))
 }
@@ -525,7 +523,7 @@ pub(crate) fn collect_book_info_rules(
 /// 收集 toc 来源规则段(单值模式，`field_rules` 为空)。
 pub(crate) fn collect_toc_rules(
     rule: Option<&RuleToc>,
-) -> Result<(Vec<ExtractRule>, FieldRules), CoreError> {
+) -> Result<(Vec<ExtractRule>, FieldRules), Error> {
     let mut field_rules: FieldRules = FieldRules::new();
     let mut chapter_list: Vec<ExtractRule> = Vec::new();
     if let Some(r) = rule {
@@ -549,7 +547,7 @@ pub(crate) fn collect_toc_rules(
 /// 收集 content 来源规则段(单值模式，`field_rules` 为空)。
 pub(crate) fn collect_content_rules(
     rule: Option<&RuleContent>,
-) -> Result<(Vec<ExtractRule>, FieldRules), CoreError> {
+) -> Result<(Vec<ExtractRule>, FieldRules), Error> {
     let rules = collect_rules!(rule, content, replace_regex)?;
     Ok((rules, HashMap::new()))
 }

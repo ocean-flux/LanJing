@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-use lj_core::endpoint::{HttpMethod, HttpSpec};
-use lj_core::extract_rule::{ExpectedDataType, ExtractRule, ExtractSpec, ExtractType};
-use lj_core::node::{Edge, JsSpec, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec};
+use lj_rule_model::{ExpectedDataType, ExtractRule, ExtractSpec, ExtractType};
+use lj_rule_model::{HttpMethod, HttpSpec};
+use lj_runtime::{Edge, JsSpec, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec};
 
 use super::types::MaccmsFormat;
 use super::vocab::{
@@ -45,7 +45,7 @@ pub(crate) fn build_pair(
         rules,
         field_rules,
         expected_type,
-        output_target: lj_core::extract_rule::OutputTarget::default(),
+        output_target: lj_rule_model::OutputTarget::default(),
     };
     let extract_node = create_node(NodeSpec {
         kind: NodeKind::Extract,

@@ -10,7 +10,9 @@ description = "存储层：SQLite 持久化、仓库与模式管理"
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
+lj-rule-model = { path = "../lj-rule-model" }
+lj-runtime = { path = "../lj-runtime" }
+lj-media = { path = "../lj-media" }
 diesel = { workspace = true }
 diesel_migrations = { workspace = true }
 libsqlite3-sys = { workspace = true }

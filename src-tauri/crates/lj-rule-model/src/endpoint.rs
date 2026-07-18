@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::extract_rule::ExpectedDataType;
+
 /// HTTP 方法。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HttpMethod {
@@ -26,5 +28,5 @@ pub struct HttpSpec {
     /// 字符集。
     pub charset: Option<String>,
     /// 预期响应数据类型(决定 Extract 用哪个解析器)。
-    pub expected_type: crate::extract_rule::ExpectedDataType,
+    pub expected_type: ExpectedDataType,
 }

@@ -1,12 +1,12 @@
 //! runtime mapper 字段回退 helper。
 
-use lj_core::mapper_vocab::{
+use lj_media::MediaKind;
+use lj_rule_model::mapper_vocab::{
     ASSET_CONTENT_KEYS, ASSET_URL_KEYS, DISCOVERY_ACTION_KEYS, DISCOVERY_TITLE_KEYS,
     ITEM_COVER_KEYS, ITEM_CREATOR_KEYS, ITEM_DESCRIPTION_KEYS, ITEM_SOURCE_KEY_KEYS,
     ITEM_TITLE_KEYS, ITEM_URL_KEYS, PLAY_FROM_KEYS, PLAY_URL_KEYS, UNIT_LOCATOR_KEYS,
     UNIT_TITLE_KEYS,
 };
-use lj_core::media::MediaKind;
 use serde_json::Value;
 
 const LOOKS_LIKE_MEDIA_KEYS: &[&str] = &[

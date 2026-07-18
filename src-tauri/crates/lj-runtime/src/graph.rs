@@ -1,6 +1,7 @@
-//! 节点图结构 — 节点/边/图/子例程。
+//! 节点图结构 — 节点/边/图/子例程（C1 临时 owner；C3 起 Plan-only 后删除生产路径）。
 
 use lj_capability::{IntentExport, StandardIntent};
+use lj_rule_model::{ExtractSpec, HttpSpec};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -51,11 +52,11 @@ pub struct NodeSpec {
     /// 节点类型。
     pub kind: NodeKind,
     /// HTTP 节点的 spec(当 kind == Http)。
-    pub http: Option<crate::endpoint::HttpSpec>,
+    pub http: Option<HttpSpec>,
     /// JS 节点的 spec(当 kind == Js)。
     pub js: Option<JsSpec>,
     /// 提取节点的 spec(当 kind == Extract)。
-    pub extract: Option<crate::extract_rule::ExtractSpec>,
+    pub extract: Option<ExtractSpec>,
     /// Mapper 节点的 spec(当 kind == Mapper)。
     #[serde(default)]
     pub mapper: Option<MapperSpec>,

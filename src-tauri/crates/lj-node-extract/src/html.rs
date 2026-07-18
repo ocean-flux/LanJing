@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use lj_core::extract_rule::{ExtractType, RegexClean};
+use lj_rule_model::{ExtractType, RegexClean};
 use scraper::Selector;
 
 use crate::regex_extract::{RegexCache, apply_regex_clean};
@@ -312,7 +312,7 @@ fn split_contains_selector(s: &str) -> Result<(String, String), crate::error::Ex
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lj_core::extract_rule::ExtractType;
+    use lj_rule_model::ExtractType;
 
     #[test]
     fn test_extract_text() {

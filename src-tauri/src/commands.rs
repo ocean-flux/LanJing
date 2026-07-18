@@ -12,13 +12,13 @@ use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use lj_capability::{IntentInput, StandardIntent};
-use lj_core::media::{MediaGraphDelta, MediaResourceId};
-use lj_core::node::{Graph, NodeKind};
-use lj_core::node_data::NodeData;
-use lj_core::sandbox::Sandbox;
-use lj_core::traits::{
-    ExecutionContext, Executor, Importer, NodeProcessor, RepoId, Repository, SegmentSpec,
-};
+use lj_importer::preview::ImportPreview;
+use lj_media::{MediaGraphDelta, MediaResourceId};
+use lj_rule_model::PolicyCapabilities;
+use lj_runtime::NodeData;
+use lj_runtime::{ExecutionContext, NodeProcessor, SegmentSpec};
+use lj_runtime::{Graph, NodeKind};
+use lj_storage::RepoId;
 
 use lj_importer::legado::{LegadoImporter, LegadoSourceJson};
 use lj_importer::maccms::{MaccmsFormat, MaccmsImporter, MaccmsSourceUrl};
@@ -68,7 +68,7 @@ pub struct ImportPreviewResponse {
     /// JS 块数量。
     pub js_block_count: usize,
     /// 沙箱能力配置。
-    pub sandbox: Sandbox,
+    pub sandbox: PolicyCapabilities,
     /// 所有 HTTP 目标 URL 模板（SSRF 审计）。
     pub http_target_urls: Vec<String>,
     /// JS 块源码（用户审计）。
@@ -144,7 +144,7 @@ pub struct LibraryEntryRequest {
 // ===== 辅助函数 =====
 
 /// 包装 `ImportPreview` 到响应结构。
-fn preview_to_response(preview: lj_core::traits::ImportPreview) -> ImportPreviewResponse {
+fn preview_to_response(preview: ImportPreview) -> ImportPreviewResponse {
     let graph_json =
         serde_json::to_string(&preview.graph).unwrap_or_else(|e| format!("序列化 graph 失败: {e}"));
     ImportPreviewResponse {
@@ -169,7 +169,7 @@ fn preview_to_response(preview: lj_core::traits::ImportPreview) -> ImportPreview
 fn detect_and_import(
     rule_json: &str,
     maccms_format: Option<MaccmsFormat>,
-) -> Result<lj_core::traits::ImportPreview, String> {
+) -> Result<ImportPreview, String> {
     // 1. 尝试解析为 Legado 书源 JSON
     if let Ok(legado) = serde_json::from_str::<LegadoSourceJson>(rule_json) {
         return LegadoImporter
@@ -241,7 +241,7 @@ pub fn confirm_import(
         .lock()
         .map_err(|e| format!("存储锁获取失败: {e}"))?;
     storage
-        .save(&repo_id, &graph)
+        .save_graph(&repo_id, &graph)
         .map_err(|e| format!("保存规则失败: {e}"))?;
 
     Ok(rule_id)
@@ -258,7 +258,7 @@ pub fn list_rules(state: State<'_, AppState>) -> Result<Vec<RuleListItem>, Strin
         .lock()
         .map_err(|e| format!("存储锁获取失败: {e}"))?;
     let items: Vec<(RepoId<Graph>, Graph)> = storage
-        .list()
+        .list_graphs()
         .map_err(|e| format!("读取规则列表失败: {e}"))?;
 
     // ponytail: `source_url` 暂不落库，后续 `confirm_import` 可存入独立字段
@@ -352,7 +352,7 @@ pub async fn execute_segment(
             .lock()
             .map_err(|e| format!("存储锁获取失败: {e}"))?;
         storage
-            .get(&rule_id)
+            .get_graph(&rule_id)
             .map_err(|e| format!("读取规则失败: {e}"))?
             .ok_or_else(|| format!("规则 {} 不存在", request.rule_id))?
     };
@@ -373,14 +373,14 @@ pub async fn execute_segment(
     // 3b. 创建执行上下文
     let ctx = ExecutionContext {
         cookies: HashMap::new(),
-        caps: Sandbox::default(),
+        caps: PolicyCapabilities::default(),
         trace_id: Uuid::new_v4().to_string(),
         base_url: graph.base_url.clone(),
     };
 
     // 4. 执行并流式 emit
     // executor 内部已用 tap_stream 包裹每个节点 output(含真实 NodeId 和 tracing 日志)
-    let mut output = state.executor.execute(&graph, segment, &ctx, &processors);
+    let mut output = state.executor.execute(&graph, &segment, &ctx, &processors);
 
     while let Some((node_id, item)) = output.next().await {
         // 5a. 只 emit Media 给前端（避免传递 16MB body）

@@ -15,10 +15,10 @@ use encoding_rs::GBK;
 use futures::stream::{BoxStream, StreamExt};
 use regex::Regex;
 
-use lj_core::extract_rule::{ExpectedDataType, ExtractRule, OutputTarget};
-use lj_core::node::{NodeKind, NodeSpec};
-use lj_core::node_data::{NodeData, NodeDataVariant};
-use lj_core::traits::{ExecutionContext, NodeProcessor};
+use lj_rule_model::{ExpectedDataType, ExtractRule, OutputTarget};
+use lj_runtime::{ExecutionContext, NodeProcessor};
+use lj_runtime::{NodeData, NodeDataVariant};
+use lj_runtime::{NodeKind, NodeSpec};
 
 use crate::regex_extract::RegexCache;
 use crate::{html_css, html_xpath, json, xml};

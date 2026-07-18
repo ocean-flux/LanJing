@@ -10,7 +10,8 @@ description = "导入器：Legado 书源导入、校验与升级"
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
+lj-rule-model = { path = "../lj-rule-model" }
+lj-runtime = { path = "../lj-runtime" }
 lj-capability = { path = "../lj-capability" }
 lj-compiler = { path = "../lj-compiler" }
 serde = { workspace = true }

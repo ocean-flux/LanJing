@@ -1,6 +1,6 @@
 //! 规则升级算法 — 首刀 stub,返回 `ImportOutcome::New`。
 
-use lj_core::traits::ImportOutcome;
+use crate::preview::ImportOutcome;
 
 /// 升级算法 stub:全量替换,提示用户编辑将丢失。
 ///

@@ -4,8 +4,8 @@
 //! 组合。xmloxide html5 解析器默认不解析外部实体(XXE 防护),与 `xml` 模块共用
 //! `evaluate_xpath` 求值逻辑,仅解析入口换为 `parse_html5`。
 
-use lj_core::extract_rule::ExtractRule;
-use lj_core::node_data::NodeData;
+use lj_rule_model::ExtractRule;
+use lj_runtime::NodeData;
 use xmloxide::Document;
 use xmloxide::NodeId;
 use xmloxide::html5::parse_html5;

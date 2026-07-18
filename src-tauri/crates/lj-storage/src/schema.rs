@@ -2,7 +2,7 @@
 
 use diesel::sqlite::SqliteConnection;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
-use lj_core::error::CoreError;
+use lj_rule_model::Error;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
@@ -59,9 +59,9 @@ diesel::allow_tables_to_appear_in_same_query!(rules, media, cookies, media_graph
 ///
 /// # Errors
 ///
-/// 返回 `CoreError::Storage` 当 migration 执行失败。
-pub fn run_migrations(conn: &mut SqliteConnection) -> Result<(), CoreError> {
+/// 返回 `Error::Storage` 当 migration 执行失败。
+pub fn run_migrations(conn: &mut SqliteConnection) -> Result<(), Error> {
     conn.run_pending_migrations(MIGRATIONS)
-        .map_err(|e| CoreError::Storage(format!("执行 SQLite migration 失败: {e}")))?;
+        .map_err(|e| Error::Storage(format!("执行 SQLite migration 失败: {e}")))?;
     Ok(())
 }

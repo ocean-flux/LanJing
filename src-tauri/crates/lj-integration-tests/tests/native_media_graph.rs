@@ -7,17 +7,15 @@ mod common;
 use std::collections::HashMap;
 
 use lj_capability::{IntentExport, IntentInput, StandardIntent};
-use lj_core::endpoint::{HttpMethod, HttpSpec};
-use lj_core::extract_rule::{
-    ExpectedDataType, ExtractRule, ExtractSpec, ExtractType, OutputTarget,
-};
-use lj_core::media::MediaKind;
-use lj_core::node::{
-    Edge, Graph, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec, SourceId,
-};
-use lj_core::traits::{Importer, SegmentSpec};
 use lj_importer::native::NativeImporter;
 use lj_importer::validate::validate_graph;
+use lj_media::MediaKind;
+use lj_rule_model::{ExpectedDataType, ExtractRule, ExtractSpec, ExtractType, OutputTarget};
+use lj_rule_model::{HttpMethod, HttpSpec};
+use lj_runtime::SegmentSpec;
+use lj_runtime::{
+    Edge, Graph, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec, SourceId,
+};
 use uuid::Uuid;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};

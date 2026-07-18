@@ -10,7 +10,9 @@ description = "HTTP 协议节点：网络请求处理器与 SSRF 防护"
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
+lj-rule-model = { path = "../lj-rule-model" }
+lj-runtime = { path = "../lj-runtime" }
+lj-media = { path = "../lj-media" }
 reqwest = { workspace = true }
 futures = { workspace = true }
 async-stream = { workspace = true }

@@ -22,7 +22,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use hickory_resolver::TokioResolver;
-use lj_core::error::CoreError;
+use lj_rule_model::Error;
 
 /// DNS 解析超时(外层 `tokio::time::timeout` 兑底,防 hickory `ResolverOpts::timeout`
 /// 某些场景不生效,见 hickory-dns issue #1073)。
@@ -31,7 +31,7 @@ const DNS_TIMEOUT: Duration = Duration::from_secs(10);
 /// 共享异步 DNS 解析器(系统配置 + tokio runtime)。
 /// 用 `OnceLock` 延迟初始化,跨请求复用(含缓存)。初始化失败缓存错误
 /// 并传播给调用方,避免 panic。
-fn shared_resolver() -> Result<&'static TokioResolver, CoreError> {
+fn shared_resolver() -> Result<&'static TokioResolver, Error> {
     static RESOLVER: OnceLock<Result<TokioResolver, String>> = OnceLock::new();
     let cached = RESOLVER.get_or_init(|| {
         // `builder_tokio` 读系统 /etc/resolv.conf 或 Windows 配置,
@@ -43,7 +43,7 @@ fn shared_resolver() -> Result<&'static TokioResolver, CoreError> {
     });
     cached
         .as_ref()
-        .map_err(|msg| CoreError::SsrfBlocked(msg.clone()))
+        .map_err(|msg| Error::SsrfBlocked(msg.clone()))
 }
 
 /// SSRF 校验后的目标信息,包含 DNS 解析结果用于防 rebinding。
@@ -158,14 +158,14 @@ fn is_ipv4_mapped_ipv6(ip: &Ipv6Addr) -> bool {
 ///
 /// # Errors
 ///
-/// 返回 `CoreError::SsrfBlocked` 当目标地址被 SSRF 防护阻断或 DNS 解析失败。
-pub async fn validate_url_and_pin(url: &str) -> Result<PinnedTarget, CoreError> {
+/// 返回 `Error::SsrfBlocked` 当目标地址被 SSRF 防护阻断或 DNS 解析失败。
+pub async fn validate_url_and_pin(url: &str) -> Result<PinnedTarget, Error> {
     let parsed =
-        url::Url::parse(url).map_err(|e| CoreError::SsrfBlocked(format!("URL 解析失败: {e}")))?;
+        url::Url::parse(url).map_err(|e| Error::SsrfBlocked(format!("URL 解析失败: {e}")))?;
 
     let host = parsed
         .host_str()
-        .ok_or_else(|| CoreError::SsrfBlocked("URL 无有效主机".into()))?;
+        .ok_or_else(|| Error::SsrfBlocked("URL 无有效主机".into()))?;
 
     let port: u16 = parsed.port_or_known_default().unwrap_or(80);
 
@@ -174,19 +174,19 @@ pub async fn validate_url_and_pin(url: &str) -> Result<PinnedTarget, CoreError> 
     let resolver = shared_resolver()?;
     let lookup = tokio::time::timeout(DNS_TIMEOUT, resolver.lookup_ip(host))
         .await
-        .map_err(|_| CoreError::SsrfBlocked(format!("DNS 解析超时: {host}")))?
-        .map_err(|e| CoreError::SsrfBlocked(format!("DNS 解析失败: {e}")))?;
+        .map_err(|_| Error::SsrfBlocked(format!("DNS 解析超时: {host}")))?
+        .map_err(|e| Error::SsrfBlocked(format!("DNS 解析失败: {e}")))?;
 
     let addrs: Vec<SocketAddr> = lookup.iter().map(|ip| SocketAddr::new(ip, port)).collect();
 
     if addrs.is_empty() {
-        return Err(CoreError::SsrfBlocked("DNS 未解析到任何地址".into()));
+        return Err(Error::SsrfBlocked("DNS 未解析到任何地址".into()));
     }
 
     // 校验所有解析出的 IP (负载均衡多 A 记录)
     for addr in &addrs {
         if is_blocked_ip(&addr.ip()) {
-            return Err(CoreError::SsrfBlocked(format!(
+            return Err(Error::SsrfBlocked(format!(
                 "目标地址被阻止: {host} ({})",
                 addr.ip()
             )));

@@ -7,12 +7,12 @@ use std::time::Duration;
 use async_stream::stream;
 use futures::stream::{BoxStream, StreamExt};
 
-use lj_core::endpoint::HttpMethod;
-use lj_core::error::CoreError;
-use lj_core::media::{parse_item_resource_id, parse_unit_resource_id};
-use lj_core::node::{NodeKind, NodeSpec};
-use lj_core::node_data::{HttpResponse, NodeData, NodeDataVariant};
-use lj_core::traits::{ExecutionContext, NodeProcessor};
+use lj_media::{parse_item_resource_id, parse_unit_resource_id};
+use lj_rule_model::Error;
+use lj_rule_model::HttpMethod;
+use lj_runtime::{ExecutionContext, NodeProcessor};
+use lj_runtime::{HttpResponse, NodeData, NodeDataVariant};
+use lj_runtime::{NodeKind, NodeSpec};
 use serde_json::Value;
 
 use crate::ssrf;
@@ -30,7 +30,7 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// 测试模式共享 `Client`(无 SSRF,自动 redirect,连接池复用)。
-fn test_client() -> Result<&'static reqwest::Client, CoreError> {
+fn test_client() -> Result<&'static reqwest::Client, Error> {
     static CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
     let cached = CLIENT.get_or_init(|| {
         reqwest::Client::builder()
@@ -41,12 +41,12 @@ fn test_client() -> Result<&'static reqwest::Client, CoreError> {
             .build()
             .map_err(|e| format!("测试模式 reqwest client 创建失败: {e}"))
     });
-    cached.as_ref().map_err(|msg| CoreError::Other(msg.clone()))
+    cached.as_ref().map_err(|msg| Error::Other(msg.clone()))
 }
 
 /// SSRF HTTP 模式共享 `Client`(禁用自动 redirect,连接池复用)。
 /// HTTPS 场景需 per-host resolve,不适用此共享 client。
-fn ssrf_http_client() -> Result<&'static reqwest::Client, CoreError> {
+fn ssrf_http_client() -> Result<&'static reqwest::Client, Error> {
     static CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
     let cached = CLIENT.get_or_init(|| {
         reqwest::Client::builder()
@@ -57,7 +57,7 @@ fn ssrf_http_client() -> Result<&'static reqwest::Client, CoreError> {
             .build()
             .map_err(|e| format!("SSRF HTTP reqwest client 创建失败: {e}"))
     });
-    cached.as_ref().map_err(|msg| CoreError::Other(msg.clone()))
+    cached.as_ref().map_err(|msg| Error::Other(msg.clone()))
 }
 
 /// 拼接 Cookie 请求头字符串。
@@ -77,7 +77,7 @@ fn cookie_str(ctx: &ExecutionContext) -> Option<String> {
 /// 构建 HTTP 请求(方法、Host 头、自定义头、Cookie)。
 fn build_request(
     client: &reqwest::Client,
-    spec: &lj_core::endpoint::HttpSpec,
+    spec: &lj_rule_model::HttpSpec,
     ctx: &ExecutionContext,
     url: &str,
     host_header: Option<&str>,
@@ -316,7 +316,7 @@ fn resolve_request_url(url_str: &str, base_url: &str) -> String {
 ///
 /// 抽为独立函数避免 `process` 过长(clippy too-many-lines),逻辑内聚。
 async fn execute_ssrf_request(
-    http_spec: &lj_core::endpoint::HttpSpec,
+    http_spec: &lj_rule_model::HttpSpec,
     ctx: &ExecutionContext,
     url_str: &str,
 ) -> NodeData {
@@ -430,13 +430,13 @@ fn host_with_port(url_str: &str) -> String {
 
 /// 将 `reqwest::Response` 转换为 `HttpResponse`。
 ///
-/// body 流式读取,累计计数,超 `MAX_BODY_SIZE` 返回 `CoreError::BodyTooLarge`(KTD15)。
+/// body 流式读取,累计计数,超 `MAX_BODY_SIZE` 返回 `Error::BodyTooLarge`(KTD15)。
 ///
 /// # Errors
 ///
-/// 返回 `CoreError::NodeExecution` 当 chunk 读取失败。
-/// 返回 `CoreError::BodyTooLarge` 当响应体超过 `MAX_BODY_SIZE`。
-pub async fn convert_response(mut resp: reqwest::Response) -> Result<HttpResponse, CoreError> {
+/// 返回 `Error::NodeExecution` 当 chunk 读取失败。
+/// 返回 `Error::BodyTooLarge` 当响应体超过 `MAX_BODY_SIZE`。
+pub async fn convert_response(mut resp: reqwest::Response) -> Result<HttpResponse, Error> {
     let status = resp.status().as_u16();
 
     let headers: HashMap<String, String> = resp
@@ -455,7 +455,7 @@ pub async fn convert_response(mut resp: reqwest::Response) -> Result<HttpRespons
         let chunk = resp
             .chunk()
             .await
-            .map_err(|e| CoreError::NodeExecution(e.to_string()))?;
+            .map_err(|e| Error::NodeExecution(e.to_string()))?;
         let Some(chunk) = chunk else { break };
         let remaining = MAX_BODY_SIZE.saturating_sub(body.len());
         if chunk.len() > remaining {
@@ -463,7 +463,7 @@ pub async fn convert_response(mut resp: reqwest::Response) -> Result<HttpRespons
             let actual = body.len();
             tracing::warn!("HTTP body 超过上限: {actual} bytes (上限 {MAX_BODY_SIZE})",);
             // 返回错误而非静默截断(KTD15, P2-25)
-            return Err(CoreError::BodyTooLarge {
+            return Err(Error::BodyTooLarge {
                 actual,
                 max: MAX_BODY_SIZE,
             });

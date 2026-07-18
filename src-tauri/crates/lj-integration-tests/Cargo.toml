@@ -11,14 +11,14 @@ description = "跨 crate 集成测试：导入、执行和标准媒体资源图�
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
+lj-rule-model = { path = "../lj-rule-model" }
+lj-media = { path = "../lj-media" }
 lj-capability = { path = "../lj-capability" }
 lj-importer = { path = "../lj-importer" }
 lj-runtime = { path = "../lj-runtime" }
 lj-node-http = { path = "../lj-node-http" }
 lj-node-js = { path = "../lj-node-js" }
 lj-node-extract = { path = "../lj-node-extract" }
-lj-sandbox = { path = "../lj-sandbox" }
 lj-compiler = { path = "../lj-compiler" }
 
 tokio = { workspace = true }

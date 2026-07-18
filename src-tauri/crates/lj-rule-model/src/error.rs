@@ -1,10 +1,10 @@
-//! lj-core 错误类型。
+//! 跨层共享错误（无运行时/存储实现依赖）。
 
-use crate::sandbox::Capability;
+use crate::policy::Capability;
 
-/// lj-core 错误。
+/// 领域与装配层共享错误。
 #[derive(Debug, thiserror::Error)]
-pub enum CoreError {
+pub enum Error {
     /// 导入错误。
     #[error("导入错误: {0}")]
     Import(String),

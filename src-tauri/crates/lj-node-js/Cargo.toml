@@ -10,8 +10,8 @@ description = "JavaScript 节点：QuickJS 引擎集成与宿主 API"
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
-lj-sandbox = { path = "../lj-sandbox" }
+lj-rule-model = { path = "../lj-rule-model" }
+lj-runtime = { path = "../lj-runtime" }
 rquickjs = { workspace = true }
 tokio = { workspace = true }
 thiserror = { workspace = true }

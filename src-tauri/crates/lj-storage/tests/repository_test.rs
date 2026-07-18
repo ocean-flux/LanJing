@@ -9,11 +9,11 @@ use diesel::sql_query;
 use diesel::sql_types::Text;
 use keyring::{mock, set_default_credential_builder};
 use lj_capability::{IntentExport, StandardIntent};
-use lj_core::error::CoreError;
-use lj_core::media::{MediaItem, MediaKind, MediaResourceId, ResourceCompleteness};
-use lj_core::node::{Graph, SourceId};
-use lj_core::traits::{RepoId, Repository};
+use lj_media::{MediaItem, MediaKind, MediaResourceId, ResourceCompleteness};
+use lj_rule_model::Error;
+use lj_runtime::{Graph, SourceId};
 use lj_storage::AsyncStorage;
+use lj_storage::RepoId;
 use lj_storage::repository::{CookieMap, SqliteStorage};
 use lj_storage::{LibraryEntry, LibraryProgress};
 use uuid::Uuid;
@@ -77,8 +77,8 @@ fn test_graph_save_get_round_trip() {
     let storage = SqliteStorage::in_memory().unwrap();
     let graph = make_test_graph();
     let id = RepoId::<Graph>::new("test-graph".to_string());
-    storage.save(&id, &graph).unwrap();
-    let loaded = storage.get(&id).unwrap();
+    storage.save_graph(&id, &graph).unwrap();
+    let loaded = storage.get_graph(&id).unwrap();
     assert!(loaded.is_some());
     assert_eq!(loaded.unwrap(), graph);
 }
@@ -87,7 +87,7 @@ fn test_graph_save_get_round_trip() {
 fn test_graph_get_nonexistent() {
     let storage = SqliteStorage::in_memory().unwrap();
     let id = RepoId::<Graph>::new("nonexistent".to_string());
-    assert!(storage.get(&id).unwrap().is_none());
+    assert!(storage.get_graph(&id).unwrap().is_none());
 }
 
 #[test]
@@ -95,9 +95,9 @@ fn test_graph_delete_returns_none() {
     let storage = SqliteStorage::in_memory().unwrap();
     let graph = make_test_graph();
     let id = RepoId::<Graph>::new("test-graph".to_string());
-    storage.save(&id, &graph).unwrap();
-    storage.delete(&id).unwrap();
-    assert!(storage.get(&id).unwrap().is_none());
+    storage.save_graph(&id, &graph).unwrap();
+    storage.delete_graph(&id).unwrap();
+    assert!(storage.get_graph(&id).unwrap().is_none());
 }
 
 #[test]
@@ -105,8 +105,8 @@ fn test_graph_list_returns_saved() {
     let storage = SqliteStorage::in_memory().unwrap();
     let graph = make_test_graph();
     let id = RepoId::<Graph>::new("test-graph".to_string());
-    storage.save(&id, &graph).unwrap();
-    let list = storage.list().unwrap();
+    storage.save_graph(&id, &graph).unwrap();
+    let list = storage.list_graphs().unwrap();
     assert_eq!(list.len(), 1);
     assert_eq!(list[0].0, id);
 }
@@ -118,7 +118,7 @@ fn test_list_graphs_page_pagination() {
         let mut graph = make_test_graph();
         graph.source_id = SourceId(uuid::Uuid::new_v4());
         storage
-            .save(&RepoId::<Graph>::new(format!("g-{i}")), &graph)
+            .save_graph(&RepoId::<Graph>::new(format!("g-{i}")), &graph)
             .unwrap();
     }
 
@@ -141,7 +141,7 @@ fn test_list_media_page_pagination() {
     for i in 0..3 {
         let media = make_test_media(i, "source:test");
         storage
-            .save(&RepoId::<MediaItem>::new(format!("m-{i}")), &media)
+            .save_media(&RepoId::<MediaItem>::new(format!("m-{i}")), &media)
             .unwrap();
     }
 
@@ -159,12 +159,12 @@ fn test_list_media_by_source() {
     for i in 0..3 {
         let media = make_test_media(i, "source:shared");
         storage
-            .save(&RepoId::<MediaItem>::new(format!("src-m-{i}")), &media)
+            .save_media(&RepoId::<MediaItem>::new(format!("src-m-{i}")), &media)
             .unwrap();
     }
     let other_media = make_test_media(99, "source:other");
     storage
-        .save(
+        .save_media(
             &RepoId::<MediaItem>::new("other-media".to_string()),
             &other_media,
         )
@@ -186,7 +186,7 @@ fn test_list_cookies_page_pagination() {
     for i in 0..4 {
         let cm = CookieMap(HashMap::from([(format!("k{i}"), format!("v{i}"))]));
         storage
-            .save(&RepoId::<CookieMap>::new(format!("c-{i}")), &cm)
+            .save_cookie(&RepoId::<CookieMap>::new(format!("c-{i}")), &cm)
             .unwrap();
     }
 
@@ -239,7 +239,7 @@ async fn test_async_storage_list_graphs_page() {
 #[test]
 fn test_graph_list_empty() {
     let storage = SqliteStorage::in_memory().unwrap();
-    let list: Vec<(RepoId<Graph>, Graph)> = storage.list().unwrap();
+    let list: Vec<(RepoId<Graph>, Graph)> = storage.list_graphs().unwrap();
     assert!(list.is_empty());
 }
 
@@ -248,8 +248,8 @@ fn test_media_save_get_round_trip() {
     let storage = SqliteStorage::in_memory().unwrap();
     let media = make_test_media(1, "source:test");
     let id = RepoId::<MediaItem>::new("test-media".to_string());
-    storage.save(&id, &media.clone()).unwrap();
-    let loaded = storage.get(&id).unwrap();
+    storage.save_media(&id, &media.clone()).unwrap();
+    let loaded = storage.get_media(&id).unwrap();
     assert!(loaded.is_some());
     assert_eq!(loaded.unwrap(), media);
 }
@@ -259,9 +259,9 @@ fn test_media_delete() {
     let storage = SqliteStorage::in_memory().unwrap();
     let media = make_test_media(1, "source:test");
     let id = RepoId::<MediaItem>::new("test-media".to_string());
-    storage.save(&id, &media).unwrap();
-    storage.delete(&id).unwrap();
-    assert!(storage.get(&id).unwrap().is_none());
+    storage.save_media(&id, &media).unwrap();
+    storage.delete_media(&id).unwrap();
+    assert!(storage.get_media(&id).unwrap().is_none());
 }
 
 #[test]
@@ -269,8 +269,8 @@ fn test_media_list() {
     let storage = SqliteStorage::in_memory().unwrap();
     let media = make_test_media(1, "source:test");
     let id = RepoId::<MediaItem>::new("test-media".to_string());
-    storage.save(&id, &media).unwrap();
-    let list = storage.list().unwrap();
+    storage.save_media(&id, &media).unwrap();
+    let list = storage.list_media().unwrap();
     assert_eq!(list.len(), 1);
     assert_eq!(list[0].0, id);
 }
@@ -279,7 +279,7 @@ fn test_media_list() {
 fn test_media_graph_delta_merge_and_library_projection_share_identity() {
     let storage = SqliteStorage::in_memory().unwrap();
     let item = make_test_media(1, "source:test");
-    let graph = lj_core::media::MediaGraphDelta {
+    let graph = lj_media::MediaGraphDelta {
         items: vec![item.clone()],
         ..Default::default()
     };
@@ -318,13 +318,13 @@ fn test_media_graph_incremental_merge_deduplicates_by_stable_id() {
     update.completeness = ResourceCompleteness::Complete;
 
     storage
-        .merge_media_graph_delta(lj_core::media::MediaGraphDelta {
+        .merge_media_graph_delta(lj_media::MediaGraphDelta {
             items: vec![first],
             ..Default::default()
         })
         .unwrap();
     storage
-        .merge_media_graph_delta(lj_core::media::MediaGraphDelta {
+        .merge_media_graph_delta(lj_media::MediaGraphDelta {
             items: vec![update.clone()],
             ..Default::default()
         })
@@ -342,7 +342,7 @@ fn test_library_entry_without_graph_resource_is_rejected() {
             "item:missing".to_string(),
         )))
         .expect_err("资料库状态不能脱离标准资源图存在");
-    assert!(matches!(error, CoreError::Storage(message) if message.contains("标准媒体资源不存在")));
+    assert!(matches!(error, Error::Storage(message) if message.contains("标准媒体资源不存在")));
 }
 
 #[test]
@@ -354,8 +354,8 @@ fn test_cookie_save_get_round_trip() {
     cookies.insert("token".to_string(), "xyz".to_string());
     let cookie_map = CookieMap(cookies);
     let id = RepoId::<CookieMap>::new("test-cookie".to_string());
-    storage.save(&id, &cookie_map).unwrap();
-    let loaded = storage.get(&id).unwrap();
+    storage.save_cookie(&id, &cookie_map).unwrap();
+    let loaded = storage.get_cookie(&id).unwrap();
     assert!(loaded.is_some());
     assert_eq!(loaded.unwrap(), cookie_map);
 }
@@ -366,9 +366,9 @@ fn test_cookie_delete() {
     let storage = SqliteStorage::in_memory().unwrap();
     let cookie_map = CookieMap(HashMap::new());
     let id = RepoId::<CookieMap>::new("test-cookie".to_string());
-    storage.save(&id, &cookie_map).unwrap();
-    storage.delete(&id).unwrap();
-    assert!(storage.get(&id).unwrap().is_none());
+    storage.save_cookie(&id, &cookie_map).unwrap();
+    storage.delete_cookie(&id).unwrap();
+    assert!(storage.get_cookie(&id).unwrap().is_none());
 }
 
 #[test]
@@ -377,8 +377,8 @@ fn test_cookie_list() {
     let storage = SqliteStorage::in_memory().unwrap();
     let cookie_map = CookieMap(HashMap::new());
     let id = RepoId::<CookieMap>::new("test-cookie".to_string());
-    storage.save(&id, &cookie_map).unwrap();
-    let list = storage.list().unwrap();
+    storage.save_cookie(&id, &cookie_map).unwrap();
+    let list = storage.list_cookies().unwrap();
     assert_eq!(list.len(), 1);
     assert_eq!(list[0].0, id);
 }
@@ -416,7 +416,7 @@ fn test_cookie_raw_storage_uses_keyring_marker() {
         )]));
         let id = RepoId::<CookieMap>::new("test-cookie-raw".to_string());
 
-        storage.save(&id, &cookie_map).unwrap();
+        storage.save_cookie(&id, &cookie_map).unwrap();
 
         let mut conn = open_file_connection(&db_path);
         let stored = sql_query("SELECT cookie_json AS value FROM cookies WHERE id = ?")
@@ -446,10 +446,10 @@ fn test_cookie_missing_keyring_secret_returns_storage_error() {
 
     let storage = SqliteStorage::new(&db_path).unwrap();
     let error = storage
-        .get(&id)
+        .get_cookie(&id)
         .expect_err("缺失 keyring secret 应返回错误");
     assert!(
-        matches!(error, CoreError::Storage(message) if message.contains("读取 Cookie keyring 失败"))
+        matches!(error, Error::Storage(message) if message.contains("读取 Cookie keyring 失败"))
     );
     drop(storage);
 

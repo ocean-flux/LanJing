@@ -1,9 +1,9 @@
 //! 运行时 tap：压缩 `NodeData` 事件摘要。
 
+use crate::graph::NodeId;
+use crate::node_data::NodeData;
 use futures::StreamExt;
 use futures::stream::BoxStream;
-use lj_core::node::NodeId;
-use lj_core::node_data::NodeData;
 use serde::Serialize;
 
 /// 节点输出摘要。

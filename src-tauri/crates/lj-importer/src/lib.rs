@@ -6,5 +6,6 @@
 pub mod legado;
 pub mod maccms;
 pub mod native;
+pub mod preview;
 pub mod upgrade;
 pub mod validate;

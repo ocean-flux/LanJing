@@ -3,9 +3,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::media::MediaGraphDelta;
+use lj_media::MediaGraphDelta;
 
-/// HTTP 响应(lj-core 自有 struct，不绑 reqwest)。
+/// HTTP 响应(不绑 reqwest)。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HttpResponse {
     /// HTTP 状态码。

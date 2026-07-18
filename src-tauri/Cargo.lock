@@ -2633,11 +2633,12 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "lj-capability",
- "lj-core",
  "lj-importer",
+ "lj-media",
  "lj-node-extract",
  "lj-node-http",
  "lj-node-js",
+ "lj-rule-model",
  "lj-runtime",
  "lj-storage",
  "serde",
@@ -2779,22 +2780,8 @@ dependencies = [
 name = "lj-compiler"
 version = "0.1.0"
 dependencies = [
- "lj-core",
+ "lj-rule-model",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "lj-core"
-version = "0.1.0"
-dependencies = [
- "futures",
- "lj-capability",
- "lj-media",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "thiserror 2.0.18",
- "uuid",
 ]
 
 [[package]]
@@ -2803,7 +2790,8 @@ version = "0.1.0"
 dependencies = [
  "lj-capability",
  "lj-compiler",
- "lj-core",
+ "lj-rule-model",
+ "lj-runtime",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -2818,13 +2806,13 @@ dependencies = [
  "futures",
  "lj-capability",
  "lj-compiler",
- "lj-core",
  "lj-importer",
+ "lj-media",
  "lj-node-extract",
  "lj-node-http",
  "lj-node-js",
+ "lj-rule-model",
  "lj-runtime",
- "lj-sandbox",
  "reqwest",
  "serde",
  "serde_json",
@@ -2852,7 +2840,8 @@ dependencies = [
  "encoding_rs",
  "futures",
  "jsonpath-rust",
- "lj-core",
+ "lj-rule-model",
+ "lj-runtime",
  "regex",
  "scraper",
  "serde_json",
@@ -2869,7 +2858,9 @@ dependencies = [
  "async-stream",
  "futures",
  "hickory-resolver",
- "lj-core",
+ "lj-media",
+ "lj-rule-model",
+ "lj-runtime",
  "reqwest",
  "serde_json",
  "tokio",
@@ -2884,12 +2875,24 @@ version = "0.1.0"
 dependencies = [
  "async-stream",
  "futures",
- "lj-core",
- "lj-sandbox",
+ "lj-rule-model",
+ "lj-runtime",
  "rquickjs",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
+]
+
+[[package]]
+name = "lj-rule-model"
+version = "0.1.0"
+dependencies = [
+ "lj-capability",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "thiserror 2.0.18",
+ "uuid",
 ]
 
 [[package]]
@@ -2899,19 +2902,13 @@ dependencies = [
  "async-stream",
  "futures",
  "lj-capability",
- "lj-core",
+ "lj-media",
+ "lj-rule-model",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
  "uuid",
-]
-
-[[package]]
-name = "lj-sandbox"
-version = "0.1.0"
-dependencies = [
- "lj-core",
 ]
 
 [[package]]
@@ -2923,7 +2920,9 @@ dependencies = [
  "keyring",
  "libsqlite3-sys",
  "lj-capability",
- "lj-core",
+ "lj-media",
+ "lj-rule-model",
+ "lj-runtime",
  "serde",
  "serde_json",
  "tokio",

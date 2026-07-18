@@ -4,14 +4,14 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
 
+use crate::ids::RepoId;
 use diesel::OptionalExtension;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use keyring::{Entry, Error as KeyringError};
-use lj_core::error::CoreError;
-use lj_core::media::{MediaGraphDelta, MediaItem, MediaResourceId};
-use lj_core::node::Graph;
-use lj_core::traits::{RepoId, Repository};
+use lj_media::{MediaGraphDelta, MediaItem, MediaResourceId};
+use lj_rule_model::Error;
+use lj_runtime::Graph;
 
 use crate::library::{LibraryEntry, LibraryProjection};
 use crate::models::{
@@ -30,27 +30,27 @@ fn to_i64(n: usize) -> i64 {
     i64::try_from(n).unwrap_or(i64::MAX)
 }
 
-fn storage_error(error: impl std::fmt::Display) -> CoreError {
-    CoreError::Storage(error.to_string())
+fn storage_error(error: impl std::fmt::Display) -> Error {
+    Error::Storage(error.to_string())
 }
 
-fn cookie_entry(id: &str) -> Result<Entry, CoreError> {
+fn cookie_entry(id: &str) -> Result<Entry, Error> {
     Entry::new(COOKIE_KEYRING_SERVICE, id)
-        .map_err(|e| CoreError::Storage(format!("创建 Cookie keyring 条目失败: {e}")))
+        .map_err(|e| Error::Storage(format!("创建 Cookie keyring 条目失败: {e}")))
 }
 
 fn encode_cookie_map(
     id: &str,
     value: &CookieMap,
     cache: &Mutex<HashMap<String, String>>,
-) -> Result<String, CoreError> {
+) -> Result<String, Error> {
     let json = serde_json::to_string(value)?;
     cookie_entry(id)?
         .set_password(&json)
-        .map_err(|e| CoreError::Storage(format!("写入 Cookie keyring 失败: {e}")))?;
+        .map_err(|e| Error::Storage(format!("写入 Cookie keyring 失败: {e}")))?;
     cache
         .lock()
-        .map_err(|e| CoreError::Storage(e.to_string()))?
+        .map_err(|e| Error::Storage(e.to_string()))?
         .insert(id.to_string(), json);
     Ok(COOKIE_KEYRING_MARKER.to_string())
 }
@@ -59,11 +59,11 @@ fn decode_cookie_map(
     id: &str,
     stored: &str,
     cache: &Mutex<HashMap<String, String>>,
-) -> Result<CookieMap, CoreError> {
+) -> Result<CookieMap, Error> {
     let json = if stored == COOKIE_KEYRING_MARKER {
         if let Some(json) = cache
             .lock()
-            .map_err(|e| CoreError::Storage(e.to_string()))?
+            .map_err(|e| Error::Storage(e.to_string()))?
             .get(id)
             .cloned()
         {
@@ -71,7 +71,7 @@ fn decode_cookie_map(
         } else {
             cookie_entry(id)?
                 .get_password()
-                .map_err(|e| CoreError::Storage(format!("读取 Cookie keyring 失败: {e}")))?
+                .map_err(|e| Error::Storage(format!("读取 Cookie keyring 失败: {e}")))?
         }
     } else {
         stored.to_string()
@@ -79,30 +79,30 @@ fn decode_cookie_map(
     Ok(serde_json::from_str(&json)?)
 }
 
-fn delete_cookie_secret(id: &str, cache: &Mutex<HashMap<String, String>>) -> Result<(), CoreError> {
+fn delete_cookie_secret(id: &str, cache: &Mutex<HashMap<String, String>>) -> Result<(), Error> {
     cache
         .lock()
-        .map_err(|e| CoreError::Storage(e.to_string()))?
+        .map_err(|e| Error::Storage(e.to_string()))?
         .remove(id);
     match cookie_entry(id)?.delete_credential() {
         Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
-        Err(e) => Err(CoreError::Storage(format!("删除 Cookie keyring 失败: {e}"))),
+        Err(e) => Err(Error::Storage(format!("删除 Cookie keyring 失败: {e}"))),
     }
 }
 
-fn establish_connection(database_url: &str) -> Result<SqliteConnection, CoreError> {
+fn establish_connection(database_url: &str) -> Result<SqliteConnection, Error> {
     let mut connection = SqliteConnection::establish(database_url)
-        .map_err(|e| CoreError::Storage(format!("打开 SQLite 连接失败: {e}")))?;
+        .map_err(|e| Error::Storage(format!("打开 SQLite 连接失败: {e}")))?;
     run_migrations(&mut connection)?;
     Ok(connection)
 }
 
-fn decode_rule_row(row: RuleRow) -> Result<(RepoId<Graph>, Graph), CoreError> {
+fn decode_rule_row(row: RuleRow) -> Result<(RepoId<Graph>, Graph), Error> {
     let graph = serde_json::from_str(&row.graph_json)?;
     Ok((RepoId::<Graph>::new(row.id), graph))
 }
 
-fn decode_media_row(row: MediaRow) -> Result<(RepoId<MediaItem>, MediaItem), CoreError> {
+fn decode_media_row(row: MediaRow) -> Result<(RepoId<MediaItem>, MediaItem), Error> {
     let media = serde_json::from_str(&row.media_json)?;
     Ok((RepoId::<MediaItem>::new(row.id), media))
 }
@@ -110,12 +110,12 @@ fn decode_media_row(row: MediaRow) -> Result<(RepoId<MediaItem>, MediaItem), Cor
 fn decode_cookie_row(
     row: CookieRow,
     cache: &Mutex<HashMap<String, String>>,
-) -> Result<(RepoId<CookieMap>, CookieMap), CoreError> {
+) -> Result<(RepoId<CookieMap>, CookieMap), Error> {
     let cookies = decode_cookie_map(&row.id, &row.cookie_json, cache)?;
     Ok((RepoId::<CookieMap>::new(row.id), cookies))
 }
 
-fn decode_library_entry(row: LibraryEntryRow) -> Result<LibraryEntry, CoreError> {
+fn decode_library_entry(row: LibraryEntryRow) -> Result<LibraryEntry, Error> {
     let progress = row
         .progress_json
         .as_deref()
@@ -145,8 +145,8 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库打开或 migration 失败。
-    pub fn new(path: impl AsRef<Path>) -> Result<Self, CoreError> {
+    /// 返回 `Error::Storage` 当数据库打开或 migration 失败。
+    pub fn new(path: impl AsRef<Path>) -> Result<Self, Error> {
         let database_url = path.as_ref().to_string_lossy().into_owned();
         Ok(Self {
             conn: Mutex::new(establish_connection(&database_url)?),
@@ -158,30 +158,28 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当 migration 失败。
-    pub fn in_memory() -> Result<Self, CoreError> {
+    /// 返回 `Error::Storage` 当 migration 失败。
+    pub fn in_memory() -> Result<Self, Error> {
         Ok(Self {
             conn: Mutex::new(establish_connection(":memory:")?),
             cookie_cache: Mutex::new(HashMap::new()),
         })
     }
 
-    fn lock_connection(&self) -> Result<MutexGuard<'_, SqliteConnection>, CoreError> {
-        self.conn
-            .lock()
-            .map_err(|e| CoreError::Storage(e.to_string()))
+    fn lock_connection(&self) -> Result<MutexGuard<'_, SqliteConnection>, Error> {
+        self.conn.lock().map_err(|e| Error::Storage(e.to_string()))
     }
 
-    /// 分页列出所有 Graph。
+    /// 分页列出所有 `Graph`。
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库查询失败。
+    /// 返回 `Error::Storage` 当数据库查询失败。
     pub fn list_graphs_page(
         &self,
         limit: usize,
         offset: usize,
-    ) -> Result<Vec<(RepoId<Graph>, Graph)>, CoreError> {
+    ) -> Result<Vec<(RepoId<Graph>, Graph)>, Error> {
         let mut conn = self.lock_connection()?;
         let rows = rules::table
             .select(RuleRow::as_select())
@@ -197,12 +195,12 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库查询失败。
+    /// 返回 `Error::Storage` 当数据库查询失败。
     pub fn list_media_page(
         &self,
         limit: usize,
         offset: usize,
-    ) -> Result<Vec<(RepoId<MediaItem>, MediaItem)>, CoreError> {
+    ) -> Result<Vec<(RepoId<MediaItem>, MediaItem)>, Error> {
         let mut conn = self.lock_connection()?;
         let rows = media::table
             .select(MediaRow::as_select())
@@ -218,13 +216,13 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库查询失败。
+    /// 返回 `Error::Storage` 当数据库查询失败。
     pub fn list_media_by_source(
         &self,
         source_id: &str,
         limit: usize,
         offset: usize,
-    ) -> Result<Vec<(RepoId<MediaItem>, MediaItem)>, CoreError> {
+    ) -> Result<Vec<(RepoId<MediaItem>, MediaItem)>, Error> {
         let mut conn = self.lock_connection()?;
         let rows = media::table
             .filter(media::source_id.eq(source_id))
@@ -241,12 +239,12 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库查询失败。
+    /// 返回 `Error::Storage` 当数据库查询失败。
     pub fn list_cookies_page(
         &self,
         limit: usize,
         offset: usize,
-    ) -> Result<Vec<(RepoId<CookieMap>, CookieMap)>, CoreError> {
+    ) -> Result<Vec<(RepoId<CookieMap>, CookieMap)>, Error> {
         let mut conn = self.lock_connection()?;
         let rows = cookies::table
             .select(CookieRow::as_select())
@@ -264,8 +262,8 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当图读取或反序列化失败。
-    pub fn media_graph(&self) -> Result<MediaGraphDelta, CoreError> {
+    /// 返回 `Error::Storage` 当图读取或反序列化失败。
+    pub fn media_graph(&self) -> Result<MediaGraphDelta, Error> {
         let mut conn = self.lock_connection()?;
         let row = media_graph::table
             .find(1)
@@ -286,11 +284,11 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当图读取、合并或写入失败。
+    /// 返回 `Error::Storage` 当图读取、合并或写入失败。
     pub fn merge_media_graph_delta(
         &self,
         delta: MediaGraphDelta,
-    ) -> Result<MediaGraphDelta, CoreError> {
+    ) -> Result<MediaGraphDelta, Error> {
         let merged = self.media_graph()?.merge(delta);
         let json = serde_json::to_string(&merged)?;
         let mut conn = self.lock_connection()?;
@@ -312,8 +310,8 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当图或状态读取失败。
-    pub fn library_projection(&self) -> Result<LibraryProjection, CoreError> {
+    /// 返回 `Error::Storage` 当图或状态读取失败。
+    pub fn library_projection(&self) -> Result<LibraryProjection, Error> {
         let graph = self.media_graph()?;
         let mut conn = self.lock_connection()?;
         let rows = library_entries::table
@@ -332,11 +330,11 @@ impl SqliteStorage {
     ///
     /// # Errors
     ///
-    /// 当资源不在权威资源图中或状态写入失败时返回 `CoreError::Storage`。
-    pub fn set_library_entry(&self, entry: &LibraryEntry) -> Result<(), CoreError> {
+    /// 当资源不在权威资源图中或状态写入失败时返回 `Error::Storage`。
+    pub fn set_library_entry(&self, entry: &LibraryEntry) -> Result<(), Error> {
         let graph = self.media_graph()?;
         if !graph.items.iter().any(|item| item.id == entry.resource_id) {
-            return Err(CoreError::Storage(format!(
+            return Err(Error::Storage(format!(
                 "标准媒体资源不存在: {}",
                 entry.resource_id.0
             )));
@@ -370,8 +368,13 @@ impl SqliteStorage {
     }
 }
 
-impl Repository<Graph> for SqliteStorage {
-    fn get(&self, id: &RepoId<Graph>) -> Result<Option<Graph>, CoreError> {
+impl SqliteStorage {
+    /// 按 ID 读取 `Graph`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库查询或反序列化失败时返回错误。
+    pub fn get_graph(&self, id: &RepoId<Graph>) -> Result<Option<Graph>, Error> {
         let mut conn = self.lock_connection()?;
         let row = rules::table
             .find(&id.id)
@@ -383,7 +386,12 @@ impl Repository<Graph> for SqliteStorage {
             .transpose()
     }
 
-    fn save(&self, id: &RepoId<Graph>, value: &Graph) -> Result<(), CoreError> {
+    /// 保存 `Graph`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库写入失败时返回错误。
+    pub fn save_graph(&self, id: &RepoId<Graph>, value: &Graph) -> Result<(), Error> {
         let json = serde_json::to_string(value)?;
         let row = NewRuleRow {
             id: &id.id,
@@ -406,7 +414,12 @@ impl Repository<Graph> for SqliteStorage {
         Ok(())
     }
 
-    fn delete(&self, id: &RepoId<Graph>) -> Result<(), CoreError> {
+    /// 删除 `Graph`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库删除失败时返回错误。
+    pub fn delete_graph(&self, id: &RepoId<Graph>) -> Result<(), Error> {
         let mut conn = self.lock_connection()?;
         diesel::delete(rules::table.find(&id.id))
             .execute(&mut *conn)
@@ -414,7 +427,12 @@ impl Repository<Graph> for SqliteStorage {
         Ok(())
     }
 
-    fn list(&self) -> Result<Vec<(RepoId<Graph>, Graph)>, CoreError> {
+    /// 列出全部 `Graph`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库查询失败时返回错误。
+    pub fn list_graphs(&self) -> Result<Vec<(RepoId<Graph>, Graph)>, Error> {
         let mut conn = self.lock_connection()?;
         let rows = rules::table
             .select(RuleRow::as_select())
@@ -425,8 +443,13 @@ impl Repository<Graph> for SqliteStorage {
     }
 }
 
-impl Repository<MediaItem> for SqliteStorage {
-    fn get(&self, id: &RepoId<MediaItem>) -> Result<Option<MediaItem>, CoreError> {
+impl SqliteStorage {
+    /// 按 ID 读取 `MediaItem`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库查询失败时返回错误。
+    pub fn get_media(&self, id: &RepoId<MediaItem>) -> Result<Option<MediaItem>, Error> {
         let mut conn = self.lock_connection()?;
         let row = media::table
             .find(&id.id)
@@ -438,7 +461,12 @@ impl Repository<MediaItem> for SqliteStorage {
             .transpose()
     }
 
-    fn save(&self, id: &RepoId<MediaItem>, value: &MediaItem) -> Result<(), CoreError> {
+    /// 保存 `MediaItem`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库写入失败时返回错误。
+    pub fn save_media(&self, id: &RepoId<MediaItem>, value: &MediaItem) -> Result<(), Error> {
         let json = serde_json::to_string(value)?;
         let row = NewMediaRow {
             id: &id.id,
@@ -459,7 +487,12 @@ impl Repository<MediaItem> for SqliteStorage {
         Ok(())
     }
 
-    fn delete(&self, id: &RepoId<MediaItem>) -> Result<(), CoreError> {
+    /// 删除 `MediaItem`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库删除失败时返回错误。
+    pub fn delete_media(&self, id: &RepoId<MediaItem>) -> Result<(), Error> {
         let mut conn = self.lock_connection()?;
         diesel::delete(media::table.find(&id.id))
             .execute(&mut *conn)
@@ -467,7 +500,12 @@ impl Repository<MediaItem> for SqliteStorage {
         Ok(())
     }
 
-    fn list(&self) -> Result<Vec<(RepoId<MediaItem>, MediaItem)>, CoreError> {
+    /// 列出全部 `MediaItem`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库查询失败时返回错误。
+    pub fn list_media(&self) -> Result<Vec<(RepoId<MediaItem>, MediaItem)>, Error> {
         let mut conn = self.lock_connection()?;
         let rows = media::table
             .select(MediaRow::as_select())
@@ -478,8 +516,13 @@ impl Repository<MediaItem> for SqliteStorage {
     }
 }
 
-impl Repository<CookieMap> for SqliteStorage {
-    fn get(&self, id: &RepoId<CookieMap>) -> Result<Option<CookieMap>, CoreError> {
+impl SqliteStorage {
+    /// 按 ID 读取 `CookieMap`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库查询失败时返回错误。
+    pub fn get_cookie(&self, id: &RepoId<CookieMap>) -> Result<Option<CookieMap>, Error> {
         let mut conn = self.lock_connection()?;
         let row = cookies::table
             .find(&id.id)
@@ -491,7 +534,12 @@ impl Repository<CookieMap> for SqliteStorage {
             .transpose()
     }
 
-    fn save(&self, id: &RepoId<CookieMap>, value: &CookieMap) -> Result<(), CoreError> {
+    /// 保存 `CookieMap`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库写入失败时返回错误。
+    pub fn save_cookie(&self, id: &RepoId<CookieMap>, value: &CookieMap) -> Result<(), Error> {
         let stored = encode_cookie_map(&id.id, value, &self.cookie_cache)?;
         let row = NewCookieRow {
             id: &id.id,
@@ -515,7 +563,12 @@ impl Repository<CookieMap> for SqliteStorage {
         Ok(())
     }
 
-    fn delete(&self, id: &RepoId<CookieMap>) -> Result<(), CoreError> {
+    /// 删除 `CookieMap`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库删除失败时返回错误。
+    pub fn delete_cookie(&self, id: &RepoId<CookieMap>) -> Result<(), Error> {
         let mut conn = self.lock_connection()?;
         diesel::delete(cookies::table.find(&id.id))
             .execute(&mut *conn)
@@ -523,7 +576,12 @@ impl Repository<CookieMap> for SqliteStorage {
         delete_cookie_secret(&id.id, &self.cookie_cache)
     }
 
-    fn list(&self) -> Result<Vec<(RepoId<CookieMap>, CookieMap)>, CoreError> {
+    /// 列出全部 `CookieMap`。
+    ///
+    /// # Errors
+    ///
+    /// 数据库查询失败时返回错误。
+    pub fn list_cookies(&self) -> Result<Vec<(RepoId<CookieMap>, CookieMap)>, Error> {
         let mut conn = self.lock_connection()?;
         let rows = cookies::table
             .select(CookieRow::as_select())

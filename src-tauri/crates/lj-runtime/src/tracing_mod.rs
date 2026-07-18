@@ -1,7 +1,7 @@
 //! tracing 辅助：节点执行 span 等。
 
+use crate::graph::Node;
 use lj_capability::StandardIntent;
-use lj_core::node::Node;
 
 /// 创建节点执行 span。
 #[must_use]

@@ -4,10 +4,10 @@
 
 use std::collections::HashMap;
 
-use lj_core::extract_rule::{ExtractRule, ExtractType, RegexClean};
-use lj_core::node_data::NodeData;
 use lj_node_extract::html_xpath;
 use lj_node_extract::regex_extract::RegexCache;
+use lj_rule_model::{ExtractRule, ExtractType, RegexClean};
+use lj_runtime::NodeData;
 
 fn json_at(result: &[NodeData], index: usize) -> &serde_json::Value {
     match &result[index] {

@@ -5,10 +5,10 @@
 mod common;
 
 use lj_capability::{IntentInput, StandardIntent};
-use lj_core::media::{MediaAssetKind, MediaAssetLocator, MediaKind};
-use lj_core::node::Graph;
-use lj_core::traits::{Importer, SegmentSpec};
 use lj_importer::maccms::{MaccmsFormat, MaccmsImporter, MaccmsSourceUrl};
+use lj_media::{MediaAssetKind, MediaAssetLocator, MediaKind};
+use lj_runtime::Graph;
+use lj_runtime::SegmentSpec;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 

@@ -10,5 +10,5 @@ description = "规则编译器：Legado 书源规则解析与编译"
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
+lj-rule-model = { path = "../lj-rule-model" }
 thiserror = { workspace = true }

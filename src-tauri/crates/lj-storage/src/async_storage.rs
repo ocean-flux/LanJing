@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
-use lj_core::error::CoreError;
-use lj_core::node::Graph;
-use lj_core::traits::{RepoId, Repository};
+use crate::ids::RepoId;
+use lj_rule_model::Error;
+use lj_runtime::Graph;
 
 use crate::repository::SqliteStorage;
 
@@ -32,55 +32,55 @@ impl AsyncStorage {
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库查询失败或 `spawn_blocking` panic。
-    pub async fn get_graph(&self, id: &RepoId<Graph>) -> Result<Option<Graph>, CoreError> {
+    /// 返回 `Error::Storage` 当数据库查询失败或 `spawn_blocking` panic。
+    pub async fn get_graph(&self, id: &RepoId<Graph>) -> Result<Option<Graph>, Error> {
         let inner = self.inner.clone();
         let id = id.clone();
-        tokio::task::spawn_blocking(move || inner.get(&id))
+        tokio::task::spawn_blocking(move || inner.get_graph(&id))
             .await
-            .map_err(|e| CoreError::Storage(format!("spawn_blocking panic: {e}")))?
+            .map_err(|e| Error::Storage(format!("spawn_blocking panic: {e}")))?
     }
 
     /// 异步保存 Graph。
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库写入失败或 `spawn_blocking` panic。
-    pub async fn save_graph(&self, id: &RepoId<Graph>, value: &Graph) -> Result<(), CoreError> {
+    /// 返回 `Error::Storage` 当数据库写入失败或 `spawn_blocking` panic。
+    pub async fn save_graph(&self, id: &RepoId<Graph>, value: &Graph) -> Result<(), Error> {
         let inner = self.inner.clone();
         let id = id.clone();
         let value = value.clone();
-        tokio::task::spawn_blocking(move || inner.save(&id, &value))
+        tokio::task::spawn_blocking(move || inner.save_graph(&id, &value))
             .await
-            .map_err(|e| CoreError::Storage(format!("spawn_blocking panic: {e}")))?
+            .map_err(|e| Error::Storage(format!("spawn_blocking panic: {e}")))?
     }
 
     /// 异步删除 Graph。
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库删除失败或 `spawn_blocking` panic。
-    pub async fn delete_graph(&self, id: &RepoId<Graph>) -> Result<(), CoreError> {
+    /// 返回 `Error::Storage` 当数据库删除失败或 `spawn_blocking` panic。
+    pub async fn delete_graph(&self, id: &RepoId<Graph>) -> Result<(), Error> {
         let inner = self.inner.clone();
         let id = id.clone();
-        tokio::task::spawn_blocking(move || inner.delete(&id))
+        tokio::task::spawn_blocking(move || inner.delete_graph(&id))
             .await
-            .map_err(|e| CoreError::Storage(format!("spawn_blocking panic: {e}")))?
+            .map_err(|e| Error::Storage(format!("spawn_blocking panic: {e}")))?
     }
 
     /// 异步分页列出 Graph。
     ///
     /// # Errors
     ///
-    /// 返回 `CoreError::Storage` 当数据库查询失败或 `spawn_blocking` panic。
+    /// 返回 `Error::Storage` 当数据库查询失败或 `spawn_blocking` panic。
     pub async fn list_graphs_page(
         &self,
         limit: usize,
         offset: usize,
-    ) -> Result<Vec<(RepoId<Graph>, Graph)>, CoreError> {
+    ) -> Result<Vec<(RepoId<Graph>, Graph)>, Error> {
         let inner = self.inner.clone();
         tokio::task::spawn_blocking(move || inner.list_graphs_page(limit, offset))
             .await
-            .map_err(|e| CoreError::Storage(format!("spawn_blocking panic: {e}")))?
+            .map_err(|e| Error::Storage(format!("spawn_blocking panic: {e}")))?
     }
 }

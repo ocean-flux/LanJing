@@ -10,7 +10,8 @@ description = "提取节点：HTML/XML/JSON/正则内容提取器"
 workspace = true
 
 [dependencies]
-lj-core = { path = "../lj-core" }
+lj-rule-model = { path = "../lj-rule-model" }
+lj-runtime = { path = "../lj-runtime" }
 scraper = { workspace = true }
 xmloxide = { workspace = true }
 jsonpath-rust = { workspace = true }

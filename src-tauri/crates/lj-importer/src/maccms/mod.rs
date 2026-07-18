@@ -11,12 +11,12 @@ pub use types::{MaccmsFormat, MaccmsSourceUrl};
 
 use std::collections::HashMap;
 
+use crate::preview::ImportPreview;
 use lj_capability::{IntentExport, StandardIntent};
-use lj_core::error::CoreError;
-use lj_core::extract_rule::ExpectedDataType;
-use lj_core::node::{Edge, Graph, MapperOutputKind, Node, SourceId};
-use lj_core::sandbox::Sandbox;
-use lj_core::traits::{ImportPreview, Importer};
+use lj_rule_model::Error;
+use lj_rule_model::ExpectedDataType;
+use lj_rule_model::PolicyCapabilities;
+use lj_runtime::{Edge, Graph, MapperOutputKind, Node, SourceId};
 
 use translator::{
     build_pair, connect_flow_edges, create_js_node, create_mapper_node, detail_field_rules,
@@ -30,20 +30,25 @@ use vocab::{
 /// Maccms10 视频源导入器。
 pub struct MaccmsImporter;
 
-impl Importer<MaccmsSourceUrl> for MaccmsImporter {
-    fn import(&self, opts: MaccmsSourceUrl) -> Result<ImportPreview, CoreError> {
+impl MaccmsImporter {
+    /// 导入 Maccms 采集源。
+    ///
+    /// # Errors
+    ///
+    /// URL 非法或图验证失败时返回错误。
+    pub fn import(&self, opts: MaccmsSourceUrl) -> Result<ImportPreview, Error> {
         // 保留 URL 尾斜杠(`/api.php/provide/vod/`),避免与采集端点路径精确匹配失败;
         // 追加查询参数时 `base_url?ac=list&...` 路径含尾斜杠,符合 Maccms 协议约定。
-        let base_url = opts.url.clone();
+        let MaccmsSourceUrl { url: base_url, at } = opts;
         if !base_url.contains(API_PATH) {
-            return Err(CoreError::Import(format!(
+            return Err(Error::Import(format!(
                 "非 Maccms 采集 API URL(缺少 /api.php/provide/vod/ 路径): {base_url}"
             )));
         }
         // base_url 已含 query 时用 & 连接,否则用 ? (#12 防 double-? 畸形 URL)。
         let query_sep = if base_url.contains('?') { '&' } else { '?' };
 
-        let expected_type = match opts.at {
+        let expected_type = match at {
             MaccmsFormat::Json => ExpectedDataType::Json,
             MaccmsFormat::Xml => ExpectedDataType::Xml,
         };
@@ -63,8 +68,8 @@ impl Importer<MaccmsSourceUrl> for MaccmsImporter {
         let (disc_http, disc_ext) = build_pair(
             &discover_url,
             expected_type,
-            discover_rules(opts.at),
-            discover_field_rules(opts.at),
+            discover_rules(at),
+            discover_field_rules(at),
         );
         edges.push(Edge {
             from: disc_js.node_id.clone(),
@@ -98,8 +103,8 @@ impl Importer<MaccmsSourceUrl> for MaccmsImporter {
         let (det_http, det_ext) = build_pair(
             &detail_url,
             expected_type,
-            detail_rules(opts.at),
-            detail_field_rules(opts.at),
+            detail_rules(at),
+            detail_field_rules(at),
         );
         edges.push(Edge {
             from: det_http.node_id.clone(),
@@ -163,9 +168,9 @@ impl Importer<MaccmsSourceUrl> for MaccmsImporter {
             node_count: graph.nodes.len(),
             edge_count: graph.edges.len(),
             js_block_count: 0,
-            sandbox: Sandbox {
+            sandbox: PolicyCapabilities {
                 network: true,
-                system: lj_core::sandbox::SystemCapabilities::default(),
+                system: lj_rule_model::SystemCapabilities::default(),
             },
             http_target_urls,
             js_sources: Vec::new(),
@@ -177,7 +182,7 @@ impl Importer<MaccmsSourceUrl> for MaccmsImporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lj_core::node::NodeKind;
+    use lj_runtime::NodeKind;
 
     fn import_json(url: &str) -> ImportPreview {
         MaccmsImporter
@@ -281,7 +286,7 @@ mod tests {
         assert!(
             name_rules
                 .iter()
-                .any(|r| matches!(r, lj_core::extract_rule::ExtractRule::XPath { .. })),
+                .any(|r| matches!(r, lj_rule_model::ExtractRule::XPath { .. })),
             "XML format 的 name field rule 应为 XPath"
         );
     }

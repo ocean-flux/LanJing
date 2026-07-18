@@ -1,10 +1,10 @@
 //! 集成测试：HTML 提取、回退链、charset 解码、正则清理。
 
-use lj_core::extract_rule::{ExtractRule, ExtractType, RegexClean};
 use lj_node_extract::html::{extract_elements_from_doc, extract_from_doc, parse_html};
 use lj_node_extract::html_css::try_extract_on_doc;
 use lj_node_extract::processor::decode_body;
 use lj_node_extract::regex_extract::{RegexCache, apply_regex_clean};
+use lj_rule_model::{ExtractRule, ExtractType, RegexClean};
 use regex::Regex;
 
 /// HTML + CSS 选择器提取文本。

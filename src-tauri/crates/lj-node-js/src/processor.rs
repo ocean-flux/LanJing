@@ -13,11 +13,11 @@ use tokio::sync::mpsc;
 
 use rquickjs::{Context, Runtime as JsRuntime};
 
-use lj_core::node::{NodeKind, NodeSpec};
-use lj_core::node_data::{NodeData, NodeDataVariant};
-use lj_core::sandbox::Capability;
-use lj_core::traits::{ExecutionContext, NodeProcessor};
-use lj_sandbox::capabilities::check_capability;
+use lj_rule_model::Capability;
+use lj_runtime::check_capability;
+use lj_runtime::{ExecutionContext, NodeProcessor};
+use lj_runtime::{NodeData, NodeDataVariant};
+use lj_runtime::{NodeKind, NodeSpec};
 
 use crate::error::JsError;
 

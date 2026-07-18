@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use lj_core::extract_rule::RegexClean;
+use lj_rule_model::RegexClean;
 use regex::Regex;
 
 /// 正则预编译缓存(全局共享，避免重复编译)。

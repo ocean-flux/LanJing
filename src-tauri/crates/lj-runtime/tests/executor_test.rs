@@ -4,19 +4,17 @@ use std::collections::{BTreeMap, HashMap};
 
 use futures::stream::{BoxStream, StreamExt};
 use lj_capability::{IntentExport, IntentInput, StandardIntent};
-use lj_core::endpoint::{HttpMethod, HttpSpec};
-use lj_core::extract_rule::{ExpectedDataType, ExtractSpec};
-use lj_core::media::{
-    MediaGraphDelta, MediaItem, MediaKind, MediaResourceId, ResourceCompleteness,
-};
-use lj_core::node::{
-    Edge, Graph, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec, SourceId,
-};
-use lj_core::node_data::{HttpResponse, NodeData, NodeDataVariant};
-use lj_core::sandbox::Sandbox;
-use lj_core::traits::{ExecutionContext, Executor, NodeProcessor, SegmentSpec};
+use lj_media::{MediaGraphDelta, MediaItem, MediaKind, MediaResourceId, ResourceCompleteness};
+use lj_rule_model::PolicyCapabilities;
+use lj_rule_model::{ExpectedDataType, ExtractSpec};
+use lj_rule_model::{HttpMethod, HttpSpec};
 use lj_runtime::executor::GraphExecutor;
 use lj_runtime::tap::{TapSummary, tap_stream};
+use lj_runtime::{
+    Edge, Graph, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec, SourceId,
+};
+use lj_runtime::{ExecutionContext, NodeProcessor, SegmentSpec};
+use lj_runtime::{HttpResponse, NodeData, NodeDataVariant};
 use uuid::Uuid;
 
 struct MockProcessor {
@@ -180,7 +178,7 @@ fn extract_node() -> Node {
                 rules: Vec::new(),
                 field_rules: HashMap::new(),
                 expected_type: ExpectedDataType::Html,
-                output_target: lj_core::extract_rule::OutputTarget::default(),
+                output_target: lj_rule_model::OutputTarget::default(),
             }),
             mapper: None,
         },
@@ -226,7 +224,7 @@ fn graph_with_export(
 fn ctx() -> ExecutionContext {
     ExecutionContext {
         cookies: HashMap::new(),
-        caps: Sandbox::default(),
+        caps: PolicyCapabilities::default(),
         trace_id: "test-trace".into(),
         base_url: String::new(),
     }
@@ -479,7 +477,7 @@ async fn pipeline_two_node_chain() {
     );
 
     let items: Vec<(NodeId, NodeData)> = GraphExecutor::new()
-        .execute(&graph, segment, &ctx(), &processors)
+        .execute(&graph, &segment, &ctx(), &processors)
         .collect()
         .await;
 
@@ -515,7 +513,7 @@ async fn pipeline_can_emit_media_graph_delta() {
     processors.insert(NodeKind::Extract, Box::new(JsonToDeltaMapper));
 
     let items: Vec<(NodeId, NodeData)> = GraphExecutor::new()
-        .execute(&graph, segment, &ctx(), &processors)
+        .execute(&graph, &segment, &ctx(), &processors)
         .collect()
         .await;
 
@@ -550,7 +548,7 @@ async fn pipeline_maps_declared_mapper_json_to_media_graph_delta() {
     processors.insert(NodeKind::Extract, Box::new(JsonRecordProcessor));
 
     let items: Vec<(NodeId, NodeData)> = GraphExecutor::new()
-        .execute(&graph, segment, &ctx(), &processors)
+        .execute(&graph, &segment, &ctx(), &processors)
         .collect()
         .await;
 
@@ -582,7 +580,7 @@ async fn pipeline_empty_subgraph_returns_empty() {
     };
     let processors: HashMap<NodeKind, Box<dyn NodeProcessor>> = HashMap::new();
     let items: Vec<(NodeId, NodeData)> = GraphExecutor::new()
-        .execute(&graph, segment, &ctx(), &processors)
+        .execute(&graph, &segment, &ctx(), &processors)
         .collect()
         .await;
     assert!(items.is_empty());
@@ -605,7 +603,7 @@ async fn pipeline_missing_processor_returns_error() {
     let processors: HashMap<NodeKind, Box<dyn NodeProcessor>> = HashMap::new();
 
     let items: Vec<(NodeId, NodeData)> = GraphExecutor::new()
-        .execute(&graph, segment, &ctx(), &processors)
+        .execute(&graph, &segment, &ctx(), &processors)
         .collect()
         .await;
 

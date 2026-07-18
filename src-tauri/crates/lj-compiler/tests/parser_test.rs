@@ -2,7 +2,7 @@
 //!
 
 use lj_compiler::legado_parser::parse_legado_rule;
-use lj_core::extract_rule::{ExtractRule, ExtractType, RegexClean};
+use lj_rule_model::{ExtractRule, ExtractType, RegexClean};
 
 // -- 辅助函数 --
 

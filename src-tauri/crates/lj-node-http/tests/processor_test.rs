@@ -7,14 +7,14 @@ use std::net::IpAddr;
 
 use futures::StreamExt;
 
-use lj_core::Sandbox;
-use lj_core::error::CoreError;
-use lj_core::node::NodeKind;
-use lj_core::node_data::NodeDataVariant;
-use lj_core::traits::{ExecutionContext, NodeProcessor};
 use lj_node_http::processor::{HttpNodeProcessor, convert_response};
 use lj_node_http::ssrf::is_blocked_ip;
 use lj_node_http::util::{parse_charset, render_url_template};
+use lj_rule_model::Error;
+use lj_rule_model::PolicyCapabilities;
+use lj_runtime::NodeDataVariant;
+use lj_runtime::NodeKind;
+use lj_runtime::{ExecutionContext, NodeProcessor};
 
 // ── SSRF 校验 ──────────────────────────────────────────
 
@@ -245,18 +245,18 @@ fn processor_empty_spec_returns_empty_stream() {
         let processor = HttpNodeProcessor::new();
         let ctx = ExecutionContext {
             cookies: HashMap::new(),
-            caps: Sandbox::default(),
+            caps: PolicyCapabilities::default(),
             trace_id: "test".into(),
             base_url: String::new(),
         };
-        let spec = lj_core::node::NodeSpec {
+        let spec = lj_runtime::NodeSpec {
             kind: NodeKind::Http,
             http: None,
             js: None,
             extract: None,
             mapper: None,
         };
-        let input: futures::stream::BoxStream<'static, lj_core::node_data::NodeData> =
+        let input: futures::stream::BoxStream<'static, lj_runtime::NodeData> =
             futures::stream::empty().boxed();
         let mut output = processor.process(&ctx, &spec, input);
         let result = output.next().await;
@@ -317,7 +317,7 @@ async fn convert_response_body_size_limit() {
     assert!(result.is_err(), "超过上限的 body 应返回错误");
 
     match &result.unwrap_err() {
-        CoreError::BodyTooLarge { actual, max } => {
+        Error::BodyTooLarge { actual, max } => {
             assert_eq!(*max, 16 * 1024 * 1024, "上限应为 16 MiB");
             assert!(
                 *actual <= 16 * 1024 * 1024,

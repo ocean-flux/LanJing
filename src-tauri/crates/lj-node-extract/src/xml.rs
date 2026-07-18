@@ -2,8 +2,8 @@
 //!
 //! 配置 DTD/外部实体处理禁用(xmloxide 默认不解析外部实体,XXE 防护)。
 
-use lj_core::extract_rule::{ExtractRule, ExtractType};
-use lj_core::node_data::NodeData;
+use lj_rule_model::{ExtractRule, ExtractType};
+use lj_runtime::NodeData;
 use xmloxide::Document;
 use xmloxide::xpath::{self, XPathValue};
 
@@ -208,12 +208,12 @@ pub(crate) fn format_xpath_number(n: f64) -> String {
 }
 
 // 兼容旧 stub API(测试可能引用)
-use lj_core::extract_rule::RegexClean;
+use lj_rule_model::RegexClean;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lj_core::extract_rule::ExtractType;
+    use lj_rule_model::ExtractType;
 
     fn regex_cache() -> RegexCache {
         RegexCache::new()
