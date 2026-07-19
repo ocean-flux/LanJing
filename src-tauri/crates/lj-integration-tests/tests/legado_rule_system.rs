@@ -341,6 +341,45 @@ fn assert_text_asset(delta: &MediaGraphDelta) {
     )));
 }
 
+/// 断言黄金路径只通过标准媒体资源的来源与父子归属暴露结果。
+fn assert_standard_source_ownership(
+    delta: &MediaGraphDelta,
+    expected_source_id: &str,
+    expected_item_id: Option<&str>,
+    expected_unit_id: Option<&str>,
+) {
+    for item in &delta.items {
+        assert_eq!(item.source_id.0, expected_source_id);
+    }
+    for unit in &delta.units {
+        assert_eq!(unit.source_id.0, expected_source_id);
+        if let Some(expected_item_id) = expected_item_id {
+            assert_eq!(unit.item_id.0, expected_item_id);
+        }
+    }
+    for asset in &delta.assets {
+        assert_eq!(asset.source_id.0, expected_source_id);
+        if let Some(expected_unit_id) = expected_unit_id {
+            assert_eq!(
+                asset.unit_id.as_ref().map(|unit_id| unit_id.0.as_str()),
+                Some(expected_unit_id)
+            );
+        }
+    }
+    for action in &delta.actions {
+        assert_eq!(action.source_id.0, expected_source_id);
+        if action.intent == StandardIntent::ContinueAction {
+            assert_eq!(
+                action.payload["source_identity"].as_str(),
+                Some(expected_source_id)
+            );
+        }
+    }
+    for source in &delta.sources {
+        assert_eq!(source.id.0, expected_source_id);
+    }
+}
+
 fn find_continue_action(delta: &MediaGraphDelta) -> Value {
     let action = delta
         .actions
@@ -572,6 +611,7 @@ async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() 
     )
     .await;
     let item_id = find_item(&search.delta, "修罗武神");
+    assert_standard_source_ownership(&search.delta, &installed.profile.id.0, None, None);
 
     let discover = execute_live(
         &system,
@@ -581,6 +621,7 @@ async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() 
     )
     .await;
     let continue_action = find_continue_action(&discover.delta);
+    assert_standard_source_ownership(&discover.delta, &installed.profile.id.0, None, None);
 
     let resolve_item = execute_live(
         &system,
@@ -590,24 +631,32 @@ async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() 
     )
     .await;
     let resolved_item_id = find_item(&resolve_item.delta, "修罗武神");
+    assert_standard_source_ownership(&resolve_item.delta, &installed.profile.id.0, None, None);
 
     let units = execute_live(
         &system,
         &installed.source_id,
         StandardIntent::ListUnits,
-        IntentInput::ItemId(resolved_item_id),
+        IntentInput::ItemId(resolved_item_id.clone()),
     )
     .await;
     let unit_id = find_unit(&units.delta);
+    assert_standard_source_ownership(
+        &units.delta,
+        &installed.profile.id.0,
+        Some(&resolved_item_id),
+        None,
+    );
 
     let asset = execute_live(
         &system,
         &installed.source_id,
         StandardIntent::ResolveAsset,
-        IntentInput::UnitId(unit_id),
+        IntentInput::UnitId(unit_id.clone()),
     )
     .await;
     assert_text_asset(&asset.delta);
+    assert_standard_source_ownership(&asset.delta, &installed.profile.id.0, None, Some(&unit_id));
 
     let continued = execute_live(
         &system,
@@ -617,6 +666,7 @@ async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() 
     )
     .await;
     find_item(&continued.delta, "豪门测试书");
+    assert_standard_source_ownership(&continued.delta, &installed.profile.id.0, None, None);
 
     assert_live_http_and_quickjs_witnesses(&system, &search, &discover).await;
 
