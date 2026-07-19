@@ -468,6 +468,32 @@ impl RuleSystem {
             ExecutionMode::Replay {
                 execution_id: archived_execution_id,
             } => {
+                let archived = self
+                    .state
+                    .storage
+                    .get_execution(archived_execution_id.as_uuid())
+                    .await
+                    .map_err(|error| storage_error(&error, RuleErrorStage::Replay, trace_id))?
+                    .ok_or_else(|| {
+                        RuleError::new(
+                            RuleErrorStage::Replay,
+                            "replay_execution_missing",
+                            "历史 execution 不存在",
+                            trace_id.to_string(),
+                            false,
+                            Vec::new(),
+                        )
+                    })?;
+                if archived.status != ExecutionStatus::Completed {
+                    return Err(RuleError::new(
+                        RuleErrorStage::Replay,
+                        "replay_execution_not_completed",
+                        "历史 execution 未以可 replay 的完成终态结束",
+                        trace_id.to_string(),
+                        false,
+                        Vec::new(),
+                    ));
+                }
                 let pin = self
                     .state
                     .storage

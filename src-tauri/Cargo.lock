@@ -2910,6 +2910,7 @@ name = "lj-integration-tests"
 version = "0.1.0"
 dependencies = [
  "async-stream",
+ "diesel",
  "futures",
  "keyring",
  "lj-capability",

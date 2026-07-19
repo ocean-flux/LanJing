@@ -11,7 +11,8 @@ use diesel::sql_types::{BigInt, Integer, Nullable, Text};
 use diesel::sqlite::SqliteConnection;
 use lj_media::SourceProfile;
 use lj_rule_model::{
-    EventType, ExecutionPlan, PolicyCapabilities, SecretRef, canonical_json, definition_hash,
+    ArtifactRef, EventType, ExecutionPlan, PolicyCapabilities, SecretRef, canonical_json,
+    definition_hash,
 };
 use uuid::Uuid;
 
@@ -44,6 +45,14 @@ pub(crate) fn process_stage_candidate(
     let plan_bytes = serde_json::to_vec(&draft.plan).map_err(|_| StorageError::Serialization)?;
     let package = artifacts.write(ArtifactKind::Body, &package_bytes)?;
     let plan = artifacts.write(ArtifactKind::Body, &plan_bytes)?;
+    let profile_json = serialize(&draft.profile)?;
+    let grant_json = serialize(&draft.required_grant)?;
+    let diagnostics_json = serialize(&draft.diagnostics)?;
+    let profile_hash = blake3::hash(profile_json.as_bytes()).to_hex().to_string();
+    let grant_hash = blake3::hash(grant_json.as_bytes()).to_hex().to_string();
+    let diagnostics_hash = blake3::hash(diagnostics_json.as_bytes())
+        .to_hex()
+        .to_string();
     let expires_at_ms = draft
         .expires_at_ms
         .unwrap_or(draft.created_at_ms.saturating_add(DEFAULT_CANDIDATE_TTL_MS));
@@ -53,7 +62,7 @@ pub(crate) fn process_stage_candidate(
         expected_version: 0,
         event_id: draft.candidate_id,
         event_type: EventType::Candidate,
-        schema_version: 1,
+        schema_version: 2,
         correlation_id: draft.correlation_id,
         causation_id: None,
         trace_id: draft.trace_id,
@@ -64,6 +73,10 @@ pub(crate) fn process_stage_candidate(
             "source_identity": source_identity,
             "definition_hash": draft.plan.definition_hash,
             "plan_hash": draft.plan.plan_hash,
+            "profile_hash": profile_hash,
+            "required_grant_hash": grant_hash,
+            "diagnostics_hash": diagnostics_hash,
+            "artifact_hash_algorithm": "blake3",
             "expires_at_ms": expires_at_ms,
         }),
         source_identity: Some(source_identity.clone()),
@@ -73,9 +86,6 @@ pub(crate) fn process_stage_candidate(
     let plan_hash = plan.hash.clone();
     let definition_hash = draft.plan.definition_hash.clone();
     let execution_plan_hash = draft.plan.plan_hash.clone();
-    let profile_json = serialize(&draft.profile)?;
-    let grant_json = serialize(&draft.required_grant)?;
-    let diagnostics_json = serialize(&draft.diagnostics)?;
     let links = vec![ArtifactLink::New(package), ArtifactLink::New(plan)];
     append_event_transaction(conn, &event, &links, |conn, _global_seq, version| {
         sql_query(
@@ -253,29 +263,16 @@ pub(crate) fn process_install_candidate(
         "expired" => return Err(StorageError::CandidateExpired),
         _ => return Err(StorageError::CandidateUnavailable),
     }
+    validate_staged_candidate_event(conn, request.candidate_id, &candidate)?;
     if candidate.expires_at_ms <= request.occurred_at_ms {
         expire_candidate(conn, request.candidate_id)?;
         return Err(StorageError::CandidateExpired);
     }
-    let required_grant =
-        deserialize::<PolicyCapabilities>(candidate.required_grant_json.as_bytes())?;
+    let (package, plan, profile, required_grant) =
+        load_and_validate_candidate_artifacts(conn, artifacts, &candidate)?;
     if !grant_covers(&request.grant, &required_grant) {
         return Err(StorageError::GrantInsufficient);
     }
-    let package_bytes = read_body_by_hash(conn, artifacts, &candidate.package_artifact_hash)?;
-    let plan_bytes = read_body_by_hash(conn, artifacts, &candidate.plan_artifact_hash)?;
-    let package = deserialize::<lj_rule_model::RulePackage>(&package_bytes)?;
-    let plan = deserialize::<lj_rule_model::ExecutionPlan>(&plan_bytes)?;
-    validate_candidate_package_and_plan(&package, &plan)?;
-    if package.source_identity.id != candidate.source_identity
-        || plan.plan_hash != candidate.plan_hash
-        || plan.definition_hash != candidate.definition_hash
-    {
-        return Err(StorageError::InvalidInput(
-            "candidate artifact 与 metadata 不一致".to_string(),
-        ));
-    }
-    let profile = deserialize::<SourceProfile>(candidate.profile_json.as_bytes())?;
     let source_identity = candidate.source_identity.clone();
     let source_credentials = resolve_install_source_credentials(
         conn,
@@ -390,6 +387,145 @@ pub(crate) fn process_install_candidate(
         grant: request.grant,
         revision: receipt.stream_version,
     })
+}
+
+fn load_and_validate_candidate_artifacts(
+    conn: &mut SqliteConnection,
+    artifacts: &ArtifactStore,
+    candidate: &CandidateRow,
+) -> Result<
+    (
+        lj_rule_model::RulePackage,
+        lj_rule_model::ExecutionPlan,
+        SourceProfile,
+        PolicyCapabilities,
+    ),
+    StorageError,
+> {
+    let package_bytes = read_body_by_hash(conn, artifacts, &candidate.package_artifact_hash)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let plan_bytes = read_body_by_hash(conn, artifacts, &candidate.plan_artifact_hash)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let package = deserialize::<lj_rule_model::RulePackage>(&package_bytes)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let plan = deserialize::<lj_rule_model::ExecutionPlan>(&plan_bytes)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    validate_candidate_package_and_plan(&package, &plan)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    if package.source_identity.id != candidate.source_identity
+        || package.definition.source_identity != package.source_identity
+        || plan.plan_hash != candidate.plan_hash
+        || plan.definition_hash != candidate.definition_hash
+    {
+        return Err(StorageError::CandidateTampered);
+    }
+    let profile = deserialize::<SourceProfile>(candidate.profile_json.as_bytes())
+        .map_err(|_| StorageError::CandidateTampered)?;
+    if profile.id.0 != candidate.source_identity
+        || profile.version.as_deref() != Some(package.version.as_str())
+    {
+        return Err(StorageError::CandidateTampered);
+    }
+    let required_grant =
+        deserialize::<PolicyCapabilities>(candidate.required_grant_json.as_bytes())
+            .map_err(|_| StorageError::CandidateTampered)?;
+    if required_grant != package.definition.capability_manifest.required {
+        return Err(StorageError::CandidateTampered);
+    }
+    Ok((package, plan, profile, required_grant))
+}
+
+fn validate_staged_candidate_event(
+    conn: &mut SqliteConnection,
+    candidate_id: Uuid,
+    candidate: &CandidateRow,
+) -> Result<(), StorageError> {
+    let candidate_id_text = candidate_id.to_string();
+    let event = sql_query(
+        "SELECT stream_version, event_id, source_identity, event_type, schema_version, payload_json, artifact_refs_json, secret_refs_json FROM events WHERE stream_id = ? AND stream_version = 1",
+    )
+    .bind::<Text, _>(candidate_stream_id(candidate_id))
+    .get_result::<CandidateStagedEventRow>(conn)
+    .optional()
+    .map_err(database_error)?
+    .ok_or(StorageError::CandidateTampered)?;
+    let payload = serde_json::from_str::<serde_json::Value>(&event.payload_json)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let event_type = serde_json::from_str::<EventType>(&event.event_type)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let artifact_refs = serde_json::from_str::<Vec<ArtifactRef>>(&event.artifact_refs_json)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let artifact_refs_use_zstd = artifact_refs
+        .iter()
+        .all(|artifact| artifact.codec == "zstd");
+    let secret_refs = serde_json::from_str::<Vec<SecretRef>>(&event.secret_refs_json)
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let mut actual_artifact_hashes = artifact_refs
+        .into_iter()
+        .map(|artifact| artifact.hash)
+        .collect::<Vec<_>>();
+    actual_artifact_hashes.sort_unstable();
+    let mut expected_artifact_hashes = vec![
+        candidate.package_artifact_hash.clone(),
+        candidate.plan_artifact_hash.clone(),
+    ];
+    expected_artifact_hashes.sort_unstable();
+    let profile_hash = blake3::hash(candidate.profile_json.as_bytes())
+        .to_hex()
+        .to_string();
+    let grant_hash = blake3::hash(candidate.required_grant_json.as_bytes())
+        .to_hex()
+        .to_string();
+    let diagnostics_hash = blake3::hash(candidate.diagnostics_json.as_bytes())
+        .to_hex()
+        .to_string();
+    if event.stream_version != 1
+        || event.event_id != candidate_id_text
+        || event.source_identity.as_deref() != Some(candidate.source_identity.as_str())
+        || event_type != EventType::Candidate
+        || event.schema_version != 2
+        || payload.get("kind").and_then(serde_json::Value::as_str) != Some("staged")
+        || payload
+            .get("candidate_id")
+            .and_then(serde_json::Value::as_str)
+            != Some(candidate_id_text.as_str())
+        || payload
+            .get("source_identity")
+            .and_then(serde_json::Value::as_str)
+            != Some(candidate.source_identity.as_str())
+        || payload
+            .get("definition_hash")
+            .and_then(serde_json::Value::as_str)
+            != Some(candidate.definition_hash.as_str())
+        || payload.get("plan_hash").and_then(serde_json::Value::as_str)
+            != Some(candidate.plan_hash.as_str())
+        || payload
+            .get("profile_hash")
+            .and_then(serde_json::Value::as_str)
+            != Some(profile_hash.as_str())
+        || payload
+            .get("required_grant_hash")
+            .and_then(serde_json::Value::as_str)
+            != Some(grant_hash.as_str())
+        || payload
+            .get("diagnostics_hash")
+            .and_then(serde_json::Value::as_str)
+            != Some(diagnostics_hash.as_str())
+        || payload
+            .get("artifact_hash_algorithm")
+            .and_then(serde_json::Value::as_str)
+            != Some("blake3")
+        || payload
+            .get("expires_at_ms")
+            .and_then(serde_json::Value::as_i64)
+            != Some(candidate.expires_at_ms)
+        || actual_artifact_hashes != expected_artifact_hashes
+        || !artifact_refs_use_zstd
+        || !secret_refs.is_empty()
+    {
+        return Err(StorageError::CandidateTampered);
+    }
+    Ok(())
 }
 
 /// 读取 opaque candidate 的安全 preview；没有 candidate 时返回 `Ok(None)`。
@@ -707,6 +843,26 @@ fn source_install_links(
         });
     }
     links
+}
+
+#[derive(QueryableByName)]
+struct CandidateStagedEventRow {
+    #[diesel(sql_type = BigInt)]
+    stream_version: i64,
+    #[diesel(sql_type = Text)]
+    event_id: String,
+    #[diesel(sql_type = Nullable<Text>)]
+    source_identity: Option<String>,
+    #[diesel(sql_type = Text)]
+    event_type: String,
+    #[diesel(sql_type = Integer)]
+    schema_version: i32,
+    #[diesel(sql_type = Text)]
+    payload_json: String,
+    #[diesel(sql_type = Text)]
+    artifact_refs_json: String,
+    #[diesel(sql_type = Text)]
+    secret_refs_json: String,
 }
 
 #[derive(QueryableByName)]

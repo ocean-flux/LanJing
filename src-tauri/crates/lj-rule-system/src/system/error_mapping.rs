@@ -193,6 +193,12 @@ pub(super) fn storage_error(
             "candidate 已被消费或不可安装",
             false,
         ),
+        StorageError::CandidateTampered => (
+            RuleErrorStage::Candidate,
+            "candidate_tampered",
+            "candidate durable metadata 与安装内容不一致",
+            false,
+        ),
         StorageError::GrantInsufficient => (
             RuleErrorStage::Capability,
             "grant_insufficient",

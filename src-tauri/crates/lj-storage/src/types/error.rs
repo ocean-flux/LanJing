@@ -34,6 +34,9 @@ pub enum StorageError {
     /// candidate 已被消费或丢弃。
     #[error("candidate 已不可安装")]
     CandidateUnavailable,
+    /// candidate 的 durable artifact、metadata 或 staging Event 不一致。
+    #[error("candidate durable metadata 被篡改")]
+    CandidateTampered,
     /// 已批准能力未覆盖 candidate 在 staging 时声明的必需能力。
     #[error("批准的能力不足以安装 candidate")]
     GrantInsufficient,

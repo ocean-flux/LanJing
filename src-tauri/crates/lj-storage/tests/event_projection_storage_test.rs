@@ -174,6 +174,12 @@ fn updated_candidate(now_ms: i64) -> CandidateDraft {
     let mut draft = candidate(now_ms);
     draft.package.version = "v2".to_string();
     draft.package.definition.base_url = "https://updated.example.test".to_string();
+    draft
+        .package
+        .definition
+        .capability_manifest
+        .required
+        .network = true;
     draft.profile.title = "更新后的测试来源".to_string();
     draft.profile.version = Some("v2".to_string());
     draft.required_grant.network = true;
@@ -207,6 +213,26 @@ fn candidate_for_source(now_ms: i64, source_identity: &str) -> CandidateDraft {
     .to_hex()
     .to_string();
     draft
+}
+
+fn require_network_capability(draft: &mut CandidateDraft) {
+    draft
+        .package
+        .definition
+        .capability_manifest
+        .required
+        .network = true;
+    draft.required_grant.network = true;
+    draft.plan.definition_hash =
+        definition_hash(&draft.package.definition).expect("network Definition hash");
+    draft.plan.plan_hash.clear();
+    draft.plan.plan_hash = blake3::hash(
+        canonical_json(&draft.plan)
+            .expect("network canonical Plan")
+            .as_bytes(),
+    )
+    .to_hex()
+    .to_string();
 }
 
 async fn install_source(storage: &EventProjectionStorage, now_ms: i64) {
@@ -350,7 +376,7 @@ async fn candidate_hashes_are_verified_before_staging_and_installation() {
                 source_credentials: None,
             })
             .await,
-        Err(StorageError::ArtifactUnavailable(_))
+        Err(StorageError::CandidateTampered)
     ));
     storage.shutdown().await.expect("writer shutdown");
 }
@@ -439,7 +465,7 @@ async fn candidate_summary_round_trips_safe_preview_and_rejects_insufficient_gra
     let storage = temp.open().await;
     let now = 1_750_000_700_000;
     let mut draft = candidate(now);
-    draft.required_grant.network = true;
+    require_network_capability(&mut draft);
     draft.diagnostics = vec![Diagnostic {
         code: "CAPABILITY_NETWORK".to_string(),
         severity: DiagnosticSeverity::Warning,

@@ -4,17 +4,20 @@
 //! handler registry 或 storage transaction。
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Once;
 use std::time::Duration;
 
+use diesel::prelude::*;
+use diesel::sql_query;
+use diesel::sql_types::{BigInt, Text};
 use futures::StreamExt;
 use keyring::{mock, set_default_credential_builder};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::{MediaAssetKind, MediaAssetLocator, MediaGraphDelta, MediaKind};
 use lj_rule_system::{
-    CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, LibraryEntryUpdate,
-    LibraryProgress, RuleErrorStage, RuleInput, RuleSystem, RuleSystemConfig,
+    CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, InstallCandidate,
+    LibraryEntryUpdate, LibraryProgress, RuleErrorStage, RuleInput, RuleSystem, RuleSystemConfig,
 };
 use serde_json::json;
 use uuid::Uuid;
@@ -35,6 +38,10 @@ impl TempRuleSystem {
             root,
             keyring_service,
         }
+    }
+
+    fn database_path(&self) -> PathBuf {
+        self.root.join("event-store.db")
     }
 
     async fn open(&self, candidate_ttl: Duration) -> RuleSystem {
@@ -81,6 +88,80 @@ impl Drop for TempRuleSystem {
 fn init_mock_keyring() {
     static INIT: Once = Once::new();
     INIT.call_once(|| set_default_credential_builder(mock::default_credential_builder()));
+}
+
+#[derive(Clone, Copy)]
+enum CandidateTamper {
+    Profile,
+    RequiredGrant,
+    Expiry,
+    DefinitionHash,
+    Diagnostics,
+    ArtifactAlgorithm,
+}
+
+fn tamper_candidate_row(path: &Path, candidate: &InstallCandidate, tamper: CandidateTamper) {
+    let mut connection = diesel::sqlite::SqliteConnection::establish(
+        path.to_str().expect("测试 SQLite 路径必须是 UTF-8"),
+    )
+    .expect("打开真实 candidate SQLite 以注入篡改");
+    let candidate_id = serde_json::to_string(&candidate.id)
+        .expect("candidate ID 可序列化")
+        .trim_matches('"')
+        .to_string();
+    let changed = match tamper {
+        CandidateTamper::Profile => {
+            let mut profile = candidate.profile.clone();
+            profile.id = lj_media::MediaResourceId("source:tampered".to_string());
+            let profile_json = serde_json::to_string(&profile).expect("profile 可序列化");
+            sql_query("UPDATE candidates SET profile_json = ? WHERE candidate_id = ?")
+                .bind::<Text, _>(&profile_json)
+                .bind::<Text, _>(&candidate_id)
+                .execute(&mut connection)
+        }
+        CandidateTamper::RequiredGrant => {
+            let grant_json = serde_json::to_string(&CapabilityGrant::none())
+                .expect("grant 可序列化");
+            sql_query("UPDATE candidates SET required_grant_json = ? WHERE candidate_id = ?")
+                .bind::<Text, _>(&grant_json)
+                .bind::<Text, _>(&candidate_id)
+                .execute(&mut connection)
+        }
+        CandidateTamper::Diagnostics => {
+            let diagnostics_json = serde_json::to_string(&serde_json::json!([
+                {
+                    "code": "tampered",
+                    "severity": "warning",
+                    "message": "tampered"
+                }
+            ]))
+            .expect("diagnostics 可序列化");
+            sql_query("UPDATE candidates SET diagnostics_json = ? WHERE candidate_id = ?")
+                .bind::<Text, _>(&diagnostics_json)
+                .bind::<Text, _>(&candidate_id)
+                .execute(&mut connection)
+        }
+        CandidateTamper::ArtifactAlgorithm => sql_query(
+            "UPDATE events SET artifact_refs_json = json_set(artifact_refs_json, '$[0].codec', ?) WHERE stream_id = ?",
+        )
+        .bind::<Text, _>("sha256")
+        .bind::<Text, _>(&format!("candidate/{candidate_id}"))
+        .execute(&mut connection),
+        CandidateTamper::Expiry => sql_query(
+            "UPDATE candidates SET expires_at_ms = ? WHERE candidate_id = ?",
+        )
+        .bind::<BigInt, _>(candidate.expires_at_ms.saturating_add(60_000))
+        .bind::<Text, _>(&candidate_id)
+        .execute(&mut connection),
+        CandidateTamper::DefinitionHash => sql_query(
+            "UPDATE candidates SET definition_hash = ? WHERE candidate_id = ?",
+        )
+        .bind::<Text, _>(&"0".repeat(64))
+        .bind::<Text, _>(&candidate_id)
+        .execute(&mut connection),
+    }
+    .expect("注入 candidate SQLite 篡改");
+    assert_eq!(changed, 1, "必须只篡改一个 candidate row");
 }
 
 fn maccms_json_input(base_url: &str) -> RuleInput {
@@ -469,6 +550,12 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
     assert!(candidate.required_grant.requires_network());
     assert_eq!(candidate.definition_hash.len(), 64);
     assert_eq!(candidate.plan_hash.len(), 64);
+    assert_eq!(
+        candidate.profile.version.as_deref(),
+        Some(candidate.definition_hash.as_str()),
+        "candidate profile version 必须绑定 Definition hash",
+    );
+    let expected_source_version = candidate.definition_hash.clone();
     drop(system);
     let system = temp.reopen_after_drop(Duration::from_mins(1)).await;
 
@@ -491,6 +578,7 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
         .install(candidate.id, CapabilityGrant::network_only())
         .await
         .expect("有效 candidate 应安装");
+    assert_eq!(first.version, expected_source_version);
     let consumed = system
         .install(consumed_candidate_id, CapabilityGrant::network_only())
         .await
@@ -504,6 +592,7 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
         .install(replacement.id, CapabilityGrant::network_only())
         .await
         .expect("同 identity 安装应追加 source revision");
+    assert_eq!(second.version, first.version);
     assert_eq!(first.source_id, second.source_id, "来源 identity 必须稳定");
     assert!(
         second.revision > first.revision,
@@ -521,6 +610,40 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
         .await
         .expect_err("过期 candidate 不得安装");
     assert_eq!(expiry_error.stage, RuleErrorStage::Candidate);
+}
+
+#[tokio::test]
+async fn candidate_install_revalidates_event_metadata_after_restart() {
+    init_mock_keyring();
+    for (name, tamper) in [
+        ("profile", CandidateTamper::Profile),
+        ("grant", CandidateTamper::RequiredGrant),
+        ("expiry", CandidateTamper::Expiry),
+        ("definition-hash", CandidateTamper::DefinitionHash),
+        ("diagnostics", CandidateTamper::Diagnostics),
+        ("artifact-algorithm", CandidateTamper::ArtifactAlgorithm),
+    ] {
+        let temp = TempRuleSystem::new(&format!("candidate-tamper-{name}"));
+        let system = temp.open(Duration::from_mins(1)).await;
+        let candidate = system
+            .prepare_install(maccms_json_input("https://fixture.example"))
+            .await
+            .expect("Maccms candidate 应先 durable staging");
+        system
+            .shutdown_for_test()
+            .await
+            .expect("篡改前应关闭 SQLite writer");
+        drop(system);
+        tamper_candidate_row(&temp.database_path(), &candidate, tamper);
+
+        let reopened = temp.reopen_after_drop(Duration::from_mins(1)).await;
+        let error = reopened
+            .install(candidate.id, CapabilityGrant::network_only())
+            .await
+            .expect_err("重启后 candidate durable metadata 篡改必须被拒绝");
+        assert_eq!(error.stage, RuleErrorStage::Candidate);
+        assert_eq!(error.code, "candidate_tampered");
+    }
 }
 
 #[tokio::test]
@@ -650,6 +773,21 @@ async fn stream_drop_does_not_cancel_and_cancel_and_catch_up_are_idempotent_and_
         })
         .await
         .expect("cancellable execution");
+    let cancelled_execution = cancelled.id;
+    let running_replay_error = system
+        .execute(ExecuteRequest {
+            source_id: source.source_id.clone(),
+            intent: StandardIntent::Discover,
+            input: IntentInput::None,
+            mode: ExecutionMode::Replay {
+                execution_id: cancelled_execution,
+            },
+        })
+        .await
+        .err()
+        .expect("running execution archive 不得 replay");
+    assert_eq!(running_replay_error.stage, RuleErrorStage::Replay);
+    assert_eq!(running_replay_error.code, "replay_execution_not_completed");
     assert!(cancelled.cancel(), "首次 cancel 必须改变状态");
     assert!(!cancelled.cancel(), "重复 cancel 必须幂等");
     let catch_up = catch_up_until_terminal(&cancelled).await;
@@ -668,6 +806,23 @@ async fn stream_drop_does_not_cancel_and_cancel_and_catch_up_are_idempotent_and_
             Some(ExecutionEventKind::Cancelled)
         ),
         "cancelled session 必须只有 Cancelled 终态: {catch_up:?}"
+    );
+    let cancelled_replay_error = system
+        .execute(ExecuteRequest {
+            source_id: source.source_id.clone(),
+            intent: StandardIntent::Discover,
+            input: IntentInput::None,
+            mode: ExecutionMode::Replay {
+                execution_id: cancelled_execution,
+            },
+        })
+        .await
+        .err()
+        .expect("cancelled execution archive 不得 replay");
+    assert_eq!(cancelled_replay_error.stage, RuleErrorStage::Replay);
+    assert_eq!(
+        cancelled_replay_error.code,
+        "replay_execution_not_completed"
     );
 
     let moved_session = system

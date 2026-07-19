@@ -110,7 +110,7 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
     let alpha_grant = alpha.required_grant.clone();
     install_draft(&storage, alpha, 0, alpha_grant, now + 1).await;
     let mut beta = candidate_for_source(now + 2, "source:beta");
-    beta.required_grant.network = true;
+    require_network_capability(&mut beta);
     let beta_grant = beta.required_grant.clone();
     install_draft(&storage, beta, 0, beta_grant, now + 3).await;
 
