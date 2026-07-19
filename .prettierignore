@@ -1,6 +1,17 @@
 .svelte-kit/
 .tmp/
 .vscode/
+.codegraph/
+.codex/
+.opencode/
+.claude/
+.pi/
+.trellis/
+.pi-subagents/
+.agents/
+.playwright-mcp/
+.impeccable/
+.omp/
 build/
 coverage/
 dist/
