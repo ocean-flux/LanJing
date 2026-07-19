@@ -109,7 +109,6 @@ pub(crate) fn validate_delta_source(
     }
     for item in &delta.upserts.items {
         ensure_source(&item.source_id, source_identity)?;
-        ensure_existing_owner(conn, "projection_items", "id", &item.id.0, source_identity)?;
     }
     for collection in &delta.upserts.collections {
         ensure_source(&collection.source_id, source_identity)?;
@@ -249,8 +248,8 @@ fn upsert_item(
     global_seq: u64,
 ) -> Result<(), StorageError> {
     let payload = serialize(item)?;
-    sql_query(
-        "INSERT INTO projection_items (id, source_identity, media_kind, title, completeness, payload_json, updated_global_seq) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET source_identity = excluded.source_identity, media_kind = excluded.media_kind, title = excluded.title, completeness = excluded.completeness, payload_json = excluded.payload_json, updated_global_seq = excluded.updated_global_seq",
+    let affected = sql_query(
+        "INSERT INTO projection_items (id, source_identity, media_kind, title, completeness, payload_json, updated_global_seq) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET source_identity = excluded.source_identity, media_kind = excluded.media_kind, title = excluded.title, completeness = excluded.completeness, payload_json = excluded.payload_json, updated_global_seq = excluded.updated_global_seq WHERE projection_items.source_identity = excluded.source_identity",
     )
     .bind::<Text, _>(&item.id.0)
     .bind::<Text, _>(&item.source_id.0)
@@ -259,8 +258,11 @@ fn upsert_item(
     .bind::<Text, _>(serialize(&item.completeness)?)
     .bind::<Text, _>(&payload)
     .bind::<BigInt, _>(to_i64(global_seq)?)
-    .execute(conn)
-    .map_err(database_error)?;
+        .execute(conn)
+        .map_err(database_error)?;
+    if affected == 0 {
+        return Err(StorageError::InvalidInput("投影资源跨来源写入".to_string()));
+    }
     Ok(())
 }
 

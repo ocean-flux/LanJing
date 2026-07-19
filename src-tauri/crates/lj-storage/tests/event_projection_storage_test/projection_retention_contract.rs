@@ -491,6 +491,10 @@ async fn d12_thousand_resource_event_projection_transaction_gate() {
     const SAMPLES: usize = 20;
     const RESOURCE_COUNT: usize = 1_000;
     const P95_LIMIT: std::time::Duration = std::time::Duration::from_millis(25);
+    const QUERY_SAMPLES: usize = 100;
+    const QUERY_P95_LIMIT: std::time::Duration = std::time::Duration::from_millis(10);
+    const CHECKPOINT_SAMPLES: usize = 10;
+    const CHECKPOINT_P95_LIMIT: std::time::Duration = std::time::Duration::from_millis(50);
 
     if cfg!(debug_assertions) {
         eprintln!("D12 timing gate requires a release build");
@@ -548,6 +552,112 @@ async fn d12_thousand_resource_event_projection_transaction_gate() {
     assert!(
         p95 <= P95_LIMIT,
         "D12 1,000-resource event+projection p95 was {p95:?}, limit is {P95_LIMIT:?}"
+    );
+    let query_id = MediaResourceId("item:d12:999".to_string());
+    let mut query_elapsed = Vec::with_capacity(QUERY_SAMPLES);
+    for _ in 0..QUERY_SAMPLES {
+        let started = std::time::Instant::now();
+        let queried = storage
+            .get_item(query_id.clone())
+            .await
+            .expect("query indexed D12 item")
+            .expect("D12 item exists");
+        assert_eq!(queried.id, query_id);
+        query_elapsed.push(started.elapsed());
+    }
+    query_elapsed.sort_unstable();
+    let query_p95 = query_elapsed[(QUERY_SAMPLES * 95).div_ceil(100) - 1];
+    assert!(
+        query_p95 <= QUERY_P95_LIMIT,
+        "D12 indexed item query p95 was {query_p95:?}, limit is {QUERY_P95_LIMIT:?}"
+    );
+
+    let mut checkpoint_elapsed = Vec::with_capacity(CHECKPOINT_SAMPLES);
+    for index in 0..CHECKPOINT_SAMPLES {
+        let started = std::time::Instant::now();
+        storage
+            .checkpoint_source(
+                "source:test",
+                now + 100 + i64::try_from(index).expect("checkpoint timestamp"),
+            )
+            .await
+            .expect("checkpoint D12 source projection");
+        checkpoint_elapsed.push(started.elapsed());
+    }
+    checkpoint_elapsed.sort_unstable();
+    let checkpoint_p95 = checkpoint_elapsed[(CHECKPOINT_SAMPLES * 95).div_ceil(100) - 1];
+    assert!(
+        checkpoint_p95 <= CHECKPOINT_P95_LIMIT,
+        "D12 source checkpoint p95 was {checkpoint_p95:?}, limit is {CHECKPOINT_P95_LIMIT:?}"
+    );
+    eprintln!(
+        "D12 release gates: projection_p95={p95:?}, indexed_query_p95={query_p95:?}, source_checkpoint_p95={checkpoint_p95:?}, dataset_items={RESOURCE_COUNT}, full_library_items_not_materialized=1000000, payload=synthetic_minimal_item"
+    );
+    storage.shutdown().await.expect("writer shutdown");
+}
+
+#[tokio::test]
+#[ignore = "D12 performance calibration; run with cargo test --release on target hardware"]
+async fn d12_thousand_archive_gc_gate() {
+    const ARCHIVE_COUNT: usize = 1_000;
+    const GC_LIMIT: std::time::Duration = std::time::Duration::from_secs(2);
+
+    if cfg!(debug_assertions) {
+        eprintln!("D12 timing gate requires a release build");
+        return;
+    }
+    let temp = TempStore::new("d12-gc");
+    let storage = temp.open().await;
+    let now = 1_750_000_700_000;
+    install_source(&storage, now).await;
+    for index in 0..ARCHIVE_COUNT {
+        let execution_id = Uuid::new_v4();
+        let offset = i64::try_from(index).expect("archive timestamp");
+        storage
+            .start_execution(ExecutionStart {
+                execution_id,
+                source_identity: "source:test".to_string(),
+                event_id: Uuid::new_v4(),
+                trace_id: format!("trace-d12-gc-start-{index}"),
+                started_at_ms: now + 1 + offset,
+                correlation_id: None,
+            })
+            .await
+            .expect("start D12 GC execution");
+        storage
+            .finish_execution(ExecutionFinish {
+                execution_id,
+                expected_version: 1,
+                event_id: Uuid::new_v4(),
+                status: ExecutionStatus::Completed,
+                finished_at_ms: now + 2 + offset,
+                trace_id: format!("trace-d12-gc-finish-{index}"),
+            })
+            .await
+            .expect("finish D12 GC execution");
+    }
+
+    let started = std::time::Instant::now();
+    let report = storage
+        .run_gc(
+            RetentionPolicy {
+                quota_bytes: u64::MAX,
+                archive_ttl_ms: Some(1),
+            },
+            now + i64::try_from(ARCHIVE_COUNT).expect("archive count") + 10,
+        )
+        .await
+        .expect("run D12 archive GC");
+    let elapsed = started.elapsed();
+    assert_eq!(report.marked, ARCHIVE_COUNT);
+    assert_eq!(report.external_refs_removed, ARCHIVE_COUNT);
+    assert_eq!(report.finalized, ARCHIVE_COUNT);
+    assert!(
+        elapsed <= GC_LIMIT,
+        "D12 1,000 archive GC took {elapsed:?}, limit is {GC_LIMIT:?}"
+    );
+    eprintln!(
+        "D12 release gate: archive_gc_1000={elapsed:?}, source_count=1, artifact_refs_per_archive=0, secret_refs_per_archive=0"
     );
     storage.shutdown().await.expect("writer shutdown");
 }

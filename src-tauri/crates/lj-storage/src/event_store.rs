@@ -495,7 +495,7 @@ pub(crate) fn stored_event_from_row(row: EventRow) -> Result<StoredEvent, Storag
     let secret_refs =
         serde_json::from_str(&row.secret_refs_json).map_err(|_| StorageError::Serialization)?;
     Ok(StoredEvent {
-        source_identity: row.source_identity.clone(),
+        source_identity: row.source_identity,
         envelope: EventEnvelope {
             global_seq: from_i64(row.global_seq, "global sequence")?,
             stream_id: row.stream_id,

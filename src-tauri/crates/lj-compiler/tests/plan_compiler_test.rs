@@ -201,3 +201,39 @@ fn unbounded_flow_is_a_compile_failure() {
 
     assert_compiler_rejects(&definition, "FLOW_UNBOUNDED");
 }
+
+#[test]
+#[ignore = "D12 performance calibration; run with cargo test --release on target hardware"]
+fn d12_plan_compile_p95_gate() {
+    const SAMPLES: usize = 1_000;
+    const P95_LIMIT: std::time::Duration = std::time::Duration::from_millis(5);
+
+    if cfg!(debug_assertions) {
+        eprintln!("D12 timing gate requires a release build");
+        return;
+    }
+    let compiler = Compiler::with_version("d12-compiler@1".to_string());
+    let definition = valid_definition();
+    compiler
+        .compile(&definition)
+        .expect("warm D12 compiler path");
+    let mut elapsed = Vec::with_capacity(SAMPLES);
+    for _ in 0..SAMPLES {
+        let started = std::time::Instant::now();
+        compiler
+            .compile(&definition)
+            .expect("compile valid D12 Definition");
+        elapsed.push(started.elapsed());
+    }
+    elapsed.sort_unstable();
+    let p95 = elapsed[(SAMPLES * 95).div_ceil(100) - 1];
+    assert!(
+        p95 <= P95_LIMIT,
+        "D12 Plan compile p95 was {p95:?}, limit is {P95_LIMIT:?}"
+    );
+    eprintln!(
+        "D12 release gate: plan_compile_p95={p95:?}, definition_nodes={}, definition_edges={}, payload=synthetic_minimal_definition",
+        definition.flow.nodes.len(),
+        definition.flow.edges.len()
+    );
+}

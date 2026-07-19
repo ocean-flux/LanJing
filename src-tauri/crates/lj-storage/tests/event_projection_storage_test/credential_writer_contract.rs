@@ -319,3 +319,62 @@ async fn failed_event_transaction_leaves_recoverable_artifact_orphan() {
     assert!(collect_file_bytes(&temp.config.artifact_root).is_empty());
     restarted.shutdown().await.expect("writer shutdown");
 }
+
+#[tokio::test]
+#[ignore = "D12 performance calibration; run with cargo test --release on target hardware"]
+async fn d12_sixteen_writer_receipt_latency_p95_gate() {
+    const WRITERS: usize = 16;
+    const P95_LIMIT: std::time::Duration = std::time::Duration::from_millis(250);
+
+    if cfg!(debug_assertions) {
+        eprintln!("D12 timing gate requires a release build");
+        return;
+    }
+    let temp = TempStore::new("d12-writer");
+    let storage = temp.open().await;
+    let mut tasks = Vec::with_capacity(WRITERS);
+    for index in 0..WRITERS {
+        let storage = storage.clone();
+        tasks.push(tokio::spawn(async move {
+            let started = std::time::Instant::now();
+            let receipt = storage
+                .append_event(AppendRequest {
+                    stream_id: format!("d12-writer/{index}"),
+                    expected_version: 0,
+                    event_id: Uuid::new_v4(),
+                    event_type: EventType::Other("d12_writer".to_string()),
+                    schema_version: 1,
+                    correlation_id: None,
+                    causation_id: None,
+                    trace_id: format!("trace-d12-writer-{index}"),
+                    occurred_at_ms: 1_750_000_800_000
+                        + i64::try_from(index).expect("writer timestamp"),
+                    payload: serde_json::json!({"index": index}),
+                    source_id: None,
+                    artifacts: Vec::new(),
+                })
+                .await
+                .expect("D12 writer durable receipt");
+            (receipt.global_seq, started.elapsed())
+        }));
+    }
+    let mut sequences = Vec::with_capacity(WRITERS);
+    let mut elapsed = Vec::with_capacity(WRITERS);
+    for task in tasks {
+        let (sequence, duration) = task.await.expect("D12 writer task join");
+        sequences.push(sequence);
+        elapsed.push(duration);
+    }
+    sequences.sort_unstable();
+    elapsed.sort_unstable();
+    assert_eq!(sequences, (1_u64..=16).collect::<Vec<_>>());
+    let p95 = elapsed[(WRITERS * 95).div_ceil(100) - 1];
+    assert!(
+        p95 <= P95_LIMIT,
+        "D12 16-writer durable receipt latency p95 was {p95:?}, limit is {P95_LIMIT:?}"
+    );
+    eprintln!(
+        "D12 release gate: writer_16_receipt_latency_p95={p95:?}, queue_wait_is_bounded_above_by_receipt_latency=true, payload=synthetic_index_json, artifact_refs=0"
+    );
+    storage.shutdown().await.expect("writer shutdown");
+}

@@ -267,6 +267,9 @@ pub(crate) fn process_gc(
     }
     purge_zero_ref_artifacts(conn, artifacts)?;
     let rows = gc_execution_rows(conn)?;
+    let soft_quota = policy.quota_bytes.saturating_mul(90) / 100;
+    let mut checkpointed_sources = HashSet::new();
+    let mut library_checkpointed = false;
     for row in rows {
         let execution = execution_from_row(row)?;
         let mut state = execution.gc_state;
@@ -276,12 +279,18 @@ pub(crate) fn process_gc(
                     .finished_at_ms
                     .is_some_and(|finished| finished <= now_ms.saturating_sub(ttl))
             });
-            let soft_quota = policy.quota_bytes.saturating_mul(90) / 100;
-            let over_quota = artifact_usage(conn)? >= soft_quota;
+            let over_quota = !expired && artifact_usage(conn)? >= soft_quota;
             if !expired && !over_quota {
                 continue;
             }
-            mark_execution_for_gc(conn, artifacts, &execution, now_ms)?;
+            if checkpointed_sources.insert(execution.source_identity.clone()) {
+                process_checkpoint_source(conn, artifacts, &execution.source_identity, now_ms)?;
+            }
+            if !library_checkpointed {
+                process_checkpoint_library(conn, artifacts, now_ms)?;
+                library_checkpointed = true;
+            }
+            mark_execution_after_checkpoint(conn, execution.execution_id)?;
             report.marked += 1;
             state = GcState::Marked;
         }
@@ -376,8 +385,15 @@ fn mark_execution_for_gc(
 ) -> Result<(), StorageError> {
     process_checkpoint_source(conn, artifacts, &execution.source_identity, now_ms)?;
     process_checkpoint_library(conn, artifacts, now_ms)?;
+    mark_execution_after_checkpoint(conn, execution.execution_id)
+}
+
+fn mark_execution_after_checkpoint(
+    conn: &mut SqliteConnection,
+    execution_id: Uuid,
+) -> Result<(), StorageError> {
     sql_query("UPDATE execution_projection SET gc_state = 'marked' WHERE execution_id = ? AND gc_state = 'active'")
-        .bind::<Text, _>(execution.execution_id.to_string())
+        .bind::<Text, _>(execution_id.to_string())
         .execute(conn)
         .map_err(database_error)?;
     Ok(())

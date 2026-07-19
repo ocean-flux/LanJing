@@ -669,10 +669,22 @@ async fn delta_replay_after_terminal_is_idempotent_and_cross_source_ids_are_prot
         })
         .await
         .expect("commit alpha delta");
+    let same_owner_no_op = storage
+        .commit_execution_delta(DeltaCommit {
+            execution_id: alpha_execution_id,
+            expected_version: 2,
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-alpha-no-op".to_string(),
+            occurred_at_ms: now + 3,
+            delta: delta.clone(),
+        })
+        .await
+        .expect("same-source identical upsert is a legal no-op");
+    assert!(same_owner_no_op.global_seq > first.global_seq);
     storage
         .finish_execution(ExecutionFinish {
             execution_id: alpha_execution_id,
-            expected_version: 2,
+            expected_version: 3,
             event_id: Uuid::new_v4(),
             status: ExecutionStatus::Completed,
             finished_at_ms: now + 4,
@@ -781,5 +793,71 @@ async fn append_event_retries_require_matching_artifact_refs_and_integrity() {
         storage.append_event(request(b"different artifact")).await,
         Err(StorageError::IdempotencyMismatch)
     ));
+    storage.shutdown().await.expect("writer shutdown");
+}
+
+#[tokio::test]
+#[ignore = "D12 performance calibration; run with cargo test --release on target hardware"]
+async fn d12_replay_event_scan_throughput_gate() {
+    const EVENT_COUNT: usize = 1_000_000;
+    const MIN_EVENTS_PER_SECOND: f64 = 500_000.0;
+
+    if cfg!(debug_assertions) {
+        eprintln!("D12 timing gate requires a release build");
+        return;
+    }
+    let temp = TempStore::new("d12-replay-scan");
+    let storage = temp.open().await;
+    let now = 1_750_001_500_000;
+    install_source(&storage, now).await;
+    let execution_id = Uuid::new_v4();
+    storage
+        .start_execution(ExecutionStart {
+            execution_id,
+            source_identity: "source:test".to_string(),
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-d12-replay-start".to_string(),
+            started_at_ms: now + 1,
+            correlation_id: None,
+        })
+        .await
+        .expect("start D12 replay scan execution");
+    let stream_id = format!("execution/{execution_id}");
+    for index in 0..EVENT_COUNT {
+        storage
+            .append_event(AppendRequest {
+                stream_id: stream_id.clone(),
+                expected_version: u64::try_from(index + 1).expect("event revision"),
+                event_id: Uuid::new_v4(),
+                event_type: EventType::Execution,
+                schema_version: 1,
+                correlation_id: None,
+                causation_id: None,
+                trace_id: "trace-d12-replay".to_string(),
+                occurred_at_ms: now + 2 + i64::try_from(index).expect("event timestamp"),
+                payload: serde_json::json!({"kind": "diagnostic"}),
+                source_id: Some("source:test".to_string()),
+                artifacts: Vec::new(),
+            })
+            .await
+            .expect("append D12 replay event");
+    }
+
+    let started = std::time::Instant::now();
+    let events = storage
+        .catch_up_execution(execution_id, 0)
+        .await
+        .expect("scan D12 replay events");
+    let elapsed = started.elapsed();
+    assert_eq!(events.len(), EVENT_COUNT + 1);
+    let event_count = u32::try_from(events.len()).expect("event count fits u32");
+    let events_per_second = f64::from(event_count) / elapsed.as_secs_f64();
+    assert!(
+        events_per_second >= MIN_EVENTS_PER_SECOND,
+        "D12 replay scan was {events_per_second:.0} events/s, minimum is {MIN_EVENTS_PER_SECOND:.0}"
+    );
+    eprintln!(
+        "D12 release gate: replay_scan={events_per_second:.0} events/s, event_count={EVENT_COUNT}, payload=synthetic_diagnostic_json, artifact_refs_per_event=0, source_count=1"
+    );
     storage.shutdown().await.expect("writer shutdown");
 }
