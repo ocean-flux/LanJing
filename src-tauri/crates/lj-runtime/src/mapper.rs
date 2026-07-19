@@ -3,15 +3,13 @@
 use std::collections::BTreeMap;
 use std::fmt::Write;
 
-use crate::graph::{Graph, MapperOutputKind, MapperSpec};
-use crate::node_data::NodeData;
-use crate::processor::ExecutionContext;
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::{
     MediaAction, MediaAsset, MediaAssetKind, MediaAssetLocator, MediaCollection, MediaGraphDelta,
     MediaItem, MediaResourceId, MediaUnit, ResourceCompleteness, SourceProfile, item_resource_id,
     parse_item_resource_id, parse_unit_resource_id, unit_resource_id,
 };
+use lj_rule_model::{ControlledMapper, definition::MapperOutputKind};
 use serde_json::Value;
 
 use crate::mapper_fields::{
@@ -29,46 +27,43 @@ pub(crate) struct MapperContext {
 }
 
 impl MapperContext {
-    /// 从图和执行上下文创建 mapper 上下文。
+    /// 从 immutable Plan 的已安装来源元数据创建 mapper 上下文。
+    ///
+    /// 此构造器不读取旧 `Graph`，使 Plan runtime 能复用同一受控媒体映射语义。
     #[must_use]
-    pub(crate) fn new(graph: &Graph, ctx: &ExecutionContext) -> Self {
-        let source_title = if ctx.base_url.trim().is_empty() {
-            graph.base_url.clone()
-        } else {
-            ctx.base_url.clone()
-        };
+    pub(crate) fn for_plan(
+        source_id: MediaResourceId,
+        source_title: String,
+        supported_intents: Vec<StandardIntent>,
+    ) -> Self {
         Self {
-            source_id: MediaResourceId(format!("source:{}", graph.source_id.0)),
+            source_id,
             source_title,
-            supported_intents: graph.intent_exports.keys().copied().collect(),
+            supported_intents,
         }
     }
 
-    /// 将 Mapper 节点声明的输出转换为标准媒体资源图增量。
+    /// 将 Plan 中的 `ControlledMapper` 和 JSON 中间记录转换为标准媒体增量。
     #[must_use]
-    pub(crate) fn map_node_data(
+    pub(crate) fn map_plan_json(
         &self,
-        spec: &MapperSpec,
+        mapper: &ControlledMapper,
         intent: StandardIntent,
         input: &IntentInput,
-        data: NodeData,
-    ) -> NodeData {
-        match data {
-            NodeData::Json(value) => NodeData::Delta(self.map_json(spec, intent, input, &value)),
-            NodeData::Delta(delta) => NodeData::Delta(self.with_source(delta)),
-            other => other,
-        }
+        value: &Value,
+    ) -> MediaGraphDelta {
+        self.map_json(mapper.output, intent, input, value)
     }
 
     #[must_use]
     fn map_json(
         &self,
-        spec: &MapperSpec,
+        output: MapperOutputKind,
         intent: StandardIntent,
         input: &IntentInput,
         value: &Value,
     ) -> MediaGraphDelta {
-        match spec.output {
+        match output {
             MapperOutputKind::Items => {
                 let completeness = if intent == StandardIntent::ResolveItem {
                     ResourceCompleteness::Complete
@@ -342,18 +337,6 @@ impl MapperContext {
                 });
             }
         }
-    }
-
-    #[must_use]
-    fn with_source(&self, mut delta: MediaGraphDelta) -> MediaGraphDelta {
-        if delta
-            .sources
-            .iter()
-            .all(|source| source.id != self.source_id)
-        {
-            delta.sources.insert(0, self.source_profile());
-        }
-        delta
     }
 
     #[must_use]

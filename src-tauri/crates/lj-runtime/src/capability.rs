@@ -1,4 +1,4 @@
-//! 能力检查 — 从原 `lj-sandbox` 迁入 runtime owner。
+//! Plan runtime 的能力检查归属模块。
 
 use lj_rule_model::{Capability, CapabilityError, PolicyCapabilities, SystemCapabilities};
 

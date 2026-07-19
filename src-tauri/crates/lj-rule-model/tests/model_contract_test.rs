@@ -1,13 +1,19 @@
 //! 规则模型合同测试：Definition/Plan 隔离、hash 稳定、EventEnvelope 字段。
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::{
     CapabilityManifest, EventEnvelope, EventType, ExecutionPlan, FlowGraph, IntentEntry,
-    RuleDefinition, SourceIdentity, definition_hash,
+    RuleDefinition, SourceIdentity, canonical_json, definition_hash,
 };
+use serde::Serialize;
 use uuid::Uuid;
+
+#[derive(Serialize)]
+struct NestedMaps {
+    values: HashMap<String, HashMap<String, String>>,
+}
 
 fn sample_definition() -> RuleDefinition {
     let entry = Uuid::parse_str("11111111-1111-1111-1111-111111111111").unwrap();
@@ -83,10 +89,38 @@ fn definition_hash_is_stable() {
     let hb = definition_hash(&b).expect("hash b");
     assert_eq!(ha, hb);
     assert_eq!(ha.len(), 64);
+    let canonical = canonical_json(&a).expect("canonical Definition");
+    assert_eq!(ha, blake3::hash(canonical.as_bytes()).to_hex().to_string());
     // 字段顺序扰动：重建相同内容
     let mut c = sample_definition();
     c.source_id_rules = vec!["source_item_id".to_string()];
     assert_eq!(ha, definition_hash(&c).expect("hash c"));
+}
+
+#[test]
+fn canonical_json_sorts_nested_hash_map_keys() {
+    let mut forward_inner = HashMap::new();
+    forward_inner.insert("alpha".to_string(), "one".to_string());
+    forward_inner.insert("zeta".to_string(), "two".to_string());
+    let mut forward_outer = HashMap::new();
+    forward_outer.insert("first".to_string(), forward_inner);
+
+    let mut reverse_inner = HashMap::new();
+    reverse_inner.insert("zeta".to_string(), "two".to_string());
+    reverse_inner.insert("alpha".to_string(), "one".to_string());
+    let mut reverse_outer = HashMap::new();
+    reverse_outer.insert("first".to_string(), reverse_inner);
+
+    let forward = NestedMaps {
+        values: forward_outer,
+    };
+    let reverse = NestedMaps {
+        values: reverse_outer,
+    };
+    assert_eq!(
+        canonical_json(&forward).expect("canonical forward JSON"),
+        canonical_json(&reverse).expect("canonical reverse JSON")
+    );
 }
 
 #[test]

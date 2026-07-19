@@ -1,24 +1,32 @@
-//! 规则运行时引擎 crate。
+//! immutable Execution Plan runtime。
 //!
-//! 负责规则图的执行调度、生命周期管理（RuntimeProfile 三档配置）、
-//! 节点间数据流编排、并发控制与错误恢复。
-//!
-//! C1：临时托管旧 Graph 类型与 `NodeProcessor` seam；C3 起改为 Plan-only。
+//! 只接收 compiler 产出的 `ExecutionPlan`，通过 typed HTTP、QuickJS、Extract effect
+//! seam 执行。公开执行合同只包含 immutable Plan 与 typed effect seam。
 
 pub mod capability;
-pub mod executor;
-pub mod graph;
+pub mod effect;
 pub(crate) mod mapper;
 pub(crate) mod mapper_fields;
 pub mod node_data;
-pub mod processor;
-pub mod tap;
-pub mod tracing_mod;
+pub mod plan_runtime;
 
 pub use capability::{check_capability, default_capabilities, merge};
-pub use graph::{
-    ConditionBranch, Edge, Graph, JsSpec, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind,
-    NodeSpec, SourceId, SubroutineId,
+pub use effect::{
+    ArchivedEffectCapture, CancellationHandle, CapturedEffectOutput, DurableCaptureReceipt,
+    EffectArchive, EffectArchiveError, EffectCancellation, EffectCapture,
+    EffectCaptureMaterialSensitivity, EffectError, EffectErrorCode, EffectFailure, EffectHandlers,
+    EffectInput, EffectOutput, EffectReplayLookup, EffectWitness, EffectWitnessError,
+    ExtractEffectHandler, ExtractEffectRequest, ExtractEffectWitness, ExtractOutput,
+    HttpCredentialsError, HttpDnsTargetKind, HttpDnsTargetWitness, HttpEffectErrorKind,
+    HttpEffectHandler, HttpEffectRequest, HttpEffectWitness, HttpExecutionCredentials,
+    HttpRedirectWitness, HttpRequestBodyWitness, HttpRequestHeaderWitness, HttpRequestWitness,
+    QuickJsEffectHandler, QuickJsEffectRequest, QuickJsEffectWitness, QuickJsErrorKind,
+    QuickJsHostCall, QuickJsHostCallWitness, QuickJsOutput, SecretHttpHeaders, effect_bytes_hash,
+    effect_input_hash, effect_output_hash, quickjs_script_hash,
 };
-pub use node_data::{HttpResponse, NodeData, NodeDataVariant};
-pub use processor::{ExecutionContext, NodeProcessor, SegmentSpec};
+pub use node_data::{HttpResponse, NodeData};
+pub use plan_runtime::{
+    ExecutionEvent, ExecutionEventKind, ExecutionFailure, ExecutionMode, ExecutionSession,
+    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, PlanRuntimeError, RuntimeFailureCode,
+    SUPPORTED_PLAN_SCHEMA_VERSION,
+};

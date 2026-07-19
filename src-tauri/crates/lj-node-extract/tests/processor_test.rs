@@ -1,11 +1,22 @@
 //! 集成测试：HTML 提取、回退链、charset 解码、正则清理。
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use lj_node_extract::html::{extract_elements_from_doc, extract_from_doc, parse_html};
 use lj_node_extract::html_css::try_extract_on_doc;
+use lj_node_extract::processor::ExtractEffectAdapter;
 use lj_node_extract::processor::decode_body;
 use lj_node_extract::regex_extract::{RegexCache, apply_regex_clean};
-use lj_rule_model::{ExtractRule, ExtractType, RegexClean};
+use lj_rule_model::{
+    ExpectedDataType, ExtractRule, ExtractSpec, ExtractType, OutputTarget, RegexClean,
+};
+use lj_runtime::{
+    CancellationHandle, EffectInput, EffectOutput, ExtractEffectHandler, ExtractEffectRequest,
+    HttpResponse,
+};
 use regex::Regex;
+use uuid::Uuid;
 
 /// HTML + CSS 选择器提取文本。
 #[test]
@@ -160,4 +171,49 @@ fn test_html_list() {
     let text1: String = list[1].text().collect();
     assert!(text0.contains("修罗武神"));
     assert!(text1.contains("凡人修仙传"));
+}
+
+#[tokio::test]
+async fn plan_extract_effect_borrows_typed_http_output() {
+    let processor = ExtractEffectAdapter;
+    let response = Arc::new(EffectOutput::Http(HttpResponse {
+        status: 200,
+        headers: HashMap::new(),
+        body: "<h1>类型化提取</h1>".as_bytes().to_vec(),
+        charset: Some("utf-8".to_string()),
+    }));
+    let capture = processor
+        .execute_extract(
+            ExtractEffectRequest {
+                execution_id: Uuid::new_v4(),
+                source_id: "extract-effect-test".to_string(),
+                node_id: Uuid::new_v4(),
+                effect_id: Uuid::new_v4(),
+                trace_id: "extract-effect-trace".to_string(),
+                spec: ExtractSpec {
+                    rules: vec![ExtractRule::CssSelector {
+                        selector: "h1".to_string(),
+                        extract_type: ExtractType::Text,
+                        regex_clean: None,
+                    }],
+                    field_rules: HashMap::new(),
+                    expected_type: ExpectedDataType::Html,
+                    output_target: OutputTarget::default(),
+                },
+                input: EffectInput::Output(response),
+                base_url: "https://example.invalid".to_string(),
+            },
+            CancellationHandle::new().token(),
+        )
+        .await
+        .expect("Extract effect 应返回类型化记录");
+
+    let EffectOutput::Extract(output) = &capture.output else {
+        panic!("Extract effect 必须返回 Extract 类型化输出");
+    };
+    assert_eq!(output.records.len(), 1);
+    assert_eq!(output.records[0]["title"], "类型化提取");
+    capture
+        .validate()
+        .expect("Extract output 必须与输入 hash witness 绑定");
 }

@@ -1,115 +1,207 @@
-//! Maccms10 视频源 translator — 采集 API URL → 标准意图 Graph。
+//! Maccms10 JSON/XML 采集 API → `RuleDefinition` 翻译。
 //!
-//! 参考 `legado::translator` 的 `build_http_extract_pair` 模式,详情 Flow 带播放 URL 解析字段。
+//! 本模块只构造作者 Definition；不会生成旧 Graph、执行计划或运行时节点。节点 ID 由
+//! 稳定来源身份与语义角色派生，使同一采集端点的 compiler 产物保持可复现。
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
-use sha2::{Digest, Sha256};
+use lj_capability::{IntentExport, StandardIntent};
+use lj_rule_model::definition::MapperOutputKind;
+use lj_rule_model::{
+    CapabilityManifest, ControlledMapper, ExpectedDataType, ExtractRule, ExtractSpec, ExtractType,
+    FlowEdge, FlowGraph, FlowNode, FlowNodeKind, HttpMethod, HttpSpec, PolicyCapabilities,
+    RuleDefinition, SourceIdentity, SystemCapabilities,
+};
 use uuid::Uuid;
-
-use lj_rule_model::{ExpectedDataType, ExtractRule, ExtractSpec, ExtractType};
-use lj_rule_model::{HttpMethod, HttpSpec};
-use lj_runtime::{Edge, JsSpec, MapperOutputKind, MapperSpec, Node, NodeId, NodeKind, NodeSpec};
 
 use super::types::MaccmsFormat;
 use super::vocab::{
-    COVER_FIELD, DESCRIPTION_FIELD, KIND_FIELD, NAME_FIELD, PLAY_FROM_FIELD, PLAY_URL_FIELD,
-    REMARKS_FIELD, TYPE_NAME_FIELD, VOD_CONTENT_FIELD, VOD_ID_EXPORT_FIELD, VOD_ID_FIELD,
+    ASSET_IDENTITY_FIELDS, COVER_FIELD, DESCRIPTION_FIELD, DISCOVERY_IDENTITY_FIELDS,
+    ITEM_IDENTITY_FIELDS, KIND_FIELD, NAME_FIELD, PLAY_FROM_FIELD, PLAY_URL_FIELD, REMARKS_FIELD,
+    TYPE_NAME_FIELD, UNIT_IDENTITY_FIELDS, VOD_CONTENT_FIELD, VOD_ID_EXPORT_FIELD, VOD_ID_FIELD,
     VOD_NAME_FIELD, VOD_PIC_FIELD, VOD_PLAY_FROM_FIELD, VOD_PLAY_URL_FIELD, VOD_REMARKS_FIELD,
 };
 
-/// 构建一对 Http + Extract 节点。
-pub(crate) fn build_pair(
-    url: &str,
-    expected_type: ExpectedDataType,
+/// 从已验证的 Maccms 端点构造只含标准意图的 Definition。
+#[must_use]
+pub(crate) fn definition(base_url: String, format: MaccmsFormat) -> RuleDefinition {
+    let source_identity = source_identity(&base_url, format);
+    let expected_type = match format {
+        MaccmsFormat::Json => ExpectedDataType::Json,
+        MaccmsFormat::Xml => ExpectedDataType::Xml,
+    };
+    let query_separator = if base_url.contains('?') { '&' } else { '?' };
+
+    let discover_http = node_id(&source_identity, "discover-http");
+    let discover_extract = node_id(&source_identity, "discover-extract");
+    let discover_mapper = node_id(&source_identity, "discover-mapper");
+    let detail_http = node_id(&source_identity, "detail-http");
+    let detail_extract = node_id(&source_identity, "detail-extract");
+    let item_mapper = node_id(&source_identity, "item-mapper");
+    let unit_mapper = node_id(&source_identity, "unit-mapper");
+    let asset_mapper = node_id(&source_identity, "asset-mapper");
+
+    let discover_url = format!("{base_url}{query_separator}ac=list&t={{{{type}}}}&pg={{{{page}}}}");
+    let detail_url = format!("{base_url}{query_separator}ac=detail&ids={{{{vod_id}}}}");
+    let nodes = vec![
+        http_node(discover_http, discover_url, expected_type),
+        extract_node(
+            discover_extract,
+            discover_rules(format),
+            discover_field_rules(format),
+            expected_type,
+        ),
+        mapper_node(
+            discover_mapper,
+            MapperOutputKind::Discovery,
+            DISCOVERY_IDENTITY_FIELDS,
+        ),
+        http_node(detail_http, detail_url, expected_type),
+        extract_node(
+            detail_extract,
+            detail_rules(format),
+            detail_field_rules(format),
+            expected_type,
+        ),
+        mapper_node(item_mapper, MapperOutputKind::Items, ITEM_IDENTITY_FIELDS),
+        mapper_node(unit_mapper, MapperOutputKind::Units, UNIT_IDENTITY_FIELDS),
+        mapper_node(
+            asset_mapper,
+            MapperOutputKind::Assets,
+            ASSET_IDENTITY_FIELDS,
+        ),
+    ];
+    let edges = vec![
+        edge(discover_http, discover_extract),
+        edge(discover_extract, discover_mapper),
+        edge(detail_http, detail_extract),
+        edge(detail_extract, item_mapper),
+        edge(detail_extract, unit_mapper),
+        edge(detail_extract, asset_mapper),
+    ];
+    let intent_exports = BTreeMap::from([
+        (
+            StandardIntent::Discover,
+            IntentExport::new(discover_http, discover_mapper),
+        ),
+        (
+            StandardIntent::ResolveItem,
+            IntentExport::new(detail_http, item_mapper),
+        ),
+        (
+            StandardIntent::ListUnits,
+            IntentExport::new(detail_http, unit_mapper),
+        ),
+        (
+            StandardIntent::ResolveAsset,
+            IntentExport::new(detail_http, asset_mapper),
+        ),
+    ]);
+
+    RuleDefinition {
+        schema_version: 1,
+        source_identity: SourceIdentity {
+            id: source_identity,
+        },
+        base_url,
+        intent_exports,
+        flow: FlowGraph { nodes, edges },
+        capability_manifest: CapabilityManifest {
+            required: PolicyCapabilities {
+                network: true,
+                system: SystemCapabilities::default(),
+            },
+        },
+        source_id_rules: vec![VOD_ID_FIELD.to_string()],
+    }
+}
+
+fn source_identity(base_url: &str, format: MaccmsFormat) -> String {
+    let format_label = match format {
+        MaccmsFormat::Json => "json",
+        MaccmsFormat::Xml => "xml",
+    };
+    let digest = blake3::hash(format!("maccms:{format_label}:{base_url}").as_bytes());
+    format!("source:maccms:{}", digest.to_hex())
+}
+
+fn node_id(source_identity: &str, role: &str) -> Uuid {
+    let bytes = *blake3::hash(format!("{source_identity}:{role}").as_bytes()).as_bytes();
+    let mut uuid_bytes = [0_u8; 16];
+    uuid_bytes.copy_from_slice(&bytes[..16]);
+    Uuid::from_bytes(uuid_bytes)
+}
+
+fn edge(from: Uuid, to: Uuid) -> FlowEdge {
+    FlowEdge {
+        from,
+        to,
+        condition_branch: None,
+    }
+}
+
+fn http_node(id: Uuid, url: String, expected_type: ExpectedDataType) -> FlowNode {
+    FlowNode {
+        id,
+        kind: FlowNodeKind::Http,
+        http: Some(HttpSpec {
+            method: HttpMethod::Get,
+            url,
+            headers: HashMap::new(),
+            body: None,
+            charset: None,
+            expected_type,
+        }),
+        js_code: None,
+        extract: None,
+        mapper: None,
+        span: None,
+    }
+}
+
+fn extract_node(
+    id: Uuid,
     rules: Vec<ExtractRule>,
     field_rules: HashMap<String, Vec<ExtractRule>>,
-) -> (Node, Node) {
-    let http_spec = HttpSpec {
-        method: HttpMethod::Get,
-        url: url.to_string(),
-        headers: HashMap::new(),
-        body: None,
-        charset: None,
-        expected_type,
-    };
-    let http_node = create_node(NodeSpec {
-        kind: NodeKind::Http,
-        http: Some(http_spec),
-        js: None,
-        extract: None,
-        mapper: None,
-    });
-
-    let extract_spec = ExtractSpec {
-        rules,
-        field_rules,
-        expected_type,
-        output_target: lj_rule_model::OutputTarget::default(),
-    };
-    let extract_node = create_node(NodeSpec {
-        kind: NodeKind::Extract,
+    expected_type: ExpectedDataType,
+) -> FlowNode {
+    FlowNode {
+        id,
+        kind: FlowNodeKind::Extract,
         http: None,
-        js: None,
-        extract: Some(extract_spec),
-        mapper: None,
-    });
-
-    (http_node, extract_node)
-}
-
-/// 创建 Js 节点(Maccms 发现用空 code 满足首个 Flow 入口,无 @js: 块)。
-#[must_use]
-pub(crate) fn create_js_node(code: &str) -> Node {
-    create_node(NodeSpec {
-        kind: NodeKind::Js,
-        http: None,
-        js: Some(JsSpec {
-            code: code.to_string(),
+        js_code: None,
+        extract: Some(ExtractSpec {
+            rules,
+            field_rules,
+            expected_type,
+            output_target: lj_rule_model::OutputTarget::default(),
         }),
-        extract: None,
         mapper: None,
-    })
+        span: None,
+    }
 }
 
-/// 创建受控 Mapper 节点。
-#[must_use]
-pub(crate) fn create_mapper_node(output: MapperOutputKind, identity_fields: &[&str]) -> Node {
-    create_node(NodeSpec {
-        kind: NodeKind::Mapper,
+fn mapper_node(id: Uuid, output: MapperOutputKind, identity_fields: &[&str]) -> FlowNode {
+    FlowNode {
+        id,
+        kind: FlowNodeKind::Mapper,
         http: None,
-        js: None,
+        js_code: None,
         extract: None,
-        mapper: Some(MapperSpec {
+        mapper: Some(ControlledMapper {
             output,
             identity_fields: identity_fields
                 .iter()
                 .map(|field| (*field).to_string())
                 .collect(),
         }),
-    })
-}
-
-/// 创建带 `import_hash` 的节点。
-fn create_node(spec: NodeSpec) -> Node {
-    use std::fmt::Write;
-    let node_id = NodeId(Uuid::new_v4());
-    let json = serde_json::to_string(&spec).unwrap_or_default();
-    let hash = Sha256::digest(json.as_bytes());
-    let mut hex = String::with_capacity(64);
-    for b in hash {
-        let _ = write!(hex, "{b:02x}");
-    }
-    Node {
-        node_id,
-        import_hash: hex,
-        spec,
+        span: None,
     }
 }
 
-/// 发现列表 rules(取 item 列表的 XPath/JSONPath)。
-pub(crate) fn discover_rules(at: MaccmsFormat) -> Vec<ExtractRule> {
-    match at {
+/// 发现列表规则（取得 Maccms 的视频数组）。
+pub(crate) fn discover_rules(format: MaccmsFormat) -> Vec<ExtractRule> {
+    match format {
         MaccmsFormat::Json => vec![ExtractRule::JsonPath {
             path: "$.list[*]".to_string(),
             extract_type: ExtractType::Text,
@@ -123,67 +215,73 @@ pub(crate) fn discover_rules(at: MaccmsFormat) -> Vec<ExtractRule> {
     }
 }
 
-/// 详情 item rules(取首 item 的 XPath/JSONPath)。
-pub(crate) fn detail_rules(at: MaccmsFormat) -> Vec<ExtractRule> {
-    // detail 响应同 list 结构(<rss><list><video> 或 {list:[...]}),取首 item
-    discover_rules(at)
+/// 详情规则（Maccms JSON/XML 与列表共享外层视频数组）。
+pub(crate) fn detail_rules(format: MaccmsFormat) -> Vec<ExtractRule> {
+    discover_rules(format)
 }
 
-/// 发现字段 rules(列表项元数据,KTD4 按 format 分别生成)。
-pub(crate) fn discover_field_rules(at: MaccmsFormat) -> HashMap<String, Vec<ExtractRule>> {
-    let mut map = HashMap::new();
-    match at {
+/// 发现记录的字段规则。
+pub(crate) fn discover_field_rules(format: MaccmsFormat) -> HashMap<String, Vec<ExtractRule>> {
+    let mut fields = HashMap::new();
+    match format {
         MaccmsFormat::Json => {
-            insert_json(&mut map, NAME_FIELD, &format!("$.{VOD_NAME_FIELD}"));
-            insert_json(&mut map, COVER_FIELD, &format!("$.{VOD_PIC_FIELD}"));
-            insert_json(&mut map, VOD_ID_EXPORT_FIELD, &format!("$.{VOD_ID_FIELD}"));
-            insert_json(&mut map, KIND_FIELD, &format!("$.{TYPE_NAME_FIELD}"));
-            insert_json(&mut map, REMARKS_FIELD, &format!("$.{VOD_REMARKS_FIELD}"));
+            insert_json(&mut fields, NAME_FIELD, &format!("$.{VOD_NAME_FIELD}"));
+            insert_json(&mut fields, COVER_FIELD, &format!("$.{VOD_PIC_FIELD}"));
+            insert_json(
+                &mut fields,
+                VOD_ID_EXPORT_FIELD,
+                &format!("$.{VOD_ID_FIELD}"),
+            );
+            insert_json(&mut fields, KIND_FIELD, &format!("$.{TYPE_NAME_FIELD}"));
+            insert_json(
+                &mut fields,
+                REMARKS_FIELD,
+                &format!("$.{VOD_REMARKS_FIELD}"),
+            );
         }
         MaccmsFormat::Xml => {
-            insert_xml(&mut map, NAME_FIELD, "name/text()");
-            insert_xml(&mut map, COVER_FIELD, "pic/text()");
-            insert_xml(&mut map, VOD_ID_EXPORT_FIELD, "id/text()");
-            insert_xml(&mut map, KIND_FIELD, "type/text()");
-            insert_xml(&mut map, REMARKS_FIELD, "note/text()");
+            insert_xml(&mut fields, NAME_FIELD, "name/text()");
+            insert_xml(&mut fields, COVER_FIELD, "pic/text()");
+            insert_xml(&mut fields, VOD_ID_EXPORT_FIELD, "id/text()");
+            insert_xml(&mut fields, KIND_FIELD, "type/text()");
+            insert_xml(&mut fields, REMARKS_FIELD, "note/text()");
         }
     }
-    map
+    fields
 }
 
-/// 详情字段 rules(元数据 + `vod_play_url/vod_play_from,KTD4`)。
-pub(crate) fn detail_field_rules(at: MaccmsFormat) -> HashMap<String, Vec<ExtractRule>> {
-    let mut map = discover_field_rules(at);
-    match at {
+/// 详情记录的字段规则，包括播放线路与播放地址。
+pub(crate) fn detail_field_rules(format: MaccmsFormat) -> HashMap<String, Vec<ExtractRule>> {
+    let mut fields = discover_field_rules(format);
+    match format {
         MaccmsFormat::Json => {
             insert_json(
-                &mut map,
+                &mut fields,
                 DESCRIPTION_FIELD,
                 &format!("$.{VOD_CONTENT_FIELD}"),
             );
-            insert_json(&mut map, PLAY_URL_FIELD, &format!("$.{VOD_PLAY_URL_FIELD}"));
             insert_json(
-                &mut map,
+                &mut fields,
+                PLAY_URL_FIELD,
+                &format!("$.{VOD_PLAY_URL_FIELD}"),
+            );
+            insert_json(
+                &mut fields,
                 PLAY_FROM_FIELD,
                 &format!("$.{VOD_PLAY_FROM_FIELD}"),
             );
         }
         MaccmsFormat::Xml => {
-            // Maccms XML 详情：<des><![CDATA[...]]></des>
-            insert_xml(&mut map, DESCRIPTION_FIELD, "des");
-            // Maccms XML 详情：<dl><dd flag="hnyun"><![CDATA[...]]></dd>...</dl>
-            // playUrl：取所有 dd 的 CDATA，$$$ 拼接
-            insert_xml(&mut map, PLAY_URL_FIELD, "dl/dd");
-            // playFrom：取所有 dd 的 flag 属性，$$$ 拼接
-            insert_xml_attr(&mut map, PLAY_FROM_FIELD, "dl/dd", "flag");
+            insert_xml(&mut fields, DESCRIPTION_FIELD, "des");
+            insert_xml(&mut fields, PLAY_URL_FIELD, "dl/dd");
+            insert_xml_attr(&mut fields, PLAY_FROM_FIELD, "dl/dd", "flag");
         }
     }
-    map
+    fields
 }
 
-/// 插入 `JSONPath` 字段规则。
-fn insert_json(map: &mut HashMap<String, Vec<ExtractRule>>, name: &str, path: &str) {
-    map.insert(
+fn insert_json(fields: &mut HashMap<String, Vec<ExtractRule>>, name: &str, path: &str) {
+    fields.insert(
         name.to_string(),
         vec![ExtractRule::JsonPath {
             path: path.to_string(),
@@ -193,44 +291,29 @@ fn insert_json(map: &mut HashMap<String, Vec<ExtractRule>>, name: &str, path: &s
     );
 }
 
-/// 插入 `XPath` 字段规则。
-fn insert_xml(map: &mut HashMap<String, Vec<ExtractRule>>, name: &str, expr: &str) {
-    map.insert(
+fn insert_xml(fields: &mut HashMap<String, Vec<ExtractRule>>, name: &str, expression: &str) {
+    fields.insert(
         name.to_string(),
         vec![ExtractRule::XPath {
-            expression: expr.to_string(),
+            expression: expression.to_string(),
             extract_type: ExtractType::Text,
             regex_clean: None,
         }],
     );
 }
 
-/// 插入 `XPath` 属性字段规则。
 fn insert_xml_attr(
-    map: &mut HashMap<String, Vec<ExtractRule>>,
+    fields: &mut HashMap<String, Vec<ExtractRule>>,
     name: &str,
-    expr: &str,
-    attr: &str,
+    expression: &str,
+    attribute: &str,
 ) {
-    map.insert(
+    fields.insert(
         name.to_string(),
         vec![ExtractRule::XPath {
-            expression: expr.to_string(),
-            extract_type: ExtractType::Attr(attr.to_string()),
+            expression: expression.to_string(),
+            extract_type: ExtractType::Attr(attribute.to_string()),
             regex_clean: None,
         }],
     );
-}
-
-/// 连接发现 Extract → 详情 Http 的 Flow 延续边。
-pub(crate) fn connect_flow_edges(
-    edges: &mut Vec<Edge>,
-    discover_extract_id: &NodeId,
-    detail_http_id: &NodeId,
-) {
-    edges.push(Edge {
-        from: discover_extract_id.clone(),
-        to: detail_http_id.clone(),
-        condition_branch: None,
-    });
 }

@@ -1,7 +1,6 @@
-//! 提取节点 crate。
+//! Extract Plan effect adapter crate。
 //!
-//! 实现多种内容提取处理器：HTML（`scraper`）、XML（`xmloxide`）、
-//! JSON（`jsonpath-rust`）、正则表达式，以及编码转换支持。
+//! 支持 HTML、XML、JSON、正则和编码转换的受控内容提取。
 
 pub mod error;
 pub mod html;

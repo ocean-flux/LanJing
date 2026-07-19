@@ -1,37 +1,57 @@
 //! Canonical JSON 与 Definition hash。
 
-use sha2::{Digest, Sha256};
+use blake3::Hasher;
 
 use crate::definition::RuleDefinition;
 use crate::error::Error;
 
-/// 将值序列化为确定性 JSON（`serde_json` 默认 map 键序 + 稳定结构）。
+/// 将值序列化为递归规范化的确定性 JSON。
+///
+/// object key 会在每一层按字节序排序；因此 `HashMap` 的随机迭代顺序不能影响
+/// Definition、Plan 或 effect fingerprint 的 content hash。数组顺序保持不变，因为
+/// 它是作者合同的一部分。
 ///
 /// # Errors
 ///
 /// 序列化失败时返回 [`Error::Json`]。
 pub fn canonical_json<T: serde::Serialize>(value: &T) -> Result<String, Error> {
-    // BTreeMap 字段保证 key 有序；其余结构按类型定义稳定写出。
-    Ok(serde_json::to_string(value)?)
+    let mut value = serde_json::to_value(value)?;
+    canonicalize_json_value(&mut value);
+    Ok(serde_json::to_string(&value)?)
 }
 
-/// 计算 Definition 的稳定 canonical hash（sha256 hex）。
+/// 计算 Definition 的稳定 canonical BLAKE3 hash（hex）。
 ///
 /// # Errors
 ///
 /// 序列化失败时返回 [`Error::Json`]。
 pub fn definition_hash(definition: &RuleDefinition) -> Result<String, Error> {
     let canonical = canonical_json(definition)?;
-    let digest = Sha256::digest(canonical.as_bytes());
-    Ok(hex_encode(&digest))
+    let mut hasher = Hasher::new();
+    hasher.update(canonical.as_bytes());
+    Ok(hasher.finalize().to_hex().to_string())
 }
 
-fn hex_encode(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
+fn canonicalize_json_value(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Array(values) => {
+            for value in values {
+                canonicalize_json_value(value);
+            }
+        }
+        serde_json::Value::Object(object) => {
+            let mut entries = std::mem::take(object).into_iter().collect::<Vec<_>>();
+            entries.sort_by(|(left, _), (right, _)| left.cmp(right));
+            for (_, value) in &mut entries {
+                canonicalize_json_value(value);
+            }
+            for (key, value) in entries {
+                object.insert(key, value);
+            }
+        }
+        serde_json::Value::Null
+        | serde_json::Value::Bool(_)
+        | serde_json::Value::Number(_)
+        | serde_json::Value::String(_) => {}
     }
-    out
 }

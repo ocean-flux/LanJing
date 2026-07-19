@@ -1,7 +1,6 @@
-//! HTTP 协议节点 crate。
+//! HTTP Plan effect adapter crate。
 //!
-//! 实现 HTTP 网络请求节点的处理器，负责发送 HTTP 请求、
-//! 管理 Cookie、处理响应流，并提供 SSRF 防护机制。
+//! 负责受能力约束的网络请求、敏感凭据注入、取消和 SSRF 防护。
 
 pub mod processor;
 pub mod ssrf;

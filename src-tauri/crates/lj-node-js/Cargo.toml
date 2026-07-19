@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "JavaScript 节点：QuickJS 引擎集成与宿主 API"
+description = "QuickJS effect adapter：受控脚本执行与宿主 API"
 
 [lints]
 workspace = true
@@ -12,9 +12,12 @@ workspace = true
 [dependencies]
 lj-rule-model = { path = "../lj-rule-model" }
 lj-runtime = { path = "../lj-runtime" }
+lj-capability = { path = "../lj-capability" }
 rquickjs = { workspace = true }
 tokio = { workspace = true }
 thiserror = { workspace = true }
-futures = { workspace = true }
-async-stream = { workspace = true }
 serde_json = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+uuid = { workspace = true }

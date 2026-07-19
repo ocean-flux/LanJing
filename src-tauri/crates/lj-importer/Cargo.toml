@@ -11,10 +11,8 @@ workspace = true
 
 [dependencies]
 lj-rule-model = { path = "../lj-rule-model" }
-lj-runtime = { path = "../lj-runtime" }
 lj-capability = { path = "../lj-capability" }
-lj-compiler = { path = "../lj-compiler" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sha2 = { workspace = true }
+blake3 = { workspace = true }
 uuid = { workspace = true }

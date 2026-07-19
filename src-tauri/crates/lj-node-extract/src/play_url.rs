@@ -5,7 +5,6 @@
 /// `vod_play_url` 两级嵌套树解析的分隔符 grammar。
 ///
 /// 定义 Maccms 视频源 `vod_play_url` / `vod_play_from` 字段的解析规则。
-/// 从 lj-core 移到 lj-node-extract（lj-importer 的 Maccms 适配层通过本 crate 访问）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayUrlParserSpec {
     /// 线路间分隔符（默认 `###`）。

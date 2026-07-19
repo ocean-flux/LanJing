@@ -20,6 +20,7 @@ lj-node-http = { path = "../lj-node-http" }
 lj-node-js = { path = "../lj-node-js" }
 lj-node-extract = { path = "../lj-node-extract" }
 lj-compiler = { path = "../lj-compiler" }
+lj-rule-system = { path = "../lj-rule-system", features = ["test-support"] }
 
 tokio = { workspace = true }
 futures = { workspace = true }
@@ -31,3 +32,4 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 wiremock = { workspace = true }
+keyring = { workspace = true }

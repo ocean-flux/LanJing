@@ -1,0 +1,32 @@
+[package]
+name = "lj-rule-system"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "规则生命周期 concrete façade"
+
+[lints]
+workspace = true
+
+[features]
+test-support = []
+
+[dependencies]
+lj-capability = { path = "../lj-capability" }
+lj-compiler = { path = "../lj-compiler" }
+lj-importer = { path = "../lj-importer" }
+lj-media = { path = "../lj-media" }
+lj-node-extract = { path = "../lj-node-extract" }
+lj-node-http = { path = "../lj-node-http" }
+lj-node-js = { path = "../lj-node-js" }
+lj-rule-model = { path = "../lj-rule-model" }
+lj-runtime = { path = "../lj-runtime" }
+lj-storage = { path = "../lj-storage" }
+blake3 = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }

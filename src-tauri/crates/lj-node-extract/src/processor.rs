@@ -1,128 +1,137 @@
-//! 提取节点处理器 — 消费 `HttpResponse`，按 `ExtractRule` IR 提取产出。
+//! Extract Plan effect adapter。
 //!
-//! 两种模式:
-//! - **列表模式**(`field_rules` 非空):先用 list 规则取 N 个 item,
-//!   再对每个 item 提取多字段，产 N 条 JSON 中间记录。
-//! - **单值模式**(`field_rules` 为空):直接用 fallback 链取单值，产 1 条 JSON 中间记录。
-//!
-//! 分发策略:
-//! - `ExpectedDataType::Html` + `ExtractRule::XPath` → `html_xpath` 模块(html5+XPath)
-//! - `ExpectedDataType::Html` + `ExtractRule::CssSelector` → `html_css` 模块(scraper+CSS)
-//! - `ExpectedDataType::Xml` → `xml` 模块
-//! - `ExpectedDataType::Json` → `json` 模块
+//! 根据已编译 `ExtractSpec` 消费上游 HTTP effect 的响应，并产出受控 JSON records。
+
+use std::time::Instant;
 
 use encoding_rs::GBK;
-use futures::stream::{BoxStream, StreamExt};
 use regex::Regex;
 
-use lj_rule_model::{ExpectedDataType, ExtractRule, OutputTarget};
-use lj_runtime::{ExecutionContext, NodeProcessor};
-use lj_runtime::{NodeData, NodeDataVariant};
-use lj_runtime::{NodeKind, NodeSpec};
+use lj_rule_model::{ExpectedDataType, ExtractRule, ExtractSpec, OutputTarget};
+use lj_runtime::{
+    CapturedEffectOutput, EffectCancellation, EffectError, EffectErrorCode, EffectFailure,
+    EffectOutput, EffectWitness, ExtractEffectHandler, ExtractEffectRequest, ExtractEffectWitness,
+    HttpResponse, NodeData, effect_input_hash,
+};
 
 use crate::regex_extract::RegexCache;
 use crate::{html_css, html_xpath, json, xml};
 
-/// 提取节点处理器。
-pub struct ExtractNodeProcessor;
+/// Extract Plan effect adapter。
+pub struct ExtractEffectAdapter;
 
-impl NodeProcessor for ExtractNodeProcessor {
-    fn kind(&self) -> NodeKind {
-        NodeKind::Extract
-    }
-
-    fn input_type(&self) -> Option<NodeDataVariant> {
-        Some(NodeDataVariant::HttpResponse)
-    }
-
-    fn output_type(&self) -> NodeDataVariant {
-        NodeDataVariant::Json
-    }
-
-    /// 消费 input stream(每个 HttpResponse)，按 `ExtractSpec` 提取并产出。
-    ///
-    /// `field_rules` 非空 → 列表模式，否则 → 单值模式。
-    /// `output_target` 决定提取意图：媒体条目、媒体单元或媒体载荷中间记录。
-    fn process<'a>(
-        &'a self,
-        ctx: &'a ExecutionContext,
-        spec: &'a NodeSpec,
-        input: BoxStream<'a, NodeData>,
-    ) -> BoxStream<'a, NodeData> {
-        let Some(extract_spec) = spec.extract.clone() else {
-            return futures::stream::empty().boxed();
+/// adapter 直接借用上游 HTTP body 进行提取，不会为 Plan runtime 的 `Arc` 输出复制 body。
+#[async_trait::async_trait]
+impl ExtractEffectHandler for ExtractEffectAdapter {
+    async fn execute_extract(
+        &self,
+        request: ExtractEffectRequest,
+        cancellation: EffectCancellation,
+    ) -> Result<CapturedEffectOutput, EffectError> {
+        if cancellation.is_cancelled() {
+            return Err(EffectError::new(
+                EffectErrorCode::Cancelled,
+                "Extract effect 已取消",
+            ));
+        }
+        let started = Instant::now();
+        let input_hash = effect_input_hash(&request.input).map_err(|_| {
+            EffectError::new(
+                EffectErrorCode::Internal,
+                "Extract effect 输入 hash 计算失败",
+            )
+        })?;
+        let Some(EffectOutput::Http(response)) = request.input.output() else {
+            return Err(EffectError::new(
+                EffectErrorCode::InputType,
+                "Extract effect 需要 HTTP 响应输入",
+            ));
         };
-        let expected_type = extract_spec.expected_type;
-        let rules = extract_spec.rules;
-        let field_rules = extract_spec.field_rules;
-        let output_target = extract_spec.output_target;
-
-        // 列表/单值模式：field_rules 非空 = 列表模式
-        let is_list = !field_rules.is_empty();
-
-        // 预编译 regex 缓存
-        let regex_cache = build_regex_cache(&rules, &field_rules);
-
-        // base_url 用于相对路径→绝对路径拼接
-        let base_url = ctx.base_url.clone();
-
-        input
-            .flat_map(move |data| {
-                let rules = rules.clone();
-                let field_rules = field_rules.clone();
-                let regex_cache = regex_cache.clone();
-                let base_url = base_url.clone();
-
-                match data {
-                    NodeData::HttpResponse(resp) => {
-                        let body_str = decode_body(&resp.body, resp.charset.as_deref());
-                        let results = match expected_type {
-                            ExpectedDataType::Html => {
-                                let has_xpath =
-                                    rules.iter().any(|r| matches!(r, ExtractRule::XPath { .. }));
-                                if has_xpath {
-                                    // Html+XPath 路径 (xmloxide html5)
-                                    process_html_xpath(
-                                        &body_str,
-                                        &rules,
-                                        &field_rules,
-                                        &regex_cache,
-                                        &base_url,
-                                        is_list,
-                                        output_target,
-                                    )
-                                } else {
-                                    // Html+CSS 路径 (scraper)
-                                    process_html_css(
-                                        &body_str,
-                                        &rules,
-                                        &field_rules,
-                                        &regex_cache,
-                                        &base_url,
-                                        is_list,
-                                        output_target,
-                                    )
-                                }
-                            }
-                            // XML/JSON 真实分发
-                            ExpectedDataType::Xml | ExpectedDataType::Json => extract_xml_or_json(
-                                expected_type,
-                                &body_str,
-                                &rules,
-                                &field_rules,
-                                &regex_cache,
-                                is_list,
-                            ),
-                        };
-                        futures::stream::iter(results).boxed()
-                    }
-                    // Error 透传,不静默吞没
-                    NodeData::Error(_) => futures::stream::once(async move { data }).boxed(),
-                    _ => futures::stream::empty().boxed(),
-                }
-            })
-            .boxed()
+        let output = match extract_http_response(&request.spec, response, &request.base_url) {
+            Ok(records) => EffectOutput::Extract(lj_runtime::ExtractOutput { records }),
+            Err(_) => EffectOutput::Failure(EffectFailure::Extract),
+        };
+        if cancellation.is_cancelled() {
+            return Err(EffectError::new(
+                EffectErrorCode::Cancelled,
+                "Extract effect 已取消",
+            ));
+        }
+        Ok(CapturedEffectOutput::new(
+            output,
+            EffectWitness::Extract(ExtractEffectWitness {
+                input_hash,
+                duration_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
+            }),
+        ))
     }
+}
+
+/// 用已编译 Extract spec 从 HTTP 响应提取 JSON 中间记录。
+///
+/// # Errors
+///
+/// 当规则不匹配、解析失败或处理器返回非 JSON 结果时返回安全错误消息。
+fn extract_http_response(
+    extract_spec: &ExtractSpec,
+    response: &HttpResponse,
+    base_url: &str,
+) -> Result<Vec<serde_json::Value>, String> {
+    let expected_type = extract_spec.expected_type;
+    let rules = &extract_spec.rules;
+    let field_rules = &extract_spec.field_rules;
+    let output_target = extract_spec.output_target;
+    let is_list = !field_rules.is_empty();
+    let regex_cache = build_regex_cache(rules, field_rules);
+    let body = decode_body(&response.body, response.charset.as_deref());
+    let results = match expected_type {
+        ExpectedDataType::Html => {
+            let has_xpath = rules
+                .iter()
+                .any(|rule| matches!(rule, ExtractRule::XPath { .. }));
+            if has_xpath {
+                process_html_xpath(
+                    &body,
+                    rules,
+                    field_rules,
+                    &regex_cache,
+                    base_url,
+                    is_list,
+                    output_target,
+                )
+            } else {
+                process_html_css(
+                    &body,
+                    rules,
+                    field_rules,
+                    &regex_cache,
+                    base_url,
+                    is_list,
+                    output_target,
+                )
+            }
+        }
+        ExpectedDataType::Xml | ExpectedDataType::Json => extract_xml_or_json(
+            expected_type,
+            &body,
+            rules,
+            field_rules,
+            &regex_cache,
+            is_list,
+        ),
+    };
+    let mut records = Vec::with_capacity(results.len());
+    for result in results {
+        match result {
+            NodeData::Json(serde_json::Value::Array(values)) => records.extend(values),
+            NodeData::Json(value) => records.push(value),
+            NodeData::Error(message) => return Err(message),
+            NodeData::Raw(_) | NodeData::HttpResponse(_) => {
+                return Err("Extract 返回了非 JSON 结果".to_string());
+            }
+        }
+    }
+    Ok(records)
 }
 
 /// HTML+XPath 路径分发，按 `output_target` 和 `is_list` 选择提取函数。

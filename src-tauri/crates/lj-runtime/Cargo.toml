@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "规则运行时引擎：规则执行、生命周期管理"
+description = "immutable Execution Plan runtime：effect seam 与受控调度"
 
 [lints]
 workspace = true
@@ -14,13 +14,16 @@ lj-rule-model = { path = "../lj-rule-model" }
 lj-capability = { path = "../lj-capability" }
 lj-media = { path = "../lj-media" }
 futures = { workspace = true }
-async-stream = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
+async-trait = { workspace = true }
+blake3 = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 uuid = { workspace = true }
 serde_json = { workspace = true }
+lj-compiler = { path = "../lj-compiler" }

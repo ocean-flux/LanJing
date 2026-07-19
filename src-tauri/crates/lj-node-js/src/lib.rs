@@ -1,10 +1,9 @@
-//! JavaScript 节点 crate。
+//! `QuickJS` Plan effect adapter crate。
 //!
-//! 基于 QuickJS（rquickjs）实现 JS 脚本执行节点，
-//! 提供宿主 API 绑定，支持在沙箱中安全执行用户脚本。
+//! 在受限的 blocking lane 内执行 QuickJS，并提供安全宿主 API。
 
 pub mod error;
 pub mod host_api;
 pub mod processor;
 
-pub use processor::execute_js_blocking;
+pub use processor::execute_js_blocking_cancellable;
