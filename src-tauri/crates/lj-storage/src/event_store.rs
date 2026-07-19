@@ -85,6 +85,7 @@ pub(crate) fn process_append(
         source_identity: request.source_id,
     };
     if let Some(receipt) = idempotent_event(conn, &draft)? {
+        ensure_idempotent_artifacts(conn, artifacts, &request.artifacts, &receipt)?;
         return Ok(receipt);
     }
     let links = write_inputs(artifacts, request.artifacts)?;
@@ -161,7 +162,7 @@ where
     })
 }
 
-/// 只接受完全同内容的 event ID 重试；不同 payload 绝不能伪装幂等成功。
+/// 只接受 envelope 内容完全一致的 event ID 重试；expected version 不参与重复判定。
 pub(crate) fn idempotent_event(
     conn: &mut SqliteConnection,
     draft: &EventDraft,
@@ -171,8 +172,18 @@ pub(crate) fn idempotent_event(
     };
     let event_type = serialize(&draft.event_type)?;
     let payload = serialize(&draft.payload)?;
+    let schema_version = i32::try_from(draft.schema_version)
+        .map_err(|_| StorageError::InvalidInput("schema version 超出 i32".to_string()))?;
+    let correlation_id = draft.correlation_id.map(|value| value.to_string());
+    let causation_id = draft.causation_id.map(|value| value.to_string());
     if row.stream_id != draft.stream_id
+        || row.source_identity != draft.source_identity
         || row.event_type != event_type
+        || row.schema_version != schema_version
+        || row.correlation_id != correlation_id
+        || row.causation_id != causation_id
+        || row.trace_id != draft.trace_id
+        || row.occurred_at_ms != draft.occurred_at_ms
         || row.payload_json != payload
     {
         return Err(StorageError::IdempotencyMismatch);
@@ -180,18 +191,55 @@ pub(crate) fn idempotent_event(
     Ok(Some(event_receipt_from_row(&row)?))
 }
 
+fn ensure_idempotent_artifacts(
+    conn: &mut SqliteConnection,
+    artifacts: &ArtifactStore,
+    inputs: &[ArtifactInput],
+    receipt: &CommitReceipt,
+) -> Result<(), StorageError> {
+    let mut expected = std::collections::HashSet::new();
+    for input in inputs {
+        expected.insert((input.kind, blake3::hash(&input.bytes).to_hex().to_string()));
+    }
+    let actual = receipt
+        .artifact_refs
+        .iter()
+        .map(|reference| (ArtifactKind::Body, reference.hash.clone()))
+        .chain(
+            receipt
+                .secret_refs
+                .iter()
+                .map(|reference| (ArtifactKind::Secret, reference.hash.clone())),
+        )
+        .collect::<std::collections::HashSet<_>>();
+    if expected != actual {
+        return Err(StorageError::IdempotencyMismatch);
+    }
+    for (kind, hash) in actual {
+        let row = artifact_row(conn, &hash, kind)?
+            .ok_or_else(|| StorageError::ArtifactUnavailable(hash.clone()))?;
+        match kind {
+            ArtifactKind::Body => {
+                artifacts.read_body(&hash, &row.relative_path)?;
+            }
+            ArtifactKind::Secret => {
+                artifacts.read_secret(&hash, &row.relative_path)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn write_inputs(
     artifacts: &ArtifactStore,
     inputs: Vec<ArtifactInput>,
 ) -> Result<Vec<ArtifactLink>, StorageError> {
-    inputs
-        .into_iter()
-        .map(|input| {
-            artifacts
-                .write(input.kind, &input.bytes)
-                .map(ArtifactLink::New)
-        })
-        .collect()
+    let mut links = Vec::with_capacity(inputs.len());
+    for input in inputs {
+        let pending = artifacts.write(input.kind, &input.bytes)?;
+        push_new_artifact_link(&mut links, pending);
+    }
+    Ok(links)
 }
 
 fn describe_links(

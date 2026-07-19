@@ -411,6 +411,24 @@ async fn policy_gc_expires_candidates_and_honors_pins() {
         .expect("pinned summary retained");
     assert_eq!(pinned_record.gc_state, GcState::Active);
     assert!(pinned_record.replayable);
+    assert!(matches!(
+        storage
+            .clear_execution_archive(pinned, false, now + 1)
+            .await,
+        Err(StorageError::InvalidInput(_))
+    ));
+    let manual_report = storage
+        .clear_execution_archive(pinned, true, now + 1)
+        .await
+        .expect("explicitly confirmed pinned archive clear");
+    assert_eq!(manual_report.finalized, 1);
+    let cleared = storage
+        .get_execution(pinned)
+        .await
+        .expect("cleared summary")
+        .expect("cleared execution summary remains");
+    assert_eq!(cleared.gc_state, GcState::Finalized);
+    assert!(!cleared.replayable);
     storage.shutdown().await.expect("writer shutdown");
 }
 

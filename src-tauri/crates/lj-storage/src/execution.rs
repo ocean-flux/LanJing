@@ -188,12 +188,7 @@ pub(crate) fn process_delta(
 ) -> Result<CommitReceipt, StorageError> {
     let execution =
         get_execution_sync(conn, request.execution_id)?.ok_or(StorageError::ExecutionMissing)?;
-    if execution.status.is_terminal() {
-        return Err(StorageError::InvalidInput(
-            "终态 execution 不能提交 Delta".to_string(),
-        ));
-    }
-    validate_delta_source(&request.delta, &execution.source_identity)?;
+    validate_delta_source(conn, &request.delta, &execution.source_identity)?;
     let payload = serialize(&request.delta)?;
     let event = EventDraft {
         stream_id: execution_stream_id(request.execution_id),
@@ -210,6 +205,11 @@ pub(crate) fn process_delta(
     };
     if let Some(receipt) = idempotent_event(conn, &event)? {
         return Ok(receipt);
+    }
+    if execution.status.is_terminal() {
+        return Err(StorageError::InvalidInput(
+            "终态 execution 不能提交 Delta".to_string(),
+        ));
     }
     let source_identity = execution.source_identity;
     let delta = request.delta;
@@ -233,11 +233,7 @@ pub(crate) fn process_finish_execution(
     }
     let execution =
         get_execution_sync(conn, request.execution_id)?.ok_or(StorageError::ExecutionMissing)?;
-    if execution.status.is_terminal() && execution.status != request.status {
-        return Err(StorageError::InvalidInput(
-            "execution 已处于不同终态".to_string(),
-        ));
-    }
+    let already_terminal = execution.status.is_terminal();
     let event = EventDraft {
         stream_id: execution_stream_id(request.execution_id),
         expected_version: request.expected_version,
@@ -254,6 +250,11 @@ pub(crate) fn process_finish_execution(
     if idempotent_event(conn, &event)?.is_some() {
         return get_execution_sync(conn, request.execution_id)?
             .ok_or(StorageError::ExecutionMissing);
+    }
+    if already_terminal {
+        return Err(StorageError::InvalidInput(
+            "execution 已处于终态".to_string(),
+        ));
     }
     let execution_id = request.execution_id;
     let status = request.status.as_db();
@@ -279,6 +280,7 @@ pub(crate) fn process_pin_execution(
 ) -> Result<ExecutionRecord, StorageError> {
     let execution =
         get_execution_sync(conn, request.execution_id)?.ok_or(StorageError::ExecutionMissing)?;
+    let gc_state = execution.gc_state;
     let event = EventDraft {
         stream_id: execution_stream_id(request.execution_id),
         expected_version: request.expected_version,
@@ -295,6 +297,11 @@ pub(crate) fn process_pin_execution(
     if idempotent_event(conn, &event)?.is_some() {
         return get_execution_sync(conn, request.execution_id)?
             .ok_or(StorageError::ExecutionMissing);
+    }
+    if gc_state != GcState::Active {
+        return Err(StorageError::ReplayUnavailable(
+            "GC 已开始的 archive 不能修改 pin".to_string(),
+        ));
     }
     let execution_id = request.execution_id;
     let pinned = i32::from(request.pinned);

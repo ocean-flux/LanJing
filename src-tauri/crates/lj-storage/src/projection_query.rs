@@ -95,12 +95,12 @@ pub(crate) fn apply_projection_delta(
     for hint in &delta.upserts.hints {
         upsert_hint(conn, source_identity, hint, global_seq)?;
     }
-    apply_tombstones(conn, &delta.tombstones)?;
+    apply_tombstones(conn, source_identity, &delta.tombstones)?;
     Ok(())
 }
 
-/// 拒绝任何跨 source 的 upsert 或 relation tombstone，防止投影 owner 被偷换。
 pub(crate) fn validate_delta_source(
+    conn: &mut SqliteConnection,
     delta: &ProjectionDelta,
     source_identity: &str,
 ) -> Result<(), StorageError> {
@@ -109,24 +109,110 @@ pub(crate) fn validate_delta_source(
     }
     for item in &delta.upserts.items {
         ensure_source(&item.source_id, source_identity)?;
+        ensure_existing_owner(conn, "projection_items", "id", &item.id.0, source_identity)?;
     }
     for collection in &delta.upserts.collections {
         ensure_source(&collection.source_id, source_identity)?;
+        ensure_existing_owner(
+            conn,
+            "projection_collections",
+            "id",
+            &collection.id.0,
+            source_identity,
+        )?;
     }
     for unit in &delta.upserts.units {
         ensure_source(&unit.source_id, source_identity)?;
+        ensure_existing_owner(conn, "projection_units", "id", &unit.id.0, source_identity)?;
     }
     for asset in &delta.upserts.assets {
         ensure_source(&asset.source_id, source_identity)?;
+        ensure_existing_owner(
+            conn,
+            "projection_assets",
+            "id",
+            &asset.id.0,
+            source_identity,
+        )?;
     }
     for relation in &delta.upserts.relations {
         ensure_source(&relation.source_id, source_identity)?;
     }
     for action in &delta.upserts.actions {
         ensure_source(&action.source_id, source_identity)?;
+        ensure_existing_owner(
+            conn,
+            "projection_actions",
+            "id",
+            &action.id.0,
+            source_identity,
+        )?;
     }
-    for relation in &delta.tombstones.relations {
+    for hint in &delta.upserts.hints {
+        ensure_existing_owner(
+            conn,
+            "projection_hints",
+            "resource_id",
+            &hint.resource_id.0,
+            source_identity,
+        )?;
+    }
+    validate_tombstone_owner(conn, source_identity, &delta.tombstones)
+}
+
+fn validate_tombstone_owner(
+    conn: &mut SqliteConnection,
+    source_identity: &str,
+    tombstones: &ProjectionTombstones,
+) -> Result<(), StorageError> {
+    for source in &tombstones.sources {
+        ensure_source(source, source_identity)?;
+    }
+    for id in &tombstones.items {
+        ensure_existing_owner(conn, "projection_items", "id", &id.0, source_identity)?;
+    }
+    for id in &tombstones.collections {
+        ensure_existing_owner(conn, "projection_collections", "id", &id.0, source_identity)?;
+    }
+    for id in &tombstones.units {
+        ensure_existing_owner(conn, "projection_units", "id", &id.0, source_identity)?;
+    }
+    for id in &tombstones.assets {
+        ensure_existing_owner(conn, "projection_assets", "id", &id.0, source_identity)?;
+    }
+    for relation in &tombstones.relations {
         ensure_source(&relation.source_id, source_identity)?;
+    }
+    for id in &tombstones.actions {
+        ensure_existing_owner(conn, "projection_actions", "id", &id.0, source_identity)?;
+    }
+    for id in &tombstones.hints {
+        ensure_existing_owner(
+            conn,
+            "projection_hints",
+            "resource_id",
+            &id.0,
+            source_identity,
+        )?;
+    }
+    Ok(())
+}
+
+fn ensure_existing_owner(
+    conn: &mut SqliteConnection,
+    table: &str,
+    id_column: &str,
+    id: &str,
+    source_identity: &str,
+) -> Result<(), StorageError> {
+    let statement = format!("SELECT source_identity AS value FROM {table} WHERE {id_column} = ?");
+    let owner = sql_query(statement)
+        .bind::<Text, _>(id)
+        .get_result::<OwnerRow>(conn)
+        .optional()
+        .map_err(database_error)?;
+    if owner.is_some_and(|owner| owner.value != source_identity) {
+        return Err(StorageError::InvalidInput("投影资源跨来源写入".to_string()));
     }
     Ok(())
 }
@@ -300,28 +386,35 @@ fn upsert_hint(
 
 fn apply_tombstones(
     conn: &mut SqliteConnection,
+    source_identity: &str,
     tombstones: &ProjectionTombstones,
 ) -> Result<(), StorageError> {
     for id in &tombstones.sources {
         delete_by_id(conn, "projection_sources", "id", &id.0)?;
     }
     for id in &tombstones.items {
-        delete_by_id(conn, "projection_items", "id", &id.0)?;
+        delete_by_owner(conn, "projection_items", "id", &id.0, source_identity)?;
     }
     for id in &tombstones.collections {
-        delete_by_id(conn, "projection_collections", "id", &id.0)?;
+        delete_by_owner(conn, "projection_collections", "id", &id.0, source_identity)?;
     }
     for id in &tombstones.units {
-        delete_by_id(conn, "projection_units", "id", &id.0)?;
+        delete_by_owner(conn, "projection_units", "id", &id.0, source_identity)?;
     }
     for id in &tombstones.assets {
-        delete_by_id(conn, "projection_assets", "id", &id.0)?;
+        delete_by_owner(conn, "projection_assets", "id", &id.0, source_identity)?;
     }
     for id in &tombstones.actions {
-        delete_by_id(conn, "projection_actions", "id", &id.0)?;
+        delete_by_owner(conn, "projection_actions", "id", &id.0, source_identity)?;
     }
     for id in &tombstones.hints {
-        delete_by_id(conn, "projection_hints", "resource_id", &id.0)?;
+        delete_by_owner(
+            conn,
+            "projection_hints",
+            "resource_id",
+            &id.0,
+            source_identity,
+        )?;
     }
     for relation in &tombstones.relations {
         sql_query(
@@ -346,6 +439,22 @@ fn delete_by_id(
     let statement = format!("DELETE FROM {table} WHERE {column} = ?");
     sql_query(statement)
         .bind::<Text, _>(id)
+        .execute(conn)
+        .map_err(database_error)?;
+    Ok(())
+}
+
+fn delete_by_owner(
+    conn: &mut SqliteConnection,
+    table: &str,
+    id_column: &str,
+    id: &str,
+    source_identity: &str,
+) -> Result<(), StorageError> {
+    let statement = format!("DELETE FROM {table} WHERE {id_column} = ? AND source_identity = ?");
+    sql_query(statement)
+        .bind::<Text, _>(id)
+        .bind::<Text, _>(source_identity)
         .execute(conn)
         .map_err(database_error)?;
     Ok(())
@@ -502,6 +611,11 @@ fn library_stream_id(resource_id: &MediaResourceId) -> String {
     format!("library/{}", resource_id.0)
 }
 
+#[derive(QueryableByName)]
+struct OwnerRow {
+    #[diesel(sql_type = Text)]
+    value: String,
+}
 #[derive(QueryableByName)]
 struct JsonRow {
     #[diesel(sql_type = Text)]

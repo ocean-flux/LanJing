@@ -8,6 +8,7 @@
 use diesel::sqlite::SqliteConnection;
 use lj_runtime::{DurableCaptureReceipt, EffectCapture};
 use tokio::sync::{mpsc, oneshot};
+use uuid::Uuid;
 
 use crate::artifact::ArtifactStore;
 use crate::candidate_install::{
@@ -20,7 +21,8 @@ use crate::execution::{
 };
 use crate::projection_query::process_library_update;
 use crate::retention_recovery::{
-    process_checkpoint_library, process_checkpoint_source, process_gc, recover_orphans_sync,
+    process_checkpoint_library, process_checkpoint_source, process_clear_execution_archive,
+    process_gc, recover_orphans_sync,
 };
 use crate::types::{
     AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt, DeltaCommit,
@@ -88,6 +90,12 @@ pub(crate) enum WriterCommand {
     },
     RunGc {
         policy: RetentionPolicy,
+        now_ms: i64,
+        reply: oneshot::Sender<Result<GcReport, StorageError>>,
+    },
+    ClearExecutionArchive {
+        execution_id: Uuid,
+        confirm_pinned: bool,
         now_ms: i64,
         reply: oneshot::Sender<Result<GcReport, StorageError>>,
     },
@@ -196,6 +204,20 @@ fn handle_writer_command(
             reply,
         } => {
             let _ = reply.send(process_gc(conn, artifacts, policy, now_ms));
+        }
+        WriterCommand::ClearExecutionArchive {
+            execution_id,
+            confirm_pinned,
+            now_ms,
+            reply,
+        } => {
+            let _ = reply.send(process_clear_execution_archive(
+                conn,
+                artifacts,
+                execution_id,
+                confirm_pinned,
+                now_ms,
+            ));
         }
         WriterCommand::RecoverOrphans(reply) => {
             let _ = reply.send(recover_orphans_sync(conn, artifacts));

@@ -23,6 +23,7 @@ use crate::event_store::{
 };
 use crate::execution::{
     ExecutionRow, events_after_source_sync, execution_from_row, execution_stream_id,
+    get_execution_sync,
 };
 use crate::projection_query::{list_library_entries_sync, source_projection_sync};
 use crate::types::{
@@ -293,6 +294,45 @@ pub(crate) fn process_gc(
             finalize_execution_gc(conn, artifacts, execution.execution_id)?;
             report.finalized += 1;
         }
+    }
+    Ok(report)
+}
+
+/// 立即清理一个 execution archive；pin archive 需要调用方显式确认。
+pub(crate) fn process_clear_execution_archive(
+    conn: &mut SqliteConnection,
+    artifacts: &ArtifactStore,
+    execution_id: Uuid,
+    confirm_pinned: bool,
+    now_ms: i64,
+) -> Result<GcReport, StorageError> {
+    let execution =
+        get_execution_sync(conn, execution_id)?.ok_or(StorageError::ExecutionMissing)?;
+    if !execution.status.is_terminal() {
+        return Err(StorageError::InvalidInput(
+            "running execution 不能手动清理".to_string(),
+        ));
+    }
+    if execution.pinned && !confirm_pinned {
+        return Err(StorageError::InvalidInput(
+            "pin archive 需要显式确认后清理".to_string(),
+        ));
+    }
+    let mut report = GcReport::default();
+    let mut state = execution.gc_state;
+    if state == GcState::Active {
+        mark_execution_for_gc(conn, artifacts, &execution, now_ms)?;
+        report.marked = 1;
+        state = GcState::Marked;
+    }
+    if state == GcState::Marked {
+        remove_execution_external_refs(conn, execution_id)?;
+        report.external_refs_removed = 1;
+        state = GcState::ExternalRefsRemoved;
+    }
+    if state == GcState::ExternalRefsRemoved {
+        finalize_execution_gc(conn, artifacts, execution_id)?;
+        report.finalized = 1;
     }
     Ok(report)
 }

@@ -14,7 +14,7 @@ pub struct ArtifactInput {
 }
 
 /// artifact 的存储形式。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArtifactKind {
     /// 明文逻辑 body，磁盘上仅以 zstd frame 保存。
     Body,

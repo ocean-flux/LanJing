@@ -594,6 +594,29 @@ impl EventProjectionStorage {
         .await
     }
 
+    /// 立即清理一个终态 execution archive，并复用 checkpoint 与两阶段 GC 状态机。
+    ///
+    /// 未 pin archive 可直接清理；pin archive 只有在 `confirm_pinned` 为 `true` 时才允许清理。
+    ///
+    /// # Errors
+    ///
+    /// execution 不存在、仍在运行、pin 未确认，或 checkpoint/artifact/SQLite 阶段失败时返回
+    /// [`StorageError`]。
+    pub async fn clear_execution_archive(
+        &self,
+        execution_id: Uuid,
+        confirm_pinned: bool,
+        now_ms: i64,
+    ) -> Result<GcReport, StorageError> {
+        self.dispatch(|reply| WriterCommand::ClearExecutionArchive {
+            execution_id,
+            confirm_pinned,
+            now_ms,
+            reply,
+        })
+        .await
+    }
+
     /// 执行 candidate staging 与 execution archive 的策略 B 回收。
     ///
     /// 未 pin 的过期 archive 或使用量达到配额 90% 时会依次经历

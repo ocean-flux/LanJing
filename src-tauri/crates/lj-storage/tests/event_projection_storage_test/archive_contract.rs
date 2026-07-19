@@ -634,3 +634,152 @@ async fn effect_witness_artifact_tampering_and_loss_block_replay() {
         .await
         .expect("close missing-witness storage");
 }
+
+#[tokio::test]
+async fn delta_replay_after_terminal_is_idempotent_and_cross_source_ids_are_protected() {
+    let temp = TempStore::new("delta-ownership-and-terminal-replay");
+    let storage = temp.open().await;
+    let now = 1_750_001_300_000;
+
+    let alpha = candidate_for_source(now, "source:alpha");
+    let alpha_grant = alpha.required_grant.clone();
+    install_draft(&storage, alpha, 0, alpha_grant, now + 1).await;
+    let alpha_execution_id = Uuid::new_v4();
+    storage
+        .start_execution(ExecutionStart {
+            execution_id: alpha_execution_id,
+            source_identity: "source:alpha".to_string(),
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-alpha-start".to_string(),
+            started_at_ms: now + 2,
+            correlation_id: None,
+        })
+        .await
+        .expect("start alpha execution");
+    let delta_event_id = Uuid::new_v4();
+    let delta = delta_with_item("source:alpha", "owned by alpha");
+    let first = storage
+        .commit_execution_delta(DeltaCommit {
+            execution_id: alpha_execution_id,
+            expected_version: 1,
+            event_id: delta_event_id,
+            trace_id: "trace-alpha-delta".to_string(),
+            occurred_at_ms: now + 3,
+            delta: delta.clone(),
+        })
+        .await
+        .expect("commit alpha delta");
+    storage
+        .finish_execution(ExecutionFinish {
+            execution_id: alpha_execution_id,
+            expected_version: 2,
+            event_id: Uuid::new_v4(),
+            status: ExecutionStatus::Completed,
+            finished_at_ms: now + 4,
+            trace_id: "trace-alpha-finish".to_string(),
+        })
+        .await
+        .expect("finish alpha execution");
+    let replay = storage
+        .commit_execution_delta(DeltaCommit {
+            execution_id: alpha_execution_id,
+            expected_version: 1,
+            event_id: delta_event_id,
+            trace_id: "trace-alpha-delta".to_string(),
+            occurred_at_ms: now + 3,
+            delta,
+        })
+        .await
+        .expect("terminal replay returns original receipt");
+    assert_eq!(replay, first);
+
+    let beta = candidate_for_source(now + 5, "source:beta");
+    let beta_grant = beta.required_grant.clone();
+    install_draft(&storage, beta, 0, beta_grant, now + 6).await;
+    let beta_execution_id = Uuid::new_v4();
+    storage
+        .start_execution(ExecutionStart {
+            execution_id: beta_execution_id,
+            source_identity: "source:beta".to_string(),
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-beta-start".to_string(),
+            started_at_ms: now + 7,
+            correlation_id: None,
+        })
+        .await
+        .expect("start beta execution");
+    let cross_source = storage
+        .commit_execution_delta(DeltaCommit {
+            execution_id: beta_execution_id,
+            expected_version: 1,
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-cross-source-upsert".to_string(),
+            occurred_at_ms: now + 8,
+            delta: delta_with_item("source:beta", "must not steal alpha item"),
+        })
+        .await;
+    assert!(matches!(cross_source, Err(StorageError::InvalidInput(_))));
+    let cross_source_tombstone = storage
+        .commit_execution_delta(DeltaCommit {
+            execution_id: beta_execution_id,
+            expected_version: 1,
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-cross-source-tombstone".to_string(),
+            occurred_at_ms: now + 9,
+            delta: ProjectionDelta {
+                upserts: lj_media::MediaGraphDelta::default(),
+                tombstones: ProjectionTombstones {
+                    items: vec![lj_media::MediaResourceId("item:test:1".to_string())],
+                    ..ProjectionTombstones::default()
+                },
+            },
+        })
+        .await;
+    assert!(matches!(
+        cross_source_tombstone,
+        Err(StorageError::InvalidInput(_))
+    ));
+    assert_eq!(
+        storage
+            .get_item(lj_media::MediaResourceId("item:test:1".to_string()))
+            .await
+            .expect("read alpha-owned item")
+            .expect("alpha item remains")
+            .title,
+        "owned by alpha"
+    );
+    storage.shutdown().await.expect("writer shutdown");
+}
+
+#[tokio::test]
+async fn append_event_retries_require_matching_artifact_refs_and_integrity() {
+    let temp = TempStore::new("append-idempotency-artifact");
+    let storage = temp.open().await;
+    let event_id = Uuid::new_v4();
+    let request = |bytes: &[u8]| AppendRequest {
+        stream_id: "append/idempotency".to_string(),
+        expected_version: 0,
+        event_id,
+        event_type: lj_rule_model::EventType::Other("artifact-idempotency".to_string()),
+        schema_version: 1,
+        correlation_id: None,
+        causation_id: None,
+        trace_id: "trace-append-idempotency".to_string(),
+        occurred_at_ms: 1_750_001_400_000,
+        payload: serde_json::json!({"kind": "artifact-idempotency"}),
+        source_id: None,
+        artifacts: vec![ArtifactInput {
+            kind: ArtifactKind::Body,
+            bytes: bytes.to_vec(),
+        }],
+    };
+    storage
+        .append_event(request(b"first artifact"))
+        .await
+        .expect("first append");
+    assert!(matches!(
+        storage.append_event(request(b"different artifact")).await,
+        Err(StorageError::IdempotencyMismatch)
+    ));
+    storage.shutdown().await.expect("writer shutdown");
+}
