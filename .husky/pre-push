@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
+pnpm check
+pnpm test:web
 cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml --workspace

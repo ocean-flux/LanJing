@@ -2,5 +2,5 @@
 set -e
 
 pnpm exec lint-staged
-pnpm run format:check:web
+pnpm check
 cargo fmt --manifest-path src-tauri/Cargo.toml --all --check
