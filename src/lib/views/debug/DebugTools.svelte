@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ImportPreview from '$lib/components/ImportPreview.svelte';
+  import InstallSource from '$lib/components/InstallSource.svelte';
   import { Button } from '$lib/components/ui/button';
   import ExecutionWitness from '$lib/components/ExecutionWitness.svelte';
   import { m } from '$lib/i18n';
@@ -38,7 +38,7 @@
 
   <div class="min-h-0 flex-1 overflow-auto">
     {#if activeTab === 'import'}
-      <ImportPreview />
+      <InstallSource />
     {:else}
       <ExecutionWitness />
     {/if}

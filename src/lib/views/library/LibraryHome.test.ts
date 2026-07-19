@@ -4,16 +4,7 @@ import LibraryHome from './LibraryHome.svelte';
 import type { LibraryEntry, LibraryProjectionResponse } from './library-projection';
 
 const emptyProjection: LibraryProjectionResponse = {
-  graph: {
-    sources: [],
-    items: [],
-    collections: [],
-    units: [],
-    assets: [],
-    relations: [],
-    actions: [],
-    hints: [],
-  },
+  global_seq: 0,
   entries: [],
 };
 
@@ -33,41 +24,9 @@ describe('LibraryHome', () => {
     expect(screen.getByRole('link', { name: /搜索内容/ }).getAttribute('href')).toBe('/apps');
   });
 
-  it('renders real graph resources and writes shared state through boundary callback', async () => {
+  it('renders safe library entries and writes their current revision', async () => {
     const projection: LibraryProjectionResponse = {
-      graph: {
-        sources: [
-          {
-            id: 'source:one',
-            title: '本地来源',
-            icon_url: null,
-            version: null,
-            supported_intents: [],
-            risk_notes: [],
-          },
-        ],
-        items: [
-          {
-            id: 'item:one',
-            source_id: 'source:one',
-            media_kind: 'text',
-            title: '真实资源',
-            subtitle: null,
-            creators: [],
-            description: null,
-            cover_asset_id: null,
-            metadata: {},
-            completeness: 'partial',
-            updated_at: null,
-          },
-        ],
-        collections: [],
-        units: [],
-        assets: [],
-        relations: [],
-        actions: [],
-        hints: [],
-      },
+      global_seq: 8,
       entries: [
         {
           resource_id: 'item:one',
@@ -75,23 +34,29 @@ describe('LibraryHome', () => {
           pinned: false,
           last_opened_at: null,
           progress: null,
+          revision: 3,
+          updated_global_seq: 8,
         },
       ],
     };
-    let updatedResource = '';
+    let updatedEntry: LibraryEntry | null = null;
 
     render(LibraryHome, {
       props: {
         projection,
         update: async (entry: LibraryEntry) => {
-          updatedResource = entry.resource_id;
+          updatedEntry = entry;
+          return { global_seq: 9, revision: 4 };
         },
       },
     });
 
-    expect(screen.getByText('真实资源')).toBeTruthy();
-    expect(screen.getByText('来源：本地来源')).toBeTruthy();
+    expect(screen.getByText('item:one')).toBeTruthy();
     await screen.getByRole('button', { name: '取消收藏' }).click();
-    expect(updatedResource).toBe('item:one');
+    expect(updatedEntry).toMatchObject({
+      resource_id: 'item:one',
+      favorite: false,
+      revision: 3,
+    });
   });
 });

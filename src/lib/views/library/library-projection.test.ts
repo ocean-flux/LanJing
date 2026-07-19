@@ -2,59 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { projectLibrary, type LibraryProjectionResponse } from './library-projection';
 
 const projection: LibraryProjectionResponse = {
-  graph: {
-    sources: [
-      {
-        id: 'source:one',
-        title: '本地来源',
-        icon_url: null,
-        version: null,
-        supported_intents: ['Search'],
-        risk_notes: [],
-      },
-    ],
-    items: [
-      {
-        id: 'item:one',
-        source_id: 'source:one',
-        media_kind: 'text',
-        title: '真实资源',
-        subtitle: null,
-        creators: ['作者'],
-        description: null,
-        cover_asset_id: null,
-        metadata: {},
-        completeness: 'partial',
-        updated_at: null,
-      },
-      {
-        id: 'item:unowned',
-        source_id: 'source:one',
-        media_kind: 'text',
-        title: '未入库资源',
-        subtitle: null,
-        creators: [],
-        description: null,
-        cover_asset_id: null,
-        metadata: {},
-        completeness: 'partial',
-        updated_at: null,
-      },
-    ],
-    collections: [],
-    units: [],
-    assets: [],
-    relations: [
-      {
-        source_id: 'source:one',
-        from_id: 'item:one',
-        to_id: 'item:unowned',
-        relation_kind: 'similar',
-      },
-    ],
-    actions: [],
-    hints: [],
-  },
+  global_seq: 12,
   entries: [
     {
       resource_id: 'item:one',
@@ -62,31 +10,50 @@ const projection: LibraryProjectionResponse = {
       pinned: false,
       last_opened_at: '2026-07-15T10:00:00Z',
       progress: null,
+      revision: 2,
+      updated_global_seq: 12,
+    },
+    {
+      resource_id: 'item:unowned',
+      favorite: false,
+      pinned: false,
+      last_opened_at: null,
+      progress: null,
+      revision: 1,
+      updated_global_seq: 11,
     },
   ],
 };
 
 describe('projectLibrary', () => {
-  it('projects owned standard resources and source attribution without inventing routes', () => {
+  it('projects only owned safe library entries without reading a media graph', () => {
     const items = projectLibrary(projection);
 
-    expect(items).toHaveLength(1);
-    expect(items[0].item.title).toBe('真实资源');
-    expect(items[0].source?.title).toBe('本地来源');
-    expect(items[0].alternativeRoutes).toEqual([]);
+    expect(items).toEqual([
+      {
+        resource_id: 'item:one',
+        state: projection.entries[0],
+      },
+    ]);
   });
 
-  it('deduplicates graph and state updates by stable resource identity', () => {
-    const item = projection.graph.items?.[0];
-    const entry = projection.entries[0];
-    if (!item || !entry) throw new Error('测试资源缺失');
-    const updated = projectLibrary({
+  it('orders pinned entries ahead of most recently opened entries', () => {
+    const items = projectLibrary({
       ...projection,
-      graph: { ...projection.graph, items: [...(projection.graph.items ?? []), item] },
-      entries: [entry, { ...entry, pinned: true }],
+      entries: [
+        ...projection.entries,
+        {
+          resource_id: 'item:pinned',
+          favorite: false,
+          pinned: true,
+          last_opened_at: null,
+          progress: null,
+          revision: 1,
+          updated_global_seq: 12,
+        },
+      ],
     });
 
-    expect(updated).toHaveLength(1);
-    expect(updated[0].state.pinned).toBe(true);
+    expect(items.map((item) => item.resource_id)).toEqual(['item:pinned', 'item:one']);
   });
 });

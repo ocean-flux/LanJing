@@ -9,7 +9,8 @@
   import '../index.css';
 
   let { children }: { children?: import('svelte').Snippet } = $props();
-  const isThrowawayPrototype = $derived(dev && page.url.pathname === '/prototype/media-shell');
+  // dev 可丢弃原型：整段 /prototype/* 自持壳层，不套产品 ModeShell
+  const isThrowawayPrototype = $derived(dev && page.url.pathname.startsWith('/prototype'));
 
   onMount(() => {
     if (!browser) return;

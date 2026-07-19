@@ -7,7 +7,11 @@
   import Star from '@lucide/svelte/icons/star';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n';
-  import { loadLibraryProjection, updateLibraryEntry } from './library-api';
+  import {
+    loadLibraryProjection,
+    updateLibraryEntry,
+    type LibraryUpdateReceipt,
+  } from './library-api';
   import {
     projectLibrary,
     type LibraryEntry,
@@ -24,7 +28,7 @@
   type Props = {
     projection?: LibraryProjectionResponse | null;
     load?: () => Promise<LibraryProjectionResponse>;
-    update?: (entry: LibraryEntry) => Promise<void>;
+    update?: (entry: LibraryEntry) => Promise<LibraryUpdateReceipt>;
   };
 
   let {
@@ -86,12 +90,19 @@
     };
 
     try {
-      await update(nextEntry);
+      const receipt = await update(nextEntry);
       if (!activeProjection) return;
       activeProjection = {
         ...activeProjection,
+        global_seq: receipt.global_seq,
         entries: activeProjection.entries.map((entry) =>
-          entry.resource_id === nextEntry.resource_id ? nextEntry : entry,
+          entry.resource_id === nextEntry.resource_id
+            ? {
+                ...nextEntry,
+                revision: receipt.revision,
+                updated_global_seq: receipt.global_seq,
+              }
+            : entry,
         ),
       };
     } catch {
@@ -113,33 +124,18 @@
       <p class="text-sm text-ink-muted" role="status">{m.library_desc()}</p>
     {:else if items.length > 0}
       <div class="grid gap-2" aria-label={m.library_title()}>
-        {#each items as entry, index (entry.item.id)}
+        {#each items as entry, index (entry.resource_id)}
           <article
             class="grid gap-3 border-b border-hairline py-2 md:grid-cols-[minmax(0,1fr)_auto]"
-            data-resource-id={entry.item.id}
+            data-resource-id={entry.resource_id}
           >
             <div class="min-w-0">
-              <h2 class="truncate text-sm font-semibold text-ink">{entry.item.title}</h2>
-              {#if entry.item.subtitle}
-                <p class="mt-0.5 text-xs text-ink-muted">{entry.item.subtitle}</p>
-              {/if}
-              {#if entry.source}
-                <p class="mt-1 text-xs text-ink-subtle">
-                  {m.library_source_label({ name: entry.source.title })}
-                </p>
-              {/if}
+              <h2 class="truncate text-sm font-semibold text-ink">{entry.resource_id}</h2>
               {#if entry.state.progress}
                 <p class="mt-1 text-xs text-ink-subtle">
                   {entry.state.progress.position}{#if entry.state.progress.total !== null}
                     / {entry.state.progress.total}
                   {/if}
-                </p>
-              {/if}
-              {#if entry.alternativeRoutes.length > 0}
-                <p class="mt-1 text-xs text-ink-subtle">
-                  {m.library_alternative_routes()}: {entry.alternativeRoutes
-                    .map((route) => route.title)
-                    .join('、')}
                 </p>
               {/if}
             </div>

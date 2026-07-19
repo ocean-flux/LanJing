@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { loadRules, getRules } from '$lib/stores/rules.svelte';
+  import { getInstalledSources, loadInstalledSources } from '$lib/stores/rules.svelte';
   import {
     startSearch,
     startDiscover,
@@ -11,7 +11,6 @@
     getMediaItems,
     getMediaUnits,
     getResolvedText,
-    getNodeOutputs,
     getLoading,
     getError,
     getCurrentStage,
@@ -24,10 +23,9 @@
 
   let selectedRuleId = $state('');
   let searchQuery = $state('');
-  let nodePanelOpen = $state(true);
 
   onMount(() => {
-    loadRules();
+    loadInstalledSources();
     return () => cleanup();
   });
 
@@ -54,10 +52,9 @@
         class="h-9 rounded-md border border-input bg-background px-3 text-sm"
       >
         <option value="">-- {m.debug_select_rule_placeholder()} --</option>
-        {#each getRules() as rule (rule.id)}
-          <option value={rule.id}>
-            {rule.source_url ||
-              m.debug_rule_option({ id: rule.id.slice(0, 8), count: rule.node_count })}
+        {#each getInstalledSources() as source (source.source_id)}
+          <option value={source.source_id}>
+            {source.profile.title || source.source_id}
           </option>
         {/each}
       </select>
@@ -193,40 +190,5 @@
         </div>
       {/if}
     {/if}
-  {/if}
-
-  {#if getNodeOutputs().length > 0}
-    <div class="rounded-md border bg-card">
-      <Button
-        type="button"
-        variant="ghost"
-        class="h-auto w-full justify-between rounded-none px-3 py-2 text-sm font-semibold"
-        onclick={() => (nodePanelOpen = !nodePanelOpen)}
-      >
-        <span>{m.debug_node_outputs({ count: getNodeOutputs().length })}</span>
-        <span class="text-muted-foreground"
-          >{nodePanelOpen ? m.debug_collapse() : m.debug_expand()}</span
-        >
-      </Button>
-      {#if nodePanelOpen}
-        <div class="max-h-60 space-y-1 overflow-y-auto border-t p-2">
-          {#each getNodeOutputs() as output, i (output.node_id + i)}
-            <div
-              class="rounded px-2 py-1 font-mono text-xs {i === getNodeOutputs().length - 1
-                ? 'border border-primary/30 bg-primary/10'
-                : 'bg-muted/30'}"
-            >
-              <span class="font-semibold text-primary">#{i}</span>
-              <span class="text-muted-foreground"> ID:</span>
-              {output.node_id.slice(0, 8)}...
-              <span class="text-muted-foreground"> {m.debug_node_type()}:</span>
-              {output.variant}
-              <span class="text-muted-foreground"> {m.debug_node_summary()}:</span>
-              {output.summary}
-            </div>
-          {/each}
-        </div>
-      {/if}
-    </div>
   {/if}
 </div>
