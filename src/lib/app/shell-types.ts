@@ -23,10 +23,7 @@ export type PlatformKind = 'browser' | 'windows' | 'macos' | 'linux' | 'ios' | '
 export type Orientation = 'portrait' | 'landscape';
 /** 原生窗口控件策略（含浏览器预览与各 OS overlay）。 */
 export type NativeWindowControlMode =
-  | 'browser-preview'
-  | 'macos-overlay'
-  | 'system-decorated'
-  | 'windows-overlay';
+  'browser-preview' | 'macos-overlay' | 'system-decorated' | 'windows-overlay';
 
 /** 平台能力快照：视口、指针与窗口控件模式。 */
 export type PlatformCapabilities = {
@@ -71,11 +68,7 @@ export type ModeShellContract = {
 
 /** 响应式壳断点。 */
 export type ShellMode =
-  | 'mobile'
-  | 'tablet-portrait'
-  | 'tablet-landscape'
-  | 'narrow-desktop'
-  | 'desktop';
+  'mobile' | 'tablet-portrait' | 'tablet-landscape' | 'narrow-desktop' | 'desktop';
 
 export type PointerKind = 'coarse' | 'fine';
 export type HoverKind = 'none' | 'hover';

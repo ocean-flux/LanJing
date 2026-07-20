@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use aes_gcm::aead::{Aead, Generate, Key, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
-use keyring::{Entry, Error as KeyringError};
+use keyring_core::{Entry, Error as KeyringError};
 use uuid::Uuid;
 
 use crate::types::{ArtifactKind, OrphanRecovery, StorageError};
@@ -42,9 +42,10 @@ pub(crate) struct ArtifactStore {
 impl ArtifactStore {
     /// 创建 artifact 根目录描述，并固定同一个 keyring credential 实例。
     ///
-    /// 固定实例既符合生产 keyring 的安装级语义，也让 keyring 官方 mock 在同一 storage
+    /// 固定实例既符合生产 keyring 的安装级语义，也让 keyring-core mock 在同一 storage
     /// 生命周期内正确模拟持久凭据。
     pub(crate) fn new(root: PathBuf, keyring_service: &str) -> Result<Self, StorageError> {
+        crate::keyring_init::ensure_default_keyring_store()?;
         let master_key_entry =
             Entry::new(keyring_service, MASTER_KEY_ACCOUNT).map_err(|_| StorageError::Keyring)?;
         Ok(Self {

@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Once;
 
 use futures::StreamExt;
-use keyring::{mock, set_default_credential_builder};
+use keyring_core::{Entry, mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_importer::legado::{CONTINUE_ACTION_TTL_MS, LegadoImporter};
 use lj_media::{MediaAssetLocator, MediaGraphDelta, MediaKind};
@@ -63,7 +63,14 @@ impl Drop for TempRuleSystem {
 
 fn init_mock_keyring() {
     static INIT: Once = Once::new();
-    INIT.call_once(|| set_default_credential_builder(mock::default_credential_builder()));
+    INIT.call_once(|| {
+        set_default_store(mock::Store::new().expect("keyring-core mock store"));
+    });
+}
+
+fn wipe_master_key(keyring_service: &str) {
+    let entry = Entry::new(keyring_service, "master-key-v1").expect("master-key entry");
+    entry.delete_credential().expect("删除 mock master key");
 }
 
 fn legado_input(base_url: &str) -> RuleInput {
@@ -770,6 +777,7 @@ async fn legado_replay_refuses_lost_master_key_before_effects() {
         .await
         .expect("close C2 writer before key-loss restart");
     drop(system);
+    wipe_master_key(&temp.keyring_service);
     let restarted = temp.open().await;
 
     let Err(error) = restarted

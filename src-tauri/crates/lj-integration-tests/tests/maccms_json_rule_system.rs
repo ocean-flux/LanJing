@@ -12,7 +12,7 @@ use diesel::prelude::*;
 use diesel::sql_query;
 use diesel::sql_types::{BigInt, Text};
 use futures::StreamExt;
-use keyring::{mock, set_default_credential_builder};
+use keyring_core::{mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::{MediaAssetKind, MediaAssetLocator, MediaGraphDelta, MediaKind};
 use lj_rule_system::{
@@ -87,7 +87,9 @@ impl Drop for TempRuleSystem {
 
 fn init_mock_keyring() {
     static INIT: Once = Once::new();
-    INIT.call_once(|| set_default_credential_builder(mock::default_credential_builder()));
+    INIT.call_once(|| {
+        set_default_store(mock::Store::new().expect("keyring-core mock store"));
+    });
 }
 
 #[derive(Clone, Copy)]

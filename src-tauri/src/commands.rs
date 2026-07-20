@@ -461,7 +461,7 @@ mod tests {
     use std::sync::{Arc, Mutex, Once};
     use std::time::Duration;
 
-    use keyring::{mock, set_default_credential_builder};
+    use keyring_core::{mock, set_default_store};
     use lj_rule_system::RuleSystemConfig;
     use serde_json::json;
     use uuid::Uuid;
@@ -509,7 +509,9 @@ mod tests {
 
     fn init_mock_keyring() {
         static INIT: Once = Once::new();
-        INIT.call_once(|| set_default_credential_builder(mock::default_credential_builder()));
+        INIT.call_once(|| {
+            set_default_store(mock::Store::new().expect("keyring-core mock store"));
+        });
     }
 
     async fn mount_slow_discover_route(server: &MockServer) {

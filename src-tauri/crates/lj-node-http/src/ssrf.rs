@@ -39,7 +39,11 @@ fn shared_resolver() -> Result<&'static TokioResolver, Error> {
         // 缓存错误,后续调用复用同结果避免重复尝试。
         TokioResolver::builder_tokio()
             .map_err(|e| format!("hickory resolver 构建失败(系统 DNS 配置读取失败): {e}"))
-            .map(hickory_resolver::ResolverBuilder::build)
+            .and_then(|builder| {
+                builder
+                    .build()
+                    .map_err(|e| format!("hickory resolver 构建失败: {e}"))
+            })
     });
     cached
         .as_ref()

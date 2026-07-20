@@ -30,45 +30,50 @@ clippy.all = "deny"
 clippy.pedantic = "deny"
 
 [workspace.dependencies]
-tauri = "2.11.3"
-tauri-build = { version = "2.6.3", features = [] }
-tauri-plugin-dialog = "2.7.1"
-tauri-plugin-notification = "2.3.3"
-tauri-plugin-os = "2.3.2"
-tauri-plugin-single-instance = "2.4.2"
-tauri-plugin-window-state = "2.4.1"
-diesel = { version = "2.3.10", features = ["sqlite"] }
+tauri = "2"
+tauri-build = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-os = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-svelte = "3"
+# 第三方依赖统一在 workspace.dependencies 钉版本；子 crate 仅 { workspace = true }
+# tauri 系用主版本轨解析最新兼容版。
+# keyring v4 生态：生产用 keyring-core + 平台 store；测试用 keyring-core::mock。
+diesel = { version = "2.3.11", features = ["sqlite"] }
 diesel_migrations = "2.3.2"
+# diesel 2.3 要求 libsqlite3-sys < 0.38
 libsqlite3-sys = { version = "0.37.0", features = ["bundled"] }
 reqwest = { version = "0.13.4", features = ["cookies", "gzip", "brotli"] }
 cookie_store = "0.22.1"
-rquickjs = "0.12.0"
-blake3 = "1.8.3"
+rquickjs = "0.12.1"
+blake3 = "1.8.5"
 aes-gcm = { version = "0.11.0", features = ["getrandom"] }
 zstd = "0.13.3"
-keyring = { version = "3.6.3", features = [
-  "windows-native",
-  "apple-native",
-  "linux-native",
-] }
-async-trait = "0.1.89"
+keyring-core = "1.0.0"
+windows-native-keyring-store = "1.1.0"
+apple-native-keyring-store = { version = "1.0.1", features = ["keychain"] }
+zbus-secret-service-keyring-store = "1.0.0"
+async-trait = "0.1.91"
 wiremock = "0.6.5"
-tokio = { version = "1.52.3", features = ["full"] }
+tokio = { version = "1.53.0", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 async-stream = "0.3.6"
-futures = "0.3.32"
-uuid = { version = "1.23.4", features = ["v4", "serde"] }
+futures = "0.3.33"
+uuid = { version = "1.24.0", features = ["v4", "serde"] }
 url = "2.5.8"
-hickory-resolver = { version = "0.25.2", features = ["tokio", "system-config"] }
+hickory-resolver = { version = "0.26.1", features = ["tokio", "system-config"] }
 scraper = "0.27.0"
 xmloxide = "0.4.3"
-jsonpath-rust = "1.0.4"
-regex = "1.12.4"
+jsonpath-rust = "1.0.5"
+regex = "1.13.1"
 encoding_rs = "0.8.35"
-thiserror = "2.0.18"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.150"
+thiserror = "2.0.19"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 
 [package]
 name = "lanjing"
@@ -91,17 +96,17 @@ serde = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
 tauri-plugin-notification = { workspace = true }
-tauri-plugin-opener = "2.5.4"
+tauri-plugin-opener = { workspace = true }
 tauri-plugin-os = { workspace = true }
 tauri-plugin-single-instance = { workspace = true }
-tauri-plugin-svelte = "3"
+tauri-plugin-svelte = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
 lj-rule-system = { path = "crates/lj-rule-system" }
 futures = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
-keyring = { workspace = true }
+keyring-core = { workspace = true }
 lj-rule-system = { path = "crates/lj-rule-system", features = ["test-support"] }
 serde_json = { workspace = true }
 tokio = { workspace = true }

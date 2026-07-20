@@ -79,14 +79,7 @@ export const lanjingMotion = {
 export type LanjingPalette = typeof lanjingPalette;
 
 export type MediaAppKey =
-  | 'novel'
-  | 'comic'
-  | 'music'
-  | 'video'
-  | 'images'
-  | 'podcast'
-  | 'article'
-  | 'local';
+  'novel' | 'comic' | 'music' | 'video' | 'images' | 'podcast' | 'article' | 'local';
 
 export const mediaApps: Array<{ key: MediaAppKey }> = [
   { key: 'novel' },

@@ -1,7 +1,7 @@
 //! Event Store、规范化投影、writer 与 durable archive 的真实 `SQLite` 合同测试。
 //!
 //! 每个测试都创建真实临时 `SQLite` 文件与 artifact 目录；不使用 `:memory:` 或 mock
-//! Diesel。keyring 仅使用 keyring crate 的官方 mock credential builder，以便在 CI 中
+//! Diesel。keyring 仅使用 keyring-core 官方 mock store，以便在 CI 中
 //! 可重复验证主密钥丢失后的 explicit replay failure。
 
 use std::collections::{BTreeMap, HashMap};
@@ -11,7 +11,7 @@ use std::sync::Once;
 
 use diesel::prelude::*;
 use diesel::sql_query;
-use keyring::{mock, set_default_credential_builder};
+use keyring_core::{Entry, mock, set_default_store};
 use lj_media::{
     MediaAsset, MediaAssetKind, MediaAssetLocator, MediaGraphDelta, MediaItem, MediaKind,
     MediaResourceId, MediaUnit, ResourceCompleteness, SourceProfile,
@@ -38,7 +38,15 @@ use uuid::Uuid;
 
 fn init_mock_keyring() {
     static INIT: Once = Once::new();
-    INIT.call_once(|| set_default_credential_builder(mock::default_credential_builder()));
+    INIT.call_once(|| {
+        set_default_store(mock::Store::new().expect("keyring-core mock store"));
+    });
+}
+
+/// keyring-core mock 跨 Entry 持久；模拟 OS keyring 主密钥丢失时需显式删除。
+fn wipe_master_key(keyring_service: &str) {
+    let entry = Entry::new(keyring_service, "master-key-v1").expect("master-key entry");
+    entry.delete_credential().expect("删除 mock master key");
 }
 
 struct TempStore {

@@ -229,6 +229,7 @@ async fn effect_archive_is_durable_redacted_and_explicit_when_master_key_is_lost
     }));
 
     storage.shutdown().await.expect("writer shutdown");
+    wipe_master_key(&temp.config.keyring_service);
     let restarted = temp.open().await;
     assert!(
         EffectArchive::load_replay(

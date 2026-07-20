@@ -11,6 +11,7 @@ mod connection;
 mod event_store;
 mod execution;
 mod execution_archive;
+mod keyring_init;
 mod projection_query;
 mod retention_recovery;
 mod schema;

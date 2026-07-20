@@ -5,12 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 export type CapabilityGrantPreset = 'none' | 'network_only';
 
 export type StandardIntent =
-  | 'Search'
-  | 'Discover'
-  | 'ResolveItem'
-  | 'ListUnits'
-  | 'ResolveAsset'
-  | 'ContinueAction';
+  'Search' | 'Discover' | 'ResolveItem' | 'ListUnits' | 'ResolveAsset' | 'ContinueAction';
 
 export interface SourceProfile {
   id: string;

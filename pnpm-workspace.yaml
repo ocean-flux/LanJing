@@ -6,3 +6,4 @@ allowBuilds:
   sharp: true
 minimumReleaseAgeExclude:
   - deslop-js@0.0.21
+  - eslint-plugin-svelte@3.22.0

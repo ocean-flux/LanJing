@@ -260,6 +260,7 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
         .shutdown()
         .await
         .expect("close before key-loss read");
+    wipe_master_key(&temp.config.keyring_service);
     let restarted = temp.open().await;
     assert!(matches!(
         restarted
