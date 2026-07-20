@@ -440,6 +440,8 @@ fn delta_with_item(source_id: &str, title: &str) -> ProjectionDelta {
 mod archive_contract;
 #[path = "event_projection_storage_test/credential_writer_contract.rs"]
 mod credential_writer_contract;
+#[path = "event_projection_storage_test/media_query_contract.rs"]
+mod media_query_contract;
 #[path = "event_projection_storage_test/projection_retention_contract.rs"]
 mod projection_retention_contract;
 #[path = "event_projection_storage_test/replay_contract.rs"]

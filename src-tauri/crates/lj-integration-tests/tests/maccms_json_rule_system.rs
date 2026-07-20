@@ -982,4 +982,94 @@ async fn safe_query_facade_lists_sources_projects_library_and_catches_up() {
     let projection_wire = serde_json::to_value(&projection).expect("资料库投影可安全序列化");
     assert!(projection_wire.get("plan").is_none());
     assert!(projection_wire.get("secret").is_none());
+
+    assert_media_projection_query_and_restart(system, &temp, resource_id).await;
+}
+
+/// 标准媒体投影查询：library `resource_id` → item → units → assets；重启后仍可读。
+async fn assert_media_projection_query_and_restart(
+    system: RuleSystem,
+    temp: &TempRuleSystem,
+    resource_id: String,
+) {
+    let media = system
+        .get_media_item(resource_id.clone())
+        .await
+        .expect("get_media_item 应读回持久投影")
+        .expect("Discover 写入的 item 必须存在");
+    assert_eq!(media.id.0, resource_id);
+    assert!(!media.title.is_empty(), "标准摘要必须含 title");
+    let media_wire = serde_json::to_value(&media).expect("MediaItem wire");
+    assert!(media_wire.get("definition").is_none());
+    assert!(media_wire.get("plan").is_none());
+    assert!(media_wire.get("secret").is_none());
+
+    let batch = system
+        .get_media_items(vec![resource_id.clone(), "item:missing".to_string()])
+        .await
+        .expect("get_media_items 应跳过缺失");
+    assert_eq!(batch.len(), 1);
+    assert_eq!(batch[0].id.0, resource_id);
+
+    assert!(
+        system
+            .get_media_item("item:missing".to_string())
+            .await
+            .expect("缺失 item 查询")
+            .is_none()
+    );
+    let empty_units = system
+        .list_media_units("item:missing".to_string(), 0, Some(50))
+        .await
+        .expect("缺失父 item 应空页");
+    assert!(!empty_units.parent_found);
+    assert!(empty_units.items.is_empty());
+    assert!(!empty_units.has_more);
+
+    let limit_err = system
+        .list_media_units(resource_id.clone(), 0, Some(0))
+        .await
+        .expect_err("limit=0 必须校验失败");
+    assert_eq!(limit_err.stage, RuleErrorStage::Validation);
+    assert_eq!(limit_err.code, "media_page_limit_invalid");
+
+    let units = system
+        .list_media_units(resource_id.clone(), 0, Some(50))
+        .await
+        .expect("list_media_units");
+    assert!(units.parent_found);
+    // Discover 至少写出 item；unit 视来源 plan 可能为空。
+    if units.items.len() > 1 {
+        let first_page = system
+            .list_media_units(resource_id.clone(), 0, Some(1))
+            .await
+            .expect("list_media_units has_more 探测");
+        assert!(first_page.parent_found);
+        assert_eq!(first_page.items.len(), 1);
+        assert!(first_page.has_more, "limit+1 探测必须报告 has_more");
+    }
+    if let Some(unit) = units.items.first() {
+        let assets = system
+            .list_media_assets(unit.id.0.clone(), 0, None)
+            .await
+            .expect("list_media_assets");
+        assert!(assets.parent_found);
+        let assets_wire = serde_json::to_value(&assets).expect("MediaAssetPage wire");
+        assert!(assets_wire.get("effect").is_none());
+        assert!(assets_wire.get("secret").is_none());
+    }
+
+    system
+        .shutdown_for_test()
+        .await
+        .expect("关闭 writer 以便同路径重开");
+    drop(system);
+    let reopened = temp.reopen_after_drop(Duration::from_mins(1)).await;
+    let after_restart = reopened
+        .get_media_item(resource_id.clone())
+        .await
+        .expect("重启后 get_media_item")
+        .expect("持久投影必须跨进程可见");
+    assert_eq!(after_restart.id.0, resource_id);
+    assert_eq!(after_restart.title, media.title);
 }

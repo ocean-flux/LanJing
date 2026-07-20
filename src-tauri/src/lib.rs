@@ -54,6 +54,10 @@ pub fn run() {
             commands::list_installed_sources,
             commands::get_library_projection,
             commands::update_library_entry,
+            commands::get_media_item,
+            commands::get_media_items,
+            commands::list_media_units,
+            commands::list_media_assets,
         ])
         .run(tauri::generate_context!())
         .expect("error while running lanjing application");

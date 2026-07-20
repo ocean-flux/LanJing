@@ -26,7 +26,8 @@ use crate::execution::{
     load_execution_replay_pin_sync, load_execution_source_credentials_sync,
 };
 use crate::projection_query::{
-    get_library_entry_sync, get_payload_by_id, library_projection_sync, payloads_by_column,
+    get_items_by_ids, get_library_entry_sync, get_payload_by_id, library_projection_sync,
+    list_assets_for_unit_bounded, list_units_for_item_bounded, payloads_by_column,
     source_projection_sync,
 };
 use crate::retention_recovery::{
@@ -442,6 +443,34 @@ impl EventProjectionStorage {
             .await
     }
 
+    /// 按稳定 ID 批量查询媒体主体；跳过缺失项，命中结果按 `id` 升序。
+    ///
+    /// 调用方保证 ID 数量有界；本方法不截断列表。
+    ///
+    /// # Errors
+    ///
+    /// `SQLite` 或 JSON 读取失败时返回 [`StorageError`]。
+    pub async fn get_items(
+        &self,
+        resource_ids: Vec<MediaResourceId>,
+    ) -> Result<Vec<MediaItem>, StorageError> {
+        let ids: Vec<String> = resource_ids.into_iter().map(|id| id.0).collect();
+        self.read(move |conn, _| get_items_by_ids(conn, &ids)).await
+    }
+
+    /// 按稳定 ID 查询消费单元。
+    ///
+    /// # Errors
+    ///
+    /// `SQLite` 或 JSON 读取失败时返回 [`StorageError`]。
+    pub async fn get_unit(
+        &self,
+        resource_id: MediaResourceId,
+    ) -> Result<Option<MediaUnit>, StorageError> {
+        self.read(move |conn, _| get_payload_by_id(conn, "projection_units", "id", &resource_id.0))
+            .await
+    }
+
     /// 按来源稳定索引查询媒体主体。
     ///
     /// # Errors
@@ -463,7 +492,9 @@ impl EventProjectionStorage {
         .await
     }
 
-    /// 按媒体主体索引查询消费单元。
+    /// 按媒体主体索引有界查询消费单元。
+    ///
+    /// 稳定顺序：`position IS NULL` 置后，再 `position ASC, id ASC`。
     ///
     /// # Errors
     ///
@@ -471,14 +502,16 @@ impl EventProjectionStorage {
     pub async fn list_units_for_item(
         &self,
         item_id: MediaResourceId,
+        offset: u32,
+        limit: u32,
     ) -> Result<Vec<MediaUnit>, StorageError> {
-        self.read(move |conn, _| {
-            payloads_by_column(conn, "projection_units", "item_id", &item_id.0)
-        })
-        .await
+        self.read(move |conn, _| list_units_for_item_bounded(conn, &item_id.0, offset, limit))
+            .await
     }
 
-    /// 按消费单元索引查询资产。
+    /// 按消费单元索引有界查询资产。
+    ///
+    /// 稳定顺序：`id ASC`。
     ///
     /// # Errors
     ///
@@ -486,11 +519,11 @@ impl EventProjectionStorage {
     pub async fn list_assets_for_unit(
         &self,
         unit_id: MediaResourceId,
+        offset: u32,
+        limit: u32,
     ) -> Result<Vec<MediaAsset>, StorageError> {
-        self.read(move |conn, _| {
-            payloads_by_column(conn, "projection_assets", "unit_id", &unit_id.0)
-        })
-        .await
+        self.read(move |conn, _| list_assets_for_unit_bounded(conn, &unit_id.0, offset, limit))
+            .await
     }
 
     /// 显式扫描并删除 temp/无 metadata 的 artifact orphan。

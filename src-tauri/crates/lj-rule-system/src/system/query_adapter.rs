@@ -3,8 +3,11 @@
 //! query 只读 C2 的规范化投影或更新 library aggregate；不会返回 Definition、Plan、artifact
 //! ref、secret 或 storage transaction。`catch_up_execution` 保持 C2 stream sequence 连续性，
 //! 使 delivery 断开不会改变 execution 的生命周期。
+//!
+//! 标准媒体投影读取（item/unit/asset）只按稳定 ID 与有界分页恢复；不替代 live execution，
+//! 也不下发整图 `MediaGraphDelta`。
 
-use lj_media::MediaResourceId;
+use lj_media::{MediaItem, MediaResourceId};
 use lj_storage::{
     InstalledSourceRecord as StorageInstalledSourceRecord, LibraryEntry as StorageLibraryEntry,
     LibraryProgress as StorageLibraryProgress, LibraryProjection as StorageLibraryProjection,
@@ -17,8 +20,16 @@ use super::session_delivery::catch_up_execution;
 use super::{RuleSystem, now_millis};
 use crate::{
     ExecutionEvent, ExecutionId, InstalledSource, LibraryEntryUpdate, LibraryProgress,
-    LibraryProjection, LibraryProjectionEntry, LibraryUpdateReceipt, RuleError, RuleErrorStage,
+    LibraryProjection, LibraryProjectionEntry, LibraryUpdateReceipt, MediaAssetPage, MediaUnitPage,
+    RuleError, RuleErrorStage,
 };
+
+/// 产品面分页默认页大小。
+const DEFAULT_MEDIA_PAGE_LIMIT: u32 = 50;
+/// 产品面分页硬上限。
+const MAX_MEDIA_PAGE_LIMIT: u32 = 100;
+/// 批量点查 ID 数量硬上限。
+const MAX_MEDIA_BATCH_IDS: usize = 64;
 
 impl RuleSystem {
     /// 按稳定 source identity 升序列出所有已安装来源的安全摘要。
@@ -125,6 +136,209 @@ impl RuleSystem {
     ) -> Result<Vec<ExecutionEvent>, RuleError> {
         catch_up_execution(&self.state.storage, execution_id, after_sequence).await
     }
+
+    /// 按稳定 item ID 取标准媒体摘要；缺失或 tombstone 返回 `None`。
+    ///
+    /// # Errors
+    ///
+    /// 资源 ID 为空，或 C2 投影读取失败时返回 [`RuleError`]；存储失败不会变成空成功。
+    pub async fn get_media_item(
+        &self,
+        resource_id: String,
+    ) -> Result<Option<MediaItem>, RuleError> {
+        let trace_id = super::trace_id();
+        let resource_id = require_non_empty_id(&resource_id, "resource_id", &trace_id)?;
+        self.state
+            .storage
+            .get_item(MediaResourceId(resource_id))
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))
+    }
+
+    /// 批量按稳定 item ID 取标准媒体摘要；跳过缺失 ID，命中结果按 `id` 升序。
+    ///
+    /// # Errors
+    ///
+    /// ID 列表为空、超过 64、含空 ID，或 C2 投影读取失败时返回 [`RuleError`]。
+    pub async fn get_media_items(
+        &self,
+        resource_ids: Vec<String>,
+    ) -> Result<Vec<MediaItem>, RuleError> {
+        let trace_id = super::trace_id();
+        if resource_ids.is_empty() {
+            return Err(validation_error(
+                "media_resource_ids_empty",
+                "批量资源 ID 不能为空",
+                &trace_id,
+            ));
+        }
+        if resource_ids.len() > MAX_MEDIA_BATCH_IDS {
+            return Err(validation_error(
+                "media_resource_ids_too_many",
+                format!("批量资源 ID 最多 {MAX_MEDIA_BATCH_IDS} 个"),
+                &trace_id,
+            ));
+        }
+        let mut ids = Vec::with_capacity(resource_ids.len());
+        for resource_id in resource_ids {
+            let resource_id = require_non_empty_id(&resource_id, "resource_id", &trace_id)?;
+            ids.push(MediaResourceId(resource_id));
+        }
+        self.state
+            .storage
+            .get_items(ids)
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))
+    }
+
+    /// 有界列出某 item 下的消费单元（目录页）。
+    ///
+    /// 父 item 缺失时返回空页且 `parent_found=false`（不 404）。
+    /// `limit` 默认 50、硬上限 100；`0` 或 `>100` 为校验错误。
+    ///
+    /// # Errors
+    ///
+    /// 参数非法或 C2 投影读取失败时返回 [`RuleError`]。
+    pub async fn list_media_units(
+        &self,
+        item_id: String,
+        offset: u32,
+        limit: Option<u32>,
+    ) -> Result<MediaUnitPage, RuleError> {
+        let trace_id = super::trace_id();
+        let item_id = require_non_empty_id(&item_id, "item_id", &trace_id)?;
+        let limit = resolve_page_limit(limit, &trace_id)?;
+        let parent_found = self
+            .state
+            .storage
+            .get_item(MediaResourceId(item_id.clone()))
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))?
+            .is_some();
+        if !parent_found {
+            return Ok(MediaUnitPage {
+                items: Vec::new(),
+                offset,
+                limit,
+                has_more: false,
+                parent_found: false,
+            });
+        }
+        // limit+1 探测 has_more，避免全量 count。
+        let fetch_limit = limit.saturating_add(1);
+        let rows = self
+            .state
+            .storage
+            .list_units_for_item(MediaResourceId(item_id), offset, fetch_limit)
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))?;
+        let (items, has_more) = take_page(rows, limit);
+        Ok(MediaUnitPage {
+            items,
+            offset,
+            limit,
+            has_more,
+            parent_found: true,
+        })
+    }
+
+    /// 有界列出某 unit 下的资产（正文/封面/流）。
+    ///
+    /// 父 unit 缺失时返回空页且 `parent_found=false`（不 404）。
+    ///
+    /// # Errors
+    ///
+    /// 参数非法或 C2 投影读取失败时返回 [`RuleError`]。
+    pub async fn list_media_assets(
+        &self,
+        unit_id: String,
+        offset: u32,
+        limit: Option<u32>,
+    ) -> Result<MediaAssetPage, RuleError> {
+        let trace_id = super::trace_id();
+        let unit_id = require_non_empty_id(&unit_id, "unit_id", &trace_id)?;
+        let limit = resolve_page_limit(limit, &trace_id)?;
+        let parent_found = self
+            .state
+            .storage
+            .get_unit(MediaResourceId(unit_id.clone()))
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))?
+            .is_some();
+        if !parent_found {
+            return Ok(MediaAssetPage {
+                items: Vec::new(),
+                offset,
+                limit,
+                has_more: false,
+                parent_found: false,
+            });
+        }
+        let fetch_limit = limit.saturating_add(1);
+        let rows = self
+            .state
+            .storage
+            .list_assets_for_unit(MediaResourceId(unit_id), offset, fetch_limit)
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))?;
+        let (items, has_more) = take_page(rows, limit);
+        Ok(MediaAssetPage {
+            items,
+            offset,
+            limit,
+            has_more,
+            parent_found: true,
+        })
+    }
+}
+
+fn require_non_empty_id(value: &str, field: &str, trace_id: &str) -> Result<String, RuleError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(validation_error(
+            format!("{field}_invalid"),
+            format!("{field} 不能为空"),
+            trace_id,
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn resolve_page_limit(limit: Option<u32>, trace_id: &str) -> Result<u32, RuleError> {
+    let limit = limit.unwrap_or(DEFAULT_MEDIA_PAGE_LIMIT);
+    if limit == 0 || limit > MAX_MEDIA_PAGE_LIMIT {
+        return Err(validation_error(
+            "media_page_limit_invalid",
+            format!("limit 必须在 1..={MAX_MEDIA_PAGE_LIMIT} 之间"),
+            trace_id,
+        ));
+    }
+    Ok(limit)
+}
+
+/// 将 `limit+1` 探测结果裁成产品页：超出则 `has_more=true` 并截断至 `limit`。
+fn take_page<T>(mut rows: Vec<T>, limit: u32) -> (Vec<T>, bool) {
+    let limit_usize = usize::try_from(limit).unwrap_or(usize::MAX);
+    let has_more = rows.len() > limit_usize;
+    if has_more {
+        rows.truncate(limit_usize);
+    }
+    (rows, has_more)
+}
+
+fn validation_error(
+    code: impl Into<String>,
+    message: impl Into<String>,
+    trace_id: &str,
+) -> RuleError {
+    RuleError::new(
+        RuleErrorStage::Validation,
+        code,
+        message,
+        trace_id.to_string(),
+        false,
+        Vec::new(),
+    )
 }
 
 fn installed_source_from_record(source: StorageInstalledSourceRecord) -> InstalledSource {
@@ -174,5 +388,55 @@ fn library_progress_to_storage(progress: LibraryProgress) -> StorageLibraryProgr
         unit_id: progress.unit_id.map(MediaResourceId),
         position: progress.position,
         total: progress.total,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn take_page_detects_has_more_and_truncates() {
+        let (page, has_more) = take_page(vec!["a", "b", "c"], 2);
+        assert!(has_more);
+        assert_eq!(page, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn take_page_exact_limit_has_no_more() {
+        let (page, has_more) = take_page(vec!["a", "b"], 2);
+        assert!(!has_more);
+        assert_eq!(page, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn resolve_page_limit_defaults_and_rejects_bounds() {
+        let trace = "trace-limit";
+        assert_eq!(resolve_page_limit(None, trace).expect("default"), 50);
+        assert_eq!(resolve_page_limit(Some(1), trace).expect("min"), 1);
+        assert_eq!(resolve_page_limit(Some(100), trace).expect("max"), 100);
+        assert_eq!(
+            resolve_page_limit(Some(0), trace).expect_err("zero").code,
+            "media_page_limit_invalid"
+        );
+        assert_eq!(
+            resolve_page_limit(Some(101), trace).expect_err("over").code,
+            "media_page_limit_invalid"
+        );
+    }
+
+    #[test]
+    fn require_non_empty_id_trims_and_rejects_blank() {
+        let trace = "trace-id";
+        assert_eq!(
+            require_non_empty_id("  item:1  ", "resource_id", trace).expect("trim"),
+            "item:1"
+        );
+        assert_eq!(
+            require_non_empty_id("   ", "resource_id", trace)
+                .expect_err("blank")
+                .code,
+            "resource_id_invalid"
+        );
     }
 }

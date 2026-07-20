@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use futures::stream::BoxStream;
 use lj_capability::{IntentInput, StandardIntent};
-use lj_media::{MediaGraphDelta, SourceProfile};
+use lj_media::{MediaAsset, MediaGraphDelta, MediaUnit, SourceProfile};
 use lj_rule_model::{ArtifactRef, Diagnostic, PolicyCapabilities};
 use lj_runtime::CancellationHandle;
 use lj_storage::EventProjectionStorage;
@@ -216,6 +216,36 @@ pub struct LibraryUpdateReceipt {
     pub global_seq: u64,
     /// 提交后的资源 library stream revision。
     pub revision: u64,
+}
+
+/// 有界消费单元页：仅标准 `MediaUnit`，不含 Plan/effect/secret。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaUnitPage {
+    /// 本页单元；顺序与 storage 稳定排序一致。
+    pub items: Vec<MediaUnit>,
+    /// 请求的 offset。
+    pub offset: u32,
+    /// 请求的 limit（硬上限由 façade 校验）。
+    pub limit: u32,
+    /// 是否还有后续页。
+    pub has_more: bool,
+    /// 父 item 是否仍存在（tombstone/缺失为 false）。
+    pub parent_found: bool,
+}
+
+/// 有界资产页：仅标准 `MediaAsset`，含 locator 枚举原文。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MediaAssetPage {
+    /// 本页资产；按 `id` 升序。
+    pub items: Vec<MediaAsset>,
+    /// 请求的 offset。
+    pub offset: u32,
+    /// 请求的 limit（硬上限由 façade 校验）。
+    pub limit: u32,
+    /// 是否还有后续页。
+    pub has_more: bool,
+    /// 父 unit 是否仍存在（tombstone/缺失为 false）。
+    pub parent_found: bool,
 }
 
 /// execution 请求模式。

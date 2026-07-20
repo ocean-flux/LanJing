@@ -46,7 +46,7 @@ async fn event_projection_is_atomic_idempotent_and_catchable() {
     );
     assert_eq!(
         storage
-            .list_units_for_item(MediaResourceId("item:test:1".to_string()))
+            .list_units_for_item(MediaResourceId("item:test:1".to_string()), 0, 50)
             .await
             .expect("item unit index")
             .len(),
@@ -54,7 +54,7 @@ async fn event_projection_is_atomic_idempotent_and_catchable() {
     );
     assert_eq!(
         storage
-            .list_assets_for_unit(MediaResourceId("unit:test:1".to_string()))
+            .list_assets_for_unit(MediaResourceId("unit:test:1".to_string()), 0, 50)
             .await
             .expect("unit asset index")
             .len(),

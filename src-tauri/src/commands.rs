@@ -11,7 +11,8 @@ use futures::stream::BoxStream;
 use lj_rule_system::{
     CandidateId, CapabilityGrant, ExecuteRequest, ExecutionCancellation, ExecutionEvent,
     ExecutionEventKind, ExecutionId, InstalledSource, LibraryEntryUpdate, LibraryProjection,
-    LibraryUpdateReceipt, RuleError, RuleInput, RuleSystem,
+    LibraryUpdateReceipt, MediaAssetPage, MediaItem, MediaUnitPage, RuleError, RuleInput,
+    RuleSystem,
 };
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, State};
@@ -393,6 +394,136 @@ async fn update_library_entry_inner(
         .map_err(|error| map_rule_error(&error))
 }
 
+/// 按稳定 item ID 取标准媒体摘要；缺失时返回 JSON `null`。
+#[derive(Debug, Deserialize)]
+pub struct GetMediaItemRequest {
+    /// 标准媒体主体稳定 ID（通常来自 library `resource_id`）。
+    pub resource_id: String,
+}
+
+/// 批量按稳定 item ID 取标准媒体摘要。
+#[derive(Debug, Deserialize)]
+pub struct GetMediaItemsRequest {
+    /// 1..=64 个非空稳定 ID。
+    pub resource_ids: Vec<String>,
+}
+
+/// 有界列出 item 下消费单元。
+#[derive(Debug, Deserialize)]
+pub struct ListMediaUnitsRequest {
+    /// 父 item 稳定 ID。
+    pub item_id: String,
+    /// 分页 offset；默认 0。
+    #[serde(default)]
+    pub offset: u32,
+    /// 分页 limit；省略时 façade 使用默认 50，硬上限 100。
+    pub limit: Option<u32>,
+}
+
+/// 有界列出 unit 下资产。
+#[derive(Debug, Deserialize)]
+pub struct ListMediaAssetsRequest {
+    /// 父 unit 稳定 ID。
+    pub unit_id: String,
+    /// 分页 offset；默认 0。
+    #[serde(default)]
+    pub offset: u32,
+    /// 分页 limit；省略时 façade 使用默认 50，硬上限 100。
+    pub limit: Option<u32>,
+}
+
+/// 按稳定 ID 读取标准媒体主体；不存在时 `Ok(None)` → JSON `null`。
+///
+/// # Errors
+///
+/// 参数非法或投影读取失败时返回安全 IPC 错误。
+#[tauri::command]
+pub async fn get_media_item(
+    state: State<'_, AppState>,
+    request: GetMediaItemRequest,
+) -> Result<Option<MediaItem>, String> {
+    get_media_item_inner(state.system.as_ref(), request).await
+}
+
+async fn get_media_item_inner(
+    system: &RuleSystem,
+    request: GetMediaItemRequest,
+) -> Result<Option<MediaItem>, String> {
+    system
+        .get_media_item(request.resource_id)
+        .await
+        .map_err(|error| map_rule_error(&error))
+}
+
+/// 批量读取标准媒体主体；跳过缺失 ID。
+///
+/// # Errors
+///
+/// 参数非法或投影读取失败时返回安全 IPC 错误。
+#[tauri::command]
+pub async fn get_media_items(
+    state: State<'_, AppState>,
+    request: GetMediaItemsRequest,
+) -> Result<Vec<MediaItem>, String> {
+    get_media_items_inner(state.system.as_ref(), request).await
+}
+
+async fn get_media_items_inner(
+    system: &RuleSystem,
+    request: GetMediaItemsRequest,
+) -> Result<Vec<MediaItem>, String> {
+    system
+        .get_media_items(request.resource_ids)
+        .await
+        .map_err(|error| map_rule_error(&error))
+}
+
+/// 有界列出目录单元。
+///
+/// # Errors
+///
+/// 参数非法或投影读取失败时返回安全 IPC 错误。
+#[tauri::command]
+pub async fn list_media_units(
+    state: State<'_, AppState>,
+    request: ListMediaUnitsRequest,
+) -> Result<MediaUnitPage, String> {
+    list_media_units_inner(state.system.as_ref(), request).await
+}
+
+async fn list_media_units_inner(
+    system: &RuleSystem,
+    request: ListMediaUnitsRequest,
+) -> Result<MediaUnitPage, String> {
+    system
+        .list_media_units(request.item_id, request.offset, request.limit)
+        .await
+        .map_err(|error| map_rule_error(&error))
+}
+
+/// 有界列出单元资产（正文/封面/流 locator）。
+///
+/// # Errors
+///
+/// 参数非法或投影读取失败时返回安全 IPC 错误。
+#[tauri::command]
+pub async fn list_media_assets(
+    state: State<'_, AppState>,
+    request: ListMediaAssetsRequest,
+) -> Result<MediaAssetPage, String> {
+    list_media_assets_inner(state.system.as_ref(), request).await
+}
+
+async fn list_media_assets_inner(
+    system: &RuleSystem,
+    request: ListMediaAssetsRequest,
+) -> Result<MediaAssetPage, String> {
+    system
+        .list_media_assets(request.unit_id, request.offset, request.limit)
+        .await
+        .map_err(|error| map_rule_error(&error))
+}
+
 fn emit_catch_up_events<F>(events: Vec<ExecutionEvent>, mut emit: F) -> Result<(), String>
 where
     F: FnMut(&RuleExecutionEvent) -> Result<(), String> + Send,
@@ -590,6 +721,58 @@ mod tests {
             entry.progress.as_ref().map(|progress| progress.position),
             Some(42),
             "library 进度必须投影"
+        );
+
+        let missing = get_media_item_inner(
+            system,
+            GetMediaItemRequest {
+                resource_id: "item:missing".to_string(),
+            },
+        )
+        .await
+        .expect("get_media_item 缺失应成功返回 null");
+        assert!(missing.is_none(), "缺失资源必须序列化为 null");
+
+        let invalid = get_media_item_inner(
+            system,
+            GetMediaItemRequest {
+                resource_id: "   ".to_string(),
+            },
+        )
+        .await
+        .expect_err("空 resource_id 必须校验失败");
+        assert!(
+            invalid.contains("resource_id_invalid"),
+            "校验错误应暴露稳定 code: {invalid}"
+        );
+
+        let units = list_media_units_inner(
+            system,
+            ListMediaUnitsRequest {
+                item_id: "item:missing".to_string(),
+                offset: 0,
+                limit: Some(50),
+            },
+        )
+        .await
+        .expect("缺失父 item 的 list_media_units 应空页");
+        assert!(!units.parent_found);
+        assert!(units.items.is_empty());
+        assert!(!units.has_more);
+
+        let limit_err = list_media_assets_inner(
+            system,
+            ListMediaAssetsRequest {
+                unit_id: "unit:any".to_string(),
+                offset: 0,
+                limit: Some(101),
+            },
+        )
+        .await
+        .expect_err("limit>100 必须校验失败");
+        assert!(
+            limit_err.contains("media_page_limit_invalid"),
+            "limit 校验错误: {limit_err}"
         );
     }
 

@@ -584,6 +584,76 @@ pub(crate) fn get_payload_by_id<T: serde::de::DeserializeOwned>(
         .transpose()
 }
 
+/// 按主键批量读取媒体主体；跳过缺失 ID，结果按 `id` 升序。
+///
+/// 使用 `json_each` 单次 `IN` 查询，调用方应保证 ID 数量有界（产品面 ≤64）。
+pub(crate) fn get_items_by_ids(
+    conn: &mut SqliteConnection,
+    ids: &[String],
+) -> Result<Vec<MediaItem>, StorageError> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let ids_json = serde_json::to_string(ids).map_err(|_| StorageError::Serialization)?;
+    let rows = sql_query(
+        "SELECT payload_json FROM projection_items \
+         WHERE id IN (SELECT value FROM json_each(?)) \
+         ORDER BY id ASC",
+    )
+    .bind::<Text, _>(ids_json)
+    .load::<JsonRow>(conn)
+    .map_err(database_error)?;
+    rows.into_iter()
+        .map(|row| deserialize(row.payload_json.as_bytes()))
+        .collect()
+}
+
+/// 按 item 索引有界列出 unit：`position IS NULL` 置后，再 `position ASC, id ASC`。
+pub(crate) fn list_units_for_item_bounded(
+    conn: &mut SqliteConnection,
+    item_id: &str,
+    offset: u32,
+    limit: u32,
+) -> Result<Vec<MediaUnit>, StorageError> {
+    let rows = sql_query(
+        "SELECT payload_json FROM projection_units \
+         WHERE item_id = ? \
+         ORDER BY (position IS NULL) ASC, position ASC, id ASC \
+         LIMIT ? OFFSET ?",
+    )
+    .bind::<Text, _>(item_id)
+    .bind::<BigInt, _>(i64::from(limit))
+    .bind::<BigInt, _>(i64::from(offset))
+    .load::<JsonRow>(conn)
+    .map_err(database_error)?;
+    rows.into_iter()
+        .map(|row| deserialize(row.payload_json.as_bytes()))
+        .collect()
+}
+
+/// 按 unit 索引有界列出 asset：稳定 `id ASC`。
+pub(crate) fn list_assets_for_unit_bounded(
+    conn: &mut SqliteConnection,
+    unit_id: &str,
+    offset: u32,
+    limit: u32,
+) -> Result<Vec<MediaAsset>, StorageError> {
+    let rows = sql_query(
+        "SELECT payload_json FROM projection_assets \
+         WHERE unit_id = ? \
+         ORDER BY id ASC \
+         LIMIT ? OFFSET ?",
+    )
+    .bind::<Text, _>(unit_id)
+    .bind::<BigInt, _>(i64::from(limit))
+    .bind::<BigInt, _>(i64::from(offset))
+    .load::<JsonRow>(conn)
+    .map_err(database_error)?;
+    rows.into_iter()
+        .map(|row| deserialize(row.payload_json.as_bytes()))
+        .collect()
+}
+
 fn payloads_by_source<T: serde::de::DeserializeOwned>(
     conn: &mut SqliteConnection,
     table: &str,

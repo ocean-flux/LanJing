@@ -572,6 +572,24 @@ async fn d12_thousand_resource_event_projection_transaction_gate() {
         "D12 indexed item query p95 was {query_p95:?}, limit is {QUERY_P95_LIMIT:?}"
     );
 
+    // 有界 list 与点查共用同一只读 lane 与索引预算。
+    let mut list_elapsed = Vec::with_capacity(QUERY_SAMPLES);
+    for _ in 0..QUERY_SAMPLES {
+        let started = std::time::Instant::now();
+        let listed = storage
+            .list_units_for_item(query_id.clone(), 0, 50)
+            .await
+            .expect("bounded list units for D12 item");
+        assert!(listed.is_empty() || listed.iter().all(|unit| unit.item_id == query_id));
+        list_elapsed.push(started.elapsed());
+    }
+    list_elapsed.sort_unstable();
+    let list_p95 = list_elapsed[(QUERY_SAMPLES * 95).div_ceil(100) - 1];
+    assert!(
+        list_p95 <= QUERY_P95_LIMIT,
+        "D12 bounded unit list p95 was {list_p95:?}, limit is {QUERY_P95_LIMIT:?}"
+    );
+
     let mut checkpoint_elapsed = Vec::with_capacity(CHECKPOINT_SAMPLES);
     for index in 0..CHECKPOINT_SAMPLES {
         let started = std::time::Instant::now();
