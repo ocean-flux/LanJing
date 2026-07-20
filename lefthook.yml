@@ -1,0 +1,49 @@
+# LanJing git hooks
+# - pre-commit: staged 快路径（FE 与 cargo fmt 并行）
+# - commit-msg: conventional commits
+# - pre-push: 全量门禁（web ∥ rust）
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: eslint-prettier-src
+      glob:
+        - src/**/*.{svelte,ts,js,css,html,json}
+      run: pnpm exec eslint --fix {staged_files} && pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+
+    - name: prettier-root
+      # lefthook 的 * 会匹配任意深度 basename；只列仓库根配置，避免扫到 src/messages
+      glob:
+        - package.json
+        - components.json
+        - tsconfig.json
+        - "*.config.js"
+        - "*.config.mjs"
+        - "*.config.ts"
+        - "*.config.cjs"
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+
+    - name: cargo-fmt
+      glob: src-tauri/**/*.rs
+      # workspace 必须 --all，否则只格式化根包，子 crate/测试会漏
+      run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: web
+      run: pnpm check && pnpm test:web
+
+    - name: rust
+      run: >
+        cargo clippy --manifest-path src-tauri/Cargo.toml --workspace
+        --all-targets --all-features -- -D warnings
+        && cargo test --manifest-path src-tauri/Cargo.toml --workspace

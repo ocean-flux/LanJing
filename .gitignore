@@ -70,3 +70,7 @@ app.*.map.json
 .env.local
 .env.*.local
 !.env.example
+
+# Lefthook local overrides (PATH / machine-specific)
+lefthook-local.yml
+.lefthookrc
