@@ -1,10 +1,5 @@
 .svelte-kit/
 .tmp/
-.vscode/
-.codegraph/
-.codex/
-.opencode/
-.claude/
 .pi/
 .trellis/
 .pi-subagents/
