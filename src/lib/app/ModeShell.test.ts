@@ -27,7 +27,7 @@ const contract: ModeShellContract = {
   },
   theme: {
     mode: 'dark',
-    appearancePack: 'inkstone-precision',
+    appearancePack: 'obsidian-void',
     reducedMotion: false,
     reducedTransparency: false,
   },
@@ -69,7 +69,7 @@ describe('ModeShell', () => {
     expect(shell.getAttribute('data-platform')).toBe('android');
     expect(shell.getAttribute('data-orientation')).toBe('portrait');
     expect(shell.getAttribute('data-theme-mode')).toBe('dark');
-    expect(shell.getAttribute('data-appearance-pack')).toBe('inkstone-precision');
+    expect(shell.getAttribute('data-appearance-pack')).toBe('obsidian-void');
     expect(shell.getAttribute('data-ambient-audio')).toBe('paused');
     expect(screen.queryByRole('navigation', { name: '主导航' })).toBeNull();
   });
@@ -104,7 +104,7 @@ describe('ModeShell', () => {
     expect(shell.getAttribute('data-orientation')).toBe('landscape');
     expect(shell.getAttribute('data-foreground-activity')).toBe('reader:chapter-7');
     expect(shell.getAttribute('data-theme-mode')).toBe('dark');
-    expect(shell.getAttribute('data-appearance-pack')).toBe('inkstone-precision');
+    expect(shell.getAttribute('data-appearance-pack')).toBe('obsidian-void');
     expect(shell.getAttribute('data-ambient-audio')).toBe('paused');
   });
 
@@ -159,7 +159,9 @@ describe('ModeShell', () => {
 
     let shell = screen.getByTestId('mode-shell');
     expect(shell.getAttribute('data-ambient-audio')).toBe('playing');
-    expect(screen.getByText('夜航')).toBeTruthy();
+    // 工作台壳不再挂 mini-player 文案；ambient 仅 data 属性暴露
+    expect(screen.queryByText('夜航')).toBeNull();
+    expect(document.querySelector('[data-mini-player]')).toBeNull();
 
     setViewport(390, 844);
     // 等 svelte:window 绑定处理 resize
@@ -168,7 +170,7 @@ describe('ModeShell', () => {
     shell = screen.getByTestId('mode-shell');
     expect(shell.getAttribute('data-ambient-audio')).toBe('playing');
     expect(shell.getAttribute('data-orientation')).toBe('portrait');
-    expect(screen.getByText('夜航')).toBeTruthy();
+    expect(screen.queryByText('夜航')).toBeNull();
   });
 
   it('keeps explicit activity override across platform-only changes (production path)', async () => {
