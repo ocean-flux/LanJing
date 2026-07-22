@@ -1,12 +1,41 @@
 <script lang="ts">
-  import type { HTMLInputAttributes, HTMLInputTypeAttribute } from 'svelte/elements';
+  import type { HTMLInputAttributes } from 'svelte/elements';
   import { cn, type WithElementRef } from '$lib/utils.js';
 
-  type InputType = Exclude<HTMLInputTypeAttribute, 'file'>;
+  // 排除 file 分支的标准输入类型，避免宽泛字符串回退重新接纳 file。
+  type InputType =
+    | 'button'
+    | 'checkbox'
+    | 'color'
+    | 'date'
+    | 'datetime-local'
+    | 'email'
+    | 'hidden'
+    | 'image'
+    | 'month'
+    | 'number'
+    | 'password'
+    | 'radio'
+    | 'range'
+    | 'reset'
+    | 'search'
+    | 'submit'
+    | 'tel'
+    | 'text'
+    | 'time'
+    | 'url'
+    | 'week';
 
   type Props = WithElementRef<
-    Omit<HTMLInputAttributes, 'type'> &
-      ({ type: 'file'; files?: FileList } | { type?: InputType; files?: undefined })
+    | (Omit<HTMLInputAttributes, 'type' | 'value'> & {
+        type: 'file';
+        files?: FileList;
+        value?: never;
+      })
+    | (Omit<HTMLInputAttributes, 'type'> & {
+        type?: InputType;
+        files?: undefined;
+      })
   >;
 
   let {
@@ -25,12 +54,11 @@
     bind:this={ref}
     data-slot={dataSlot}
     class={cn(
-      'dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+      'double-bezel-control border-hairline text-ink placeholder:text-muted-foreground file:text-foreground focus-visible:border-lantern-strong/50 focus-visible:ring-lantern/35 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 dark:disabled:bg-surface-2/80 h-8 w-full min-w-0 bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [@media(pointer:coarse)]:min-h-11',
       className,
     )}
     type="file"
     bind:files
-    bind:value
     {...restProps}
   />
 {:else}
@@ -38,7 +66,7 @@
     bind:this={ref}
     data-slot={dataSlot}
     class={cn(
-      'dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+      'double-bezel-control border-hairline text-ink placeholder:text-muted-foreground file:text-foreground focus-visible:border-lantern-strong/50 focus-visible:ring-lantern/35 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 dark:disabled:bg-surface-2/80 h-8 w-full min-w-0 bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [@media(pointer:coarse)]:min-h-11',
       className,
     )}
     {type}

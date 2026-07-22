@@ -3,6 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements';
   import { Dialog as DialogPrimitive } from 'bits-ui';
   import { Button } from '$lib/components/ui/button/index.js';
+  import { m } from '$lib/i18n';
 
   let {
     ref = $bindable(null),
@@ -19,7 +20,7 @@
   bind:this={ref}
   data-slot="dialog-footer"
   class={cn(
-    'bg-muted/50 -mx-4 -mb-4 rounded-b-xl border-t p-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
+    'bg-muted/50 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[calc(var(--radius-xl)-1px)] border-t border-hairline p-4 sm:flex-row sm:justify-end',
     className,
   )}
   {...restProps}
@@ -28,7 +29,7 @@
   {#if showCloseButton}
     <DialogPrimitive.Close>
       {#snippet child({ props })}
-        <Button variant="outline" {...props}>Close</Button>
+        <Button variant="outline" {...props}>{m.action_close()}</Button>
       {/snippet}
     </DialogPrimitive.Close>
   {/if}
