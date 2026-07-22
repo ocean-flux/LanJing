@@ -97,27 +97,27 @@
     'Microsoft YaHei', sans-serif;
   --font-code: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --font-reader: 'Source Serif 4', Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
-  /* 默认 L2：墨砚精密 inkstone-precision */
-  --canvas: #f4f5f5;
+  /* 默认 L2 亮面：porcelain-day（运行时由主题注册表覆盖） */
+  --canvas: #f3f4f6;
   --canvas-elevated: #ffffff;
-  --ink: #171a1b;
-  --ink-muted: #5c6568;
-  --ink-subtle: #7a8488;
-  --hairline: rgb(23 26 27 / 0.1);
-  --hairline-strong: rgb(23 26 27 / 0.16);
+  --ink: #1a1b1e;
+  --ink-muted: #5c616a;
+  --ink-subtle: #7a808a;
+  --hairline: rgb(26 27 30 / 0.1);
+  --hairline-strong: rgb(26 27 30 / 0.16);
   --surface-1: #ffffff;
-  --surface-2: #f7f8f8;
-  --surface-3: #eef0f0;
-  --lantern: #2a6f7a;
-  --lantern-strong: #1d5560;
-  --lantern-hover: #174850;
-  --lantern-soft: rgb(42 111 122 / 0.14);
-  --lantern-tint: #dce8ea;
-  --on-lantern: #f4fbfc;
+  --surface-2: #f6f7f9;
+  --surface-3: #e8eaee;
+  --lantern: #0f6e7a;
+  --lantern-strong: #0b5a64;
+  --lantern-hover: #094c55;
+  --lantern-soft: rgb(15 110 122 / 0.12);
+  --lantern-tint: #d9e8ea;
+  --on-lantern: #f4fcfd;
   --positive: #557d59;
-  --warning: #9f6d1e;
+  --warning: #5c616a;
   --danger: #b83f4e;
-  --media-void: #e2e6e7;
+  --media-void: #e4e6ea;
   --reader-canvas: #f3efe6;
   --reader-ink: #211e1a;
   --background: var(--canvas);
@@ -138,7 +138,7 @@
   --destructive-foreground: #fff8f6;
   --border: var(--hairline);
   --input: var(--hairline-strong);
-  --ring: rgb(29 85 96 / 0.34);
+  --ring: rgb(11 90 100 / 0.34);
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -185,30 +185,33 @@
   --motion-ease-slow: cubic-bezier(0.2, 0.9, 0.1, 1);
   --material-blur: 16px;
   --material-saturation: 1.08;
-  --focus-ring: 0 0 0 2px rgb(29 85 96 / 0.24);
+  /* 可选 mesh 光晕（冷青低饱和；禁黄橙紫靛） */
+  --mesh-a: rgb(15 110 122 / 0.22);
+  --mesh-b: rgb(15 110 122 / 0.1);
+  --focus-ring: 0 0 0 2px rgb(11 90 100 / 0.24);
 }
 
 .dark {
-  --canvas: #0e1214;
-  --canvas-elevated: #151a1c;
-  --ink: #e6eceb;
-  --ink-muted: #9aa8a9;
-  --ink-subtle: #7a8788;
-  --hairline: rgb(230 236 235 / 0.1);
-  --hairline-strong: rgb(230 236 235 / 0.16);
-  --surface-1: #151a1c;
-  --surface-2: #1b2224;
-  --surface-3: #242c2e;
-  --lantern: #5fa8b4;
-  --lantern-strong: #4a96a2;
-  --lantern-hover: #3d8793;
-  --lantern-soft: rgb(95 168 180 / 0.18);
-  --lantern-tint: #1a2c30;
-  --on-lantern: #071416;
+  --canvas: #0b0e12;
+  --canvas-elevated: #12171d;
+  --ink: #e8eaed;
+  --ink-muted: #9aa3ad;
+  --ink-subtle: #6f7882;
+  --hairline: rgb(232 234 237 / 0.12);
+  --hairline-strong: rgb(232 234 237 / 0.2);
+  --surface-1: #151a20;
+  --surface-2: #1b2229;
+  --surface-3: #252d36;
+  --lantern: #6ec8d4;
+  --lantern-strong: #3aa9b8;
+  --lantern-hover: #2f96a4;
+  --lantern-soft: rgb(110 200 212 / 0.18);
+  --lantern-tint: #143038;
+  --on-lantern: #061016;
   --positive: #7ea882;
-  --warning: #d4a24a;
+  --warning: #9aa3ad;
   --danger: #db5a6a;
-  --media-void: #1a2224;
+  --media-void: #12171d;
   --reader-canvas: #1a1714;
   --reader-ink: #d8d2c4;
   --popover: var(--surface-2);
@@ -217,18 +220,20 @@
   --destructive: var(--danger);
   --border: var(--hairline);
   --input: var(--hairline-strong);
-  --ring: rgb(95 168 180 / 0.34);
-  --focus-ring: 0 0 0 2px rgb(95 168 180 / 0.28);
-  --surface-shell: rgb(14 18 20 / 0.88);
+  --ring: rgb(58 169 184 / 0.34);
+  --focus-ring: 0 0 0 2px rgb(58 169 184 / 0.28);
+  --surface-shell: rgb(18 23 29 / 0.82);
   --surface-panel: var(--surface-1);
-  --surface-control: rgb(27 34 36 / 0.76);
-  --surface-material: rgb(27 34 36 / 0.78);
+  --surface-control: rgb(32 40 48 / 0.78);
+  --surface-material: rgb(28 36 44 / 0.72);
   --surface-material-solid: var(--surface-2);
-  --surface-material-border: rgb(230 236 235 / 0.1);
-  --surface-material-solid-border: rgb(230 236 235 / 0.08);
-  --surface-panel-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
-  --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 4px 12px rgb(0 0 0 / 0.12);
-  --surface-dialog-shadow: 0 16px 40px rgb(0 0 0 / 0.32);
+  --surface-material-border: rgb(232 234 237 / 0.14);
+  --surface-material-solid-border: rgb(232 234 237 / 0.1);
+  --surface-panel-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset;
+  --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 8px 24px rgb(0 0 0 / 0.28);
+  --surface-dialog-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
+  --mesh-a: rgb(110 200 212 / 0.28);
+  --mesh-b: rgb(58 169 184 / 0.16);
 }
 
 :root[data-material-transparency='low'],
@@ -255,7 +260,6 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
-
 .surface-shell,
 .surface-panel,
 .surface-material {
@@ -312,17 +316,75 @@ body {
   color: var(--ink-muted);
 }
 
+.double-bezel {
+  border: 1px solid var(--hairline-strong);
+  background: color-mix(in oklab, var(--surface-1) 92%, var(--canvas-elevated));
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--hairline) 55%, transparent),
+    var(--surface-panel-shadow),
+    0 18px 48px color-mix(in oklab, #000 22%, transparent);
+}
+
+/* 控件级：input / 紧凑 outline 按钮 */
+.double-bezel-control {
+  border: 1px solid var(--hairline);
+  background: var(--surface-control);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--hairline) 45%, transparent),
+    var(--surface-control-shadow);
+}
+
+/* 浮层：dialog / sheet 面板 */
+.double-bezel-float {
+  border: 1px solid var(--surface-material-border);
+  background: var(--surface-material);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--hairline) 50%, transparent),
+    var(--surface-panel-shadow),
+    var(--surface-dialog-shadow);
+}
+
+/* shell 环 + core 内芯的结构型 double-bezel 壳层 */
+.double-bezel-shell {
+  padding: 0.2rem;
+  border-radius: var(--radius-2xl);
+  background: color-mix(in oklab, var(--surface-3) 55%, transparent);
+  box-shadow:
+    0 0 0 1px var(--hairline),
+    var(--surface-dialog-shadow);
+}
+
+.double-bezel-core {
+  border-radius: calc(var(--radius-2xl) - 0.2rem);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--surface-panel-shadow);
+}
+
+/* 主 CTA：lantern 青系（禁黄橙紫） */
 .lantern-action {
+  border: 1px solid color-mix(in oklab, var(--lantern-strong) 70%, var(--hairline));
   background: var(--lantern-strong);
   color: var(--on-lantern);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--lantern) 22%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--on-lantern) 18%, transparent);
 }
 
 .lantern-action:hover {
   background: var(--lantern-hover);
 }
 
+.lantern-action:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
 @supports (backdrop-filter: blur(1px)) {
-  .surface-material {
+  .surface-material,
+  .double-bezel-float {
     backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturation));
   }
 }

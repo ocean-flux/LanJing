@@ -1,21 +1,13 @@
 /**
- * L2 Appearance pack 色表：仅重绑 L1 角色 hex。
- * 默认墨砚精密；冷银朱为第二内置包；纸灯 id 仅作迁移别名。
+ * 单 face 主题注册表（VS Code 分轨）。
+ * 每个 AppearancePackId 只含一套 token；亮/暗轨分别选 id，禁止镜像反相。
+ * 色相禁令：无黄/橙/琥珀/朱砂/紫/靛紫主色。
  */
 
-export type AppearancePackId = 'inkstone-precision' | 'cold-cinnabar';
+export type ThemeFace = 'light' | 'dark';
 
-/** 历史默认包 id → 现行默认 */
-export const LEGACY_APPEARANCE_PACK_MAP = {
-  'paper-lantern-precision': 'inkstone-precision',
-} as const satisfies Record<string, AppearancePackId>;
-
-export const DEFAULT_APPEARANCE_PACK_ID: AppearancePackId = 'inkstone-precision';
-
-export const BUILTIN_APPEARANCE_PACK_IDS: readonly AppearancePackId[] = [
-  'inkstone-precision',
-  'cold-cinnabar',
-] as const;
+export type AppearancePackId =
+  'obsidian-void' | 'graphite-atelier' | 'porcelain-day' | 'mist-studio';
 
 /** 写入 documentElement 的 L1 变量（与 index.css 角色对齐） */
 export type AppearanceRoleVar =
@@ -43,120 +35,191 @@ export type AppearanceRoleVar =
 
 export type AppearanceTokenMap = Readonly<Record<AppearanceRoleVar, string>>;
 
-const inkstoneLight = {
-  '--canvas': '#f4f5f5',
-  '--canvas-elevated': '#ffffff',
-  '--ink': '#171a1b',
-  '--ink-muted': '#5c6568',
-  '--ink-subtle': '#7a8488',
-  '--hairline': 'rgb(23 26 27 / 0.1)',
-  '--hairline-strong': 'rgb(23 26 27 / 0.16)',
-  '--surface-1': '#ffffff',
-  '--surface-2': '#f7f8f8',
-  '--surface-3': '#eef0f0',
-  '--lantern': '#2a6f7a',
-  '--lantern-strong': '#1d5560',
-  '--lantern-hover': '#174850',
-  '--lantern-soft': 'rgb(42 111 122 / 0.14)',
-  '--lantern-tint': '#dce8ea',
-  '--on-lantern': '#f4fbfc',
-  '--media-void': '#e2e6e7',
-  '--reader-canvas': '#f3efe6',
-  '--reader-ink': '#211e1a',
-  '--ring': 'rgb(29 85 96 / 0.34)',
-  '--focus-ring': '0 0 0 2px rgb(29 85 96 / 0.24)',
-} as const satisfies AppearanceTokenMap;
-
-const inkstoneDark = {
-  '--canvas': '#0e1214',
-  '--canvas-elevated': '#151a1c',
-  '--ink': '#e6eceb',
-  '--ink-muted': '#9aa8a9',
-  '--ink-subtle': '#7a8788',
-  '--hairline': 'rgb(230 236 235 / 0.1)',
-  '--hairline-strong': 'rgb(230 236 235 / 0.16)',
-  '--surface-1': '#151a1c',
-  '--surface-2': '#1b2224',
-  '--surface-3': '#242c2e',
-  '--lantern': '#5fa8b4',
-  '--lantern-strong': '#4a96a2',
-  '--lantern-hover': '#3d8793',
-  '--lantern-soft': 'rgb(95 168 180 / 0.18)',
-  '--lantern-tint': '#1a2c30',
-  '--on-lantern': '#071416',
-  '--media-void': '#1a2224',
-  '--reader-canvas': '#1a1714',
-  '--reader-ink': '#d8d2c4',
-  '--ring': 'rgb(95 168 180 / 0.34)',
-  '--focus-ring': '0 0 0 2px rgb(95 168 180 / 0.28)',
-} as const satisfies AppearanceTokenMap;
-
-const cinnabarLight = {
-  '--canvas': '#f2f2f0',
-  '--canvas-elevated': '#ffffff',
-  '--ink': '#1a1b1d',
-  '--ink-muted': '#63656a',
-  '--ink-subtle': '#81848a',
-  '--hairline': 'rgb(26 27 29 / 0.1)',
-  '--hairline-strong': 'rgb(26 27 29 / 0.16)',
-  '--surface-1': '#ffffff',
-  '--surface-2': '#f6f6f4',
-  '--surface-3': '#ecece8',
-  '--lantern': '#c45a3c',
-  '--lantern-strong': '#9a3f2a',
-  '--lantern-hover': '#853625',
-  '--lantern-soft': 'rgb(196 90 60 / 0.14)',
-  '--lantern-tint': '#f0e4df',
-  '--on-lantern': '#fff8f2',
-  '--media-void': '#e4e4e1',
-  '--reader-canvas': '#f3efe6',
-  '--reader-ink': '#211e1a',
-  '--ring': 'rgb(154 63 42 / 0.34)',
-  '--focus-ring': '0 0 0 2px rgb(154 63 42 / 0.24)',
-} as const satisfies AppearanceTokenMap;
-
-const cinnabarDark = {
-  '--canvas': '#121316',
-  '--canvas-elevated': '#1a1b1f',
-  '--ink': '#eceae6',
-  '--ink-muted': '#a3a19c',
-  '--ink-subtle': '#85837e',
-  '--hairline': 'rgb(236 234 230 / 0.1)',
-  '--hairline-strong': 'rgb(236 234 230 / 0.16)',
-  '--surface-1': '#1a1b1f',
-  '--surface-2': '#212227',
-  '--surface-3': '#2a2b31',
-  '--lantern': '#d4785a',
-  '--lantern-strong': '#c45a3c',
-  '--lantern-hover': '#b04e33',
-  '--lantern-soft': 'rgb(212 120 90 / 0.18)',
-  '--lantern-tint': '#2a1c18',
-  '--on-lantern': '#140806',
-  '--media-void': '#1e1f24',
-  '--reader-canvas': '#1b1714',
-  '--reader-ink': '#d8d2c4',
-  '--ring': 'rgb(212 120 90 / 0.34)',
-  '--focus-ring': '0 0 0 2px rgb(212 120 90 / 0.28)',
-} as const satisfies AppearanceTokenMap;
-
-export const APPEARANCE_PACK_TOKENS: Record<
-  AppearancePackId,
-  { light: AppearanceTokenMap; dark: AppearanceTokenMap }
-> = {
-  'inkstone-precision': { light: inkstoneLight, dark: inkstoneDark },
-  'cold-cinnabar': { light: cinnabarLight, dark: cinnabarDark },
+export type BuiltinThemeDefinition = {
+  id: AppearancePackId;
+  face: ThemeFace;
+  labelKey: string;
+  stone: string;
+  tokens: AppearanceTokenMap;
 };
 
-export function normalizeAppearancePackId(id: string): AppearancePackId {
-  if (id in LEGACY_APPEARANCE_PACK_MAP) {
-    return LEGACY_APPEARANCE_PACK_MAP[id as keyof typeof LEGACY_APPEARANCE_PACK_MAP];
-  }
-  if ((BUILTIN_APPEARANCE_PACK_IDS as readonly string[]).includes(id)) {
-    return id as AppearancePackId;
-  }
-  return DEFAULT_APPEARANCE_PACK_ID;
-}
+export const DEFAULT_DARK_THEME_ID: AppearancePackId = 'obsidian-void';
+export const DEFAULT_LIGHT_THEME_ID: AppearancePackId = 'porcelain-day';
+
+/** 兼容旧「单默认 pack」导出：产品默认暗轨 */
+export const DEFAULT_APPEARANCE_PACK_ID: AppearancePackId = DEFAULT_DARK_THEME_ID;
+
+export const BUILTIN_APPEARANCE_PACK_IDS: readonly AppearancePackId[] = [
+  'obsidian-void',
+  'graphite-atelier',
+  'porcelain-day',
+  'mist-studio',
+] as const;
+
+const obsidianVoid: AppearanceTokenMap = {
+  '--canvas': '#0b0e12',
+  '--canvas-elevated': '#12171d',
+  '--ink': '#e8eaed',
+  '--ink-muted': '#9aa3ad',
+  '--ink-subtle': '#6f7882',
+  '--hairline': 'rgb(232 234 237 / 0.12)',
+  '--hairline-strong': 'rgb(232 234 237 / 0.2)',
+  '--surface-1': '#151a20',
+  '--surface-2': '#1b2229',
+  '--surface-3': '#252d36',
+  '--lantern': '#6ec8d4',
+  '--lantern-strong': '#3aa9b8',
+  '--lantern-hover': '#2f96a4',
+  '--lantern-soft': 'rgb(110 200 212 / 0.18)',
+  '--lantern-tint': '#143038',
+  '--on-lantern': '#061016',
+  '--media-void': '#12171d',
+  '--reader-canvas': '#1a1714',
+  '--reader-ink': '#d8d2c4',
+  '--ring': 'rgb(58 169 184 / 0.34)',
+  '--focus-ring': '0 0 0 2px rgb(58 169 184 / 0.28)',
+};
+
+const graphiteAtelier: AppearanceTokenMap = {
+  '--canvas': '#12131a',
+  '--canvas-elevated': '#181a22',
+  '--ink': '#eceef2',
+  '--ink-muted': '#a4aab6',
+  '--ink-subtle': '#7c8390',
+  '--hairline': 'rgb(236 238 242 / 0.1)',
+  '--hairline-strong': 'rgb(236 238 242 / 0.16)',
+  '--surface-1': '#1c1f29',
+  '--surface-2': '#242833',
+  '--surface-3': '#2e3340',
+  '--lantern': '#5b9fd4',
+  '--lantern-strong': '#2f6a99',
+  '--lantern-hover': '#285c86',
+  '--lantern-soft': 'rgb(91 159 212 / 0.16)',
+  '--lantern-tint': '#1a2836',
+  '--on-lantern': '#f2f8fc',
+  '--media-void': '#1a1e28',
+  '--reader-canvas': '#1a1714',
+  '--reader-ink': '#d8d2c4',
+  '--ring': 'rgb(47 106 153 / 0.34)',
+  '--focus-ring': '0 0 0 2px rgb(47 106 153 / 0.28)',
+};
+
+const porcelainDay: AppearanceTokenMap = {
+  '--canvas': '#f3f4f6',
+  '--canvas-elevated': '#ffffff',
+  '--ink': '#1a1b1e',
+  '--ink-muted': '#5c616a',
+  '--ink-subtle': '#7a808a',
+  '--hairline': 'rgb(26 27 30 / 0.1)',
+  '--hairline-strong': 'rgb(26 27 30 / 0.16)',
+  '--surface-1': '#ffffff',
+  '--surface-2': '#f6f7f9',
+  '--surface-3': '#e8eaee',
+  '--lantern': '#0f6e7a',
+  '--lantern-strong': '#0b5a64',
+  '--lantern-hover': '#094c55',
+  '--lantern-soft': 'rgb(15 110 122 / 0.12)',
+  '--lantern-tint': '#d9e8ea',
+  '--on-lantern': '#f4fcfd',
+  '--media-void': '#e4e6ea',
+  '--reader-canvas': '#f3efe6',
+  '--reader-ink': '#211e1a',
+  '--ring': 'rgb(11 90 100 / 0.34)',
+  '--focus-ring': '0 0 0 2px rgb(11 90 100 / 0.24)',
+};
+
+const mistStudio: AppearanceTokenMap = {
+  '--canvas': '#eef1f5',
+  '--canvas-elevated': '#f7f9fc',
+  '--ink': '#171a1f',
+  '--ink-muted': '#5a6370',
+  '--ink-subtle': '#76808f',
+  '--hairline': 'rgb(23 26 31 / 0.1)',
+  '--hairline-strong': 'rgb(23 26 31 / 0.16)',
+  '--surface-1': '#ffffff',
+  '--surface-2': '#f1f4f8',
+  '--surface-3': '#e4e9f0',
+  '--lantern': '#0e7490',
+  '--lantern-strong': '#0b5f75',
+  '--lantern-hover': '#0a5568',
+  '--lantern-soft': 'rgb(14 116 144 / 0.12)',
+  '--lantern-tint': '#d9eef3',
+  '--on-lantern': '#f3fbfd',
+  '--media-void': '#e2e7ee',
+  '--reader-canvas': '#f3efe6',
+  '--reader-ink': '#211e1a',
+  '--ring': 'rgb(11 95 117 / 0.34)',
+  '--focus-ring': '0 0 0 2px rgb(11 95 117 / 0.24)',
+};
+
+export const THEME_REGISTRY: Record<AppearancePackId, BuiltinThemeDefinition> = {
+  'obsidian-void': {
+    id: 'obsidian-void',
+    face: 'dark',
+    labelKey: 'settings_theme_obsidian_void',
+    stone: '#6ec8d4',
+    tokens: obsidianVoid,
+  },
+  'graphite-atelier': {
+    id: 'graphite-atelier',
+    face: 'dark',
+    labelKey: 'settings_theme_graphite_atelier',
+    stone: '#5b9fd4',
+    tokens: graphiteAtelier,
+  },
+  'porcelain-day': {
+    id: 'porcelain-day',
+    face: 'light',
+    labelKey: 'settings_theme_porcelain_day',
+    stone: '#0f6e7a',
+    tokens: porcelainDay,
+  },
+  'mist-studio': {
+    id: 'mist-studio',
+    face: 'light',
+    labelKey: 'settings_theme_mist_studio',
+    stone: '#0e7490',
+    tokens: mistStudio,
+  },
+};
+
+/**
+ * 历史 id → 按目标 face 映射到新主题（丢弃橙/紫/靛色相）。
+ */
+const LEGACY_TO_FACE: Record<string, { light: AppearancePackId; dark: AppearancePackId }> = {
+  'inkstone-precision': { light: 'porcelain-day', dark: 'obsidian-void' },
+  'paper-lantern-precision': { light: 'porcelain-day', dark: 'obsidian-void' },
+  'cold-cinnabar': { light: 'mist-studio', dark: 'graphite-atelier' },
+};
+
+/** 无 face 上下文时的默认映射（偏暗默认） */
+export const LEGACY_APPEARANCE_PACK_MAP = {
+  'paper-lantern-precision': DEFAULT_DARK_THEME_ID,
+  'inkstone-precision': DEFAULT_DARK_THEME_ID,
+  'cold-cinnabar': 'graphite-atelier',
+} as const satisfies Record<string, AppearancePackId>;
 
 export function isBuiltinAppearancePackId(id: string): id is AppearancePackId {
   return (BUILTIN_APPEARANCE_PACK_IDS as readonly string[]).includes(id);
+}
+
+export function listThemesForFace(face: ThemeFace): BuiltinThemeDefinition[] {
+  return BUILTIN_APPEARANCE_PACK_IDS.map((id) => THEME_REGISTRY[id]).filter((t) => t.face === face);
+}
+
+/**
+ * 将任意历史/现行 id 规范到给定 face 的合法主题。
+ */
+export function normalizeAppearancePackId(id: string, face: ThemeFace = 'dark'): AppearancePackId {
+  const legacy =
+    LEGACY_TO_FACE[id] ??
+    (id.startsWith('paper-lantern-') ? LEGACY_TO_FACE['paper-lantern-precision'] : undefined);
+  if (legacy) return legacy[face];
+
+  if (isBuiltinAppearancePackId(id)) {
+    if (THEME_REGISTRY[id].face === face) return id;
+    return face === 'dark' ? DEFAULT_DARK_THEME_ID : DEFAULT_LIGHT_THEME_ID;
+  }
+
+  return face === 'dark' ? DEFAULT_DARK_THEME_ID : DEFAULT_LIGHT_THEME_ID;
 }
