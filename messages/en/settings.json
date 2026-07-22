@@ -5,8 +5,10 @@
   "settings_mode_label": "Appearance mode",
   "settings_theme_light_label": "Light theme",
   "settings_theme_dark_label": "Dark theme",
-  "settings_theme_inkstone": "Inkstone",
-  "settings_theme_cinnabar": "Cinnabar",
+  "settings_theme_obsidian_void": "Obsidian Void",
+  "settings_theme_graphite_atelier": "Graphite Atelier",
+  "settings_theme_porcelain_day": "Porcelain Day",
+  "settings_theme_mist_studio": "Mist Studio",
   "settings_language": "Language",
   "settings_lang_zh": "中文",
   "settings_lang_en": "EN"

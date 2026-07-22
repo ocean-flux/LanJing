@@ -1,13 +1,13 @@
 <script lang="ts">
+  import { Button } from '$lib/components/ui/button';
+  import { Textarea } from '$lib/components/ui/textarea';
+  import { m } from '$lib/i18n';
   import {
     installCandidate,
     prepareInstall,
     type CapabilityGrantPreset,
     type InstallCandidate,
   } from '$lib/stores/rules.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Textarea } from '$lib/components/ui/textarea';
-  import { m } from '$lib/i18n';
 
   let sourceJson = $state('');
   let candidate = $state<InstallCandidate | null>(null);
@@ -16,15 +16,20 @@
   let error = $state<string | null>(null);
   let success = $state<string | null>(null);
 
+  const requiresNetworkGrant = $derived(candidate?.required_grant.network ?? false);
+  const canInstall = $derived(
+    candidate !== null && !loading && (!requiresNetworkGrant || grant === 'network_only'),
+  );
+
   async function handlePrepare(): Promise<void> {
     loading = true;
     error = null;
     success = null;
     candidate = null;
+    grant = 'none';
 
     try {
       candidate = await prepareInstall(sourceJson);
-      grant = candidate.required_grant.network ? 'network_only' : 'none';
     } catch (caught) {
       error = String(caught);
     } finally {
@@ -33,16 +38,17 @@
   }
 
   async function handleInstall(): Promise<void> {
-    if (!candidate) return;
+    if (!candidate || (candidate.required_grant.network && grant !== 'network_only')) return;
     loading = true;
     error = null;
     success = null;
 
     try {
       const source = await installCandidate(candidate.id, grant);
-      success = m.debug_import_success({ id: source.source_id });
+      success = m.sources_install_success({ id: source.source_id });
       candidate = null;
       sourceJson = '';
+      grant = 'none';
     } catch (caught) {
       error = String(caught);
     } finally {
@@ -51,27 +57,38 @@
   }
 </script>
 
-<div class="flex h-full flex-col gap-4 overflow-auto">
-  <h2 class="text-lg font-semibold">{m.debug_import_title()}</h2>
+<!-- Ethereal 装源操作面：复用 prepare/install 合同，仅换 double-bezel / lantern 皮肤 -->
+<div class="flex h-full min-h-0 flex-col gap-3 overflow-auto" data-testid="install-source">
+  <header class="border-b border-hairline pb-2">
+    <h2 class="text-sm font-semibold tracking-tight text-ink">{m.sources_install_title()}</h2>
+  </header>
 
-  <div class="flex flex-col gap-2">
-    <label for="rule-json" class="text-sm font-medium">{m.debug_rule_json_label()}</label>
+  <div class="double-bezel flex flex-col gap-2 p-3">
+    <label for="rule-json" class="text-xs font-medium text-ink-muted">
+      {m.sources_install_json_label()}
+    </label>
     <Textarea
       id="rule-json"
       bind:value={sourceJson}
-      placeholder={m.debug_rule_json_placeholder()}
+      placeholder={m.sources_install_json_placeholder()}
       rows={8}
       disabled={loading}
+      class="double-bezel-control border-hairline bg-surface-2 text-ink placeholder:text-ink-subtle focus-visible:border-lantern-strong/50 focus-visible:ring-lantern/35 min-h-36 rounded-lg px-3 py-2 text-sm shadow-none focus-visible:ring-2"
     />
+    <Button
+      type="button"
+      onclick={handlePrepare}
+      disabled={loading || !sourceJson.trim()}
+      class="min-h-11 w-full sm:w-auto"
+    >
+      {loading ? m.sources_install_preparing() : m.sources_install_prepare()}
+    </Button>
   </div>
-
-  <Button onclick={handlePrepare} disabled={loading || !sourceJson.trim()}>
-    {loading ? m.debug_parse_loading() : m.debug_parse_preview()}
-  </Button>
 
   {#if error}
     <div
-      class="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+      class="rounded-lg border border-danger/35 bg-danger/10 px-3 py-2.5 text-sm text-danger"
+      role="alert"
     >
       {error}
     </div>
@@ -79,53 +96,99 @@
 
   {#if success}
     <div
-      class="rounded-md border border-emerald-500/30 bg-emerald-50 p-3 text-sm text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400"
+      class="rounded-lg border border-positive/40 bg-positive/10 px-3 py-2.5 text-sm text-positive"
+      role="status"
     >
       {success}
     </div>
   {/if}
 
   {#if candidate}
-    <div class="space-y-3 rounded-md border bg-card p-4">
-      <h3 class="text-base font-semibold">{m.debug_preview_title()}</h3>
-      <div class="grid grid-cols-2 gap-2 text-sm">
-        <span class="text-muted-foreground">{m.debug_source_url()}</span>
-        <span>{candidate.profile.title}</span>
-        <span class="text-muted-foreground">{m.debug_sandbox_network()}</span>
-        <span>{candidate.required_grant.network ? m.debug_allowed() : m.debug_denied()}</span>
+    <section
+      class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(16rem,0.72fr)] md:items-start"
+      data-testid="install-candidate-preview"
+      aria-labelledby="install-candidate-title"
+    >
+      <div class="double-bezel space-y-3 p-3">
+        <h3 id="install-candidate-title" class="text-sm font-semibold text-ink">
+          {m.sources_install_preview_title()}
+        </h3>
+        <dl
+          class="grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs sm:text-sm"
+        >
+          <dt class="text-ink-muted">{m.sources_install_source_name()}</dt>
+          <dd class="min-w-0 break-words font-medium text-ink">{candidate.profile.title}</dd>
+          {#if candidate.profile.version}
+            <dt class="text-ink-muted">{m.sources_install_version()}</dt>
+            <dd class="min-w-0 break-words font-medium text-ink">{candidate.profile.version}</dd>
+          {/if}
+          <dt class="text-ink-muted">{m.sources_install_network_grant()}</dt>
+          <dd class="font-medium text-ink">
+            {requiresNetworkGrant
+              ? m.sources_install_network_required()
+              : m.sources_install_network_not_required()}
+          </dd>
+        </dl>
+
+        {#if candidate.profile.risk_notes.length > 0}
+          <ul class="list-disc space-y-1 pl-5 text-xs text-ink-muted">
+            {#each candidate.profile.risk_notes as note (note)}
+              <li>{note}</li>
+            {/each}
+          </ul>
+        {/if}
+
+        {#if candidate.diagnostics.length > 0}
+          <ul
+            class="space-y-1 rounded-lg border border-hairline bg-surface-2 px-2.5 py-2 text-xs text-ink-muted"
+          >
+            {#each candidate.diagnostics as diagnostic (diagnostic.code + diagnostic.message)}
+              <li>
+                <span class="font-medium text-ink">{diagnostic.code}</span>: {diagnostic.message}
+              </li>
+            {/each}
+          </ul>
+        {/if}
       </div>
 
-      {#if candidate.profile.risk_notes.length > 0}
-        <ul class="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-          {#each candidate.profile.risk_notes as note (note)}
-            <li>{note}</li>
-          {/each}
-        </ul>
-      {/if}
+      <div
+        class="double-bezel sticky bottom-0 z-10 space-y-3 bg-surface-1/95 p-3 pb-[max(0.75rem,var(--shell-bottom-safe-padding))] backdrop-blur md:static md:z-auto md:bg-surface-1 md:backdrop-blur-none"
+        data-testid="install-actions"
+      >
+        {#if requiresNetworkGrant}
+          <p
+            class="rounded-lg border border-lantern/35 bg-lantern-soft/25 px-3 py-2 text-xs font-medium text-ink"
+          >
+            {m.sources_install_network_required_notice()}
+          </p>
+          <label class="flex flex-col gap-1.5 text-sm text-ink" for="network-grant">
+            <span class="text-xs font-medium text-ink-muted">
+              {m.sources_install_network_grant()}
+            </span>
+            <select
+              id="network-grant"
+              bind:value={grant}
+              disabled={loading}
+              class="double-bezel-control border-hairline min-h-11 w-full rounded-lg bg-surface-1 px-2.5 text-sm text-ink outline-none focus-visible:border-lantern-strong/50 focus-visible:shadow-[var(--focus-ring)]"
+            >
+              <option value="none">{m.sources_install_grant_prompt()}</option>
+              <option value="network_only">{m.sources_install_grant_network_only()}</option>
+            </select>
+          </label>
+        {:else}
+          <p class="text-xs text-ink-muted">{m.sources_install_network_not_required()}</p>
+        {/if}
 
-      {#if candidate.diagnostics.length > 0}
-        <ul class="space-y-1 text-xs text-muted-foreground">
-          {#each candidate.diagnostics as diagnostic (diagnostic.code + diagnostic.message)}
-            <li>{diagnostic.code}: {diagnostic.message}</li>
-          {/each}
-        </ul>
-      {/if}
-
-      <label class="flex items-center gap-2 text-sm">
-        <span>{m.debug_sandbox_network()}</span>
-        <select
-          bind:value={grant}
-          disabled={loading}
-          class="h-9 rounded-md border bg-background px-2"
+        <Button
+          type="button"
+          onclick={handleInstall}
+          disabled={!canInstall}
+          variant="default"
+          class="min-h-11 w-full"
         >
-          <option value="none">{m.debug_denied()}</option>
-          <option value="network_only">{m.debug_allowed()}</option>
-        </select>
-      </label>
-
-      <Button onclick={handleInstall} disabled={loading} variant="default" class="w-full">
-        {loading ? m.debug_importing() : m.debug_install_candidate()}
-      </Button>
-    </div>
+          {loading ? m.sources_install_installing() : m.sources_install_action()}
+        </Button>
+      </div>
+    </section>
   {/if}
 </div>
