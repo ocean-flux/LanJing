@@ -1,30 +1,52 @@
-import { render, screen, within } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
 import { demoSources } from '$lib/app/demo-state';
 import SourcesHome from './SourcesHome.svelte';
 
 describe('SourcesHome', () => {
-  it('shows add-source choices and local import action when no sources exist', () => {
+  it('defaults to honest empty state without demo sources', () => {
+    render(SourcesHome);
+
+    expect(screen.getByRole('heading', { name: '添加来源' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '还没有来源' })).toBeTruthy();
+    expect(screen.getByTestId('sources-empty').textContent).toContain('不会显示示例繁荣列表');
+    expect(screen.getByTestId('add-source-panel').className).toContain('double-bezel');
+    expect(screen.queryByText('示例小说源')).toBeNull();
+    expect(screen.queryByText('需要检查的音乐源')).toBeNull();
+  });
+
+  it('shows honest source entry choices when no sources exist', () => {
     render(SourcesHome, { props: { sources: [] } });
 
     expect(screen.getByRole('heading', { name: '添加来源' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '导入本地文件' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: '还没有来源' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /订阅链接/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /订阅链接/ })).toBeTruthy();
   });
 
-  it('sorts source cards by attention and exposes trust facts plus actions', () => {
+  it('sorts source cards by attention without rendering fake action buttons', () => {
     render(SourcesHome, { props: { sources: demoSources } });
 
     const cards = screen.getAllByRole('article');
     expect(within(cards[0]).getByText('需要检查的音乐源')).toBeTruthy();
     expect(within(cards[0]).getByText('需要处理')).toBeTruthy();
-    expect(within(cards[0]).getByRole('button', { name: '重试' })).toBeTruthy();
-    expect(within(cards[0]).getByRole('button', { name: '禁用' })).toBeTruthy();
+    expect(within(cards[0]).queryByRole('button', { name: '重试' })).toBeNull();
+    expect(within(cards[0]).getByRole('group', { name: '能力' })).toBeTruthy();
 
     for (const fact of ['来源', '网络访问', '远程解析', '失败隔离']) {
       expect(within(cards[0]).getByText(fact)).toBeTruthy();
     }
+  });
+
+  it('passes native source actions through an observable typed callback', async () => {
+    const onaction = vi.fn();
+    render(SourcesHome, { props: { sources: demoSources, onaction } });
+
+    const retry = screen.getByRole('button', { name: '重试' });
+    expect(retry.tagName).toBe('BUTTON');
+    expect(retry.getAttribute('type')).toBe('button');
+    await fireEvent.click(retry);
+
+    expect(onaction).toHaveBeenCalledWith({ sourceId: 'demo-warning', action: '重试' });
   });
 
   it('groups failed, partial, ready, unchecked and disabled sources separately', () => {
@@ -43,30 +65,12 @@ describe('SourcesHome', () => {
     expect(within(disabledSection).getByText('已禁用视频源')).toBeTruthy();
   });
 
-  it('applies reduced opacity to disabled sources section', () => {
+  it('uses semantic disabled styling instead of fading the whole group', () => {
     render(SourcesHome, { props: { sources: demoSources } });
 
     const disabledSection = screen.getByLabelText('已禁用');
-    expect(disabledSection.className).toContain('opacity-70');
-  });
-
-  it('renders all source action buttons as keyboard-reachable native buttons', () => {
-    render(SourcesHome, { props: { sources: demoSources } });
-
-    const allButtons = screen.getAllByRole('button');
-    const actionButtons = allButtons.filter(
-      (btn) =>
-        btn.textContent?.includes('重试') ||
-        btn.textContent?.includes('禁用') ||
-        btn.textContent?.includes('启用') ||
-        btn.textContent?.includes('开始检查') ||
-        btn.textContent?.includes('移除'),
-    );
-
-    expect(actionButtons.length).toBeGreaterThan(0);
-    for (const btn of actionButtons) {
-      expect(btn.tagName).toBe('BUTTON');
-      expect(btn.getAttribute('type')).toBe('button');
-    }
+    const disabledCard = within(disabledSection).getByRole('article');
+    expect(disabledSection.className).not.toContain('opacity-70');
+    expect(disabledCard.getAttribute('data-status')).toBe('disabled');
   });
 });

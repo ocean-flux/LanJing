@@ -12,5 +12,9 @@
   "library_unfavorite": "Remove favorite",
   "library_pin": "Pin",
   "library_unpin": "Unpin",
-  "library_alternative_routes": "Explicit routes"
+  "library_alternative_routes": "Explicit routes",
+  "library_loading": "Loading library…",
+  "library_load_error": "Library could not be loaded.",
+  "library_retry": "Retry",
+  "library_update_error": "Library state could not be updated. Try again."
 }

@@ -4,8 +4,16 @@ import { demoSources, mediaAppCards, noSourceRealmState } from './demo-state';
 describe('demo shell state', () => {
   it('keeps no-source realm state actionable', () => {
     expect(noSourceRealmState.kind).toBe('no-source');
-    expect(noSourceRealmState.primaryAction).toBe('添加来源');
-    expect(noSourceRealmState.secondaryAction).toBe('导入本地文件');
+    expect(noSourceRealmState.primaryAction).toEqual({
+      kind: 'add-source',
+      label: '添加来源',
+      href: '/sources',
+    });
+    expect(noSourceRealmState.secondaryAction).toEqual({
+      kind: 'import-local',
+      label: '导入本地文件',
+      href: '/sources',
+    });
   });
 
   it('exposes isolated failure actions and trust facts for failed sources', () => {

@@ -24,7 +24,7 @@
 
 <article
   class={[
-    'group/card motion-dock-wake relative overflow-hidden rounded-xl border border-hairline bg-surface-1 p-3 transition-colors',
+    'group/card motion-dock-wake double-bezel relative overflow-hidden p-3 transition-colors',
     lead && 'sm:col-span-2',
     selected && 'border-lantern/50 bg-lantern-soft/30',
   ]}

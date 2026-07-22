@@ -12,5 +12,9 @@
   "library_unfavorite": "取消收藏",
   "library_pin": "固定",
   "library_unpin": "取消固定",
-  "library_alternative_routes": "明确关联线路"
+  "library_alternative_routes": "明确关联线路",
+  "library_loading": "正在加载资料库…",
+  "library_load_error": "资料库加载失败。",
+  "library_retry": "重试加载",
+  "library_update_error": "资料库状态更新失败，请重试。"
 }

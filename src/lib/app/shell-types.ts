@@ -41,7 +41,7 @@ export type PlatformCapabilities = {
 /** 壳主题状态（L0 模式 + L2 pack + a11y 标志）。 */
 export type ShellThemeState = {
   mode: 'light' | 'dark' | 'system';
-  /** L2 气质包 id；默认 `inkstone-precision`，亦可为内置 `cold-cinnabar`。 */
+  /** L2 主题 id；默认暗 `obsidian-void`，亮轨常用 `porcelain-day`。 */
   appearancePack: AppearancePackId;
   reducedMotion: boolean;
   reducedTransparency: boolean;
@@ -101,6 +101,12 @@ export type SourceCardState = {
   checkedAt?: string;
 };
 
+/** 来源卡动作出口；业务 owner 以来源稳定 ID 接收用户选择。 */
+export type SourceCardAction = {
+  sourceId: string;
+  action: string;
+};
+
 /** 媒体应用宫格卡展示态。 */
 export type MediaAppCardState = {
   key: MediaAppKey;
@@ -112,6 +118,24 @@ export type MediaAppCardState = {
   href?: string;
 };
 
+/** 境场动作类型；图标与路由不依赖本地化文案。 */
+export type RealmActionKind =
+  | 'add-source'
+  | 'import-local'
+  | 'search-content'
+  | 'open-discover'
+  | 'check-source'
+  | 'view-source-status'
+  | 'retry'
+  | 'continue-available';
+
+/** 境场动作数据；label 仅展示，href 是稳定导航合同。 */
+export type RealmAction = {
+  kind: RealmActionKind;
+  label: string;
+  href: '/apps' | '/sources';
+};
+
 /** 境场空/告警等宏观状态枚举。 */
 export type RealmStateKind = 'no-source' | 'source-no-resource' | 'source-warning' | 'has-content';
 
@@ -120,8 +144,8 @@ export type RealmState = {
   kind: RealmStateKind;
   title: string;
   description: string;
-  primaryAction: string;
-  secondaryAction: string;
+  primaryAction: RealmAction;
+  secondaryAction: RealmAction;
   sourceSummary?: string;
 };
 

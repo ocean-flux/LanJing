@@ -40,8 +40,8 @@ export const noSourceRealmState: RealmState = {
   kind: 'no-source',
   title: m.realm_title_no_source(),
   description: m.realm_desc_no_source(),
-  primaryAction: m.action_add_source(),
-  secondaryAction: m.action_import_local(),
+  primaryAction: { kind: 'add-source', label: m.action_add_source(), href: '/sources' },
+  secondaryAction: { kind: 'import-local', label: m.action_import_local(), href: '/sources' },
 };
 
 /** 境场：有来源但无资源。 */
@@ -49,8 +49,8 @@ export const sourceNoResourceRealmState: RealmState = {
   kind: 'source-no-resource',
   title: m.realm_title_no_resource(),
   description: m.realm_desc_no_resource(),
-  primaryAction: m.action_search_content(),
-  secondaryAction: m.action_import_local(),
+  primaryAction: { kind: 'search-content', label: m.action_search_content(), href: '/apps' },
+  secondaryAction: { kind: 'import-local', label: m.action_import_local(), href: '/sources' },
   sourceSummary: m.realm_summary_one_source(),
 };
 
@@ -59,8 +59,16 @@ export const sourceWarningRealmState: RealmState = {
   kind: 'source-warning',
   title: m.realm_title_warning(),
   description: m.realm_desc_warning(),
-  primaryAction: m.action_view_source_status(),
-  secondaryAction: m.action_continue_available(),
+  primaryAction: {
+    kind: 'view-source-status',
+    label: m.action_view_source_status(),
+    href: '/sources',
+  },
+  secondaryAction: {
+    kind: 'continue-available',
+    label: m.action_continue_available(),
+    href: '/apps',
+  },
   sourceSummary: m.realm_summary_warning(),
 };
 

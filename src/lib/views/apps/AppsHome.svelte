@@ -9,12 +9,15 @@
   };
 
   let { apps = mediaAppCards }: Props = $props();
-  let selectedPlaceholder = $state<MediaAppCardState | null>(null);
+  let selectedKey = $state<MediaAppCardState['key'] | null>(null);
+  const selectedPlaceholder = $derived(
+    apps.find((app) => app.key === selectedKey && !app.href) ?? null,
+  );
   const leadApp = $derived(apps.find((app) => app.key === 'novel') ?? apps[0]);
   const secondaryApps = $derived(apps.filter((app) => app.key !== leadApp?.key));
 </script>
 
-<!-- 全宽 denselist：无 marketing hero / surface-panel 大卡 -->
+<!-- Ethereal 工作台：媒体卡网格；未就绪 → 诚实「媒体体验稍后」 -->
 <section class="flex w-full flex-col gap-3" aria-label={m.apps_title()}>
   <header class="flex flex-wrap items-baseline justify-between gap-2 border-b border-hairline pb-2">
     <h1 class="text-base font-semibold tracking-tight text-ink">{m.apps_title()}</h1>
@@ -22,12 +25,19 @@
   </header>
 
   {#if selectedPlaceholder}
-    <div class="border border-hairline bg-surface-2 px-3 py-2 text-sm" role="status">
-      <span class="font-semibold text-ink"
-        >{m.apps_placeholder_title({ label: selectedPlaceholder.label })}</span
-      >
-      <p class="mt-0.5 text-ink-muted">
-        {m.apps_placeholder_desc({ action: selectedPlaceholder.primaryAction })}
+    <div class="double-bezel px-3 py-3 text-sm" role="status" data-testid="apps-media-later">
+      <span class="font-semibold text-ink">{m.apps_media_later_title()}</span>
+      <p class="mt-1 text-ink-muted">
+        {m.apps_media_later_desc({
+          label: selectedPlaceholder.label,
+          action: selectedPlaceholder.primaryAction,
+        })}
+      </p>
+      <p class="mt-2 text-xs text-ink-subtle">
+        {m.apps_placeholder_desc({
+          label: selectedPlaceholder.label,
+          action: selectedPlaceholder.primaryAction,
+        })}
       </p>
     </div>
   {/if}
@@ -38,7 +48,7 @@
         app={leadApp}
         lead
         selected={selectedPlaceholder?.key === leadApp.key}
-        onselect={(next) => (selectedPlaceholder = next)}
+        onselect={(next) => (selectedKey = next.key)}
       />
     {/if}
 
@@ -46,7 +56,7 @@
       <MediaAppCard
         {app}
         selected={selectedPlaceholder?.key === app.key}
-        onselect={(next) => (selectedPlaceholder = next)}
+        onselect={(next) => (selectedKey = next.key)}
       />
     {/each}
   </div>

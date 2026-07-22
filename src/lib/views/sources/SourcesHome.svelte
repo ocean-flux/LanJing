@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { demoSources } from '$lib/app/demo-state';
-  import type { SourceCardState } from '$lib/app/shell-types';
+  import type { SourceCardAction, SourceCardState } from '$lib/app/shell-types';
   import { m } from '$lib/i18n';
   import AddSourcePanel from './AddSourcePanel.svelte';
   import SourceCard from './SourceCard.svelte';
 
   type Props = {
+    /** 默认诚实空列表；装源业务由 sources-prod 接线，不在此分叉 demo 繁荣列表。 */
     sources?: SourceCardState[];
+    onaction?: (action: SourceCardAction) => void;
   };
 
   const order: Record<SourceCardState['status'], number> = {
@@ -17,7 +18,7 @@
     disabled: 4,
   };
 
-  let { sources = demoSources }: Props = $props();
+  let { sources = [], onaction }: Props = $props();
   const sortedSources = $derived([...sources].sort((a, b) => order[a.status] - order[b.status]));
   const failedSources = $derived(sortedSources.filter((s) => s.status === 'failed'));
   const partialSources = $derived(sortedSources.filter((s) => s.status === 'partial'));
@@ -36,8 +37,9 @@
 
   {#if sortedSources.length === 0}
     <section
-      class="border border-dashed border-hairline px-4 py-6 text-center"
+      class="media-void rounded-xl px-4 py-6 text-center"
       aria-labelledby="sources-empty-title"
+      data-testid="sources-empty"
     >
       <h2 id="sources-empty-title" class="text-sm font-semibold text-ink">
         {m.sources_empty_title()}
@@ -48,7 +50,7 @@
     {#if failedSources.length > 0}
       <section class="grid gap-3" aria-label={m.status_failed()}>
         {#each failedSources as source (source.id)}
-          <SourceCard {source} attention />
+          <SourceCard {source} {onaction} attention />
         {/each}
       </section>
     {/if}
@@ -56,7 +58,7 @@
     {#if partialSources.length > 0}
       <section class="grid gap-3" aria-label={m.status_partial()}>
         {#each partialSources as source (source.id)}
-          <SourceCard {source} attention />
+          <SourceCard {source} {onaction} attention />
         {/each}
       </section>
     {/if}
@@ -64,7 +66,7 @@
     {#if readySources.length > 0}
       <section class="grid gap-3 lg:grid-cols-2" aria-label={m.status_ready()}>
         {#each readySources as source (source.id)}
-          <SourceCard {source} />
+          <SourceCard {source} {onaction} />
         {/each}
       </section>
     {/if}
@@ -72,15 +74,15 @@
     {#if uncheckedSources.length > 0}
       <section class="grid gap-3 lg:grid-cols-2" aria-label={m.status_unchecked()}>
         {#each uncheckedSources as source (source.id)}
-          <SourceCard {source} />
+          <SourceCard {source} {onaction} />
         {/each}
       </section>
     {/if}
 
     {#if disabledSources.length > 0}
-      <section class="grid gap-3 opacity-70 lg:grid-cols-2" aria-label={m.status_disabled()}>
+      <section class="grid gap-3 text-ink-muted lg:grid-cols-2" aria-label={m.status_disabled()}>
         {#each disabledSources as source (source.id)}
-          <SourceCard {source} />
+          <SourceCard {source} {onaction} />
         {/each}
       </section>
     {/if}

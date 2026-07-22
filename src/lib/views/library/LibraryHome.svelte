@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
   import Download from '@lucide/svelte/icons/download';
   import Pin from '@lucide/svelte/icons/pin';
   import Plus from '@lucide/svelte/icons/plus';
@@ -31,16 +32,30 @@
     update?: (entry: LibraryEntry) => Promise<LibraryUpdateReceipt>;
   };
 
+  type LibraryViewState =
+    | { kind: 'loading' }
+    | { kind: 'load-error' }
+    | { kind: 'empty'; projection: LibraryProjectionResponse }
+    | { kind: 'ready'; projection: LibraryProjectionResponse };
+
   let {
     projection = null,
     load = loadLibraryProjection,
     update = updateLibraryEntry,
   }: Props = $props();
-  let activeProjection = $state<LibraryProjectionResponse | null>(null);
-  let loading = $state(false);
-  let loadError = $state(false);
-  let stateError = $state(false);
-  const items = $derived(projectLibrary(activeProjection));
+
+  function stateFromProjection(next: LibraryProjectionResponse): LibraryViewState {
+    return projectLibrary(next).length === 0
+      ? { kind: 'empty', projection: next }
+      : { kind: 'ready', projection: next };
+  }
+
+  let viewState = $derived<LibraryViewState>(
+    projection ? stateFromProjection(projection) : { kind: 'loading' },
+  );
+  let updateError = $state(false);
+  let pendingResourceIds = new SvelteSet<string>();
+  const items = $derived(viewState.kind === 'ready' ? projectLibrary(viewState.projection) : []);
 
   const actions: ActionCard[] = [
     {
@@ -64,39 +79,40 @@
   ];
 
   onMount(() => {
-    if (projection) {
-      activeProjection = projection;
-      return;
-    }
-    loading = true;
-    load()
-      .then((next) => {
-        activeProjection = next;
-      })
-      .catch(() => {
-        loadError = true;
-      })
-      .finally(() => {
-        loading = false;
-      });
+    if (!projection) void loadProjection();
   });
 
-  async function toggleState(itemIndex: number, key: 'favorite' | 'pinned'): Promise<void> {
-    const item = items[itemIndex];
+  async function loadProjection(): Promise<void> {
+    viewState = { kind: 'loading' };
+    try {
+      viewState = stateFromProjection(await load());
+    } catch {
+      viewState = { kind: 'load-error' };
+    }
+  }
+
+  async function toggleState(resourceId: string, key: 'favorite' | 'pinned'): Promise<void> {
+    if (pendingResourceIds.has(resourceId)) return;
+
+    const item = items.find((candidate) => candidate.resource_id === resourceId);
     if (!item) return;
+
     const nextEntry: LibraryEntry = {
       ...item.state,
       [key]: !item.state[key],
     };
 
+    updateError = false;
+    pendingResourceIds.add(resourceId);
     try {
       const receipt = await update(nextEntry);
-      if (!activeProjection) return;
-      activeProjection = {
-        ...activeProjection,
+      if (viewState.kind !== 'ready') return;
+
+      const nextProjection: LibraryProjectionResponse = {
+        ...viewState.projection,
         global_seq: receipt.global_seq,
-        entries: activeProjection.entries.map((entry) =>
-          entry.resource_id === nextEntry.resource_id
+        entries: viewState.projection.entries.map((entry) =>
+          entry.resource_id === resourceId
             ? {
                 ...nextEntry,
                 revision: receipt.revision,
@@ -105,8 +121,12 @@
             : entry,
         ),
       };
+      viewState = stateFromProjection(nextProjection);
+      updateError = false;
     } catch {
-      stateError = true;
+      updateError = true;
+    } finally {
+      pendingResourceIds.delete(resourceId);
     }
   }
 </script>
@@ -120,72 +140,91 @@
       <p class="max-w-prose text-xs text-ink-muted">{m.library_desc()}</p>
     </header>
 
-    {#if loading}
-      <p class="text-sm text-ink-muted" role="status">{m.library_desc()}</p>
-    {:else if items.length > 0}
-      <div class="grid gap-2" aria-label={m.library_title()}>
-        {#each items as entry, index (entry.resource_id)}
-          <article
-            class="grid gap-3 border-b border-hairline py-2 md:grid-cols-[minmax(0,1fr)_auto]"
-            data-resource-id={entry.resource_id}
-          >
-            <div class="min-w-0">
-              <h2 class="truncate text-sm font-semibold text-ink">{entry.resource_id}</h2>
-              {#if entry.state.progress}
-                <p class="mt-1 text-xs text-ink-subtle">
-                  {entry.state.progress.position}{#if entry.state.progress.total !== null}
-                    / {entry.state.progress.total}
-                  {/if}
-                </p>
-              {/if}
-            </div>
-            <div class="flex items-start gap-1">
-              <button
-                type="button"
-                class="grid h-9 w-9 place-items-center rounded-md text-ink-muted hover:bg-lantern-soft hover:text-ink"
-                aria-label={entry.state.favorite ? m.library_unfavorite() : m.library_favorite()}
-                aria-pressed={entry.state.favorite}
-                onclick={() => toggleState(index, 'favorite')}
-              >
-                <Star
-                  size={16}
-                  fill={entry.state.favorite ? 'currentColor' : 'none'}
-                  aria-hidden="true"
-                />
-              </button>
-              <button
-                type="button"
-                class="grid h-9 w-9 place-items-center rounded-md text-ink-muted hover:bg-lantern-soft hover:text-ink"
-                aria-label={entry.state.pinned ? m.library_unpin() : m.library_pin()}
-                aria-pressed={entry.state.pinned}
-                onclick={() => toggleState(index, 'pinned')}
-              >
-                <Pin
-                  size={16}
-                  fill={entry.state.pinned ? 'currentColor' : 'none'}
-                  aria-hidden="true"
-                />
-              </button>
-            </div>
-          </article>
-        {/each}
+    {#if viewState.kind === 'loading'}
+      <p class="text-sm text-ink-muted" role="status">{m.library_loading()}</p>
+    {:else if viewState.kind === 'load-error'}
+      <div class="media-void rounded-xl px-3 py-4" role="alert">
+        <p class="text-sm font-medium text-danger">{m.library_load_error()}</p>
+        <button
+          type="button"
+          class="mt-3 inline-flex min-h-11 items-center rounded-lg border border-hairline-strong px-4 text-sm font-semibold text-ink outline-none hover:bg-lantern-soft focus-visible:shadow-[var(--focus-ring)]"
+          onclick={loadProjection}
+        >
+          {m.library_retry()}
+        </button>
       </div>
+    {:else if viewState.kind === 'ready'}
+      <ul class="double-bezel divide-y divide-hairline" aria-label={m.library_title()}>
+        {#each items as entry (entry.resource_id)}
+          <li>
+            <article
+              class="grid gap-3 px-3 py-2 md:grid-cols-[minmax(0,1fr)_auto]"
+              data-resource-id={entry.resource_id}
+            >
+              <div class="min-w-0">
+                <h2 class="truncate text-sm font-semibold text-ink">{entry.resource_id}</h2>
+                {#if entry.state.progress}
+                  <p class="mt-1 text-xs text-ink-subtle">
+                    {entry.state.progress.position}{#if entry.state.progress.total !== null}
+                      / {entry.state.progress.total}
+                    {/if}
+                  </p>
+                {/if}
+              </div>
+              <div
+                class="flex items-start gap-1"
+                role="group"
+                aria-label={entry.resource_id}
+                aria-busy={pendingResourceIds.has(entry.resource_id)}
+              >
+                <button
+                  type="button"
+                  class="grid h-11 w-11 place-items-center rounded-md text-ink-muted outline-none hover:bg-lantern-soft hover:text-ink focus-visible:shadow-[var(--focus-ring)] disabled:cursor-wait disabled:opacity-60"
+                  aria-label={entry.state.favorite ? m.library_unfavorite() : m.library_favorite()}
+                  aria-pressed={entry.state.favorite}
+                  aria-busy={pendingResourceIds.has(entry.resource_id)}
+                  disabled={pendingResourceIds.has(entry.resource_id)}
+                  onclick={() => toggleState(entry.resource_id, 'favorite')}
+                >
+                  <Star
+                    size={16}
+                    fill={entry.state.favorite ? 'currentColor' : 'none'}
+                    aria-hidden="true"
+                  />
+                </button>
+                <button
+                  type="button"
+                  class="grid h-11 w-11 place-items-center rounded-md text-ink-muted outline-none hover:bg-lantern-soft hover:text-ink focus-visible:shadow-[var(--focus-ring)] disabled:cursor-wait disabled:opacity-60"
+                  aria-label={entry.state.pinned ? m.library_unpin() : m.library_pin()}
+                  aria-pressed={entry.state.pinned}
+                  aria-busy={pendingResourceIds.has(entry.resource_id)}
+                  disabled={pendingResourceIds.has(entry.resource_id)}
+                  onclick={() => toggleState(entry.resource_id, 'pinned')}
+                >
+                  <Pin
+                    size={16}
+                    fill={entry.state.pinned ? 'currentColor' : 'none'}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+            </article>
+          </li>
+        {/each}
+      </ul>
     {:else}
-      <div class="border border-dashed border-hairline px-3 py-4" role="status">
+      <div class="media-void rounded-xl px-3 py-4" role="status" data-testid="library-empty">
         <h2 class="text-sm font-semibold text-ink">{m.library_empty_title()}</h2>
         <p class="mt-1 text-xs leading-5 text-ink-muted">{m.library_empty_next()}</p>
       </div>
     {/if}
 
-    {#if loadError}
-      <p class="mt-2 text-xs text-ink-muted" role="status">{m.library_empty_next()}</p>
-    {/if}
-    {#if stateError}
-      <p class="mt-2 text-xs text-danger" role="alert">{m.library_empty_next()}</p>
+    {#if updateError}
+      <p class="mt-2 text-xs text-danger" role="alert">{m.library_update_error()}</p>
     {/if}
   </div>
 
-  <aside class="border-t border-hairline pt-2 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+  <aside class="double-bezel p-3 lg:self-start">
     <p class="mb-2 text-xs font-medium text-ink-muted">{m.library_title()}</p>
     <div class="grid gap-1">
       {#each actions as action (action.kind)}
