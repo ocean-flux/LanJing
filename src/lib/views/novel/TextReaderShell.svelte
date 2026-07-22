@@ -1,129 +1,50 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { getTextReaderTheme } from '$lib/stores/theme.svelte';
+  import BookOpen from '@lucide/svelte/icons/book-open';
   import { m } from '$lib/i18n';
-
-  const theme = getTextReaderTheme();
-  let pageMode = $state(theme.pageMode);
-
-  const widthClass =
-    theme.contentWidth === 'narrow'
-      ? 'max-w-[620px]'
-      : theme.contentWidth === 'wide'
-        ? 'max-w-[var(--content-reading-wide-width)]'
-        : 'max-w-[var(--content-reading-max-width)]';
-  const colorClass =
-    theme.colorScheme === 'dark' || theme.colorScheme === 'black'
-      ? 'bg-[var(--reader-canvas)] text-[var(--reader-ink)]'
-      : theme.colorScheme === 'white'
-        ? 'bg-white text-neutral-950'
-        : theme.colorScheme === 'gray'
-          ? 'bg-neutral-100 text-neutral-950'
-          : 'bg-(--surface-reader) text-[#241b12]';
-  const fontClass = theme.fontFamily === 'serif' ? 'font-serif' : 'font-sans';
-  const readerColumns = $derived(
-    pageMode === 'paged'
-      ? 'lg:columns-2 lg:gap-12 lg:[column-rule:1px_solid_color-mix(in_oklab,currentColor_12%,transparent)]'
-      : '',
-  );
 </script>
 
-<article
-  class={[
-    'min-h-screen px-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] pt-4 md:px-8 md:py-8',
-    colorClass,
-  ]}
-  aria-labelledby="reader-title"
+<section
+  class="mx-auto flex w-full max-w-[var(--content-max-width)] flex-col gap-3 px-4 py-6 md:px-6"
+  aria-labelledby="reader-placeholder-title"
 >
-  <div class={['mx-auto', widthClass, fontClass]}>
-    <header
-      class="sticky top-3 z-10 mb-8 rounded-full border border-current/10 bg-inherit px-3 py-2 shadow-sm backdrop-blur-none"
+  <header class="border-b border-hairline pb-2">
+    <p class="text-xs font-medium text-ink-muted">{m.novel_title()}</p>
+    <h1
+      id="reader-placeholder-title"
+      class="mt-0.5 text-base font-semibold tracking-tight text-ink"
     >
-      <nav class="flex flex-wrap items-center justify-between gap-2" aria-label={m.reader_title()}>
+      {m.reader_placeholder_title()}
+    </h1>
+  </header>
+
+  <div
+    class="flex flex-col gap-3 border border-hairline bg-surface-2 px-4 py-5 sm:flex-row sm:items-start sm:gap-4"
+    role="status"
+  >
+    <span
+      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lantern-soft text-ink"
+      aria-hidden="true"
+    >
+      <BookOpen size={18} strokeWidth={1.75} />
+    </span>
+    <div class="min-w-0">
+      <p class="text-sm font-semibold text-ink">{m.novel_placeholder_title()}</p>
+      <p class="mt-1 max-w-prose text-sm leading-6 text-ink-muted">{m.reader_placeholder_desc()}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
         <a
           href={resolve('/apps/novel' as '/')}
-          class="inline-flex min-h-10 items-center rounded-full px-4 text-sm font-semibold hover:bg-current/5"
+          class="motion-nav-capsule inline-flex min-h-11 items-center rounded-lg border border-hairline bg-surface-1 px-4 text-sm font-medium text-ink outline-none hover:bg-lantern-soft focus-visible:shadow-[var(--focus-ring)]"
         >
           {m.reader_back()}
         </a>
-        <p class="px-2 text-xs font-semibold text-current/65" aria-live="polite">
-          {m.reader_progress({ current: '1', total: pageMode === 'paged' ? '1' : '2' })}
-        </p>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="min-h-10 rounded-full px-4 text-sm font-semibold hover:bg-current/5"
-            aria-label={m.reader_previous()}
-          >
-            {m.reader_previous()}
-          </button>
-          <button
-            type="button"
-            class="min-h-10 rounded-full px-4 text-sm font-semibold hover:bg-current/5"
-            aria-label={m.reader_next()}
-          >
-            {m.reader_next()}
-          </button>
-          <button
-            type="button"
-            class="min-h-10 rounded-full px-4 text-sm font-semibold hover:bg-current/5"
-            aria-pressed={pageMode === 'paged'}
-            onclick={() => (pageMode = pageMode === 'paged' ? 'scroll' : 'paged')}
-          >
-            {pageMode === 'paged' ? m.reader_single_page() : m.reader_two_page()}
-          </button>
-        </div>
-      </nav>
-    </header>
-
-    <div class="reader-frame surface-reader motion-page-turn px-5 py-7 md:px-10 md:py-10">
-      <p class="text-xs font-semibold uppercase tracking-[0.24em] opacity-60">{m.novel_title()}</p>
-      <h1 id="reader-title" class="mt-2 text-3xl font-semibold">{m.reader_title()}</h1>
-      <p class="mt-2 text-sm opacity-70">
-        {m.reader_theme_meta({
-          scheme: theme.colorScheme,
-          font: theme.fontFamily,
-          size: theme.fontSize,
-        })}
-      </p>
-
-      <div
-        class={['mt-8 motion-page-turn', readerColumns]}
-        style:font-size={`${theme.fontSize}px`}
-        style:line-height={theme.lineHeight}
-      >
-        <p
-          style:margin-bottom={theme.paragraphSpacing}
-          style:text-indent={theme.indentFirstLine ? '2em' : '0'}
+        <a
+          href={resolve('/apps' as '/')}
+          class="motion-nav-capsule inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium text-ink-muted outline-none hover:bg-lantern-soft hover:text-ink focus-visible:shadow-[var(--focus-ring)]"
         >
-          {m.reader_para_one()}
-        </p>
-        <p
-          style:margin-bottom={theme.paragraphSpacing}
-          style:text-indent={theme.indentFirstLine ? '2em' : '0'}
-        >
-          {m.reader_para_two()}
-        </p>
+          {m.nav_apps()}
+        </a>
       </div>
     </div>
   </div>
-
-  <div
-    class="fixed inset-x-0 bottom-0 z-20 border-t border-current/10 bg-inherit px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:hidden"
-  >
-    <div class="mx-auto flex max-w-[var(--content-reading-max-width)] justify-between gap-2">
-      <button
-        type="button"
-        class="min-h-11 rounded-full px-4 text-sm font-semibold hover:bg-current/5"
-      >
-        {m.reader_previous()}
-      </button>
-      <button
-        type="button"
-        class="min-h-11 rounded-full px-4 text-sm font-semibold hover:bg-current/5"
-      >
-        {m.reader_next()}
-      </button>
-    </div>
-  </div>
-</article>
+</section>
