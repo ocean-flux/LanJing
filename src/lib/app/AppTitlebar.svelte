@@ -1,113 +1,128 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
+  import { LanJingMark } from '$lib/components/brand';
+  import Icon from '$lib/components/Icon.svelte';
   import { m } from '$lib/i18n';
-  import type { NativeWindowControlMode } from './shell-types';
+  import { getPrimaryNavigationItems } from './shell-navigation';
+  import type { NativeWindowControlMode, ShellRoute } from './shell-types';
   import WindowControls from './WindowControls.svelte';
   import { shouldRenderHtmlWindowControls } from './window-controls';
 
   type Props = {
-    /** 仅 a11y；不渲染可见标题文案 */
     contextLabel?: string;
     compact?: boolean;
     nativeControlMode?: NativeWindowControlMode;
-  };
-
-  // paraglide HMR 可能短暂缺键：避免 m.xxx is not a function 打断壳渲染
-  const messages = m as typeof m & {
-    titlebar_dblclick_maximize?: () => string;
+    active?: ShellRoute;
+    settingsActive?: boolean;
   };
 
   let {
     contextLabel = m.nav_realm(),
     compact = false,
-    nativeControlMode: controlledNativeControlMode,
+    nativeControlMode = 'browser-preview',
+    active,
+    settingsActive = false,
   }: Props = $props();
 
-  const dblclickHint = $derived(
-    typeof messages.titlebar_dblclick_maximize === 'function'
-      ? messages.titlebar_dblclick_maximize()
-      : '',
+  const navItems = $derived(getPrimaryNavigationItems());
+  const showHtmlWindowControls = $derived(
+    !compact && shouldRenderHtmlWindowControls(nativeControlMode),
   );
-
-  /** 仅测试：AppShell 未传入 shell.platform.windowControls 时的回退。 */
-  function resolveNativeControlModeFallback(): NativeWindowControlMode {
-    if (typeof window === 'undefined') return 'browser-preview';
-
-    const platform = navigator.userAgent.toLowerCase();
-    const tauri = '__TAURI_INTERNALS__' in window || platform.includes('tauri');
-
-    if (!tauri) return 'browser-preview';
-    if (platform.includes('mac')) return 'macos-overlay';
-    return 'windows-overlay';
-  }
-
-  const nativeControlMode = $derived(
-    controlledNativeControlMode ?? resolveNativeControlModeFallback(),
-  );
-  const titlebarControlLeft = $derived(nativeControlMode === 'macos-overlay' ? '86px' : '0px');
-  const showHtmlWindowControls = $derived(shouldRenderHtmlWindowControls(nativeControlMode));
-
-  /** 双击拖拽带 = 最大化/还原（创意替代常驻窗控） */
+  // macOS Overlay 交通灯叠在窗口左上；与 compact 无关，始终预留，避免挡品牌/导航/标题。
+  const trafficLightInset = $derived(nativeControlMode === 'macos-overlay' ? '86px' : '0px');
   async function onDragDblClick() {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
       await getCurrentWindow().toggleMaximize();
     } catch {
-      // 浏览器预览无窗口 API
+      // 浏览器预览没有原生窗口；双击空白拖拽区保持无副作用。
     }
   }
 </script>
 
-<!--
-  持久标题带：
-  - Windows/Linux/browser 显示 HTML 窗控；系统装饰与 macOS 使用原生控件
-  - 双击拖拽区切换最大化
-  - macOS 左侧预留系统交通灯间距
--->
 <header
-  class={[
-    'titlebar-strip motion-reader-recede relative z-30 flex shrink-0 items-center',
-    compact ? 'h-7' : 'h-8',
-  ]}
-  style:padding-left="var(--titlebar-control-left, 0px)"
-  style:--titlebar-control-left={titlebarControlLeft}
+  class="glass-chrome relative z-30 flex h-11 shrink-0 items-stretch border-b border-hairline text-ink supports-backdrop-filter:backdrop-blur-(--material-blur)"
+  style:padding-left={trafficLightInset}
   aria-label={m.titlebar_label({ context: contextLabel })}
-  aria-describedby="titlebar-native-controls"
   data-native-window-controls={nativeControlMode}
-  data-titlebar-chrome="persistent"
+  data-titlebar-chrome={compact ? 'app-bar' : 'desktop'}
   data-titlebar-controls={showHtmlWindowControls ? 'html' : 'native'}
+  data-macos-traffic-light-safe={trafficLightInset !== '0px' ? 'true' : undefined}
 >
-  <span id="titlebar-native-controls" class="sr-only">{m.titlebar_native_controls()}</span>
-
-  <div
-    class="titlebar-drag min-h-full min-w-0 flex-1 self-stretch"
-    data-tauri-drag-region
-    ondblclick={onDragDblClick}
-    role="presentation"
-  >
-    <span class="sr-only" data-tauri-drag-region>
-      {m.app_name()} / {contextLabel}{dblclickHint ? `. ${dblclickHint}` : ''}
-    </span>
-  </div>
-  {#if showHtmlWindowControls}
-    <div class="titlebar-controls mr-1.5 shrink-0">
-      <WindowControls {nativeControlMode} />
+  {#if compact}
+    <div class="flex min-w-0 flex-1 items-center px-4">
+      <span class="truncate text-sm font-semibold">{contextLabel}</span>
     </div>
+  {:else}
+    <a
+      href={resolve('/')}
+      class="titlebar-no-drag inline-flex shrink-0 items-center gap-2 px-3 text-sm font-semibold outline-none hover:bg-surface-2 focus-visible:shadow-[inset_var(--focus-ring)]"
+      aria-label={m.app_name()}
+    >
+      <LanJingMark size={20} label={m.app_name()} />
+      <span>{m.app_name()}</span>
+    </a>
+
+    <nav class="titlebar-no-drag flex h-full items-stretch" aria-label={m.nav_main()}>
+      {#each navItems as item (item.key)}
+        <a
+          href={resolve(item.href)}
+          class={[
+            'relative inline-flex h-full items-center gap-1.5 px-3 text-sm font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)]',
+            active === item.key && !settingsActive && 'text-ink',
+          ]}
+          aria-current={active === item.key && !settingsActive ? 'page' : undefined}
+        >
+          <Icon name={item.icon} class="size-4" />
+          <span>{item.label}</span>
+          {#if active === item.key && !settingsActive}
+            <span
+              class="absolute inset-x-2 bottom-0 h-0.5 bg-lantern"
+              aria-hidden="true"
+              data-titlebar-active-indicator
+            ></span>
+          {/if}
+        </a>
+      {/each}
+      <a
+        href={resolve('/settings' as '/')}
+        class={[
+          'relative inline-flex h-full shrink-0 items-center gap-1.5 px-3 text-sm font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)]',
+          settingsActive && 'text-ink',
+        ]}
+        aria-current={settingsActive ? 'page' : undefined}
+      >
+        <Icon name="gear-six" class="size-4" />
+        <span>{m.settings()}</span>
+        {#if settingsActive}
+          <span
+            class="absolute inset-x-2 bottom-0 h-0.5 bg-lantern"
+            aria-hidden="true"
+            data-titlebar-active-indicator
+          ></span>
+        {/if}
+      </a>
+    </nav>
+
+    <div
+      class="titlebar-drag min-w-6 flex-1"
+      data-tauri-drag-region
+      ondblclick={onDragDblClick}
+      role="presentation"
+    ></div>
+
+    {#if showHtmlWindowControls}
+      <WindowControls {nativeControlMode} />
+    {/if}
   {/if}
 </header>
 
 <style>
-  .titlebar-strip {
-    background: transparent;
-  }
-
-  :global(:root[data-material-transparency='low']) .titlebar-strip,
-  :global(:root.low-transparency) .titlebar-strip,
-  :global([data-reduced-transparency='true']) .titlebar-strip {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
   .titlebar-drag {
     -webkit-app-region: drag;
+  }
+
+  .titlebar-no-drag {
+    -webkit-app-region: no-drag;
   }
 </style>

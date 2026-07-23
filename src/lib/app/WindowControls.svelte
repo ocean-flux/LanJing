@@ -6,12 +6,46 @@
   type WindowAction = 'minimize' | 'toggle-maximize' | 'close';
 
   type Props = {
-    /** 宿主传入壳契约中的窗控模式。 */
     nativeControlMode: NativeWindowControlMode;
   };
 
   let { nativeControlMode }: Props = $props();
   const visible = $derived(shouldRenderHtmlWindowControls(nativeControlMode));
+
+  /** 与 Win11 原生标题栏一致：最大化后切换为还原字形。 */
+  let maximized = $state(false);
+  let unlistenResized: (() => void) | undefined;
+
+  $effect(() => {
+    if (!visible) {
+      unlistenResized?.();
+      unlistenResized = undefined;
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const appWindow = getCurrentWindow();
+        if (cancelled) return;
+
+        maximized = await appWindow.isMaximized();
+        unlistenResized = await appWindow.onResized(async () => {
+          maximized = await appWindow.isMaximized();
+        });
+      } catch {
+        // 浏览器预览不挂原生监听；保持默认未最大化字形。
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      unlistenResized?.();
+      unlistenResized = undefined;
+    };
+  });
 
   async function runWindowAction(action: WindowAction) {
     try {
@@ -25,12 +59,13 @@
 
       if (action === 'toggle-maximize') {
         await appWindow.toggleMaximize();
+        maximized = await appWindow.isMaximized();
         return;
       }
 
       await appWindow.close();
     } catch (error) {
-      // 浏览器预览无窗口 API；Tauri 缺权限时也会落到这里。
+      // 浏览器预览不渲染本控件；这里仅记录真实宿主权限或调用失败。
       console.warn('[window-controls]', action, error);
     }
   }
@@ -38,12 +73,10 @@
 
 {#if visible}
   <div
-    class="window-inline titlebar-no-drag flex items-center gap-1"
-    data-preview-window-controls="visible"
+    class="titlebar-no-drag flex h-full shrink-0 items-stretch"
     data-window-controls-source="html"
-    data-window-controls-layout="inline"
     role="group"
-    aria-label={m.window_controls_preview()}
+    aria-label={m.window_controls_open()}
   >
     <button
       type="button"
@@ -53,36 +86,47 @@
       title={m.window_minimize()}
       onclick={() => runWindowAction('minimize')}
     >
-      <svg class="window-icon" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-        <path
-          d="M2.5 6h7"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.2"
-          stroke-linecap="round"
-        />
+      <!-- Win11 比例：约 10px 字形、细描边 -->
+      <svg class="window-icon" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+        <path d="M1 5h8" fill="none" stroke="currentColor" stroke-width="1" />
       </svg>
     </button>
     <button
       type="button"
       class="window-control"
       data-window-action="toggle-maximize"
+      data-window-maximized={maximized ? 'true' : 'false'}
       aria-label={m.window_toggle_maximize()}
       title={m.window_toggle_maximize()}
       onclick={() => runWindowAction('toggle-maximize')}
     >
-      <svg class="window-icon" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-        <rect
-          x="2.75"
-          y="2.75"
-          width="6.5"
-          height="6.5"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.2"
-          rx="1.1"
-        />
-      </svg>
+      {#if maximized}
+        <!-- 还原：后框只露顶/右边，前框完整 -->
+        <svg class="window-icon" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+          <path d="M3 1.5h5.5v5.5" fill="none" stroke="currentColor" stroke-width="1" />
+          <rect
+            x="1.5"
+            y="3"
+            width="5.5"
+            height="5.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+          />
+        </svg>
+      {:else}
+        <svg class="window-icon" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+          <rect
+            x="1.5"
+            y="1.5"
+            width="7"
+            height="7"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+          />
+        </svg>
+      {/if}
     </button>
     <button
       type="button"
@@ -92,13 +136,12 @@
       title={m.window_close()}
       onclick={() => runWindowAction('close')}
     >
-      <svg class="window-icon" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+      <svg class="window-icon" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
         <path
-          d="M3.25 3.25l5.5 5.5M8.75 3.25l-5.5 5.5"
+          d="M2.2 2.2l5.6 5.6M7.8 2.2l-5.6 5.6"
           fill="none"
           stroke="currentColor"
-          stroke-width="1.2"
-          stroke-linecap="round"
+          stroke-width="1"
         />
       </svg>
     </button>
@@ -112,67 +155,38 @@
 
   .window-control {
     display: grid;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 46px;
+    height: 100%;
     place-items: center;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--ink-muted);
-    background: var(--surface-material);
-    border: 1px solid var(--surface-material-border);
-    border-radius: 999px;
-    box-shadow: var(--surface-control-shadow);
     outline: none;
     cursor: default;
-    transition:
-      color var(--motion-duration-fast) var(--motion-standard),
-      background-color var(--motion-duration-fast) var(--motion-standard),
-      border-color var(--motion-duration-fast) var(--motion-standard),
-      transform var(--motion-duration-fast) var(--motion-standard);
   }
 
   .window-control:hover,
   .window-control:focus-visible {
+    background: var(--surface-2);
     color: var(--ink);
-    border-color: var(--hairline-strong);
-    transform: scale(1.04);
   }
 
   .window-control:focus-visible {
-    box-shadow: var(--focus-ring);
+    box-shadow: inset var(--focus-ring);
   }
 
   .window-control-close:hover,
   .window-control-close:focus-visible,
   .window-control-close:active {
-    color: var(--destructive-foreground);
     background: var(--danger);
-    border-color: var(--danger);
+    color: var(--destructive-foreground);
   }
 
   .window-icon {
     display: block;
+    /* Win11 caption glyph 约 10px；靠细描边贴近原生，不靠放大 */
     width: 10px;
     height: 10px;
-    overflow: visible;
-  }
-
-  @supports (backdrop-filter: blur(1px)) {
-    .window-control {
-      backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturation));
-      -webkit-backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturation));
-    }
-  }
-
-  :global(:root[data-material-transparency='low']) .window-control,
-  :global(:root.low-transparency) .window-control,
-  :global([data-reduced-transparency='true']) .window-control {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  @media (prefers-reduced-transparency: reduce) {
-    .window-control {
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-    }
   }
 </style>

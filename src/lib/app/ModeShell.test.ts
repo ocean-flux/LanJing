@@ -11,6 +11,7 @@ import type { ModeShellContract } from './shell-types';
 
 const contract: ModeShellContract = {
   productContext: 'library',
+  settingsActive: false,
   mediaSpace: 'novel',
   foregroundActivity: { kind: 'reader', id: 'chapter-7' },
   presentation: 'reader',
@@ -63,6 +64,7 @@ describe('ModeShell', () => {
 
     const shell = screen.getByTestId('mode-shell');
     expect(shell.getAttribute('data-product-context')).toBe('library');
+    expect(shell.getAttribute('data-settings-active')).toBe('false');
     expect(shell.getAttribute('data-media-space')).toBe('novel');
     expect(shell.getAttribute('data-foreground-activity')).toBe('reader:chapter-7');
     expect(shell.getAttribute('data-presentation')).toBe('reader');

@@ -2,7 +2,7 @@
  * 壳契约与 UI 状态类型：ModeShell / AppShell 的唯一数据形状。
  * 不含实现；字段名与 DOM data-* / 测试断言对齐。
  */
-import type { CapabilityKey, MediaAppKey } from '$lib/brand';
+import type { MediaAppKey } from '$lib/brand';
 import type { AppearancePackId } from '$lib/stores/appearance-packs';
 
 /** 主导航四境路由键。 */
@@ -58,6 +58,7 @@ export type AmbientAudioSession = {
 /** ModeShell 下发给 AppShell 的完整契约（单一真相源）。 */
 export type ModeShellContract = {
   productContext: ProductContext;
+  settingsActive: boolean;
   mediaSpace: MediaSpace;
   foregroundActivity: ForegroundActivity;
   presentation: ShellPresentationMode;
@@ -75,100 +76,3 @@ export type HoverKind = 'none' | 'hover';
 
 /** 呈现层：普通 / 沉浸阅读 / 播放。 */
 export type ShellPresentationMode = 'normal' | 'reader' | 'player';
-
-/** 来源卡 UI 健康状态（与探测/导入结果映射）。 */
-export type SourceUiStatus = 'ready' | 'partial' | 'failed' | 'disabled' | 'unchecked';
-
-/** 媒体应用卡连接/内容状态。 */
-export type MediaAppStatus = 'unconnected' | 'explorable' | 'has-content' | 'failed';
-
-/** 来源信任事实一行（标签 + 值）。 */
-export type SourceTrustFact = {
-  label: string;
-  value: string;
-};
-
-/** 来源列表卡展示态。 */
-export type SourceCardState = {
-  id: string;
-  name: string;
-  kind: string;
-  status: SourceUiStatus;
-  summary: string;
-  capabilities: Partial<Record<CapabilityKey, boolean>>;
-  trustFacts: SourceTrustFact[];
-  actions: string[];
-  checkedAt?: string;
-};
-
-/** 来源卡动作出口；业务 owner 以来源稳定 ID 接收用户选择。 */
-export type SourceCardAction = {
-  sourceId: string;
-  action: string;
-};
-
-/** 媒体应用宫格卡展示态。 */
-export type MediaAppCardState = {
-  key: MediaAppKey;
-  label: string;
-  description: string;
-  status: MediaAppStatus;
-  statusLabel: string;
-  primaryAction: string;
-  href?: string;
-};
-
-/** 境场动作类型；图标与路由不依赖本地化文案。 */
-export type RealmActionKind =
-  | 'add-source'
-  | 'import-local'
-  | 'search-content'
-  | 'open-discover'
-  | 'check-source'
-  | 'view-source-status'
-  | 'retry'
-  | 'continue-available';
-
-/** 境场动作数据；label 仅展示，href 是稳定导航合同。 */
-export type RealmAction = {
-  kind: RealmActionKind;
-  label: string;
-  href: '/apps' | '/sources';
-};
-
-/** 境场空/告警等宏观状态枚举。 */
-export type RealmStateKind = 'no-source' | 'source-no-resource' | 'source-warning' | 'has-content';
-
-/** 境场首页文案与主次行动。 */
-export type RealmState = {
-  kind: RealmStateKind;
-  title: string;
-  description: string;
-  primaryAction: RealmAction;
-  secondaryAction: RealmAction;
-  sourceSummary?: string;
-};
-
-/** 文本阅读器偏好（与 L0 壳主题独立）。 */
-export type TextReaderThemePreference = {
-  colorScheme: 'paper' | 'white' | 'gray' | 'dark' | 'black';
-  fontFamily: 'system' | 'serif' | 'sans' | 'fangsong';
-  fontSize: number;
-  lineHeight: number;
-  paragraphSpacing: string;
-  contentWidth: 'narrow' | 'standard' | 'wide';
-  indentFirstLine: boolean;
-  pageMode: 'scroll' | 'paged';
-};
-
-/**
- * 迷你播放器槽。
- * - reserved：是否占布局高度（含无会话时的纯座位）
- * - visible：是否渲染可交互条（有 ambient 会话）
- * - label：会话文案；座位态可忽略
- */
-export type MiniPlayerSlotState = {
-  reserved: boolean;
-  visible: boolean;
-  label: string;
-};

@@ -1,11 +1,10 @@
 /**
- * 壳模式解析：由 pathname / 视口 / UA 推导产品上下文、媒体空间与平台能力。
+ * 壳模式解析：由 pathname / 视口 / UA 推导产品上下文、前台活动与平台能力。
  * 纯函数；不读写 store，供 ModeShell 装配契约。
  */
 import type {
   ForegroundActivity,
   HoverKind,
-  MediaSpace,
   NativeWindowControlMode,
   Orientation,
   PlatformCapabilities,
@@ -40,30 +39,9 @@ export function resolveProductContext(pathname: string): ProductContext {
   return 'realm';
 }
 
-/** 由路径解析媒体空间；非媒体应用路由为 null。 */
-export function resolveMediaSpace(pathname: string): MediaSpace {
-  if (pathname.startsWith('/apps/novel')) return 'novel';
-  if (pathname.startsWith('/apps/music')) return 'music';
-  if (pathname.startsWith('/apps/comic')) return 'comic';
-  if (pathname.startsWith('/apps/video')) return 'video';
-  if (pathname.startsWith('/apps/images')) return 'images';
-  if (pathname.startsWith('/apps/podcast')) return 'podcast';
-  if (pathname.startsWith('/apps/article')) return 'article';
-  if (pathname.startsWith('/apps/local')) return 'local';
-  return null;
-}
-
 /** 路由默认前台活动（可被会话 override 覆盖）。 */
 export function resolveForegroundActivity(pathname: string): ForegroundActivity {
-  if (pathname.startsWith('/apps/novel/read')) return { kind: 'reader' };
-  if (pathname.startsWith('/apps'))
-    return { kind: 'browse', id: resolveMediaSpace(pathname) ?? undefined };
   return { kind: 'browse', id: resolveProductContext(pathname) };
-}
-
-/** 呈现模式：阅读器路径为 reader，其余 normal。 */
-export function resolvePresentation(pathname: string) {
-  return pathname.startsWith('/apps/novel/read') ? ('reader' as const) : ('normal' as const);
 }
 
 function resolvePlatformKind(userAgent: string): PlatformKind {
@@ -78,12 +56,11 @@ function resolvePlatformKind(userAgent: string): PlatformKind {
 
 function resolveWindowControls(kind: PlatformKind, tauri: boolean): NativeWindowControlMode {
   if (!tauri) return 'browser-preview';
-  // macOS：交通灯由 Overlay 标题栏（tauri.conf）提供，不用 HTML 标题条。
+  // macOS：交通灯由平台覆盖配置提供，不重复渲染 HTML 控件。
   if (kind === 'macos') return 'macos-overlay';
-  // Windows / Linux：无边框窗口 + AppTitlebar HTML 标题控件（官方 window API）。
-  // `windows-overlay` 表示应用内自定义 chrome，不是第三方插件。
+  // Windows / Linux：无边框窗口使用 AppTitlebar HTML 标题控件。
   if (kind === 'windows' || kind === 'linux') return 'windows-overlay';
-  return 'windows-overlay';
+  return 'system-decorated';
 }
 
 /** 汇总平台能力：OS 类、朝向、指针与窗口控件模式。 */
@@ -121,28 +98,18 @@ export function resolveShellMode({ width, hover, pointer }: ShellModeInput): She
   return 'desktop';
 }
 
-/** 主导航 chrome 族：桌面脊 vs 移动底栏（互斥）。 */
-export type PrimaryChromeFamily = 'rail' | 'bottom';
+/** 主导航 chrome 族：桌面标题栏 vs 移动底栏（互斥）。 */
+export type PrimaryChromeFamily = 'titlebar' | 'bottom';
 
 /**
  * 由壳断点解析主导航族。
- * mobile / tablet-portrait → bottom；其余 → rail。
+ * mobile / tablet-portrait → bottom；其余 → titlebar。
  */
 export function resolvePrimaryChromeFamily(mode: ShellMode): PrimaryChromeFamily {
-  return mode === 'mobile' || mode === 'tablet-portrait' ? 'bottom' : 'rail';
+  return mode === 'mobile' || mode === 'tablet-portrait' ? 'bottom' : 'titlebar';
 }
 
 /** 设置路由：非四境，不点亮 productContext active。 */
 export function isSettingsPathname(pathname: string): boolean {
   return pathname.startsWith('/settings');
-}
-
-/**
- * 四境 active：设置路径清空，避免第五境误读。
- */
-export function resolveActivePrimaryRoute(
-  pathname: string,
-  productContext: ProductContext,
-): ProductContext | undefined {
-  return isSettingsPathname(pathname) ? undefined : productContext;
 }

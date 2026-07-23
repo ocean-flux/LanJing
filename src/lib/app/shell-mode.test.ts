@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isSettingsPathname,
-  resolveActivePrimaryRoute,
   resolveForegroundActivity,
-  resolveMediaSpace,
   resolvePlatformCapabilities,
   resolvePrimaryChromeFamily,
   resolveProductContext,
@@ -24,26 +22,23 @@ describe('resolveShellMode', () => {
   it.each([
     ['mobile', 'bottom'],
     ['tablet-portrait', 'bottom'],
-    ['tablet-landscape', 'rail'],
-    ['narrow-desktop', 'rail'],
-    ['desktop', 'rail'],
+    ['tablet-landscape', 'titlebar'],
+    ['narrow-desktop', 'titlebar'],
+    ['desktop', 'titlebar'],
   ] as const)('maps shell mode %s to chrome family %s', (mode, family) => {
     expect(resolvePrimaryChromeFamily(mode)).toBe(family);
   });
 
-  it('resolves product context, media space, and one foreground activity from route', () => {
+  it('resolves product context and foreground activity from live routes', () => {
     expect(resolveProductContext('/library')).toBe('library');
-    expect(resolveMediaSpace('/apps/novel/read/7')).toBe('novel');
-    expect(resolveForegroundActivity('/apps/novel/read/7')).toEqual({ kind: 'reader' });
-    expect(resolveForegroundActivity('/apps/music')).toEqual({ kind: 'browse', id: 'music' });
+    expect(resolveProductContext('/apps')).toBe('apps');
+    expect(resolveForegroundActivity('/apps')).toEqual({ kind: 'browse', id: 'apps' });
   });
 
-  it('clears primary realm active on settings pathname', () => {
+  it('identifies settings pathname without adding a fifth primary route', () => {
     expect(isSettingsPathname('/settings')).toBe(true);
     expect(isSettingsPathname('/settings/theme')).toBe(true);
     expect(isSettingsPathname('/library')).toBe(false);
-    expect(resolveActivePrimaryRoute('/settings', 'library')).toBeUndefined();
-    expect(resolveActivePrimaryRoute('/library', 'library')).toBe('library');
   });
 
   it('keeps platform capabilities explicit across orientation changes', () => {
@@ -61,6 +56,7 @@ describe('resolveShellMode', () => {
       orientation: 'portrait',
       keyboard: false,
       touch: true,
+      windowControls: 'system-decorated',
     });
     expect(
       resolvePlatformCapabilities({

@@ -4,10 +4,9 @@
   import AppShell from './AppShell.svelte';
   import {
     resolveForegroundActivity,
-    resolveMediaSpace,
     resolvePlatformCapabilities,
-    resolvePresentation,
     resolveProductContext,
+    isSettingsPathname,
   } from './shell-mode';
   import {
     getActivityOverride,
@@ -25,7 +24,7 @@
   let { children, shell }: Props = $props();
   let viewportWidth = $state(typeof window === 'undefined' ? 1280 : window.innerWidth);
   let viewportHeight = $state(typeof window === 'undefined' ? 800 : window.innerHeight);
-  let previousPathname = $state<string | undefined>(undefined);
+  let previousPathname: string | undefined;
   // 系统 a11y 偏好需随 media change 重绑，保证壳层 data-* / 材质与系统一致。
   let reducedMotion = $state(
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -86,9 +85,10 @@
 
     return {
       productContext: resolveProductContext(pathname),
-      mediaSpace: resolveMediaSpace(pathname),
+      settingsActive: isSettingsPathname(pathname),
+      mediaSpace: null,
       foregroundActivity: override ?? derivedActivity,
-      presentation: resolvePresentation(pathname),
+      presentation: 'normal',
       platform,
       theme: {
         mode: getMode(),
