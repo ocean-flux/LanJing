@@ -2,6 +2,7 @@
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "settings_open": "打开设置",
   "settings_title": "设置",
+  "settings_appearance_group": "外观",
   "settings_mode_label": "明暗模式",
   "settings_theme_light_label": "亮色主题",
   "settings_theme_dark_label": "暗色主题",
@@ -9,6 +10,7 @@
   "settings_theme_graphite_atelier": "石墨工坊",
   "settings_theme_porcelain_day": "瓷昼",
   "settings_theme_mist_studio": "雾室",
+  "settings_language_group": "语言",
   "settings_language": "界面语言",
   "settings_lang_zh": "中文",
   "settings_lang_en": "EN"

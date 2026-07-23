@@ -246,8 +246,8 @@ describe('theme preferences', () => {
     setMode('dark');
     expect(getAppearancePack().id).toBe('graphite-atelier');
     expect(document.documentElement.dataset.appearancePack).toBe('graphite-atelier');
-    // 钢蓝暗面 lantern，非亮面反相
-    expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#5b9fd4');
+    // 石墨工坊使用中性冷青 lantern，不引入紫/靛色相
+    expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#79a6ab');
 
     const stored = readWebPrefs();
     expect(stored.lightThemeId).toBe('porcelain-day');

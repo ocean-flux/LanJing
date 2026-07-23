@@ -8,7 +8,7 @@
   import SheetPortal from './sheet-portal.svelte';
   import SheetOverlay from './sheet-overlay.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
-  import XIcon from '@lucide/svelte/icons/x';
+  import Icon from '$lib/components/Icon.svelte';
   import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
   import type { ComponentProps } from 'svelte';
   import { m } from '$lib/i18n';
@@ -31,13 +31,12 @@
 
 <SheetPortal {...portalProps}>
   <SheetOverlay />
-  <!-- double-bezel 浮层；侧边圆角对齐 squircle，边框用 hairline 统一 -->
   <SheetPrimitive.Content
     bind:ref
     data-slot="sheet-content"
     data-side={side}
     class={cn(
-      'double-bezel-float text-popover-foreground fixed z-50 flex max-h-dvh flex-col gap-4 overflow-y-auto overscroll-contain bg-clip-padding text-sm transition duration-200 ease-in-out data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:rounded-t-[var(--radius-2xl)] data-[side=bottom]:rounded-b-none data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:rounded-r-[var(--radius-2xl)] data-[side=left]:rounded-l-none data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:rounded-l-[var(--radius-2xl)] data-[side=right]:rounded-r-none data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:rounded-b-[var(--radius-2xl)] data-[side=top]:rounded-t-none data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-[side=bottom]:data-open:slide-in-from-bottom-10 data-[side=left]:data-open:slide-in-from-left-10 data-[side=right]:data-open:slide-in-from-right-10 data-[side=top]:data-open:slide-in-from-top-10 data-closed:animate-out data-closed:fade-out-0 data-[side=bottom]:data-closed:slide-out-to-bottom-10 data-[side=left]:data-closed:slide-out-to-left-10 data-[side=right]:data-closed:slide-out-to-right-10 data-[side=top]:data-closed:slide-out-to-top-10',
+      'glass-panel fixed z-50 flex max-h-dvh flex-col gap-4 overflow-y-auto overscroll-contain border border-hairline bg-clip-padding text-sm text-popover-foreground transition duration-200 ease-in-out data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:rounded-t-xl data-[side=bottom]:rounded-b-none data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:rounded-l-none data-[side=left]:rounded-r-xl data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:rounded-l-xl data-[side=right]:rounded-r-none data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:rounded-t-none data-[side=top]:rounded-b-xl sm:max-w-sm',
       className,
     )}
     {...restProps}
@@ -47,7 +46,7 @@
       <SheetPrimitive.Close data-slot="sheet-close">
         {#snippet child({ props })}
           <Button variant="ghost" class="absolute top-3 right-3" size="icon-sm" {...props}>
-            <XIcon />
+            <Icon name="x" class="size-4" />
             <span class="sr-only">{m.action_close()}</span>
           </Button>
         {/snippet}

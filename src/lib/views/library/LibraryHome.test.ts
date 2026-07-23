@@ -33,19 +33,14 @@ describe('LibraryHome', () => {
     expect(screen.queryByTestId('library-empty')).toBeNull();
   });
 
-  it('shows empty-first actions only after a successful empty projection', () => {
+  it('shows one source next step only after a successful empty projection', () => {
     render(LibraryHome, { props: { projection: emptyProjection } });
 
-    expect(screen.getAllByRole('heading', { name: '资料库' })[0]).toBeTruthy();
-    expect(screen.getAllByText('收藏、历史和缓存会在这里汇聚。').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { level: 1, name: '资料库' })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('资料库还没有资源');
-    expect(screen.getAllByRole('link', { name: /添加来源/ })[0]?.getAttribute('href')).toBe(
-      '/sources',
-    );
-    expect(screen.getAllByRole('link', { name: /导入本地文件/ })[0]?.getAttribute('href')).toBe(
-      '/sources',
-    );
-    expect(screen.getByRole('link', { name: /搜索内容/ }).getAttribute('href')).toBe('/apps');
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(screen.getByRole('link', { name: '管理来源' }).getAttribute('href')).toBe('/sources');
   });
 
   it('keeps load errors separate from empty state and retries', async () => {
@@ -77,6 +72,7 @@ describe('LibraryHome', () => {
 
     const favorite = screen.getByRole('button', { name: '取消收藏' });
     const pin = screen.getByRole('button', { name: '取消固定' });
+    expect(screen.getByText('修订 3')).toBeTruthy();
     await fireEvent.click(favorite);
     await fireEvent.click(pin);
 
@@ -86,11 +82,7 @@ describe('LibraryHome', () => {
     expect(favorite.getAttribute('aria-busy')).toBe('true');
 
     resolveFirst?.({ global_seq: 9, revision: 4 });
-    await waitFor(() =>
-      expect((screen.getByRole('button', { name: '收藏' }) as HTMLButtonElement).disabled).toBe(
-        false,
-      ),
-    );
+    await waitFor(() => expect(screen.getByText('修订 4')).toBeTruthy());
     await fireEvent.click(screen.getByRole('button', { name: '取消固定' }));
 
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2));

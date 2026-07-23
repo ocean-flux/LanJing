@@ -1,8 +1,9 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+export function cn(...values: ClassValue[]) {
+  // eslint-disable-next-line tailwindcss/no-custom-classname -- ClassValue 实参，非字面 class
+  return twMerge(clsx(values));
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

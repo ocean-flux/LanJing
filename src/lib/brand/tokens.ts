@@ -80,24 +80,3 @@ export type LanjingPalette = typeof lanjingPalette;
 
 export type MediaAppKey =
   'novel' | 'comic' | 'music' | 'video' | 'images' | 'podcast' | 'article' | 'local';
-
-export const mediaApps: Array<{ key: MediaAppKey }> = [
-  { key: 'novel' },
-  { key: 'comic' },
-  { key: 'music' },
-  { key: 'video' },
-  { key: 'images' },
-  { key: 'podcast' },
-  { key: 'article' },
-  { key: 'local' },
-];
-
-export type CapabilityKey = 'search' | 'discover' | 'detail' | 'units' | 'asset';
-
-export const capabilities: Array<{ key: CapabilityKey }> = [
-  { key: 'search' },
-  { key: 'discover' },
-  { key: 'detail' },
-  { key: 'units' },
-  { key: 'asset' },
-];

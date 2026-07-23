@@ -57,29 +57,34 @@
   }
 </script>
 
-<!-- Ethereal 装源操作面：复用 prepare/install 合同，仅换 double-bezel / lantern 皮肤 -->
-<div class="flex h-full min-h-0 flex-col gap-3 overflow-auto" data-testid="install-source">
-  <header class="border-b border-hairline pb-2">
-    <h2 class="text-sm font-semibold tracking-tight text-ink">{m.sources_install_title()}</h2>
+<section
+  class="flex w-full flex-col gap-4"
+  data-testid="install-source"
+  aria-labelledby="install-source-title"
+>
+  <header>
+    <h2 id="install-source-title" class="text-base font-semibold text-ink">
+      {m.sources_install_title()}
+    </h2>
   </header>
 
-  <div class="double-bezel flex flex-col gap-2 p-3">
-    <label for="rule-json" class="text-xs font-medium text-ink-muted">
-      {m.sources_install_json_label()}
-    </label>
+  <div class="glass-panel flex flex-col gap-3 rounded-xl border border-hairline p-4">
+    <label for="rule-json" class="text-sm font-medium text-ink"
+      >{m.sources_install_json_label()}</label
+    >
     <Textarea
       id="rule-json"
       bind:value={sourceJson}
       placeholder={m.sources_install_json_placeholder()}
-      rows={8}
+      rows={7}
       disabled={loading}
-      class="double-bezel-control border-hairline bg-surface-2 text-ink placeholder:text-ink-subtle focus-visible:border-lantern-strong/50 focus-visible:ring-lantern/35 min-h-36 rounded-lg px-3 py-2 text-sm shadow-none focus-visible:ring-2"
+      class="glass-control min-h-32 border-hairline px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus-visible:border-lantern-strong/50 focus-visible:ring-2 focus-visible:ring-lantern/35"
     />
     <Button
       type="button"
       onclick={handlePrepare}
       disabled={loading || !sourceJson.trim()}
-      class="min-h-11 w-full sm:w-auto"
+      class="min-h-11 w-full sm:w-auto sm:self-start"
     >
       {loading ? m.sources_install_preparing() : m.sources_install_prepare()}
     </Button>
@@ -87,7 +92,7 @@
 
   {#if error}
     <div
-      class="rounded-lg border border-danger/35 bg-danger/10 px-3 py-2.5 text-sm text-danger"
+      class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2.5 text-sm"
       role="alert"
     >
       {error}
@@ -105,22 +110,20 @@
 
   {#if candidate}
     <section
-      class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(16rem,0.72fr)] md:items-start"
+      class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(16rem,0.72fr)]"
       data-testid="install-candidate-preview"
       aria-labelledby="install-candidate-title"
     >
-      <div class="double-bezel space-y-3 p-3">
+      <div class="glass-panel space-y-3 rounded-xl border border-hairline p-4">
         <h3 id="install-candidate-title" class="text-sm font-semibold text-ink">
           {m.sources_install_preview_title()}
         </h3>
-        <dl
-          class="grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs sm:text-sm"
-        >
+        <dl class="grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
           <dt class="text-ink-muted">{m.sources_install_source_name()}</dt>
-          <dd class="min-w-0 break-words font-medium text-ink">{candidate.profile.title}</dd>
+          <dd class="min-w-0 font-medium break-words text-ink">{candidate.profile.title}</dd>
           {#if candidate.profile.version}
             <dt class="text-ink-muted">{m.sources_install_version()}</dt>
-            <dd class="min-w-0 break-words font-medium text-ink">{candidate.profile.version}</dd>
+            <dd class="min-w-0 font-medium break-words text-ink">{candidate.profile.version}</dd>
           {/if}
           <dt class="text-ink-muted">{m.sources_install_network_grant()}</dt>
           <dd class="font-medium text-ink">
@@ -131,7 +134,7 @@
         </dl>
 
         {#if candidate.profile.risk_notes.length > 0}
-          <ul class="list-disc space-y-1 pl-5 text-xs text-ink-muted">
+          <ul class="list-disc space-y-1 pl-5 text-xs leading-5 text-ink-muted">
             {#each candidate.profile.risk_notes as note (note)}
               <li>{note}</li>
             {/each}
@@ -152,7 +155,7 @@
       </div>
 
       <div
-        class="double-bezel sticky bottom-0 z-10 space-y-3 bg-surface-1/95 p-3 pb-[max(0.75rem,var(--shell-bottom-safe-padding))] backdrop-blur md:static md:z-auto md:bg-surface-1 md:backdrop-blur-none"
+        class="glass-panel space-y-3 rounded-xl border border-hairline p-4"
         data-testid="install-actions"
       >
         {#if requiresNetworkGrant}
@@ -162,14 +165,14 @@
             {m.sources_install_network_required_notice()}
           </p>
           <label class="flex flex-col gap-1.5 text-sm text-ink" for="network-grant">
-            <span class="text-xs font-medium text-ink-muted">
-              {m.sources_install_network_grant()}
-            </span>
+            <span class="text-xs font-medium text-ink-muted"
+              >{m.sources_install_network_grant()}</span
+            >
             <select
               id="network-grant"
               bind:value={grant}
               disabled={loading}
-              class="double-bezel-control border-hairline min-h-11 w-full rounded-lg bg-surface-1 px-2.5 text-sm text-ink outline-none focus-visible:border-lantern-strong/50 focus-visible:shadow-[var(--focus-ring)]"
+              class="glass-control min-h-11 w-full rounded-lg border border-hairline px-2.5 text-sm text-ink outline-none focus-visible:border-lantern-strong/50 focus-visible:shadow-[var(--focus-ring)]"
             >
               <option value="none">{m.sources_install_grant_prompt()}</option>
               <option value="network_only">{m.sources_install_grant_network_only()}</option>
@@ -183,7 +186,6 @@
           type="button"
           onclick={handleInstall}
           disabled={!canInstall}
-          variant="default"
           class="min-h-11 w-full"
         >
           {loading ? m.sources_install_installing() : m.sources_install_action()}
@@ -191,4 +193,4 @@
       </div>
     </section>
   {/if}
-</div>
+</section>

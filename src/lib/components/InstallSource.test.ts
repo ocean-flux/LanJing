@@ -78,6 +78,8 @@ describe('InstallSource', () => {
       expect(screen.getByRole('status').textContent).toContain('已安装：source:one');
     });
     expect(input.value).toBe('');
+    expect(screen.queryByTestId('install-candidate-preview')).toBeNull();
+    expect(screen.queryByRole('combobox', { name: '网络授权' })).toBeNull();
   });
 
   it('retains the source input when prepare fails', async () => {

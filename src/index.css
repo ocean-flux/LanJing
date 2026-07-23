@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@plugin '@iconify/tailwind4';
 
 @font-face {
   font-family: 'Outfit';
@@ -79,7 +80,6 @@
   --color-reader-ink: var(--reader-ink);
   --color-positive: var(--positive);
   --color-warning: var(--warning);
-  --color-danger: var(--danger);
   --shadow-surface-panel: var(--surface-panel-shadow);
   --shadow-surface-control: var(--surface-control-shadow);
   --shadow-surface-dialog: var(--surface-dialog-shadow);
@@ -93,7 +93,7 @@
 
 :root {
   --font-ui:
-    'Outfit', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     'Microsoft YaHei', sans-serif;
   --font-code: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --font-reader: 'Source Serif 4', Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
@@ -156,14 +156,13 @@
   --surface-panel-shadow: 0 1px 0 rgb(255 255 255 / 0.56) inset;
   --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.56) inset, 0 4px 12px rgb(0 0 0 / 0.08);
   --surface-dialog-shadow: 0 16px 40px rgb(0 0 0 / 0.18);
+  --glass-panel-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 22px 60px rgb(35 45 48 / 0.09);
+  --glass-chrome-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), 0 10px 32px rgb(35 45 48 / 0.07);
   --surface-ring: 0 0 0 1px var(--hairline) inset;
-  /* 窄图标脊 48px；废弃肥栏 expanded token */
-  --shell-rail-width: 48px;
   --shell-titlebar-height: 44px;
   --shell-titlebar-compact-height: 40px;
   --shell-bottom-nav-height: 64px;
   --shell-bottom-safe-padding: env(safe-area-inset-bottom, 0px);
-  --shell-mini-player-height: 56px;
   --content-max-width: 1280px;
   --content-detail-max-width: 1180px;
   --content-reading-max-width: 680px;
@@ -185,10 +184,9 @@
   --motion-ease-slow: cubic-bezier(0.2, 0.9, 0.1, 1);
   --material-blur: 16px;
   --material-saturation: 1.08;
-  /* 可选 mesh 光晕（冷青低饱和；禁黄橙紫靛） */
-  --mesh-a: rgb(15 110 122 / 0.22);
-  --mesh-b: rgb(15 110 122 / 0.1);
   --focus-ring: 0 0 0 2px rgb(11 90 100 / 0.24);
+  --scrollbar-thumb: rgb(26 27 30 / 0.22);
+  --scrollbar-thumb-hover: rgb(26 27 30 / 0.4);
 }
 
 .dark {
@@ -232,8 +230,10 @@
   --surface-panel-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset;
   --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 8px 24px rgb(0 0 0 / 0.28);
   --surface-dialog-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
-  --mesh-a: rgb(110 200 212 / 0.28);
-  --mesh-b: rgb(58 169 184 / 0.16);
+  --glass-panel-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 22px 64px rgb(0 0 0 / 0.24);
+  --glass-chrome-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 10px 32px rgb(0 0 0 / 0.18);
+  --scrollbar-thumb: rgb(232 234 237 / 0.24);
+  --scrollbar-thumb-hover: rgb(232 234 237 / 0.44);
 }
 
 :root[data-material-transparency='low'],
@@ -249,10 +249,11 @@
 }
 
 html,
-body,
-#root {
+body {
   margin: 0;
+  height: 100%;
   min-height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -260,132 +261,109 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
-.surface-shell,
-.surface-panel,
-.surface-material {
-  border-radius: var(--radius-xl);
+.app-canvas {
+  background:
+    radial-gradient(
+      80% 62% at 10% -12%,
+      color-mix(in oklab, var(--lantern) 11%, transparent),
+      transparent 64%
+    ),
+    radial-gradient(
+      72% 58% at 100% 0%,
+      color-mix(in oklab, var(--surface-3) 42%, transparent),
+      transparent 66%
+    ),
+    var(--canvas);
 }
 
-.surface-material-solid,
-.surface-control {
-  border-radius: var(--radius-lg);
-}
-
-.surface-reader {
-  border-radius: var(--radius-md);
-}
-
-.surface-shell {
-  background: var(--surface-shell);
-  box-shadow: var(--surface-panel-shadow);
-}
-
-.surface-panel {
-  border: 1px solid var(--border);
-  background: var(--surface-panel);
-  box-shadow: var(--surface-panel-shadow);
-}
-
-.surface-material {
-  border: 1px solid var(--surface-material-border);
+.glass-chrome {
+  border-color: var(--surface-material-border);
   background: var(--surface-material);
-  box-shadow: var(--surface-panel-shadow);
+  box-shadow: var(--glass-chrome-shadow);
 }
 
-.surface-material-solid {
-  border: 1px solid var(--surface-material-solid-border);
-  background: var(--surface-material-solid);
-  box-shadow: var(--surface-panel-shadow);
+.glass-panel {
+  border-color: color-mix(in oklab, var(--hairline-strong) 72%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--surface-1) 90%, transparent),
+    color-mix(in oklab, var(--surface-2) 80%, transparent)
+  );
+  box-shadow: var(--glass-panel-shadow);
 }
 
-.surface-reader {
-  background: var(--surface-reader);
-  color: var(--reader-ink);
-  box-shadow: 0 18px 60px rgb(0 0 0 / 0.12);
-}
-
-.surface-control {
-  border: 1px solid var(--border);
-  background: var(--surface-control);
+.glass-control {
+  border-color: color-mix(in oklab, var(--hairline-strong) 78%, transparent);
+  background: color-mix(in oklab, var(--surface-control) 90%, transparent);
   box-shadow: var(--surface-control-shadow);
 }
 
-.media-void {
-  border: 1px solid var(--hairline);
-  background: var(--media-void);
-  color: var(--ink-muted);
+@supports (backdrop-filter: blur(1px)) {
+  .glass-chrome {
+    backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturation));
+    -webkit-backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturation));
+  }
 }
 
-.double-bezel {
-  border: 1px solid var(--hairline-strong);
-  background: color-mix(in oklab, var(--surface-1) 92%, var(--canvas-elevated));
-  border-radius: var(--radius-xl);
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--hairline) 55%, transparent),
-    var(--surface-panel-shadow),
-    0 18px 48px color-mix(in oklab, #000 22%, transparent);
+:root[data-material-transparency='low'] .glass-chrome,
+.low-transparency .glass-chrome,
+[data-reduced-transparency='true'] .glass-chrome {
+  background: var(--surface-material-solid);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-/* 控件级：input / 紧凑 outline 按钮 */
-.double-bezel-control {
-  border: 1px solid var(--hairline);
-  background: var(--surface-control);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--hairline) 45%, transparent),
-    var(--surface-control-shadow);
-}
-
-/* 浮层：dialog / sheet 面板 */
-.double-bezel-float {
-  border: 1px solid var(--surface-material-border);
-  background: var(--surface-material);
-  border-radius: var(--radius-xl);
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--hairline) 50%, transparent),
-    var(--surface-panel-shadow),
-    var(--surface-dialog-shadow);
-}
-
-/* shell 环 + core 内芯的结构型 double-bezel 壳层 */
-.double-bezel-shell {
-  padding: 0.2rem;
-  border-radius: var(--radius-2xl);
-  background: color-mix(in oklab, var(--surface-3) 55%, transparent);
-  box-shadow:
-    0 0 0 1px var(--hairline),
-    var(--surface-dialog-shadow);
-}
-
-.double-bezel-core {
-  border-radius: calc(var(--radius-2xl) - 0.2rem);
-  background: var(--popover);
-  color: var(--popover-foreground);
+:root[data-material-transparency='low'] .glass-panel,
+.low-transparency .glass-panel,
+[data-reduced-transparency='true'] .glass-panel {
+  background: var(--surface-1);
   box-shadow: var(--surface-panel-shadow);
 }
 
-/* 主 CTA：lantern 青系（禁黄橙紫） */
-.lantern-action {
-  border: 1px solid color-mix(in oklab, var(--lantern-strong) 70%, var(--hairline));
-  background: var(--lantern-strong);
-  color: var(--on-lantern);
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--lantern) 22%, transparent),
-    inset 0 1px 0 color-mix(in oklab, var(--on-lantern) 18%, transparent);
+:root[data-material-transparency='low'] .glass-control,
+.low-transparency .glass-control,
+[data-reduced-transparency='true'] .glass-control {
+  background: var(--surface-2);
+  box-shadow: var(--surface-panel-shadow);
 }
 
-.lantern-action:hover {
-  background: var(--lantern-hover);
+.app-scroll-region {
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
-.lantern-action:focus-visible {
-  box-shadow: var(--focus-ring);
+@media (pointer: fine) {
+  .app-scroll-region {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  .app-scroll-region::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .app-scroll-region::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .app-scroll-region::-webkit-scrollbar-thumb {
+    min-height: 40px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-color: var(--scrollbar-thumb);
+    background-clip: padding-box;
+  }
+
+  .app-scroll-region::-webkit-scrollbar-thumb:hover,
+  .app-scroll-region::-webkit-scrollbar-thumb:active {
+    background-color: var(--scrollbar-thumb-hover);
+  }
 }
 
-@supports (backdrop-filter: blur(1px)) {
-  .surface-material,
-  .double-bezel-float {
-    backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturation));
+@media (forced-colors: active) {
+  .app-scroll-region {
+    scrollbar-color: auto;
   }
 }
 
@@ -401,23 +379,16 @@ body {
     --material-blur: 0px;
     --surface-material: var(--surface-material-solid);
   }
-}
 
-.motion-nav-capsule,
-.motion-command-lens,
-.motion-dock-wake,
-.motion-reader-recede,
-.motion-page-turn {
-  transition-duration: var(--motion-duration-standard);
-  transition-property:
-    transform, opacity, filter, background-color, border-color, color, box-shadow;
-  transition-timing-function: var(--motion-standard);
-}
+  .glass-panel {
+    background: var(--surface-1);
+    box-shadow: var(--surface-panel-shadow);
+  }
 
-.motion-nav-capsule:hover,
-.motion-command-lens:hover,
-.motion-dock-wake:hover {
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--lantern) 18%, transparent);
+  .glass-control {
+    background: var(--surface-2);
+    box-shadow: var(--surface-panel-shadow);
+  }
 }
 
 :focus-visible {
@@ -433,14 +404,5 @@ body {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-  }
-
-  .motion-nav-capsule,
-  .motion-command-lens,
-  .motion-dock-wake,
-  .motion-reader-recede,
-  .motion-page-turn {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
   }
 }

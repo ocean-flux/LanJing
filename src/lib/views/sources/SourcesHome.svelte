@@ -1,90 +1,158 @@
 <script lang="ts">
-  import type { SourceCardAction, SourceCardState } from '$lib/app/shell-types';
+  import { onMount } from 'svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import InstallSource from '$lib/components/InstallSource.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { m } from '$lib/i18n';
-  import AddSourcePanel from './AddSourcePanel.svelte';
-  import SourceCard from './SourceCard.svelte';
+  import {
+    getError,
+    getInstalledSources,
+    getLoading,
+    loadInstalledSources,
+    type StandardIntent,
+  } from '$lib/stores/rules.svelte';
 
-  type Props = {
-    /** 默认诚实空列表；装源业务由 sources-prod 接线，不在此分叉 demo 繁荣列表。 */
-    sources?: SourceCardState[];
-    onaction?: (action: SourceCardAction) => void;
+  let initialLoadPending = $state(true);
+  let retrying = $state(false);
+  let installerOpen = $state(false);
+
+  const sources = $derived(getInstalledSources());
+  const loadError = $derived(getError());
+  const loading = $derived(initialLoadPending || retrying || getLoading());
+
+  const intentLabels: Record<StandardIntent, () => string> = {
+    Search: () => m.sources_intent_search(),
+    Discover: () => m.sources_intent_discover(),
+    ResolveItem: () => m.sources_intent_resolve_item(),
+    ListUnits: () => m.sources_intent_list_units(),
+    ResolveAsset: () => m.sources_intent_resolve_asset(),
+    ContinueAction: () => m.sources_intent_continue_action(),
   };
 
-  const order: Record<SourceCardState['status'], number> = {
-    failed: 0,
-    partial: 1,
-    ready: 2,
-    unchecked: 3,
-    disabled: 4,
-  };
+  onMount(() => {
+    void initialize();
+  });
 
-  let { sources = [], onaction }: Props = $props();
-  const sortedSources = $derived([...sources].sort((a, b) => order[a.status] - order[b.status]));
-  const failedSources = $derived(sortedSources.filter((s) => s.status === 'failed'));
-  const partialSources = $derived(sortedSources.filter((s) => s.status === 'partial'));
-  const readySources = $derived(sortedSources.filter((s) => s.status === 'ready'));
-  const uncheckedSources = $derived(sortedSources.filter((s) => s.status === 'unchecked'));
-  const disabledSources = $derived(sortedSources.filter((s) => s.status === 'disabled'));
+  async function initialize(): Promise<void> {
+    try {
+      await loadInstalledSources();
+    } finally {
+      initialLoadPending = false;
+    }
+  }
+
+  async function retryLoad(): Promise<void> {
+    retrying = true;
+    try {
+      await loadInstalledSources();
+    } finally {
+      retrying = false;
+    }
+  }
 </script>
 
-<section class="flex w-full flex-col gap-3" aria-label={m.sources_title()}>
-  <header class="flex flex-wrap items-baseline justify-between gap-2 border-b border-hairline pb-2">
-    <h1 class="text-base font-semibold tracking-tight text-ink">{m.sources_title()}</h1>
-    <p class="max-w-prose text-xs text-ink-muted">{m.sources_desc()}</p>
-  </header>
+<section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  <PageHeader
+    title={m.sources_title()}
+    action={sources.length > 0 && !loading && !loadError
+      ? {
+          label: installerOpen ? m.sources_add_close() : m.action_add_source(),
+          icon: installerOpen ? 'x' : 'plus',
+          pressed: installerOpen,
+          onclick: () => (installerOpen = !installerOpen),
+        }
+      : undefined}
+  />
 
-  <AddSourcePanel />
-
-  {#if sortedSources.length === 0}
-    <section
-      class="media-void rounded-xl px-4 py-6 text-center"
-      aria-labelledby="sources-empty-title"
-      data-testid="sources-empty"
-    >
-      <h2 id="sources-empty-title" class="text-sm font-semibold text-ink">
-        {m.sources_empty_title()}
-      </h2>
-      <p class="mt-1 text-xs text-ink-muted">{m.sources_empty_desc()}</p>
-    </section>
+  {#if loading}
+    <div class="flex min-h-48 items-center gap-3 text-sm text-ink-muted" role="status">
+      <Icon name="arrow-clockwise" class="size-5" />
+      <span>{m.sources_loading()}</span>
+    </div>
+  {:else if loadError}
+    <div class="border-danger/35 bg-danger/10 rounded-xl border px-5 py-5" role="alert">
+      <div class="flex items-start gap-3">
+        <Icon name="warning-circle" class="text-danger mt-0.5 size-5" />
+        <div class="min-w-0">
+          <h2 class="text-danger font-semibold">{m.sources_load_error()}</h2>
+          <p class="mt-1 text-sm break-words text-ink-muted">{loadError}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="glass-control mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-hairline-strong px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)]"
+        onclick={retryLoad}
+      >
+        <Icon name="arrow-clockwise" class="size-4" />
+        <span>{m.action_retry()}</span>
+      </button>
+    </div>
+  {:else if sources.length === 0}
+    <div class="glass-panel rounded-xl border border-hairline px-5 py-5" role="status">
+      <h2 class="font-semibold text-ink">{m.sources_empty_title()}</h2>
+    </div>
+    <InstallSource />
   {:else}
-    {#if failedSources.length > 0}
-      <section class="grid gap-3" aria-label={m.status_failed()}>
-        {#each failedSources as source (source.id)}
-          <SourceCard {source} {onaction} attention />
-        {/each}
-      </section>
-    {/if}
+    <section aria-labelledby="installed-sources-title">
+      <h2 id="installed-sources-title" class="mb-3 text-sm font-semibold text-ink">
+        {m.sources_installed_title()}
+      </h2>
+      <ul class="glass-panel divide-y divide-hairline rounded-xl border border-hairline">
+        {#each sources as source (source.source_id)}
+          <li>
+            <article class="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto]">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h3 class="font-semibold text-ink">{source.profile.title}</h3>
+                  <span class="text-xs text-ink-subtle">{source.source_id}</span>
+                </div>
+                <dl class="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
+                  <dt class="text-ink-muted">{m.sources_install_version()}</dt>
+                  <dd class="text-ink">{source.version}</dd>
+                  <dt class="text-ink-muted">{m.sources_revision()}</dt>
+                  <dd class="text-ink">{source.revision}</dd>
+                </dl>
 
-    {#if partialSources.length > 0}
-      <section class="grid gap-3" aria-label={m.status_partial()}>
-        {#each partialSources as source (source.id)}
-          <SourceCard {source} {onaction} attention />
-        {/each}
-      </section>
-    {/if}
+                <div class="mt-3">
+                  <p class="text-xs font-medium text-ink-muted">{m.sources_supported_intents()}</p>
+                  {#if source.profile.supported_intents.length > 0}
+                    <ul
+                      class="mt-1.5 flex flex-wrap gap-1.5"
+                      aria-label={m.sources_supported_intents()}
+                    >
+                      {#each source.profile.supported_intents as intent (intent)}
+                        <li
+                          class="rounded-md border border-hairline bg-surface-2 px-2 py-1 text-xs text-ink"
+                        >
+                          {intentLabels[intent]()}
+                        </li>
+                      {/each}
+                    </ul>
+                  {:else}
+                    <p class="mt-1 text-xs text-ink-subtle">{m.sources_no_intents()}</p>
+                  {/if}
+                </div>
 
-    {#if readySources.length > 0}
-      <section class="grid gap-3 lg:grid-cols-2" aria-label={m.status_ready()}>
-        {#each readySources as source (source.id)}
-          <SourceCard {source} {onaction} />
+                {#if source.profile.risk_notes.length > 0}
+                  <div class="mt-3">
+                    <p class="text-xs font-medium text-ink-muted">{m.sources_risk_notes()}</p>
+                    <ul class="mt-1 list-disc space-y-1 pl-5 text-xs leading-5 text-ink-muted">
+                      {#each source.profile.risk_notes as note (note)}
+                        <li>{note}</li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+              </div>
+              <Icon name="check-circle" class="size-5 text-positive" />
+            </article>
+          </li>
         {/each}
-      </section>
-    {/if}
+      </ul>
+    </section>
 
-    {#if uncheckedSources.length > 0}
-      <section class="grid gap-3 lg:grid-cols-2" aria-label={m.status_unchecked()}>
-        {#each uncheckedSources as source (source.id)}
-          <SourceCard {source} {onaction} />
-        {/each}
-      </section>
-    {/if}
-
-    {#if disabledSources.length > 0}
-      <section class="grid gap-3 text-ink-muted lg:grid-cols-2" aria-label={m.status_disabled()}>
-        {#each disabledSources as source (source.id)}
-          <SourceCard {source} {onaction} />
-        {/each}
-      </section>
+    {#if installerOpen}
+      <InstallSource />
     {/if}
   {/if}
 </section>

@@ -3,21 +3,21 @@
   import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
   import { type VariantProps, tv } from 'tailwind-variants';
 
-  /** 主 CTA 走 lantern 青系；outline/secondary 叠 double-bezel 控件边 */
+  /** 主 CTA 使用 lantern 强调；outline/secondary 保持单层边框与表面。 */
   export const buttonVariants = tv({
-    base: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-lg border border-transparent bg-clip-padding text-sm font-medium focus-visible:ring-3 active:not-aria-[haspopup]:translate-y-px aria-invalid:ring-3 [&_svg:not([class*='size-'])]:size-4 group/button inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    base: "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11",
     variants: {
       variant: {
         default:
           'border-lantern-strong/40 bg-lantern-strong text-on-lantern shadow-[inset_0_1px_0_color-mix(in_oklab,var(--on-lantern)_16%,transparent),0_0_0_1px_color-mix(in_oklab,var(--lantern)_20%,transparent)] hover:bg-lantern-hover [a]:hover:bg-lantern-hover',
         outline:
-          'border-hairline bg-surface-1 text-ink shadow-[0_0_0_1px_color-mix(in_oklab,var(--hairline)_45%,transparent),inset_0_1px_0_color-mix(in_oklab,white_6%,transparent)] hover:bg-lantern-soft hover:text-ink dark:bg-surface-2/80 dark:hover:bg-surface-3 aria-expanded:bg-lantern-soft aria-expanded:text-ink',
+          'border-hairline bg-surface-1 text-ink shadow-sm hover:bg-lantern-soft hover:text-ink aria-expanded:bg-lantern-soft aria-expanded:text-ink dark:bg-surface-2/80 dark:hover:bg-surface-3',
         secondary:
-          'border-hairline bg-surface-2 text-ink shadow-[0_0_0_1px_color-mix(in_oklab,var(--hairline)_35%,transparent),inset_0_1px_0_color-mix(in_oklab,white_5%,transparent)] hover:bg-surface-3 aria-expanded:bg-surface-3 aria-expanded:text-ink',
+          'border-hairline bg-surface-2 text-ink shadow-sm hover:bg-surface-3 aria-expanded:bg-surface-3 aria-expanded:text-ink',
         ghost:
-          'hover:bg-lantern-soft hover:text-ink dark:hover:bg-lantern-soft/50 aria-expanded:bg-lantern-soft aria-expanded:text-ink',
+          'hover:bg-lantern-soft hover:text-ink aria-expanded:bg-lantern-soft aria-expanded:text-ink dark:hover:bg-lantern-soft/50',
         destructive:
-          'bg-destructive/10 hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/20 text-destructive focus-visible:border-destructive/40 dark:hover:bg-destructive/30',
+          'bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40',
         link: 'text-lantern-strong underline-offset-4 hover:underline',
       },
       size: {

@@ -3,7 +3,7 @@
 //
 // 用法：
 //   import { m, getLocale, setLocale } from '$lib/i18n';
-//   m.welcome()                       // 当前语言下的欢迎文案
+//   m.app_name()                        // 当前语言下的应用名称
 //   setLocale('zh-CN')                // 切换语言（默认触发页面重载）
 //   getLocale()                       // 读取当前语言
 export { m } from '$lib/paraglide/messages.js';

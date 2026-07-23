@@ -26,36 +26,31 @@ afterEach(() => {
 });
 
 describe('SettingsHome', () => {
-  it('renders denselist prefs without shortcut grid or page H1', () => {
+  it('shows a visible page heading and grouped production preferences', () => {
     render(SettingsHome);
 
-    const home = screen.getByTestId('settings-home');
-    expect(home).toBeTruthy();
-    expect(home.querySelector('h1')).toBeNull();
-    expect(screen.queryByRole('link', { name: /境场|应用|来源|资料库/ })).toBeNull();
-    expect(screen.queryByText(/快捷/)).toBeNull();
-    expect(screen.queryByText(/外观包/)).toBeNull();
-
-    const denselist = screen.getByTestId('settings-denselist');
-    expect(denselist.className).toContain('double-bezel');
-    expect(denselist.className).toContain('divide-y');
-
+    expect(screen.getByRole('heading', { level: 1, name: '设置' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '外观' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '语言' })).toBeTruthy();
     expect(screen.getByText('明暗模式')).toBeTruthy();
     expect(screen.getByText('亮色主题')).toBeTruthy();
     expect(screen.getByText('暗色主题')).toBeTruthy();
     expect(screen.getByText('界面语言')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /境场|应用|来源|资料库/ })).toBeNull();
   });
 
-  it('binds mode and dual-track themes', async () => {
+  it('binds labeled mode choices and dual-track themes', async () => {
     render(SettingsHome);
 
-    await fireEvent.click(screen.getByRole('radio', { name: '深色' }));
+    const dark = screen.getByRole('radio', { name: '深色' });
+    expect(dark.textContent).toContain('深色');
+    expect(dark.querySelector('[aria-hidden="true"]')).toBeTruthy();
+    await fireEvent.click(dark);
     expect(getMode()).toBe('dark');
 
     await fireEvent.click(screen.getByRole('radio', { name: '浅色' }));
     expect(getMode()).toBe('light');
 
-    // 亮/暗主题各两个色石；暗轨点第二个 graphite-atelier
     const lightGroup = screen.getByRole('radiogroup', { name: '亮色主题' });
     const darkGroup = screen.getByRole('radiogroup', { name: '暗色主题' });
     const lightRadios = lightGroup.querySelectorAll('[role="radio"]');
@@ -69,7 +64,7 @@ describe('SettingsHome', () => {
     expect(getDarkThemeId()).toBe('graphite-atelier');
   });
 
-  it('keeps one tab stop per group and roves selection with arrow keys', async () => {
+  it('keeps one tab stop per group and supports arrows, Home, and End', async () => {
     render(SettingsHome);
 
     for (const name of ['明暗模式', '亮色主题', '暗色主题', '界面语言']) {
@@ -79,19 +74,19 @@ describe('SettingsHome', () => {
       ).toHaveLength(1);
     }
 
-    const modeGroup = screen.getByRole('radiogroup', { name: '明暗模式' });
     const system = screen.getByRole('radio', { name: '跟随系统' });
     await fireEvent.keyDown(system, { key: 'ArrowLeft' });
     expect(getMode()).toBe('dark');
     expect(document.activeElement).toBe(screen.getByRole('radio', { name: '深色' }));
-    expect(modeGroup.querySelector('[aria-checked="true"]')).toBe(
-      screen.getByRole('radio', { name: '深色' }),
-    );
 
     const lightGroup = screen.getByRole('radiogroup', { name: '亮色主题' });
     const lightRadios = lightGroup.querySelectorAll('[role="radio"]');
-    await fireEvent.keyDown(lightRadios[0]!, { key: 'ArrowRight' });
+    await fireEvent.keyDown(lightRadios[0]!, { key: 'End' });
     expect(getLightThemeId()).toBe('mist-studio');
     expect(document.activeElement).toBe(lightRadios[1]);
+
+    await fireEvent.keyDown(lightRadios[1]!, { key: 'Home' });
+    expect(getLightThemeId()).toBe('porcelain-day');
+    expect(document.activeElement).toBe(lightRadios[0]);
   });
 });
