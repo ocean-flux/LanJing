@@ -4,12 +4,22 @@
   import Icon from '$lib/components/Icon.svelte';
   import { resolve } from '$app/paths';
   import PageHeader from '$lib/components/PageHeader.svelte';
+  import { Skeleton } from '$lib/components/ui/skeleton';
   import { m } from '$lib/i18n';
+  import type { MediaItem } from '$lib/views/media/media-api';
   import {
     loadLibraryProjection,
     updateLibraryEntry,
     type LibraryUpdateReceipt,
   } from './library-api';
+  import LibraryEntryRow from './LibraryEntryRow.svelte';
+  import {
+    enrichLibraryItems,
+    loadMediaByResourceIds,
+    mediaItemsToMap,
+    type LibraryEntryRowModel,
+    type LoadMediaItems,
+  } from './library-media';
   import {
     projectLibrary,
     type LibraryEntry,
@@ -18,7 +28,10 @@
 
   type Props = {
     projection?: LibraryProjectionResponse | null;
+    /** 同步注入媒体（测试）；缺省则按 resource_id 分批 loadMedia。 */
+    mediaItems?: MediaItem[] | null;
     load?: () => Promise<LibraryProjectionResponse>;
+    loadMedia?: LoadMediaItems;
     update?: (entry: LibraryEntry) => Promise<LibraryUpdateReceipt>;
   };
 
@@ -26,35 +39,100 @@
     | { kind: 'loading' }
     | { kind: 'load-error' }
     | { kind: 'empty'; projection: LibraryProjectionResponse }
-    | { kind: 'ready'; projection: LibraryProjectionResponse };
+    | {
+        kind: 'ready';
+        projection: LibraryProjectionResponse;
+        rows: LibraryEntryRowModel[];
+      };
 
   let {
     projection = null,
+    mediaItems = null,
     load = loadLibraryProjection,
+    loadMedia = undefined,
     update = updateLibraryEntry,
   }: Props = $props();
 
-  function stateFromProjection(next: LibraryProjectionResponse): LibraryViewState {
-    return projectLibrary(next).length === 0
-      ? { kind: 'empty', projection: next }
-      : { kind: 'ready', projection: next };
+  function rowsFromProjection(
+    next: LibraryProjectionResponse,
+    mediaById: ReadonlyMap<string, MediaItem>,
+  ): LibraryViewState {
+    const projected = projectLibrary(next);
+    if (projected.length === 0) {
+      return { kind: 'empty', projection: next };
+    }
+    return {
+      kind: 'ready',
+      projection: next,
+      rows: enrichLibraryItems(projected, mediaById),
+    };
   }
 
-  let viewState = $derived<LibraryViewState>(
-    projection ? stateFromProjection(projection) : { kind: 'loading' },
-  );
+  function initialState(): LibraryViewState {
+    if (!projection) return { kind: 'loading' };
+    const mediaById = mediaItems ? mediaItemsToMap(mediaItems) : new Map<string, MediaItem>();
+    return rowsFromProjection(projection, mediaById);
+  }
+
+  let viewState = $state<LibraryViewState>(initialState());
   let updateError = $state(false);
   let pendingResourceIds = new SvelteSet<string>();
-  const items = $derived(viewState.kind === 'ready' ? projectLibrary(viewState.projection) : []);
+  const rows = $derived(viewState.kind === 'ready' ? viewState.rows : []);
 
   onMount(() => {
-    if (!projection) void loadProjection();
+    if (!projection) {
+      void loadProjection();
+      return;
+    }
+    // 有同步 projection 但未注入 media：后台补齐 enrichment。
+    if (mediaItems === null && viewState.kind === 'ready') {
+      void enrichReadyProjection(viewState.projection);
+    }
   });
+
+  async function enrichReadyProjection(next: LibraryProjectionResponse): Promise<void> {
+    const projected = projectLibrary(next);
+    if (projected.length === 0) {
+      viewState = { kind: 'empty', projection: next };
+      return;
+    }
+
+    let mediaById: Map<string, MediaItem>;
+    try {
+      mediaById = await loadMediaByResourceIds(
+        projected.map((item) => item.resource_id),
+        loadMedia,
+      );
+    } catch {
+      // 媒体批失败：整表仍可用，行内诚实降级。
+      mediaById = new Map();
+    }
+
+    if (viewState.kind !== 'ready') return;
+    viewState = rowsFromProjection(viewState.projection, mediaById);
+  }
 
   async function loadProjection(): Promise<void> {
     viewState = { kind: 'loading' };
     try {
-      viewState = stateFromProjection(await load());
+      const next = await load();
+      const projected = projectLibrary(next);
+      if (projected.length === 0) {
+        viewState = { kind: 'empty', projection: next };
+        return;
+      }
+
+      let mediaById: Map<string, MediaItem>;
+      try {
+        mediaById = await loadMediaByResourceIds(
+          projected.map((item) => item.resource_id),
+          loadMedia,
+        );
+      } catch {
+        mediaById = new Map();
+      }
+
+      viewState = rowsFromProjection(next, mediaById);
     } catch {
       viewState = { kind: 'load-error' };
     }
@@ -62,8 +140,9 @@
 
   async function toggleState(resourceId: string, key: 'favorite' | 'pinned'): Promise<void> {
     if (pendingResourceIds.has(resourceId)) return;
+    if (viewState.kind !== 'ready') return;
 
-    const item = items.find((candidate) => candidate.resource_id === resourceId);
+    const item = viewState.rows.find((candidate) => candidate.resource_id === resourceId);
     if (!item) return;
 
     const nextEntry: LibraryEntry = {
@@ -90,7 +169,13 @@
             : entry,
         ),
       };
-      viewState = stateFromProjection(nextProjection);
+
+      const mediaById = new Map(
+        viewState.rows
+          .filter((row) => row.media)
+          .map((row) => [row.resource_id, row.media as MediaItem]),
+      );
+      viewState = rowsFromProjection(nextProjection, mediaById);
       updateError = false;
     } catch {
       updateError = true;
@@ -104,10 +189,27 @@
   <PageHeader title={m.library_title()} />
 
   {#if viewState.kind === 'loading'}
-    <p class="flex min-h-48 items-center gap-3 text-sm text-ink-muted" role="status">
-      <Icon name="database" class="size-5" />
-      <span>{m.library_loading()}</span>
-    </p>
+    <ul
+      class="glass-panel divide-y divide-hairline rounded-xl border border-hairline"
+      aria-busy="true"
+      aria-label={m.library_loading()}
+      role="status"
+      data-testid="library-loading"
+    >
+      {#each [0, 1, 2] as skeleton (skeleton)}
+        <li class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:px-5">
+          <Skeleton class="size-11 rounded-md sm:size-12" />
+          <div class="min-w-0 space-y-2">
+            <Skeleton class="h-4 w-2/3 max-w-48" />
+            <Skeleton class="h-3 w-1/3 max-w-24" />
+          </div>
+          <div class="flex gap-1">
+            <Skeleton class="size-11 rounded-md" />
+            <Skeleton class="size-11 rounded-md" />
+          </div>
+        </li>
+      {/each}
+    </ul>
   {:else if viewState.kind === 'load-error'}
     <div class="border-danger/35 bg-danger/10 rounded-xl border px-5 py-5" role="alert">
       <p class="text-danger text-sm font-medium">{m.library_load_error()}</p>
@@ -125,55 +227,14 @@
       class="glass-panel divide-y divide-hairline rounded-xl border border-hairline"
       aria-label={m.library_title()}
     >
-      {#each items as entry (entry.resource_id)}
+      {#each rows as entry (entry.resource_id)}
         <li>
-          <article
-            class="grid gap-3 px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto]"
-            data-resource-id={entry.resource_id}
-          >
-            <div class="min-w-0">
-              <h2 class="truncate text-sm font-semibold text-ink">{entry.resource_id}</h2>
-              {#if entry.state.progress}
-                <p class="mt-1 text-xs text-ink-subtle">
-                  {entry.state.progress.position}{#if entry.state.progress.total !== null}
-                    / {entry.state.progress.total}
-                  {/if}
-                </p>
-              {/if}
-              <p class="mt-1 text-xs text-ink-subtle">
-                {m.library_revision({ revision: entry.state.revision })}
-              </p>
-            </div>
-            <div
-              class="flex items-start gap-1"
-              role="group"
-              aria-label={entry.resource_id}
-              aria-busy={pendingResourceIds.has(entry.resource_id)}
-            >
-              <button
-                type="button"
-                class="glass-control grid h-11 w-11 place-items-center rounded-md border border-hairline text-ink-muted outline-none hover:bg-lantern-soft hover:text-ink focus-visible:shadow-[var(--focus-ring)] disabled:cursor-wait disabled:opacity-60"
-                aria-label={entry.state.favorite ? m.library_unfavorite() : m.library_favorite()}
-                aria-pressed={entry.state.favorite}
-                aria-busy={pendingResourceIds.has(entry.resource_id)}
-                disabled={pendingResourceIds.has(entry.resource_id)}
-                onclick={() => toggleState(entry.resource_id, 'favorite')}
-              >
-                <Icon name={entry.state.favorite ? 'star-fill' : 'star'} class="size-4" />
-              </button>
-              <button
-                type="button"
-                class="glass-control grid h-11 w-11 place-items-center rounded-md border border-hairline text-ink-muted outline-none hover:bg-lantern-soft hover:text-ink focus-visible:shadow-[var(--focus-ring)] disabled:cursor-wait disabled:opacity-60"
-                aria-label={entry.state.pinned ? m.library_unpin() : m.library_pin()}
-                aria-pressed={entry.state.pinned}
-                aria-busy={pendingResourceIds.has(entry.resource_id)}
-                disabled={pendingResourceIds.has(entry.resource_id)}
-                onclick={() => toggleState(entry.resource_id, 'pinned')}
-              >
-                <Icon name={entry.state.pinned ? 'push-pin-fill' : 'push-pin'} class="size-4" />
-              </button>
-            </div>
-          </article>
+          <LibraryEntryRow
+            {entry}
+            pending={pendingResourceIds.has(entry.resource_id)}
+            onToggleFavorite={() => toggleState(entry.resource_id, 'favorite')}
+            onTogglePinned={() => toggleState(entry.resource_id, 'pinned')}
+          />
         </li>
       {/each}
     </ul>

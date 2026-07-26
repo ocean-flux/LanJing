@@ -10,5 +10,11 @@
   "library_load_error": "资料库加载失败。",
   "library_retry": "重试加载",
   "library_update_error": "资料库状态更新失败，请重试。",
-  "library_revision": "修订 {revision}"
+  "library_revision": "修订 {revision}",
+  "library_media_missing": "该资源暂无媒体元数据。",
+  "library_detail_title": "资料详情",
+  "library_detail_resource_label": "资源 ID",
+  "library_detail_placeholder": "详情内容尚未接入。此入口保留稳定 resource_id，便于导航。",
+  "library_detail_back": "返回资料库",
+  "library_detail_missing_id": "缺少 resource_id。请从资料库列表打开条目。"
 }

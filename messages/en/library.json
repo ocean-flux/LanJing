@@ -10,5 +10,11 @@
   "library_load_error": "Library could not be loaded.",
   "library_retry": "Retry",
   "library_update_error": "Library state could not be updated. Try again.",
-  "library_revision": "Revision {revision}"
+  "library_revision": "Revision {revision}",
+  "library_media_missing": "Media metadata is unavailable for this resource.",
+  "library_detail_title": "Library item",
+  "library_detail_resource_label": "Resource ID",
+  "library_detail_placeholder": "Detail content is not available yet. This entry keeps the stable resource id for navigation.",
+  "library_detail_back": "Back to library",
+  "library_detail_missing_id": "Missing resource_id. Open an item from the library list."
 }
