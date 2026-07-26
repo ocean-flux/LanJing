@@ -73,6 +73,13 @@ export function prepareInstall(sourceJson: string): Promise<InstallCandidate> {
   });
 }
 
+/** 暂存 Maccms JSON 采集 URL，并只返回可安全展示的候选信息。 */
+export function prepareMaccmsInstall(url: string): Promise<InstallCandidate> {
+  return invoke<InstallCandidate>('prepare_install', {
+    request: { kind: 'maccms_json', url },
+  });
+}
+
 /** 原子安装已暂存 candidate，并刷新来源列表。 */
 export async function installCandidate(
   candidateId: string,

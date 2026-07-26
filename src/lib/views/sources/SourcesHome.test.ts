@@ -28,6 +28,7 @@ const store = vi.hoisted(() => {
     setSnapshot,
     loadInstalledSources: vi.fn<() => Promise<void>>(),
     prepareInstall: vi.fn(),
+    prepareMaccmsInstall: vi.fn(),
     installCandidate: vi.fn(),
   };
 });
@@ -43,6 +44,7 @@ vi.mock('$lib/stores/rules.svelte', async () => {
   return {
     loadInstalledSources: store.loadInstalledSources,
     prepareInstall: store.prepareInstall,
+    prepareMaccmsInstall: store.prepareMaccmsInstall,
     installCandidate: store.installCandidate,
     getInstalledSources: () => {
       subscribe();

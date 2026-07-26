@@ -9,6 +9,7 @@ import {
   installCandidate,
   loadInstalledSources,
   prepareInstall,
+  prepareMaccmsInstall,
 } from './rules.svelte';
 
 describe('rules RuleSystem wire', () => {
@@ -27,6 +28,21 @@ describe('rules RuleSystem wire', () => {
       request: {
         kind: 'legado',
         source_json: '{"bookSourceUrl":"https://example.test"}',
+      },
+    });
+  });
+
+  it('uses prepare_install for Maccms JSON URL input', async () => {
+    const candidate = { id: 'candidate:maccms', profile: {}, diagnostics: [] };
+    invoke.mockResolvedValue(candidate);
+
+    await expect(prepareMaccmsInstall('https://api.example.test/provide/vod')).resolves.toBe(
+      candidate,
+    );
+    expect(invoke).toHaveBeenCalledWith('prepare_install', {
+      request: {
+        kind: 'maccms_json',
+        url: 'https://api.example.test/provide/vod',
       },
     });
   });
