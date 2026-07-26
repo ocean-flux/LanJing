@@ -12,7 +12,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["legado", "lanjing"]
+        "schemes": ["legado", "yuedu", "lanjing"]
       }
     }
   },

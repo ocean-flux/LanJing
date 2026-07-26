@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseDeepLink, parseDeepLinks } from './parse';
+import { extractLegadoImportPath, parseDeepLink, parseDeepLinks } from './parse';
 
 describe('deep link parser', () => {
   it('accepts Legado bookSource imports with an encoded remote src', () => {
@@ -10,6 +10,50 @@ describe('deep link parser', () => {
       scheme: 'legado',
       sourceKind: 'bookSource',
       src,
+    });
+  });
+
+  it('accepts yuedu scheme as Legado-family import', () => {
+    expect(
+      parseDeepLink('yuedu://import/bookSource?src=https%3A%2F%2Fexample.test%2Fa.json'),
+    ).toEqual({
+      kind: 'install',
+      scheme: 'yuedu',
+      sourceKind: 'bookSource',
+      src: 'https://example.test/a.json',
+    });
+  });
+
+  it('accepts legacy booksource/importonline host path', () => {
+    expect(
+      parseDeepLink('legado://booksource/importonline?src=https%3A%2F%2Fexample.test%2Fa.json'),
+    ).toEqual({
+      kind: 'install',
+      scheme: 'legado',
+      sourceKind: 'bookSource',
+      src: 'https://example.test/a.json',
+    });
+    expect(
+      parseDeepLink('yuedu://booksource/importonline?src=https%3A%2F%2Fexample.test%2Fb.json'),
+    ).toMatchObject({ kind: 'install', scheme: 'yuedu', sourceKind: 'bookSource' });
+  });
+
+  it('accepts triple-slash and mixed-case Legado import paths', () => {
+    expect(
+      parseDeepLink('legado:///import/bookSource?src=https%3A%2F%2Fexample.test%2Fa.json'),
+    ).toEqual({
+      kind: 'install',
+      scheme: 'legado',
+      sourceKind: 'bookSource',
+      src: 'https://example.test/a.json',
+    });
+    expect(
+      parseDeepLink('LEGADO://Import/BookSource?src=https%3A%2F%2Fexample.test%2Fa.json'),
+    ).toEqual({
+      kind: 'install',
+      scheme: 'legado',
+      sourceKind: 'bookSource',
+      src: 'https://example.test/a.json',
     });
   });
 
@@ -67,5 +111,14 @@ describe('deep link parser', () => {
         (intent) => intent.kind,
       ),
     ).toEqual(['item', 'source']);
+  });
+
+  it('extracts import path the same way Legado OnLineImportActivity branches', () => {
+    expect(extractLegadoImportPath(new URL('legado://import/bookSource?src=x'))).toBe('bookSource');
+    expect(extractLegadoImportPath(new URL('legado://booksource/importonline?src=x'))).toBe(
+      'bookSource',
+    );
+    expect(extractLegadoImportPath(new URL('legado:///import/rssSource?src=x'))).toBe('rssSource');
+    expect(extractLegadoImportPath(new URL('legado://other/path?src=x'))).toBeNull();
   });
 });
