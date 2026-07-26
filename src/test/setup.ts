@@ -15,3 +15,18 @@ Object.defineProperty(window, 'matchMedia', {
       dispatchEvent: () => false,
     }) as MediaQueryList,
 });
+
+// bits-ui ScrollArea 等依赖 ResizeObserver；jsdom 默认未提供。
+class ResizeObserverStub {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+Object.defineProperty(window, 'ResizeObserver', {
+  writable: true,
+  value: ResizeObserverStub,
+});
+Object.defineProperty(globalThis, 'ResizeObserver', {
+  writable: true,
+  value: ResizeObserverStub,
+});

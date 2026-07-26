@@ -12,8 +12,8 @@ use lj_runtime::{
 use crate::ssrf;
 
 use super::request::{
-    CONNECT_TIMEOUT, HttpRequestError, REQUEST_TIMEOUT, build_request,
-    convert_response_cancellable, safe_url, send_request, ssrf_http_client, test_client,
+    CONNECT_TIMEOUT, HttpRequestError, MAX_BODY_SIZE, REQUEST_TIMEOUT, build_request,
+    convert_response_cancellable_with_limit, safe_url, send_request, ssrf_http_client, test_client,
 };
 
 /// 最大 redirect 跳数(KTD8)。
@@ -26,6 +26,25 @@ pub(super) async fn execute_direct_response(
     cancellation: Option<&EffectCancellation>,
     witness: &mut HttpEffectWitness,
 ) -> Result<HttpResponse, HttpRequestError> {
+    execute_direct_response_with_limit(
+        http_spec,
+        url_str,
+        credentials,
+        cancellation,
+        witness,
+        MAX_BODY_SIZE,
+    )
+    .await
+}
+
+pub(super) async fn execute_direct_response_with_limit(
+    http_spec: &lj_rule_model::HttpSpec,
+    url_str: &str,
+    credentials: &HttpExecutionCredentials,
+    cancellation: Option<&EffectCancellation>,
+    witness: &mut HttpEffectWitness,
+    max_body_size: usize,
+) -> Result<HttpResponse, HttpRequestError> {
     let client = test_client().map_err(|_| HttpRequestError::Request)?;
     let mut current_url = url_str.to_string();
     let mut redirect_count = 0usize;
@@ -34,7 +53,8 @@ pub(super) async fn execute_direct_response(
         let request = build_request(client, http_spec, &current_url, None, credentials)?;
         let response = send_request(request, cancellation).await?;
         if !response.status().is_redirection() {
-            return convert_response_cancellable(response, cancellation).await;
+            return convert_response_cancellable_with_limit(response, cancellation, max_body_size)
+                .await;
         }
         redirect_count += 1;
         if redirect_count > MAX_REDIRECTS {
@@ -50,6 +70,25 @@ pub(super) async fn execute_ssrf_response(
     credentials: &HttpExecutionCredentials,
     cancellation: Option<&EffectCancellation>,
     witness: &mut HttpEffectWitness,
+) -> Result<HttpResponse, HttpRequestError> {
+    execute_ssrf_response_with_limit(
+        http_spec,
+        url_str,
+        credentials,
+        cancellation,
+        witness,
+        MAX_BODY_SIZE,
+    )
+    .await
+}
+
+pub(super) async fn execute_ssrf_response_with_limit(
+    http_spec: &lj_rule_model::HttpSpec,
+    url_str: &str,
+    credentials: &HttpExecutionCredentials,
+    cancellation: Option<&EffectCancellation>,
+    witness: &mut HttpEffectWitness,
+    max_body_size: usize,
 ) -> Result<HttpResponse, HttpRequestError> {
     let mut current_target = validate_target(url_str, cancellation).await?;
     let mut redirect_count = 0usize;
@@ -81,7 +120,8 @@ pub(super) async fn execute_ssrf_response(
         )?;
         let response = send_request(request, cancellation).await?;
         if !response.status().is_redirection() {
-            return convert_response_cancellable(response, cancellation).await;
+            return convert_response_cancellable_with_limit(response, cancellation, max_body_size)
+                .await;
         }
         redirect_count += 1;
         if redirect_count > MAX_REDIRECTS {

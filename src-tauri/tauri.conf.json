@@ -9,6 +9,13 @@
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../build"
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["legado", "lanjing"]
+      }
+    }
+  },
   "app": {
     "withGlobalTauri": false,
     "windows": [

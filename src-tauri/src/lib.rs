@@ -4,6 +4,7 @@
 //! 不会穿透到 Tauri 根。
 
 mod commands;
+mod deeplink;
 
 use std::sync::Arc;
 
@@ -17,7 +18,16 @@ use tauri::Manager;
 /// 无法定位或创建应用数据目录，或无法初始化唯一的 `RuleSystem` durable store 时立即 panic。
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        // `deep-link` feature 已先把静态 scheme argv 转成 plugin 事件；这里只聚焦既有窗口。
+        deeplink::focus_main_window(app);
+    }));
+
+    builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
@@ -25,12 +35,14 @@ pub fn run() {
         // 主题/偏好：@tauri-store/svelte 后端（替换官方 plugin-store）。
         .plugin(tauri_plugin_svelte::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_focus();
-            }
-        }))
         .setup(|app| {
+            #[cfg(any(windows, target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+
+                app.deep_link().register_all()?;
+            }
+
             let data_dir = app.path().app_data_dir().expect("获取应用数据目录失败");
             std::fs::create_dir_all(&data_dir).expect("创建应用数据目录失败");
 
@@ -46,6 +58,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::fetch_import_src,
             commands::prepare_install,
             commands::install,
             commands::execute,

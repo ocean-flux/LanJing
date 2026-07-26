@@ -33,6 +33,7 @@ clippy.pedantic = "deny"
 tauri = "2"
 tauri-build = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-deep-link = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-os = "2"
 tauri-plugin-single-instance = "2"
@@ -93,17 +94,23 @@ tauri-build = { workspace = true }
 
 [dependencies]
 serde = { workspace = true }
+serde_json = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
+tauri-plugin-deep-link = { workspace = true }
 tauri-plugin-notification = { workspace = true }
 tauri-plugin-opener = { workspace = true }
 tauri-plugin-os = { workspace = true }
-tauri-plugin-single-instance = { workspace = true }
 tauri-plugin-svelte = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
+lj-node-http = { path = "crates/lj-node-http" }
 lj-rule-system = { path = "crates/lj-rule-system" }
 futures = { workspace = true }
 tracing = { workspace = true }
+
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = { workspace = true, features = ["deep-link"] }
 
 [dev-dependencies]
 keyring-core = { workspace = true }

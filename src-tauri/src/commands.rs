@@ -1,7 +1,7 @@
-//! Tauri IPC 的 `RuleSystem` delivery、查询与取消边界。
+//! Tauri IPC 的 `RuleSystem` delivery、查询、取消与导入 payload 拉取边界。
 //!
-//! 本模块只持有安全 wire DTO、会话投递和取消注册表。规则导入、编译、执行、投影与持久化
-//! 全部委托给 `RuleSystem`；不会组装 Graph、processor、storage 或任何 effect handler。
+//! 规则生命周期、执行与投影委托给 `RuleSystem`；深链 JSON 拉取仅委托给 `lj-node-http`
+//! 安全 façade。这里不组装 Definition、Plan、storage 或任何 effect handler。
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -38,6 +38,13 @@ impl AppState {
             cancellations: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+}
+
+/// 深链导入地址拉取请求。
+#[derive(Debug, Deserialize)]
+pub struct FetchImportSrcRequest {
+    /// 仅允许不含用户凭据的 HTTP(S) URL。
+    pub url: String,
 }
 
 /// 安装请求：opaque candidate 与用户批准的固定 capability 预设。
@@ -150,6 +157,19 @@ impl RuleExecutionEvent {
                 | ExecutionEventKind::Cancelled
         )
     }
+}
+
+/// 通过 `lj-node-http` 安全边界拉取导入预览文本。
+///
+/// # Errors
+///
+/// URL/SSRF/redirect 校验、30 秒总超时、非 2xx、2 MiB body 上限、响应读取或 UTF-8
+/// 校验失败时返回不含 URL query、响应 body 与底层网络详情的安全字符串。
+#[tauri::command]
+pub async fn fetch_import_src(request: FetchImportSrcRequest) -> Result<String, String> {
+    lj_node_http::fetch_import_source(&request.url)
+        .await
+        .map_err(|error| error.to_string())
 }
 
 /// 生成 durable candidate，但不暴露 Definition、Plan 或旧执行图。
@@ -643,6 +663,15 @@ mod tests {
         INIT.call_once(|| {
             set_default_store(mock::Store::new().expect("keyring-core mock store"));
         });
+    }
+
+    #[test]
+    fn fetch_import_src_request_uses_request_url_wire() {
+        let request = serde_json::from_value::<FetchImportSrcRequest>(json!({
+            "url": "https://example.com/sources.json"
+        }))
+        .expect("fetch_import_src request wire 应反序列化");
+        assert_eq!(request.url, "https://example.com/sources.json");
     }
 
     async fn mount_slow_discover_route(server: &MockServer) {

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/environment';
   import ModeShell from '$lib/app/ModeShell.svelte';
+  import { startDeepLinkRuntime } from '$lib/deeplink/runtime';
   import { getLocale, getTextDirection } from '$lib/i18n';
-  // 根布局只启动主题持久化并同步文档语言语义。
+  // 根布局只启动主题持久化、深链运行时，并同步文档语言语义。
   import { startThemePreferences } from '$lib/stores/theme.svelte';
   import { onMount } from 'svelte';
   import '../index.css';
@@ -15,6 +16,14 @@
     document.documentElement.lang = locale;
     document.documentElement.dir = getTextDirection(locale);
     void startThemePreferences();
+
+    let stopDeepLink: (() => void) | undefined;
+    void startDeepLinkRuntime().then((stop) => {
+      stopDeepLink = stop;
+    });
+    return () => {
+      stopDeepLink?.();
+    };
   });
 </script>
 

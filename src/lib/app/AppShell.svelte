@@ -4,6 +4,7 @@
   import { Toaster } from '$lib/components/ui/sonner';
   import { m } from '$lib/i18n';
   import { syncMaterialTransparencyForA11y } from '$lib/stores/theme.svelte';
+  import DeeplinkInstallHost from '$lib/views/sources/DeeplinkInstallHost.svelte';
   import type { Snippet } from 'svelte';
   import AppBottomNav from './AppBottomNav.svelte';
   import AppTitlebar from './AppTitlebar.svelte';
@@ -125,4 +126,6 @@
     showLaunch = false;
   }}
 />
+<!-- 全局深链导入 Sheet：不新开主导航 / 路由落地页 -->
+<DeeplinkInstallHost />
 <Toaster />

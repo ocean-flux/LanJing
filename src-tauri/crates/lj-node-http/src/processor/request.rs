@@ -23,7 +23,7 @@ use serde_json::Value;
 use crate::util;
 
 /// HTTP body 最大 16 MiB(KTD15)。
-const MAX_BODY_SIZE: usize = 16 * 1024 * 1024;
+pub(super) const MAX_BODY_SIZE: usize = 16 * 1024 * 1024;
 
 /// TCP 连接建立超时(reliability #4:防慢/挂第三方站点无限阻塞)。
 pub(super) const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -64,12 +64,14 @@ pub(super) fn ssrf_http_client() -> Result<&'static reqwest::Client, Error> {
         .map_err(|message| Error::Other(message.clone()))
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum HttpRequestError {
     Cancelled,
     TargetValidation,
+    Timeout,
     Request,
     Redirect,
+    BodyTooLarge,
     ResponseRead,
 }
 
@@ -78,9 +80,9 @@ impl HttpRequestError {
         match self {
             Self::Cancelled => None,
             Self::TargetValidation => Some(HttpEffectErrorKind::TargetValidation),
-            Self::Request => Some(HttpEffectErrorKind::Request),
+            Self::Timeout | Self::Request => Some(HttpEffectErrorKind::Request),
             Self::Redirect => Some(HttpEffectErrorKind::Redirect),
-            Self::ResponseRead => Some(HttpEffectErrorKind::ResponseRead),
+            Self::BodyTooLarge | Self::ResponseRead => Some(HttpEffectErrorKind::ResponseRead),
         }
     }
 }
@@ -351,26 +353,46 @@ pub(super) async fn send_request(
     if let Some(cancellation) = cancellation {
         tokio::select! {
             () = cancellation.cancelled() => Err(HttpRequestError::Cancelled),
-            response = request.send() => response.map_err(|_| HttpRequestError::Request),
+            response = request.send() => response.map_err(|error| map_request_error(&error)),
         }
     } else {
-        request.send().await.map_err(|_| HttpRequestError::Request)
+        request
+            .send()
+            .await
+            .map_err(|error| map_request_error(&error))
     }
 }
 
-pub(super) async fn convert_response_cancellable(
+fn map_request_error(error: &reqwest::Error) -> HttpRequestError {
+    if error.is_timeout() {
+        HttpRequestError::Timeout
+    } else {
+        HttpRequestError::Request
+    }
+}
+
+pub(super) async fn convert_response_cancellable_with_limit(
     response: reqwest::Response,
     cancellation: Option<&EffectCancellation>,
+    max_body_size: usize,
 ) -> Result<HttpResponse, HttpRequestError> {
     if let Some(cancellation) = cancellation {
         tokio::select! {
             () = cancellation.cancelled() => Err(HttpRequestError::Cancelled),
-            response = convert_response(response) => response.map_err(|_| HttpRequestError::ResponseRead),
+            response = convert_response_with_limit(response, max_body_size) => response.map_err(|error| map_response_error(&error)),
         }
     } else {
-        convert_response(response)
+        convert_response_with_limit(response, max_body_size)
             .await
-            .map_err(|_| HttpRequestError::ResponseRead)
+            .map_err(|error| map_response_error(&error))
+    }
+}
+
+fn map_response_error(error: &Error) -> HttpRequestError {
+    if matches!(error, &Error::BodyTooLarge { .. }) {
+        HttpRequestError::BodyTooLarge
+    } else {
+        HttpRequestError::ResponseRead
     }
 }
 
@@ -382,7 +404,14 @@ pub(super) async fn convert_response_cancellable(
 ///
 /// 返回 `Error::NodeExecution` 当 chunk 读取失败。
 /// 返回 `Error::BodyTooLarge` 当响应体超过 `MAX_BODY_SIZE`。
-pub async fn convert_response(mut resp: reqwest::Response) -> Result<HttpResponse, Error> {
+pub async fn convert_response(resp: reqwest::Response) -> Result<HttpResponse, Error> {
+    convert_response_with_limit(resp, MAX_BODY_SIZE).await
+}
+
+async fn convert_response_with_limit(
+    mut resp: reqwest::Response,
+    max_body_size: usize,
+) -> Result<HttpResponse, Error> {
     let status = resp.status().as_u16();
 
     let headers: HashMap<String, String> = resp
@@ -396,22 +425,22 @@ pub async fn convert_response(mut resp: reqwest::Response) -> Result<HttpRespons
         .collect();
 
     // 流式读取 body 带大小限制(KTD15)。
-    let mut body = Vec::with_capacity(MAX_BODY_SIZE.min(4096));
+    let mut body = Vec::with_capacity(max_body_size.min(4096));
     loop {
         let chunk = resp
             .chunk()
             .await
             .map_err(|error| Error::NodeExecution(error.to_string()))?;
         let Some(chunk) = chunk else { break };
-        let remaining = MAX_BODY_SIZE.saturating_sub(body.len());
+        let remaining = max_body_size.saturating_sub(body.len());
         if chunk.len() > remaining {
             body.extend_from_slice(&chunk[..remaining]);
             let actual = body.len();
-            tracing::warn!("HTTP body 超过上限: {actual} bytes (上限 {MAX_BODY_SIZE})");
+            tracing::warn!("HTTP body 超过上限: {actual} bytes (上限 {max_body_size})");
             // 返回错误而非静默截断(KTD15, P2-25)。
             return Err(Error::BodyTooLarge {
                 actual,
-                max: MAX_BODY_SIZE,
+                max: max_body_size,
             });
         }
         body.extend_from_slice(&chunk);

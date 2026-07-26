@@ -5,8 +5,10 @@
 //! 一个处理器文件。
 
 mod adapter;
+mod import;
 mod redirect;
 mod request;
 
 pub use adapter::HttpEffectAdapter;
+pub use import::{IMPORT_BODY_MAX_BYTES, ImportFetchError, fetch_import_source};
 pub use request::convert_response;

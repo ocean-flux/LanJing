@@ -145,8 +145,10 @@ fn effect_error_from_http(error: HttpRequestError) -> EffectError {
             EffectError::new(EffectErrorCode::Cancelled, "HTTP effect 已取消")
         }
         HttpRequestError::TargetValidation
+        | HttpRequestError::Timeout
         | HttpRequestError::Request
         | HttpRequestError::Redirect
+        | HttpRequestError::BodyTooLarge
         | HttpRequestError::ResponseRead => {
             EffectError::new(EffectErrorCode::HttpRequest, "HTTP effect 执行失败")
         }
