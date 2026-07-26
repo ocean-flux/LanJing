@@ -29,9 +29,9 @@ const legadoCandidate: InstallCandidate = {
     network: false,
     system: { fs: false, env: false, process: false },
   },
-  diagnostics: [],
-  definition_hash: 'def',
-  plan_hash: 'plan',
+  diagnostics: [{ code: 'INFO', message: 'ready' }],
+  definition_hash: 'definition-hash-abcdef012345',
+  plan_hash: 'plan-hash-abcdef012345',
   expires_at_ms: Date.now() + 60_000,
 };
 
@@ -45,6 +45,12 @@ const maccmsCandidate: InstallCandidate = {
   },
 };
 
+async function typeLegadoJson(value: string): Promise<HTMLElement> {
+  const textarea = screen.getByTestId('json-highlight-input');
+  await fireEvent.input(textarea, { target: { value } });
+  return textarea;
+}
+
 describe('SourceInstallEntry format segment', () => {
   beforeEach(() => {
     store.prepareInstall.mockReset();
@@ -57,15 +63,9 @@ describe('SourceInstallEntry format segment', () => {
 
     render(SourceInstallEntry);
 
-    const textarea = screen.getByPlaceholderText(/Paste Legado|粘贴 Legado/i);
-    await fireEvent.input(textarea, {
-      target: { value: '{"bookSourceUrl":"https://example.test"}' },
-    });
+    await typeLegadoJson('{"bookSourceUrl":"https://example.test"}');
 
-    const prepareButtons = screen.getAllByRole('button', {
-      name: /Prepare installation|准备安装/i,
-    });
-    await fireEvent.click(prepareButtons[0]!);
+    await fireEvent.click(screen.getByTestId('install-legado-prepare'));
 
     await waitFor(() => {
       expect(screen.getByText('Legado Source')).toBeTruthy();
@@ -100,5 +100,37 @@ describe('SourceInstallEntry format segment', () => {
       expect(screen.getByText('Maccms Source')).toBeTruthy();
     });
     expect(store.prepareInstall).not.toHaveBeenCalled();
+  });
+
+  it('rejects array JSON without calling prepareInstall', async () => {
+    render(SourceInstallEntry);
+
+    await typeLegadoJson('[{"bookSourceName":"A"},{"bookSourceName":"B"}]');
+    await fireEvent.click(screen.getByTestId('install-legado-prepare'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('install-error').textContent).toMatch(
+        /deep-link|深链|Multi-source|多书源/i,
+      );
+    });
+    expect(store.prepareInstall).not.toHaveBeenCalled();
+  });
+
+  it('prepares object JSON and shows thickened candidate preview', async () => {
+    store.prepareInstall.mockResolvedValue(legadoCandidate);
+
+    render(SourceInstallEntry);
+
+    await typeLegadoJson('{"bookSourceUrl":"https://example.test"}');
+    await fireEvent.click(screen.getByTestId('install-legado-prepare'));
+
+    await waitFor(() => {
+      expect(store.prepareInstall).toHaveBeenCalledWith('{"bookSourceUrl":"https://example.test"}');
+      expect(screen.getByTestId('install-candidate-preview')).toBeTruthy();
+      expect(screen.getByTestId('install-validated-hint')).toBeTruthy();
+      expect(screen.getByTestId('install-definition-hash')).toBeTruthy();
+      expect(screen.getByTestId('install-supported-intents')).toBeTruthy();
+      expect(screen.getByTestId('install-diagnostics')).toBeTruthy();
+    });
   });
 });

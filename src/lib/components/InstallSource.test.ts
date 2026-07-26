@@ -40,9 +40,9 @@ const installedSource: InstalledSource = {
 };
 
 async function prepareCandidate(): Promise<HTMLTextAreaElement> {
-  const input = screen.getByRole('textbox', { name: '规则 JSON' }) as HTMLTextAreaElement;
+  const input = screen.getByTestId('json-highlight-input') as HTMLTextAreaElement;
   await fireEvent.input(input, { target: { value: sourceInput } });
-  await fireEvent.click(screen.getByRole('button', { name: '准备安装' }));
+  await fireEvent.click(screen.getByTestId('install-legado-prepare'));
   await screen.findByTestId('install-candidate-preview');
   return input;
 }
@@ -75,7 +75,7 @@ describe('InstallSource', () => {
 
     await waitFor(() => {
       expect(storeMocks.installCandidate).toHaveBeenCalledWith('candidate:one', 'network_only');
-      expect(screen.getByRole('status').textContent).toContain('已安装：source:one');
+      expect(screen.getByText(/已安装：source:one/)).toBeTruthy();
     });
     expect(input.value).toBe('');
     expect(screen.queryByTestId('install-candidate-preview')).toBeNull();
@@ -86,9 +86,9 @@ describe('InstallSource', () => {
     storeMocks.prepareInstall.mockRejectedValueOnce(new Error('prepare failed'));
     render(InstallSource);
 
-    const input = screen.getByRole('textbox', { name: '规则 JSON' });
+    const input = screen.getByTestId('json-highlight-input');
     await fireEvent.input(input, { target: { value: sourceInput } });
-    await fireEvent.click(screen.getByRole('button', { name: '准备安装' }));
+    await fireEvent.click(screen.getByTestId('install-legado-prepare'));
 
     expect((await screen.findByRole('alert')).textContent).toContain('Error: prepare failed');
     expect((input as HTMLTextAreaElement).value).toBe(sourceInput);

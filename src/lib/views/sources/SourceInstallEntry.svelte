@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
-  import { Textarea } from '$lib/components/ui/textarea';
   import { m } from '$lib/i18n';
   import {
     installCandidate,
@@ -11,6 +10,7 @@
     type InstallCandidate,
   } from '$lib/stores/rules.svelte';
   import CandidatePreview from './CandidatePreview.svelte';
+  import JsonHighlightEditor from './JsonHighlightEditor.svelte';
 
   type InstallFormat = 'legado' | 'maccms';
 
@@ -34,6 +34,7 @@
   let loading = $state(false);
   let error = $state<string | null>(null);
   let success = $state<string | null>(null);
+  let fileName = $state<string | null>(null);
   let fileInput = $state<HTMLInputElement | null>(null);
 
   function resetSharedState(): void {
@@ -43,12 +44,22 @@
     grant = 'none';
     error = null;
     success = null;
+    fileName = null;
   }
 
   function selectFormat(next: InstallFormat): void {
     if (next === format) return;
     format = next;
     resetSharedState();
+  }
+
+  /** Client guard: multi-source arrays use deeplink pick, not single prepare_install. */
+  function isLegadoJsonArray(text: string): boolean {
+    try {
+      return Array.isArray(JSON.parse(text));
+    } catch {
+      return false;
+    }
   }
 
   async function handlePrepare(): Promise<void> {
@@ -60,6 +71,10 @@
 
     try {
       if (format === 'legado') {
+        if (isLegadoJsonArray(sourceJson)) {
+          error = m.sources_install_array_not_supported();
+          return;
+        }
         candidate = await prepareInstall(sourceJson);
       } else {
         candidate = await prepareMaccmsInstall(maccmsUrl.trim());
@@ -83,6 +98,7 @@
       candidate = null;
       sourceJson = '';
       maccmsUrl = '';
+      fileName = null;
       grant = 'none';
       onInstalled?.();
     } catch (caught) {
@@ -104,6 +120,7 @@
 
     try {
       sourceJson = await file.text();
+      fileName = file.name;
       error = null;
       success = null;
       candidate = null;
@@ -177,22 +194,29 @@
           <label for={fieldId} class="text-sm font-medium text-ink"
             >{m.sources_install_json_label()}</label
           >
-          <Textarea
+          <JsonHighlightEditor
             id={fieldId}
             bind:value={sourceJson}
             placeholder={m.sources_install_json_placeholder()}
             rows={7}
             disabled={loading}
-            class="glass-control min-h-32 border-hairline px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus-visible:border-lantern-strong/50 focus-visible:ring-2 focus-visible:ring-lantern/35"
+            class="glass-control focus-within:border-lantern-strong/50"
           />
+          {#if fileName}
+            <p class="text-xs text-ink-muted" data-testid="install-file-name">
+              {m.sources_install_file_name({ name: fileName })}
+            </p>
+          {/if}
           <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Button
               type="button"
+              variant="outline"
               onclick={handlePrepare}
               disabled={prepareDisabled}
+              data-testid="install-legado-prepare"
               class="min-h-11 w-full active:scale-[0.98] sm:w-auto"
             >
-              {loading ? m.sources_install_preparing() : m.sources_install_prepare()}
+              {loading ? m.sources_install_validating() : m.sources_install_validate()}
             </Button>
             <Button
               type="button"
@@ -230,12 +254,13 @@
           <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Button
               type="button"
+              variant="outline"
               onclick={handlePrepare}
               disabled={prepareDisabled}
               data-testid="install-maccms-prepare"
               class="min-h-11 w-full active:scale-[0.98] sm:w-auto"
             >
-              {loading ? m.sources_install_preparing() : m.sources_install_prepare()}
+              {loading ? m.sources_install_validating() : m.sources_install_validate()}
             </Button>
           </div>
         {/if}
@@ -245,6 +270,7 @@
         <div
           class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2.5 text-sm break-words"
           role="alert"
+          data-testid="install-error"
         >
           {error}
         </div>
@@ -266,6 +292,7 @@
         bind:grant
         {loading}
         {stickyActions}
+        validated={true}
         onInstall={handleInstall}
       />
     {/if}
