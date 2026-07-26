@@ -117,6 +117,9 @@ pub struct SourceProfile {
     pub title: String,
     pub icon_url: Option<String>,
     pub version: Option<String>,
+    /// 展示分组（如 Legado `bookSourceGroup`）；缺省兼容旧投影。
+    #[serde(default)]
+    pub group: Option<String>,
     pub supported_intents: Vec<lj_capability::StandardIntent>,
     pub risk_notes: Vec<String>,
 }

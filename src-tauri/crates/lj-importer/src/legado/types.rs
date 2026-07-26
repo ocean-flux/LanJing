@@ -10,6 +10,8 @@ pub struct LegadoSourceJson {
     pub book_source_name: String,
     /// 书源 URL。
     pub book_source_url: String,
+    /// 书源分组（展示用，可空）。
+    pub book_source_group: Option<String>,
     /// 搜索 URL 模板。
     pub search_url: Option<String>,
     /// 发现/浏览 URL(含 `@js:` 前缀)。

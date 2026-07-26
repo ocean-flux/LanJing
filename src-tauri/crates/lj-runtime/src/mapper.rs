@@ -350,6 +350,7 @@ impl MapperContext {
             },
             icon_url: None,
             version: None,
+            group: None,
             supported_intents: self.supported_intents.clone(),
             risk_notes: Vec::new(),
         }

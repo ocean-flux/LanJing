@@ -4,6 +4,7 @@
 
   export type IconName =
     | 'arrow-clockwise'
+    | 'arrow-left'
     | 'arrow-right'
     | 'broadcast'
     | 'check-circle'
@@ -30,6 +31,7 @@
 
   const iconClasses: Record<IconName, string> = {
     'arrow-clockwise': 'icon-[ph--arrow-clockwise]',
+    'arrow-left': 'icon-[ph--arrow-left]',
     'arrow-right': 'icon-[ph--arrow-right]',
     broadcast: 'icon-[ph--broadcast]',
     'check-circle': 'icon-[ph--check-circle]',

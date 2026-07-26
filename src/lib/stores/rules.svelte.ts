@@ -12,6 +12,8 @@ export interface SourceProfile {
   title: string;
   icon_url: string | null;
   version: string | null;
+  /** 展示分组；缺省兼容旧投影。 */
+  group?: string | null;
   supported_intents: StandardIntent[];
   risk_notes: string[];
 }

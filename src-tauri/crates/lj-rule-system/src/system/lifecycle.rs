@@ -101,11 +101,11 @@ impl RuleSystem {
     /// [`RuleError`]。
     pub async fn prepare_install(&self, input: RuleInput) -> Result<InstallCandidate, RuleError> {
         let trace_id = super::trace_id();
-        let (definition, credential_snapshot_bytes) = match input {
-            RuleInput::MaccmsJson { url } => (
-                MaccmsImporter
+        let (definition, credential_snapshot_bytes, display_title, display_group) = match input {
+            RuleInput::MaccmsJson { url } => {
+                let definition = MaccmsImporter
                     .definition(&MaccmsSourceUrl {
-                        url,
+                        url: url.clone(),
                         at: MaccmsFormat::Json,
                     })
                     .map_err(|_| {
@@ -117,9 +117,9 @@ impl RuleSystem {
                             false,
                             Vec::new(),
                         )
-                    })?,
-                None,
-            ),
+                    })?;
+                (definition, None, None, None)
+            }
             RuleInput::Legado { source_json } => {
                 let source =
                     serde_json::from_str::<LegadoSourceJson>(&source_json).map_err(|_| {
@@ -132,6 +132,20 @@ impl RuleSystem {
                             Vec::new(),
                         )
                     })?;
+                let display_title = {
+                    let name = source.book_source_name.trim();
+                    if name.is_empty() {
+                        None
+                    } else {
+                        Some(name.to_string())
+                    }
+                };
+                let display_group = source
+                    .book_source_group
+                    .as_ref()
+                    .map(|value| value.trim())
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_string);
                 let adapted = LegadoImporter.adapt(&source).map_err(|_| {
                     RuleError::new(
                         RuleErrorStage::Import,
@@ -153,7 +167,12 @@ impl RuleSystem {
                             Vec::new(),
                         )
                     })?;
-                (adapted.definition, credential_snapshot_bytes)
+                (
+                    adapted.definition,
+                    credential_snapshot_bytes,
+                    display_title,
+                    display_group,
+                )
             }
         };
         let definition = canonicalize(&definition);
@@ -176,7 +195,12 @@ impl RuleSystem {
                     Vec::new(),
                 )
             })?;
-        let profile = source_profile(&definition, &plan.definition_hash);
+        let profile = source_profile(
+            &definition,
+            &plan.definition_hash,
+            display_title,
+            display_group,
+        );
         let required_grant = definition.capability_manifest.required.clone();
         let candidate_id = Uuid::new_v4();
         let package = RulePackage {
@@ -714,12 +738,20 @@ fn installed_source_from_storage(source: StorageInstalledSource) -> InstalledSou
     }
 }
 
-fn source_profile(definition: &lj_rule_model::RuleDefinition, version: &str) -> SourceProfile {
+fn source_profile(
+    definition: &lj_rule_model::RuleDefinition,
+    version: &str,
+    display_title: Option<String>,
+    display_group: Option<String>,
+) -> SourceProfile {
     SourceProfile {
         id: MediaResourceId(definition.source_identity.id.clone()),
-        title: definition.base_url.clone(),
+        title: display_title
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| definition.base_url.clone()),
         icon_url: None,
         version: Some(version.to_string()),
+        group: display_group,
         supported_intents: definition.intent_exports.keys().copied().collect(),
         risk_notes: vec!["该来源可能按已声明的 capability 发起外部请求".to_string()],
     }

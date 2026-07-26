@@ -68,8 +68,24 @@ const installedSource: InstalledSource = {
     title: '真实来源',
     icon_url: null,
     version: '2.3.1',
+    group: '玄幻',
     supported_intents: ['Search', 'ResolveItem'],
     risk_notes: ['仅访问目标站点'],
+  },
+};
+
+const ungroupedSource: InstalledSource = {
+  source_id: 'source:two',
+  version: '1.0.0',
+  revision: 1,
+  profile: {
+    id: 'profile:two',
+    title: '未分组来源',
+    icon_url: null,
+    version: '1.0.0',
+    group: null,
+    supported_intents: ['Discover'],
+    risk_notes: [],
   },
 };
 
@@ -89,7 +105,7 @@ describe('SourcesHome', () => {
     expect(screen.queryByRole('textbox', { name: '规则 JSON' })).toBeNull();
   });
 
-  it('shows one retry for load errors and recovers to the real empty install flow', async () => {
+  it('shows one retry for load errors and recovers to the empty state', async () => {
     store.loadInstalledSources
       .mockImplementationOnce(async () => {
         store.setSnapshot({ error: 'offline' });
@@ -106,11 +122,14 @@ describe('SourcesHome', () => {
     await fireEvent.click(within(alert).getByRole('button', { name: '重试' }));
 
     expect(await screen.findByRole('heading', { name: '还没有已安装来源' })).toBeTruthy();
-    expect(screen.getByRole('textbox', { name: '规则 JSON' })).toBeTruthy();
+    expect(screen.queryByRole('textbox', { name: '规则 JSON' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: '添加来源' })).toHaveLength(1);
+    await fireEvent.click(screen.getByRole('button', { name: '添加来源' }));
+    expect(await screen.findByRole('textbox', { name: '规则 JSON' })).toBeTruthy();
     expect(store.loadInstalledSources).toHaveBeenCalledTimes(2);
   });
 
-  it('renders installed source facts and exposes one installer entry', async () => {
+  it('renders installed source facts and opens the sheet installer', async () => {
     store.setSnapshot({ sources: [installedSource] });
     render(SourcesHome);
 
@@ -118,23 +137,50 @@ describe('SourcesHome', () => {
     const article = sourceHeading.closest('article');
     expect(article).toBeTruthy();
     expect(within(article!).getByText('2.3.1')).toBeTruthy();
-    expect(within(article!).getByText('7')).toBeTruthy();
+    expect(within(article!).getByText('玄幻')).toBeTruthy();
+    expect(within(article!).queryByText('7')).toBeNull();
     expect(within(article!).getByText('搜索')).toBeTruthy();
     expect(within(article!).getByText('解析条目')).toBeTruthy();
     expect(within(article!).getByText('仅访问目标站点')).toBeTruthy();
 
     const add = screen.getByRole('button', { name: '添加来源' });
     expect(screen.getAllByRole('button', { name: '添加来源' })).toHaveLength(1);
+    expect(screen.queryByRole('textbox', { name: '规则 JSON' })).toBeNull();
     await fireEvent.click(add);
     expect(await screen.findByRole('textbox', { name: '规则 JSON' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '收起安装' })).toBeTruthy();
   });
 
-  it('shows the real install flow immediately for a successful empty load', async () => {
+  it('filters the denselist by group chips', async () => {
+    store.setSnapshot({ sources: [installedSource, ungroupedSource] });
+    render(SourcesHome);
+
+    expect(await screen.findByRole('heading', { name: '真实来源' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '未分组来源' })).toBeTruthy();
+
+    await fireEvent.click(screen.getByRole('button', { name: '玄幻' }));
+    expect(screen.getByRole('heading', { name: '真实来源' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: '未分组来源' })).toBeNull();
+
+    await fireEvent.click(screen.getByRole('button', { name: '未分组' }));
+    expect(screen.queryByRole('heading', { name: '真实来源' })).toBeNull();
+    expect(screen.getByRole('heading', { name: '未分组来源' })).toBeTruthy();
+
+    await fireEvent.click(screen.getByRole('button', { name: '全部' }));
+    expect(screen.getByRole('heading', { name: '真实来源' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: '未分组来源' })).toBeTruthy();
+  });
+
+  it('opens the shared sheet from the successful empty state CTA', async () => {
     render(SourcesHome);
 
     expect(await screen.findByRole('heading', { name: '还没有已安装来源' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '安装来源' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: '安装来源' })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: '规则 JSON' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: '添加来源' })).toHaveLength(1);
+
+    await fireEvent.click(screen.getByRole('button', { name: '添加来源' }));
+
+    expect(await screen.findByRole('heading', { name: '安装来源' })).toBeTruthy();
     expect(screen.getByRole('textbox', { name: '规则 JSON' })).toBeTruthy();
     await waitFor(() => expect(store.loadInstalledSources).toHaveBeenCalledOnce());
   });

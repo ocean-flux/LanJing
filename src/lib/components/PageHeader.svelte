@@ -33,7 +33,7 @@
     {#if action.href}
       <a
         href={resolve(action.href as '/')}
-        class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-hairline-strong bg-surface-1 px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)]"
+        class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-hairline-strong bg-surface-1 px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)] sm:self-auto"
       >
         <span>{action.label}</span>
         <Icon name={action.icon ?? 'arrow-right'} class="size-4" />
@@ -41,7 +41,7 @@
     {:else}
       <button
         type="button"
-        class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-hairline-strong bg-surface-1 px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)]"
+        class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-hairline-strong bg-surface-1 px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)] sm:self-auto"
         aria-pressed={action.pressed}
         onclick={action.onclick}
       >

@@ -20,7 +20,7 @@
   bind:this={ref}
   data-slot="dialog-footer"
   class={cn(
-    'bg-muted/50 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[calc(var(--radius-xl)-1px)] border-t border-hairline p-4 sm:flex-row sm:justify-end',
+    '-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[calc(var(--radius-xl)-1px)] border-t border-hairline bg-muted/50 p-4 sm:flex-row sm:justify-end',
     className,
   )}
   {...restProps}

@@ -266,6 +266,7 @@ async fn installed_source_listing_rejects_cross_source_profile_ownership() {
         title: "foreign source".to_string(),
         icon_url: None,
         version: Some("v1".to_string()),
+        group: None,
         supported_intents: Vec::new(),
         risk_notes: Vec::new(),
     };

@@ -166,6 +166,7 @@ fn candidate(now_ms: i64) -> CandidateDraft {
             title: "测试来源".to_string(),
             icon_url: None,
             version: Some("v1".to_string()),
+            group: None,
             supported_intents: Vec::new(),
             risk_notes: Vec::new(),
         },
