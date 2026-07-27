@@ -14,13 +14,19 @@
   }: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
     showCloseButton?: boolean;
   } = $props();
+  function attachRef(element: HTMLDivElement) {
+    ref = element;
+    return () => {
+      if (ref === element) ref = null;
+    };
+  }
 </script>
 
 <div
-  bind:this={ref}
+  {@attach attachRef}
   data-slot="dialog-footer"
   class={cn(
-    '-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[calc(var(--radius-xl)-1px)] border-t border-hairline bg-muted/50 p-4 sm:flex-row sm:justify-end',
+    '-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[calc(var(--radius-overlay)-1px)] border-t border-hairline bg-surface-2/70 p-3 sm:flex-row sm:justify-end',
     className,
   )}
   {...restProps}

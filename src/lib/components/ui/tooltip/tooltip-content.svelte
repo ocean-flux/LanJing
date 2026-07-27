@@ -27,7 +27,7 @@
     {sideOffset}
     {side}
     class={cn(
-      'data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 inline-flex w-fit max-w-xs origin-(--bits-tooltip-content-transform-origin) items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs text-background has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm',
+      'elevated-overlay z-(--layer-popover) inline-flex w-fit max-w-xs origin-(--bits-tooltip-content-transform-origin) items-center gap-1.5 rounded-md border border-hairline px-2 py-1 text-xs text-ink transition-[opacity,transform] duration-(--motion-fast) ease-[var(--motion-standard)] has-data-[slot=kbd]:pr-1.5 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-(--layer-popover) **:data-[slot=kbd]:rounded-sm data-[starting-style]:scale-95 data-[starting-style]:opacity-0',
       className,
     )}
     {...restProps}
@@ -37,7 +37,7 @@
       {#snippet child({ props })}
         <div
           class={cn(
-            'z-50 size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground',
+            'z-(--layer-popover) size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-[2px] border border-hairline bg-[var(--surface-overlay)] fill-[var(--surface-overlay)]',
             'data-[side=top]:translate-x-1/2 data-[side=top]:translate-y-[calc(-50%+2px)]',
             'data-[side=bottom]:-translate-x-1/2 data-[side=bottom]:-translate-y-[calc(-50%+1px)]',
             'data-[side=right]:translate-x-[calc(50%+2px)] data-[side=right]:translate-y-1/2',

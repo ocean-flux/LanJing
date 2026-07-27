@@ -29,7 +29,7 @@
     bind:ref
     data-slot="dialog-content"
     class={cn(
-      'glass-panel data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl border border-hairline p-4 text-sm text-popover-foreground duration-100 outline-none sm:max-w-sm',
+      'elevated-overlay fixed top-1/2 left-1/2 z-(--layer-overlay) grid max-h-[calc(100dvh-var(--safe-area-top)-var(--safe-area-bottom)-2rem)] w-full max-w-[calc(100%-var(--safe-area-left)-var(--safe-area-right)-2rem)] -translate-x-1/2 -translate-y-1/2 gap-3 overflow-y-auto overscroll-contain rounded-[var(--radius-overlay)] border border-hairline p-4 text-sm text-ink transition-[opacity,transform] duration-(--motion-fast) ease-[var(--motion-standard)] outline-none data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 sm:max-w-sm',
       className,
     )}
     {...restProps}

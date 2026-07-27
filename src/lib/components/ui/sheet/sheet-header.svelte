@@ -8,12 +8,18 @@
     children,
     ...restProps
   }: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+  function attachRef(element: HTMLDivElement) {
+    ref = element;
+    return () => {
+      if (ref === element) ref = null;
+    };
+  }
 </script>
 
 <div
-  bind:this={ref}
+  {@attach attachRef}
   data-slot="sheet-header"
-  class={cn('flex flex-col gap-0.5 p-4', className)}
+  class={cn('flex flex-col gap-1 p-3', className)}
   {...restProps}
 >
   {@render children?.()}

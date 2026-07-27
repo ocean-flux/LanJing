@@ -8,6 +8,7 @@
     children,
     ...restProps
   }: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+
   function attachRef(element: HTMLDivElement) {
     ref = element;
     return () => {
@@ -18,8 +19,8 @@
 
 <div
   {@attach attachRef}
-  data-slot="sheet-footer"
-  class={cn('mt-auto flex flex-col gap-2 border-t border-hairline p-3', className)}
+  data-slot="select-label"
+  class={cn('px-2 py-1 text-xs font-medium text-muted-foreground', className)}
   {...restProps}
 >
   {@render children?.()}

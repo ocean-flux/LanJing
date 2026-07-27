@@ -69,6 +69,12 @@
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-control: var(--surface-control);
+  --color-surface-selected: var(--surface-selected);
+  --color-surface-chrome: var(--surface-chrome);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-scrim: var(--surface-scrim);
   --color-lantern: var(--lantern);
   --color-lantern-strong: var(--lantern-strong);
   --color-lantern-soft: var(--lantern-soft);
@@ -83,6 +89,7 @@
   --shadow-surface-panel: var(--surface-panel-shadow);
   --shadow-surface-control: var(--surface-control-shadow);
   --shadow-surface-dialog: var(--surface-dialog-shadow);
+  --shadow-surface-overlay: var(--surface-overlay-shadow);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -94,7 +101,7 @@
 :root {
   --font-ui:
     'Outfit', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    'Microsoft YaHei', sans-serif;
+    'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
   --font-code: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --font-reader: 'Source Serif 4', Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
   /* 默认 L2 亮面：porcelain-day（运行时由主题注册表覆盖） */
@@ -124,7 +131,7 @@
   --foreground: var(--ink);
   --card: var(--surface-1);
   --card-foreground: var(--foreground);
-  --popover: var(--surface-2);
+  --popover: var(--surface-overlay);
   --popover-foreground: var(--foreground);
   --primary: var(--lantern-strong);
   --primary-foreground: var(--on-lantern);
@@ -139,51 +146,94 @@
   --border: var(--hairline);
   --input: var(--hairline-strong);
   --ring: rgb(11 90 100 / 0.34);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
-  --radius-3xl: 34px;
-  --surface-shell: rgb(244 245 245 / 0.86);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 16px;
+  --radius-control: 6px;
+  --radius-panel: 10px;
+  --radius-overlay: 12px;
+  --surface-shell: color-mix(in oklab, var(--canvas-elevated) 86%, transparent);
   --surface-panel: var(--surface-1);
+  --surface-control: color-mix(in oklab, var(--surface-2) 88%, var(--surface-1));
+  --surface-selected: var(--lantern-soft);
+  --surface-selected-border: color-mix(in oklab, var(--lantern-strong) 44%, var(--hairline-strong));
+  --surface-overlay: var(--canvas-elevated);
+  --surface-scrim: rgb(9 15 18 / 0.44);
   --surface-reader: var(--reader-canvas);
-  --surface-control: rgb(255 255 255 / 0.72);
-  --surface-material: rgb(247 248 248 / 0.78);
-  --surface-material-solid: var(--surface-2);
-  --surface-material-border: rgb(23 26 27 / 0.1);
-  --surface-material-solid-border: rgb(23 26 27 / 0.08);
-  --surface-panel-shadow: 0 1px 0 rgb(255 255 255 / 0.56) inset;
-  --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.56) inset, 0 4px 12px rgb(0 0 0 / 0.08);
-  --surface-dialog-shadow: 0 16px 40px rgb(0 0 0 / 0.18);
-  --glass-panel-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 22px 60px rgb(35 45 48 / 0.09);
-  --glass-chrome-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), 0 10px 32px rgb(35 45 48 / 0.07);
+  --surface-material: color-mix(in oklab, var(--canvas-elevated) 86%, transparent);
+  --surface-material-solid: var(--canvas-elevated);
+  --surface-material-border: color-mix(in oklab, var(--hairline-strong) 78%, transparent);
+  --surface-material-solid-border: var(--hairline);
+  --surface-chrome: var(--surface-material);
+  --surface-panel-border: var(--hairline);
+  --surface-control-border: var(--hairline-strong);
+  --surface-overlay-border: var(--hairline-strong);
+  --surface-panel-shadow: none;
+  --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.44) inset;
+  --surface-overlay-shadow: 0 18px 48px rgb(17 24 28 / 0.18), 0 2px 8px rgb(17 24 28 / 0.08);
+  --surface-dialog-shadow: var(--surface-overlay-shadow);
+  --glass-chrome-shadow: 0 1px 0 rgb(255 255 255 / 0.42) inset, 0 1px 8px rgb(35 45 48 / 0.06);
   --surface-ring: 0 0 0 1px var(--hairline) inset;
-  --shell-titlebar-height: 44px;
+  --shell-titlebar-height: 40px;
   --shell-titlebar-compact-height: 40px;
-  --shell-bottom-nav-height: 64px;
-  --shell-bottom-safe-padding: env(safe-area-inset-bottom, 0px);
-  --content-max-width: 1280px;
-  --content-detail-max-width: 1180px;
-  --content-reading-max-width: 680px;
-  --content-reading-wide-width: 1120px;
+  --shell-bottom-nav-height: 60px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --shell-bottom-safe-padding: var(--safe-area-bottom);
+  --layer-base: 0;
+  --layer-content: 10;
+  --layer-chrome: 30;
+  --layer-popover: 40;
+  --layer-scrim: 50;
+  --layer-overlay: 60;
+  --layer-toast: 70;
+  --layer-launch: 80;
+  --measure-standard: 1120px;
+  --measure-narrow: 800px;
+  --measure-detail: 960px;
+  --measure-workspace: 1600px;
+  --measure-reading: 680px;
+  --measure-reading-wide: 1120px;
+  --content-max-width: var(--measure-standard);
+  --content-detail-max-width: var(--measure-detail);
+  --content-reading-max-width: var(--measure-reading);
+  --content-reading-wide-width: var(--measure-reading-wide);
   --media-app-card-min-width: 220px;
   --source-card-min-width: 280px;
-  --page-padding-mobile: 16px;
-  --page-padding-tablet: 24px;
-  --page-padding-desktop: 32px;
-  --section-gap: 32px;
-  --card-gap: 16px;
+  --page-gutter-mobile: 16px;
+  --page-gutter-tablet: 20px;
+  --page-gutter-desktop: 24px;
+  --page-gutter: var(--page-gutter-mobile);
+  --page-padding-mobile: var(--page-gutter-mobile);
+  --page-padding-tablet: var(--page-gutter-tablet);
+  --page-padding-desktop: var(--page-gutter-desktop);
+  --section-gap: 16px;
+  --card-gap: 12px;
+  --density-group-gap: 8px;
+  --density-panel-padding: 16px;
+  --density-panel-padding-compact: 12px;
+  --density-control-sm: 28px;
+  --density-control-md: 32px;
+  --density-control-lg: 36px;
+  --density-touch-target: 44px;
   --motion-standard: cubic-bezier(0.32, 0.72, 0, 1);
   --motion-emphasis: cubic-bezier(0.2, 0.9, 0.1, 1);
-  --motion-duration-fast: 160ms;
-  --motion-duration-standard: 260ms;
-  --motion-duration-slow: 420ms;
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 240ms;
+  --motion-duration-fast: var(--motion-fast);
+  --motion-duration-standard: var(--motion-base);
+  --motion-duration-slow: var(--motion-slow);
   --motion-ease-fast: cubic-bezier(0.32, 0.72, 0, 1);
   --motion-ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
   --motion-ease-slow: cubic-bezier(0.2, 0.9, 0.1, 1);
-  --material-blur: 16px;
-  --material-saturation: 1.08;
+  --material-blur: 12px;
+  --material-saturation: 1.04;
   --focus-ring: 0 0 0 2px rgb(11 90 100 / 0.24);
   --scrollbar-thumb: rgb(26 27 30 / 0.22);
   --scrollbar-thumb-hover: rgb(26 27 30 / 0.4);
@@ -212,7 +262,7 @@
   --media-void: #12171d;
   --reader-canvas: #1a1714;
   --reader-ink: #d8d2c4;
-  --popover: var(--surface-2);
+  --popover: var(--surface-overlay);
   --secondary: var(--surface-2);
   --muted: var(--surface-3);
   --destructive: var(--danger);
@@ -220,24 +270,22 @@
   --input: var(--hairline-strong);
   --ring: rgb(58 169 184 / 0.34);
   --focus-ring: 0 0 0 2px rgb(58 169 184 / 0.28);
-  --surface-shell: rgb(18 23 29 / 0.82);
-  --surface-panel: var(--surface-1);
-  --surface-control: rgb(32 40 48 / 0.78);
-  --surface-material: rgb(28 36 44 / 0.72);
-  --surface-material-solid: var(--surface-2);
-  --surface-material-border: rgb(232 234 237 / 0.14);
-  --surface-material-solid-border: rgb(232 234 237 / 0.1);
-  --surface-panel-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset;
-  --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 8px 24px rgb(0 0 0 / 0.28);
-  --surface-dialog-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
-  --glass-panel-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 22px 64px rgb(0 0 0 / 0.24);
-  --glass-chrome-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 10px 32px rgb(0 0 0 / 0.18);
+  --surface-shell: color-mix(in oklab, var(--canvas-elevated) 86%, transparent);
+  --surface-material: color-mix(in oklab, var(--canvas-elevated) 82%, transparent);
+  --surface-material-solid: var(--canvas-elevated);
+  --surface-material-border: color-mix(in oklab, var(--hairline-strong) 78%, transparent);
+  --surface-material-solid-border: var(--hairline);
+  --surface-scrim: rgb(0 0 0 / 0.6);
+  --surface-control-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset;
+  --surface-overlay-shadow: 0 20px 56px rgb(0 0 0 / 0.42), 0 2px 10px rgb(0 0 0 / 0.28);
+  --glass-chrome-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 1px 10px rgb(0 0 0 / 0.16);
   --scrollbar-thumb: rgb(232 234 237 / 0.24);
   --scrollbar-thumb-hover: rgb(232 234 237 / 0.44);
 }
 
 :root[data-material-transparency='low'],
-.low-transparency {
+.low-transparency,
+[data-reduced-transparency='true'] {
   --surface-material: var(--surface-material-solid);
   --surface-material-border: var(--surface-material-solid-border);
   --material-blur: 0px;
@@ -262,40 +310,31 @@ body {
   color: var(--foreground);
 }
 .app-canvas {
-  background:
-    radial-gradient(
-      80% 62% at 10% -12%,
-      color-mix(in oklab, var(--lantern) 11%, transparent),
-      transparent 64%
-    ),
-    radial-gradient(
-      72% 58% at 100% 0%,
-      color-mix(in oklab, var(--surface-3) 42%, transparent),
-      transparent 66%
-    ),
-    var(--canvas);
+  background: var(--canvas);
 }
 
 .glass-chrome {
   border-color: var(--surface-material-border);
-  background: var(--surface-material);
+  background: var(--surface-chrome);
   box-shadow: var(--glass-chrome-shadow);
 }
 
 .glass-panel {
-  border-color: color-mix(in oklab, var(--hairline-strong) 72%, transparent);
-  background: linear-gradient(
-    145deg,
-    color-mix(in oklab, var(--surface-1) 90%, transparent),
-    color-mix(in oklab, var(--surface-2) 80%, transparent)
-  );
-  box-shadow: var(--glass-panel-shadow);
+  border-color: var(--surface-panel-border);
+  background: var(--surface-panel);
+  box-shadow: var(--surface-panel-shadow);
 }
 
 .glass-control {
-  border-color: color-mix(in oklab, var(--hairline-strong) 78%, transparent);
-  background: color-mix(in oklab, var(--surface-control) 90%, transparent);
+  border-color: var(--surface-control-border);
+  background: var(--surface-control);
   box-shadow: var(--surface-control-shadow);
+}
+
+.elevated-overlay {
+  border-color: var(--surface-overlay-border);
+  background: var(--surface-overlay);
+  box-shadow: var(--surface-overlay-shadow);
 }
 
 @supports (backdrop-filter: blur(1px)) {
@@ -313,18 +352,16 @@ body {
   -webkit-backdrop-filter: none;
 }
 
-:root[data-material-transparency='low'] .glass-panel,
-.low-transparency .glass-panel,
-[data-reduced-transparency='true'] .glass-panel {
-  background: var(--surface-1);
-  box-shadow: var(--surface-panel-shadow);
+@media (min-width: 768px) {
+  :root {
+    --page-gutter: var(--page-gutter-tablet);
+  }
 }
 
-:root[data-material-transparency='low'] .glass-control,
-.low-transparency .glass-control,
-[data-reduced-transparency='true'] .glass-control {
-  background: var(--surface-2);
-  box-shadow: var(--surface-panel-shadow);
+@media (min-width: 1200px) {
+  :root {
+    --page-gutter: var(--page-gutter-desktop);
+  }
 }
 
 .app-scroll-region {
@@ -365,6 +402,29 @@ body {
   .app-scroll-region {
     scrollbar-color: auto;
   }
+
+  .glass-chrome,
+  .glass-panel,
+  .glass-control,
+  .elevated-overlay {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
+  }
+}
+
+@media (pointer: coarse) {
+  :root {
+    --density-control-sm: var(--density-touch-target);
+    --density-control-md: var(--density-touch-target);
+    --density-control-lg: var(--density-touch-target);
+  }
 }
 
 @media (pointer: coarse), (max-width: 767px) {
@@ -377,17 +437,14 @@ body {
 @media (prefers-reduced-transparency: reduce) {
   :root {
     --material-blur: 0px;
+    --material-saturation: 1;
     --surface-material: var(--surface-material-solid);
   }
 
-  .glass-panel {
-    background: var(--surface-1);
-    box-shadow: var(--surface-panel-shadow);
-  }
-
-  .glass-control {
-    background: var(--surface-2);
-    box-shadow: var(--surface-panel-shadow);
+  .glass-chrome {
+    background: var(--surface-material-solid);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 
@@ -396,7 +453,29 @@ body {
   box-shadow: var(--focus-ring);
 }
 
+:root[data-reduced-motion='true'],
+[data-reduced-motion='true'] {
+  --motion-fast: 0ms;
+  --motion-base: 0ms;
+  --motion-slow: 0ms;
+}
+
+[data-reduced-motion='true'] *,
+[data-reduced-motion='true'] *::before,
+[data-reduced-motion='true'] *::after {
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+
   *,
   *::before,
   *::after {

@@ -1,14 +1,26 @@
+<script lang="ts" module>
+  type HeaderActionBase = {
+    label: string;
+    icon?: 'arrow-right' | 'plus' | 'x';
+  };
+
+  export type HeaderAction =
+    | (HeaderActionBase & {
+        href: string;
+        onclick?: never;
+        pressed?: never;
+      })
+    | (HeaderActionBase & {
+        href?: never;
+        onclick: () => void;
+        pressed?: boolean;
+      });
+</script>
+
 <script lang="ts">
   import { resolve } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
-
-  type HeaderAction = {
-    label: string;
-    href?: string;
-    onclick?: () => void;
-    icon?: 'arrow-right' | 'plus' | 'x';
-    pressed?: boolean;
-  };
+  import { Button } from '$lib/components/ui/button/index.js';
 
   type Props = {
     title: string;
@@ -20,34 +32,41 @@
 </script>
 
 <header
-  class="flex w-full flex-col gap-4 border-b border-hairline pb-5 sm:flex-row sm:items-end sm:justify-between"
+  data-slot="page-header"
+  class="flex w-full flex-col gap-3 border-b border-hairline pb-3 in-data-[chrome-family=bottom]:gap-2 in-data-[chrome-family=bottom]:border-b-0 in-data-[chrome-family=bottom]:pb-0 sm:flex-row sm:items-end sm:justify-between"
 >
   <div class="min-w-0">
-    <h1 class="text-xl font-semibold tracking-tight text-ink sm:text-2xl">{title}</h1>
+    <h1
+      class="text-xl font-semibold tracking-tight text-ink in-data-[chrome-family=bottom]:sr-only sm:text-2xl"
+    >
+      {title}
+    </h1>
     {#if description}
-      <p class="mt-1 max-w-2xl text-sm leading-6 text-ink-muted">{description}</p>
+      <p
+        class="mt-1 max-w-[65ch] text-sm leading-5 text-ink-muted in-data-[chrome-family=bottom]:mt-0"
+      >
+        {description}
+      </p>
     {/if}
   </div>
 
   {#if action}
-    {#if action.href}
-      <a
-        href={resolve(action.href as '/')}
-        class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-hairline-strong bg-surface-1 px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)] sm:self-auto"
-      >
+    {#if 'href' in action}
+      <Button href={resolve(action.href as '/')} variant="outline" class="self-start sm:self-auto">
         <span>{action.label}</span>
         <Icon name={action.icon ?? 'arrow-right'} class="size-4" />
-      </a>
+      </Button>
     {:else}
-      <button
+      <Button
         type="button"
-        class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-hairline-strong bg-surface-1 px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)] sm:self-auto"
+        variant="outline"
+        class="self-start sm:self-auto"
         aria-pressed={action.pressed}
-        onclick={action.onclick}
+        onclick={() => action.onclick()}
       >
         <Icon name={action.icon ?? 'plus'} class="size-4" />
         <span>{action.label}</span>
-      </button>
+      </Button>
     {/if}
   {/if}
 </header>

@@ -47,14 +47,20 @@
     'data-slot': dataSlot = 'input',
     ...restProps
   }: Props = $props();
+  function attachRef(element: HTMLInputElement) {
+    ref = element;
+    return () => {
+      if (ref === element) ref = null;
+    };
+  }
 </script>
 
 {#if type === 'file'}
   <input
-    bind:this={ref}
+    {@attach attachRef}
     data-slot={dataSlot}
     class={cn(
-      'glass-control h-8 w-full min-w-0 rounded-lg border border-hairline px-2.5 py-1 text-base text-ink transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-lantern-strong/50 focus-visible:ring-3 focus-visible:ring-lantern/35 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:disabled:bg-surface-2/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [@media(pointer:coarse)]:min-h-11',
+      'glass-control h-(--density-control-md) w-full min-w-0 rounded-md border border-hairline px-2.5 py-1 text-base text-ink transition-[color,background-color,border-color,box-shadow] duration-(--motion-fast) outline-none file:inline-flex file:h-(--density-control-sm) file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground read-only:bg-surface-2/70 focus-visible:border-lantern-strong/60 focus-visible:shadow-[var(--focus-ring)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-busy:cursor-wait aria-busy:opacity-70 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/25 md:text-sm dark:disabled:bg-surface-2/80 dark:aria-invalid:ring-destructive/40 [&[type=file]]:py-0.5 [@media(pointer:coarse)]:min-h-(--density-touch-target)',
       className,
     )}
     type="file"
@@ -63,10 +69,10 @@
   />
 {:else}
   <input
-    bind:this={ref}
+    {@attach attachRef}
     data-slot={dataSlot}
     class={cn(
-      'glass-control h-8 w-full min-w-0 rounded-lg border border-hairline px-2.5 py-1 text-base text-ink transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-lantern-strong/50 focus-visible:ring-3 focus-visible:ring-lantern/35 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:disabled:bg-surface-2/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [@media(pointer:coarse)]:min-h-11',
+      'glass-control h-(--density-control-md) w-full min-w-0 rounded-md border border-hairline px-2.5 py-1 text-base text-ink transition-[color,background-color,border-color,box-shadow] duration-(--motion-fast) outline-none file:inline-flex file:h-(--density-control-sm) file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground read-only:bg-surface-2/70 focus-visible:border-lantern-strong/60 focus-visible:shadow-[var(--focus-ring)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-busy:cursor-wait aria-busy:opacity-70 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/25 md:text-sm dark:disabled:bg-surface-2/80 dark:aria-invalid:ring-destructive/40 [&[type=file]]:py-0.5 [@media(pointer:coarse)]:min-h-(--density-touch-target)',
       className,
     )}
     {type}

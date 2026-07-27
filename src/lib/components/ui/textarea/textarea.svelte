@@ -11,9 +11,10 @@
 </script>
 
 <textarea
+  data-slot="textarea"
   bind:value
   class={cn(
-    'flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+    'glass-control flex min-h-[calc(var(--density-control-lg)*2)] w-full rounded-md border border-hairline px-2.5 py-2 text-sm text-ink transition-[color,background-color,border-color,box-shadow] duration-(--motion-fast) outline-none placeholder:text-muted-foreground read-only:bg-surface-2/70 focus-visible:border-lantern-strong/60 focus-visible:shadow-[var(--focus-ring)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-busy:cursor-wait aria-busy:opacity-70 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/25 dark:aria-invalid:ring-destructive/40',
     className,
   )}
   {...rest}></textarea>
