@@ -1,8 +1,13 @@
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getMaterialTransparency, setMaterialTransparency } from '$lib/stores/theme.svelte';
 import AppShell from './AppShell.svelte';
 import { COLD_LAUNCH_SESSION_KEY, COLD_LAUNCH_THRESHOLD_MS } from './cold-launch';
+import {
+  registerLeaveGuard,
+  requestSurfaceClose,
+  resetLeaveCoordinatorForTests,
+} from './leave-coordinator.svelte';
 import type { ModeShellContract, PlatformCapabilities } from './shell-types';
 
 function desktopPlatform(overrides: Partial<PlatformCapabilities> = {}): PlatformCapabilities {
@@ -67,6 +72,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   sessionStorage.removeItem(COLD_LAUNCH_SESSION_KEY);
   setMaterialTransparency('standard');
+  resetLeaveCoordinatorForTests();
 });
 
 describe('AppShell', () => {
@@ -226,14 +232,24 @@ describe('AppShell', () => {
     expect(screen.getByRole('main')).toBeTruthy();
   });
 
-  it('uses main as the single application scroll owner', () => {
+  it('exposes one keyboard skip target on the single application scroll owner', async () => {
     render(AppShell, { props: { shell: makeShell() } });
 
     const owners = document.querySelectorAll('[data-app-scroll-region]');
+    const main = screen.getByRole('main');
+    const skipLink = screen.getByRole('link', { name: '跳到主要内容' });
     expect(owners).toHaveLength(1);
-    expect(owners[0]?.tagName).toBe('MAIN');
-    expect(owners[0]?.classList.contains('app-scroll-region')).toBe(true);
-    expect(owners[0]?.classList.contains('overflow-y-auto')).toBe(true);
+    expect(owners[0]).toBe(main);
+    expect(main.id).toBe('main-content');
+    expect(main.getAttribute('tabindex')).toBe('-1');
+    expect(main.classList.contains('app-scroll-region')).toBe(true);
+    expect(main.classList.contains('overflow-y-auto')).toBe(true);
+    expect(skipLink.getAttribute('href')).toBe('#main-content');
+
+    skipLink.focus();
+    expect(document.activeElement).toBe(skipLink);
+    await fireEvent.click(skipLink);
+    expect(document.activeElement).toBe(main);
   });
 
   it('keeps ambient audio as contract data without mini-player chrome', () => {
@@ -286,5 +302,34 @@ describe('AppShell', () => {
 
     render(AppShell, { props: { shell: makeShell() } });
     expect(screen.queryByRole('region', { name: 'LanJing 启动动画' })).toBeNull();
+  });
+  it('renders one portal leave dialog with exactly three coordinator actions', async () => {
+    const resolveLeave = vi.fn(() => Promise.resolve('resolved' as const));
+    registerLeaveGuard({
+      canLeave: () => false,
+      resolveLeave,
+      focusEditor: vi.fn(),
+    });
+    const replay = vi.fn();
+    render(AppShell, { props: { shell: makeShell() } });
+
+    expect(requestSurfaceClose(replay)).toBe('pending');
+    const dialog = await screen.findByRole('dialog');
+    const shell = screen.getByTestId('mode-shell');
+    const actions = within(dialog).getAllByRole('button');
+
+    expect(document.body.contains(dialog)).toBe(true);
+    expect(shell.contains(dialog)).toBe(false);
+    expect(actions).toHaveLength(3);
+    expect(actions.map((action) => action.getAttribute('data-leave-action'))).toEqual([
+      'continue',
+      'discard',
+      'save',
+    ]);
+
+    await fireEvent.click(within(dialog).getByRole('button', { name: /继续|Keep editing/ }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(resolveLeave).toHaveBeenCalledWith('continue');
+    expect(replay).not.toHaveBeenCalled();
   });
 });

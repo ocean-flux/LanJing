@@ -15,15 +15,17 @@
 </script>
 
 <nav
-  class="glass-chrome grid min-h-11 shrink-0 grid-cols-5 border-t border-hairline supports-backdrop-filter:backdrop-blur-[var(--material-blur)]"
-  style:padding-bottom="max(env(safe-area-inset-bottom), var(--shell-bottom-safe-padding))"
+  class="glass-chrome z-[var(--layer-chrome)] grid min-h-[var(--density-control-lg)] shrink-0 grid-cols-5 border-t border-hairline"
+  style:padding-right="var(--safe-area-right)"
+  style:padding-bottom="max(var(--safe-area-bottom), var(--shell-bottom-safe-padding))"
+  style:padding-left="var(--safe-area-left)"
   aria-label={m.nav_bottom()}
   data-bottom-nav="visible"
 >
   {#each navItems as item (item.key)}
     <a
       href={resolve(item.href)}
-      class="inline-flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1 text-[0.7rem] font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)] aria-[current=page]:text-ink"
+      class="inline-flex min-h-[var(--density-control-lg)] min-w-0 flex-col items-center justify-center gap-0 px-1 py-0.5 text-[0.6875rem] leading-none font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)] aria-[current=page]:text-ink"
       aria-current={active === item.key ? 'page' : undefined}
     >
       <Icon name={item.icon} class="size-[18px]" />
@@ -32,7 +34,7 @@
   {/each}
   <a
     href={resolve('/settings' as '/')}
-    class="inline-flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1 text-[0.7rem] font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)] aria-[current=page]:text-ink"
+    class="inline-flex min-h-[var(--density-control-lg)] min-w-0 flex-col items-center justify-center gap-0 px-1 py-0.5 text-[0.6875rem] leading-none font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)] aria-[current=page]:text-ink"
     aria-current={settingsActive ? 'page' : undefined}
   >
     <Icon name="gear-six" class="size-[18px]" />

@@ -41,7 +41,7 @@
 </script>
 
 <header
-  class="glass-chrome relative z-30 flex h-11 shrink-0 items-stretch border-b border-hairline text-ink supports-backdrop-filter:backdrop-blur-(--material-blur)"
+  class="glass-chrome relative z-[var(--layer-chrome)] flex h-[var(--density-control-lg)] shrink-0 items-stretch border-b border-hairline text-ink"
   style:padding-left={trafficLightInset}
   aria-label={m.titlebar_label({ context: contextLabel })}
   data-native-window-controls={nativeControlMode}
@@ -50,13 +50,13 @@
   data-macos-traffic-light-safe={trafficLightInset !== '0px' ? 'true' : undefined}
 >
   {#if compact}
-    <div class="flex min-w-0 flex-1 items-center px-4">
+    <div class="flex min-w-0 flex-1 items-center px-[var(--page-gutter)]">
       <span class="truncate text-sm font-semibold">{contextLabel}</span>
     </div>
   {:else}
     <a
       href={resolve('/')}
-      class="titlebar-no-drag inline-flex shrink-0 items-center gap-2 px-3 text-sm font-semibold outline-none hover:bg-surface-2 focus-visible:shadow-[inset_var(--focus-ring)]"
+      class="titlebar-no-drag inline-flex shrink-0 items-center gap-1.5 px-2.5 text-sm font-semibold outline-none hover:bg-surface-2 focus-visible:shadow-[inset_var(--focus-ring)]"
       aria-label={m.app_name()}
     >
       <LanJingMark size={20} label={m.app_name()} />
@@ -68,7 +68,7 @@
         <a
           href={resolve(item.href)}
           class={[
-            'relative inline-flex h-full items-center gap-1.5 px-3 text-sm font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)]',
+            'relative inline-flex h-full items-center gap-1.5 px-2.5 text-sm font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)]',
             active === item.key && !settingsActive && 'text-ink',
           ]}
           aria-current={active === item.key && !settingsActive ? 'page' : undefined}
@@ -87,7 +87,7 @@
       <a
         href={resolve('/settings' as '/')}
         class={[
-          'relative inline-flex h-full shrink-0 items-center gap-1.5 px-3 text-sm font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)]',
+          'relative inline-flex h-full shrink-0 items-center gap-1.5 px-2.5 text-sm font-medium text-ink-muted outline-none hover:bg-surface-2 hover:text-ink focus-visible:shadow-[inset_var(--focus-ring)]',
           settingsActive && 'text-ink',
         ]}
         aria-current={settingsActive ? 'page' : undefined}

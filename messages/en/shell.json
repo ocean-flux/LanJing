@@ -14,5 +14,11 @@
   "theme_mode_light": "Light",
   "theme_mode_dark": "Dark",
   "theme_mode_system": "System",
-  "window_controls_open": "Window controls"
+  "window_controls_open": "Window controls",
+  "shell_skip_to_main": "Skip to main content",
+  "shell_error_title": "Page unavailable",
+  "shell_error_heading": "Page unavailable",
+  "shell_error_description": "LanJing couldn't display this page. Return to Realm to continue.",
+  "shell_error_status": "Error {status}",
+  "shell_error_return": "Return to Realm"
 }

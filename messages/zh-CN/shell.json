@@ -14,5 +14,11 @@
   "theme_mode_light": "浅色",
   "theme_mode_dark": "深色",
   "theme_mode_system": "跟随系统",
-  "window_controls_open": "窗口控制"
+  "window_controls_open": "窗口控制",
+  "shell_skip_to_main": "跳到主要内容",
+  "shell_error_title": "页面不可用",
+  "shell_error_heading": "暂时无法打开此页面",
+  "shell_error_description": "览境无法显示此页面。你可以返回境场继续使用。",
+  "shell_error_status": "错误代码 {status}",
+  "shell_error_return": "返回境场"
 }
