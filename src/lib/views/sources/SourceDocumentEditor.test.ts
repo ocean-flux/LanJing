@@ -68,7 +68,7 @@ function createHost(initial: Partial<SourceDocumentEditorSnapshot> = {}) {
         unsubscribe();
       };
     }),
-    attach: vi.fn(() => detach),
+    attach: vi.fn<(container: HTMLElement) => typeof detach>(() => detach),
     start: vi.fn(() => undefined),
     retry: vi.fn(async () => undefined),
     editText: vi.fn((text: string) => {
@@ -103,6 +103,8 @@ describe('SourceDocumentEditor', () => {
       expect(fake.implementation.attach).toHaveBeenCalledTimes(1);
       expect(fake.implementation.start).toHaveBeenCalledWith('windows');
     });
+    const adapterContainer = fake.implementation.attach.mock.calls[0]?.[0];
+    expect(adapterContainer?.getAttribute('aria-label')).toBe(labels.editor);
     const status = screen.getByRole('status');
     expect(status.getAttribute('aria-live')).toBe('polite');
     expect(status.textContent).toBe('Idle');
@@ -228,6 +230,7 @@ describe('SourceDocumentEditor', () => {
         props: { host: fake.host, platform: 'android', labels },
       });
       const button = await screen.findByRole('button', { name: 'Retry smart editor' });
+      expect(screen.getByRole('alert').contains(button)).toBe(false);
 
       await fireEvent.click(button);
       const alert = await screen.findByText(labels.retryError);

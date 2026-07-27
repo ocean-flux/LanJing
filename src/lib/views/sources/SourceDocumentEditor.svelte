@@ -248,22 +248,20 @@
   {/if}
 
   {#if snapshot.fallbackReason}
-    <div class="px-3 pt-2.5">
+    <div class="space-y-2 px-3 pt-2.5">
       {#if retryable}
         <Notice tone="danger" role="alert" icon="warning-circle">
           {labels.fallbackReason(snapshot.fallbackReason)}
-          {#snippet action()}
-            <Button
-              bind:ref={retryButton}
-              type="button"
-              variant="outline"
-              class="h-auto min-h-(--density-control-md) max-w-full text-center whitespace-normal"
-              onclick={() => void retry()}
-            >
-              {labels.retry}
-            </Button>
-          {/snippet}
         </Notice>
+        <Button
+          bind:ref={retryButton}
+          type="button"
+          variant="outline"
+          class="h-auto min-h-(--density-control-md) max-w-full text-center whitespace-normal"
+          onclick={() => void retry()}
+        >
+          {labels.retry}
+        </Button>
       {:else}
         <Notice tone="danger" role="alert" icon="warning-circle">
           {labels.fallbackReason(snapshot.fallbackReason)}
@@ -284,6 +282,7 @@
       ]}
       role="group"
       aria-labelledby={labelId}
+      aria-label={labels.editor}
       aria-hidden={snapshot.status === 'fallback' || snapshot.status === 'disposed'}
       data-editor-adapter-container
       {@attach connectHost}

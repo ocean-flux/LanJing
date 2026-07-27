@@ -131,9 +131,11 @@ describe('SourcesHome', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('来源加载失败');
-    expect(within(alert).getAllByRole('button')).toHaveLength(1);
+    expect(within(alert).queryByRole('button')).toBeNull();
+    const retry = screen.getByRole('button', { name: '重试' });
+    expect(retry.closest('[role="alert"]')).toBeNull();
 
-    await fireEvent.click(within(alert).getByRole('button', { name: '重试' }));
+    await fireEvent.click(retry);
 
     expect(await screen.findByRole('heading', { name: '还没有已安装来源' })).toBeTruthy();
     expect(screen.queryByRole('textbox', { name: '规则 JSON' })).toBeNull();
@@ -247,9 +249,11 @@ describe('SourcesHome', () => {
     expect(await screen.findByRole('heading', { name: '还没有已安装来源' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: '安装来源' })).toBeNull();
     expect(screen.queryByRole('textbox', { name: '规则 JSON' })).toBeNull();
+    const addSource = screen.getByRole('button', { name: '添加来源' });
     expect(screen.getAllByRole('button', { name: '添加来源' })).toHaveLength(1);
+    expect(addSource.closest('[role="status"]')).toBeNull();
 
-    await fireEvent.click(screen.getByRole('button', { name: '添加来源' }));
+    await fireEvent.click(addSource);
 
     expect(await screen.findByRole('heading', { name: '安装来源' })).toBeTruthy();
     expect(screen.getByRole('textbox', { name: '规则 JSON' })).toBeTruthy();

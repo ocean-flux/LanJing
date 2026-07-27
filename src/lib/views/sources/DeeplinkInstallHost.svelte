@@ -306,7 +306,7 @@
     </div>
 
     <SheetFooter
-      class="bg-surface-1 px-(--density-panel-padding-compact) py-2.5 pb-[max(var(--density-panel-padding-compact),var(--safe-area-bottom))] sm:px-(--density-panel-padding)"
+      class="bg-surface-1 px-(--density-panel-padding-compact) py-2.5 sm:px-(--density-panel-padding)"
     >
       {#if surface.kind === 'pick' && phase === 'pick'}
         <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

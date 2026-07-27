@@ -231,7 +231,7 @@
     class={[
       'space-y-2.5 border-t border-hairline pt-3',
       stickyActions &&
-        'sticky bottom-0 bg-surface-1 pb-[max(var(--density-panel-padding-compact),var(--safe-area-bottom))] lg:static lg:pb-0',
+        'sticky bottom-0 bg-surface-1 pb-(--density-panel-padding-compact) lg:static lg:pb-0',
     ]}
     data-testid="install-actions"
   >

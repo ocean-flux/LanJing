@@ -150,35 +150,34 @@
       {m.sources_loading()}
     </Notice>
   {:else if loadError}
-    <Notice
-      tone="danger"
-      role="alert"
-      title={m.sources_load_error()}
-      icon="warning-circle"
-      class="w-full max-w-2xl"
-    >
-      <span class="break-words">{loadError}</span>
-      {#snippet action()}
-        <Button type="button" variant="outline" onclick={retryLoad}>
-          <Icon name="arrow-clockwise" class="size-4" />
-          <span>{m.action_retry()}</span>
-        </Button>
-      {/snippet}
-    </Notice>
+    <div class="w-full max-w-2xl space-y-2">
+      <Notice
+        tone="danger"
+        role="alert"
+        title={m.sources_load_error()}
+        icon="warning-circle"
+        class="w-full"
+      >
+        <span class="break-words">{loadError}</span>
+      </Notice>
+      <Button type="button" variant="outline" onclick={retryLoad}>
+        <Icon name="arrow-clockwise" class="size-4" />
+        <span>{m.action_retry()}</span>
+      </Button>
+    </div>
   {:else if sources.length === 0}
-    <EmptyState
-      title={m.sources_empty_title()}
-      description={m.sources_empty_hint()}
-      icon="database"
-      class="w-full max-w-2xl"
-    >
-      {#snippet action()}
-        <Button type="button" onclick={openInstaller}>
-          <Icon name="plus" class="size-4" />
-          <span>{m.action_add_source()}</span>
-        </Button>
-      {/snippet}
-    </EmptyState>
+    <div class="w-full max-w-2xl space-y-2">
+      <EmptyState
+        title={m.sources_empty_title()}
+        description={m.sources_empty_hint()}
+        icon="database"
+        class="w-full"
+      />
+      <Button type="button" onclick={openInstaller}>
+        <Icon name="plus" class="size-4" />
+        <span>{m.action_add_source()}</span>
+      </Button>
+    </div>
   {:else}
     <section aria-labelledby="installed-sources-title" class="flex min-w-0 flex-col gap-2.5">
       <div class="flex flex-wrap items-end justify-between gap-2">
