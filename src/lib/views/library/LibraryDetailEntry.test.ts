@@ -16,5 +16,6 @@ describe('LibraryDetailEntry', () => {
 
     expect(screen.getByTestId('library-detail-missing-id')).toBeTruthy();
     expect(screen.getByRole('alert').textContent).toContain('缺少 resource_id');
+    expect(screen.getByRole('link', { name: '返回资料库' }).getAttribute('href')).toBe('/library');
   });
 });

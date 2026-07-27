@@ -1,7 +1,10 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
+  import Notice from '$lib/components/Notice.svelte';
+  import PageFrame from '$lib/components/PageFrame.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
   import { m } from '$lib/i18n';
 
   type Props = {
@@ -13,41 +16,38 @@
   const hasId = $derived(Boolean(resourceId && resourceId.trim().length > 0));
 </script>
 
-<section class="mx-auto flex w-full max-w-6xl flex-col gap-6" data-testid="library-detail-entry">
-  <PageHeader title={m.library_detail_title()} />
+<div data-testid="library-detail-entry">
+  <PageFrame width="standard">
+    <div class="flex min-w-0 flex-col gap-3">
+      <Button href={resolve('/library' as '/')} variant="outline" class="self-start">
+        <Icon name="arrow-left" class="size-4" />
+        <span>{m.library_detail_back()}</span>
+      </Button>
+      <PageHeader title={m.library_detail_title()} />
+    </div>
 
-  {#if hasId}
-    <div
-      class="glass-panel rounded-xl border border-hairline px-5 py-5"
-      data-resource-id={resourceId}
-    >
-      <p class="text-xs font-medium text-ink-muted">{m.library_detail_resource_label()}</p>
-      <p class="mt-1 font-mono text-sm break-all text-ink" data-testid="library-detail-resource-id">
-        {resourceId}
-      </p>
-      <p class="mt-4 text-sm text-ink-subtle">{m.library_detail_placeholder()}</p>
-      <a
-        href={resolve('/library' as '/')}
-        class="glass-control mt-6 inline-flex min-h-11 items-center gap-2 rounded-lg border border-hairline-strong px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)]"
+    {#if hasId}
+      <div
+        class="glass-panel overflow-hidden rounded-[var(--radius-panel)] border border-hairline p-(--density-panel-padding-compact) sm:p-(--density-panel-padding)"
+        data-resource-id={resourceId}
       >
-        <Icon name="arrow-left" class="size-4" />
-        <span>{m.library_detail_back()}</span>
-      </a>
-    </div>
-  {:else}
-    <div
-      class="border-danger/35 bg-danger/10 rounded-xl border px-5 py-5"
-      role="alert"
-      data-testid="library-detail-missing-id"
-    >
-      <p class="text-danger text-sm font-medium">{m.library_detail_missing_id()}</p>
-      <a
-        href={resolve('/library' as '/')}
-        class="glass-control mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-hairline-strong px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)]"
-      >
-        <Icon name="arrow-left" class="size-4" />
-        <span>{m.library_detail_back()}</span>
-      </a>
-    </div>
-  {/if}
-</section>
+        <p class="text-xs font-medium text-ink-muted">{m.library_detail_resource_label()}</p>
+        <p
+          class="mt-1 font-mono text-sm break-all text-ink"
+          data-testid="library-detail-resource-id"
+        >
+          {resourceId}
+        </p>
+        <Notice tone="info" role="status" class="mt-4" icon="warning-circle">
+          {m.library_detail_placeholder()}
+        </Notice>
+      </div>
+    {:else}
+      <div data-testid="library-detail-missing-id">
+        <Notice tone="danger" role="alert" icon="warning-circle">
+          {m.library_detail_missing_id()}
+        </Notice>
+      </div>
+    {/if}
+  </PageFrame>
+</div>

@@ -1,9 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
-  import Icon from '$lib/components/Icon.svelte';
   import { resolve } from '$app/paths';
+  import EmptyState from '$lib/components/EmptyState.svelte';
+  import Icon from '$lib/components/Icon.svelte';
+  import Notice from '$lib/components/Notice.svelte';
+  import PageFrame from '$lib/components/PageFrame.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
   import { Skeleton } from '$lib/components/ui/skeleton';
   import { m } from '$lib/i18n';
   import type { MediaItem } from '$lib/views/media/media-api';
@@ -185,50 +189,52 @@
   }
 </script>
 
-<section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<PageFrame width="standard">
   <PageHeader title={m.library_title()} />
 
   {#if viewState.kind === 'loading'}
     <ul
-      class="glass-panel divide-y divide-hairline rounded-xl border border-hairline"
+      class="glass-panel divide-y divide-hairline overflow-hidden rounded-[var(--radius-panel)] border border-hairline"
       aria-busy="true"
       aria-label={m.library_loading()}
       role="status"
       data-testid="library-loading"
     >
       {#each [0, 1, 2] as skeleton (skeleton)}
-        <li class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:px-5">
-          <Skeleton class="size-11 rounded-md sm:size-12" />
-          <div class="min-w-0 space-y-2">
-            <Skeleton class="h-4 w-2/3 max-w-48" />
-            <Skeleton class="h-3 w-1/3 max-w-24" />
+        <li
+          class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-(--density-panel-padding-compact) py-2.5 sm:gap-3 sm:py-3"
+        >
+          <div class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 sm:gap-3">
+            <Skeleton class="size-10 shrink-0 rounded-md sm:size-11" />
+            <div class="min-w-0 space-y-2">
+              <Skeleton class="h-4 w-2/3 max-w-48" />
+              <Skeleton class="h-3 w-1/3 max-w-24" />
+            </div>
           </div>
-          <div class="flex gap-1">
-            <Skeleton class="size-11 rounded-md" />
-            <Skeleton class="size-11 rounded-md" />
+          <div class="flex shrink-0 gap-1">
+            <Skeleton class="size-(--density-control-md) rounded-md" />
+            <Skeleton class="size-(--density-control-md) rounded-md" />
           </div>
         </li>
       {/each}
     </ul>
   {:else if viewState.kind === 'load-error'}
-    <div class="border-danger/35 bg-danger/10 rounded-xl border px-5 py-5" role="alert">
-      <p class="text-danger text-sm font-medium">{m.library_load_error()}</p>
-      <button
-        type="button"
-        class="glass-control mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-hairline-strong px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)]"
-        onclick={loadProjection}
-      >
-        <Icon name="arrow-clockwise" class="size-4" />
-        <span>{m.library_retry()}</span>
-      </button>
-    </div>
+    <Notice tone="danger" role="alert" icon="warning-circle">
+      {m.library_load_error()}
+      {#snippet action()}
+        <Button type="button" variant="outline" onclick={loadProjection}>
+          <Icon name="arrow-clockwise" class="size-4" />
+          <span>{m.library_retry()}</span>
+        </Button>
+      {/snippet}
+    </Notice>
   {:else if viewState.kind === 'ready'}
     <ul
-      class="glass-panel divide-y divide-hairline rounded-xl border border-hairline"
+      class="glass-panel divide-y divide-hairline overflow-hidden rounded-[var(--radius-panel)] border border-hairline"
       aria-label={m.library_title()}
     >
       {#each rows as entry (entry.resource_id)}
-        <li>
+        <li class="min-w-0">
           <LibraryEntryRow
             {entry}
             pending={pendingResourceIds.has(entry.resource_id)}
@@ -239,23 +245,21 @@
       {/each}
     </ul>
   {:else}
-    <div
-      class="glass-panel rounded-xl border border-hairline px-5 py-5"
-      role="status"
-      data-testid="library-empty"
-    >
-      <h2 class="text-sm font-semibold text-ink">{m.library_empty_title()}</h2>
-      <a
-        href={resolve('/sources' as '/')}
-        class="glass-control mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border border-hairline-strong px-4 text-sm font-semibold text-ink outline-none hover:bg-surface-2 focus-visible:shadow-[var(--focus-ring)]"
-      >
-        <Icon name="arrow-right" class="size-4" />
-        <span>{m.action_manage_sources()}</span>
-      </a>
+    <div data-testid="library-empty">
+      <EmptyState title={m.library_empty_title()} icon="list-bullets">
+        {#snippet action()}
+          <Button href={resolve('/sources' as '/')} variant="outline">
+            <span>{m.action_manage_sources()}</span>
+            <Icon name="arrow-right" class="size-4" />
+          </Button>
+        {/snippet}
+      </EmptyState>
     </div>
   {/if}
 
   {#if updateError}
-    <p class="text-danger text-sm" role="alert">{m.library_update_error()}</p>
+    <Notice tone="danger" role="alert" icon="warning-circle">
+      {m.library_update_error()}
+    </Notice>
   {/if}
-</section>
+</PageFrame>

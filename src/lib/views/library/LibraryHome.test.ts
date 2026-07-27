@@ -135,6 +135,8 @@ describe('LibraryHome', () => {
 
     const favorite = screen.getByRole('button', { name: '取消收藏' });
     const pin = screen.getByRole('button', { name: '取消固定' });
+    expect(favorite.getAttribute('aria-pressed')).toBe('true');
+    expect(pin.getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByText('修订 3')).toBeTruthy();
     await fireEvent.click(favorite);
     await fireEvent.click(pin);
@@ -146,6 +148,10 @@ describe('LibraryHome', () => {
 
     resolveFirst?.({ global_seq: 9, revision: 4 });
     await waitFor(() => expect(screen.getByText('修订 4')).toBeTruthy());
+    expect(screen.getByRole('button', { name: '收藏' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: '取消固定' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
     await fireEvent.click(screen.getByRole('button', { name: '取消固定' }));
 
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
@@ -155,6 +161,8 @@ describe('LibraryHome', () => {
       pinned: false,
       revision: 4,
     });
+    // 既不收藏也不固定、且无打开/进度记录时，投影会把条目移出资料库。
+    await waitFor(() => expect(screen.getByTestId('library-empty')).toBeTruthy());
   });
 
   it('does not let stale media enrichment overwrite a successful state update', async () => {
