@@ -1,6 +1,13 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { BeforeNavigate } from '@sveltejs/kit';
 import ModeShell from './ModeShell.svelte';
+import ModeShellPlatformContextHarness from './ModeShellPlatformContextHarness.test.svelte';
+import {
+  registerLeaveGuard,
+  resetLeaveCoordinatorForTests,
+  resolvePendingLeave,
+} from './leave-coordinator.svelte';
 import {
   getActivityOverride,
   resetShellSession,
@@ -8,6 +15,30 @@ import {
   setAmbientAudio,
 } from './shell-session.svelte';
 import type { ModeShellContract } from './shell-types';
+import type { RuntimePlatform } from './platform-runtime';
+
+const resolveRuntimePlatform = vi.hoisted(() =>
+  vi.fn<() => Promise<RuntimePlatform>>(() => Promise.resolve('unknown')),
+);
+
+const tauriWindowMocks = vi.hoisted(() => {
+  const unlisten = vi.fn();
+  const onCloseRequested = vi.fn(async () => unlisten);
+  const destroy = vi.fn(() => Promise.resolve());
+  const getCurrentWindow = vi.fn(() => ({ onCloseRequested, destroy }));
+  return { destroy, getCurrentWindow, onCloseRequested, unlisten };
+});
+
+const navigationMocks = vi.hoisted(() => ({
+  beforeNavigate: vi.fn<(callback: (navigation: BeforeNavigate) => void) => void>(),
+  goto: vi.fn<(url: string | URL, options?: { replaceState?: boolean }) => Promise<void>>(() =>
+    Promise.resolve(),
+  ),
+}));
+
+vi.mock('./platform-runtime', () => ({ resolveRuntimePlatform }));
+vi.mock('$app/navigation', () => navigationMocks);
+vi.mock('@tauri-apps/api/window', () => ({ getCurrentWindow: tauriWindowMocks.getCurrentWindow }));
 
 const contract: ModeShellContract = {
   productContext: 'library',
@@ -54,11 +85,92 @@ function setViewport(width: number, height: number) {
   window.dispatchEvent(new Event('resize'));
 }
 
+type TauriRuntimeWindow = Window & { __TAURI_INTERNALS__?: object };
+
+function enableTauriRuntime() {
+  (window as TauriRuntimeWindow).__TAURI_INTERNALS__ = {};
+}
+
 afterEach(() => {
   resetShellSession();
+  resetLeaveCoordinatorForTests();
+  navigationMocks.beforeNavigate.mockReset();
+  navigationMocks.goto.mockReset();
+  navigationMocks.goto.mockResolvedValue(undefined);
+  resolveRuntimePlatform.mockReset();
+  resolveRuntimePlatform.mockResolvedValue('unknown');
+  delete (window as TauriRuntimeWindow).__TAURI_INTERNALS__;
+  tauriWindowMocks.destroy.mockClear();
+  tauriWindowMocks.getCurrentWindow.mockClear();
+  tauriWindowMocks.onCloseRequested.mockClear();
+  tauriWindowMocks.unlisten.mockClear();
 });
 
 describe('ModeShell', () => {
+  it('publishes the asynchronously resolved OS through the reactive platform context', async () => {
+    let resolvePlatform: ((platform: RuntimePlatform) => void) | undefined;
+    resolveRuntimePlatform.mockReset();
+    resolveRuntimePlatform.mockImplementationOnce(
+      () =>
+        new Promise<RuntimePlatform>((resolve) => {
+          resolvePlatform = resolve;
+        }),
+    );
+
+    render(ModeShellPlatformContextHarness);
+    const probe = screen.getByTestId('platform-context-probe');
+    expect(probe.textContent).toBe('unknown');
+    await waitFor(() => expect(resolveRuntimePlatform).toHaveBeenCalledTimes(1));
+
+    if (!resolvePlatform) throw new Error('Runtime platform resolver was not started');
+    resolvePlatform('windows');
+
+    await waitFor(() => {
+      expect(probe.textContent).toBe('windows');
+      expect(screen.getByTestId('mode-shell').getAttribute('data-platform')).toBe('windows');
+    });
+  });
+
+  it('registers and cleans the desktop close guard when the OS query resolves', async () => {
+    enableTauriRuntime();
+    resolveRuntimePlatform.mockResolvedValueOnce('windows');
+    const view = render(ModeShell);
+
+    try {
+      await waitFor(() => expect(tauriWindowMocks.onCloseRequested).toHaveBeenCalledOnce());
+    } finally {
+      view.unmount();
+    }
+    await waitFor(() => expect(tauriWindowMocks.unlisten).toHaveBeenCalledOnce());
+  });
+
+  it('registers and cleans the desktop close guard when the OS query rejects', async () => {
+    enableTauriRuntime();
+    resolveRuntimePlatform.mockRejectedValueOnce(new Error('OS plugin unavailable'));
+    const view = render(ModeShell);
+
+    try {
+      await waitFor(() => expect(tauriWindowMocks.onCloseRequested).toHaveBeenCalledOnce());
+      expect(screen.getByTestId('mode-shell').getAttribute('data-platform')).toBe('browser');
+    } finally {
+      view.unmount();
+    }
+    await waitFor(() => expect(tauriWindowMocks.unlisten).toHaveBeenCalledOnce());
+  });
+
+  it('does not import or register the Tauri close guard in a browser runtime', async () => {
+    resolveRuntimePlatform.mockResolvedValueOnce('unknown');
+    const view = render(ModeShell);
+
+    try {
+      await waitFor(() => expect(resolveRuntimePlatform).toHaveBeenCalledOnce());
+      expect(tauriWindowMocks.getCurrentWindow).not.toHaveBeenCalled();
+      expect(tauriWindowMocks.onCloseRequested).not.toHaveBeenCalled();
+    } finally {
+      view.unmount();
+    }
+  });
+
   it('passes product, media, activity, presentation, platform, theme, and audio through one boundary', () => {
     render(ModeShell, { props: { shell: contract } });
 
@@ -304,5 +416,51 @@ describe('ModeShell', () => {
         value: originalMatchMedia,
       });
     }
+  });
+  it('registers one route interceptor and replays an approved internal navigation once', async () => {
+    const resolveLeave = vi.fn(() => Promise.resolve('resolved' as const));
+    registerLeaveGuard({ canLeave: () => false, resolveLeave });
+    render(ModeShell, { props: { shell: contract } });
+    const callback = navigationMocks.beforeNavigate.mock.calls.at(-1)?.[0];
+    if (!callback) throw new Error('beforeNavigate was not registered');
+
+    const cancel = vi.fn();
+    const target = new URL('https://lanjing.test/sources');
+    callback({
+      cancel,
+      willUnload: false,
+      type: 'link',
+      from: { url: new URL('https://lanjing.test/sources/rules') },
+      to: { url: target },
+    } as unknown as BeforeNavigate);
+
+    expect(cancel).toHaveBeenCalledOnce();
+    await expect(resolvePendingLeave('discard')).resolves.toBe('resolved');
+    expect(resolveLeave).toHaveBeenCalledWith('discard');
+    expect(navigationMocks.goto).toHaveBeenCalledOnce();
+    expect(navigationMocks.goto).toHaveBeenCalledWith('/sources');
+  });
+
+  it('replays an approved popstate target through goto without another history event', async () => {
+    registerLeaveGuard({
+      canLeave: () => false,
+      resolveLeave: () => Promise.resolve('resolved'),
+    });
+    render(ModeShell, { props: { shell: contract } });
+    const callback = navigationMocks.beforeNavigate.mock.calls.at(-1)?.[0];
+    if (!callback) throw new Error('beforeNavigate was not registered');
+
+    callback({
+      cancel: vi.fn(),
+      willUnload: false,
+      type: 'popstate',
+      delta: -1,
+      from: { url: new URL('https://lanjing.test/sources/rules') },
+      to: { url: new URL('https://lanjing.test/library') },
+    } as unknown as BeforeNavigate);
+
+    await expect(resolvePendingLeave('discard')).resolves.toBe('resolved');
+    expect(navigationMocks.goto).toHaveBeenCalledOnce();
+    expect(navigationMocks.goto).toHaveBeenCalledWith('/library', { replaceState: true });
   });
 });

@@ -17,13 +17,13 @@
     }
   },
   "app": {
-    "withGlobalTauri": false,
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Lanjing",
         "width": 1440,
         "height": 960,
-        "minWidth": 1100,
+        "minWidth": 768,
         "minHeight": 720,
         "resizable": true,
         "decorations": false,

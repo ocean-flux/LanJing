@@ -1,5 +1,5 @@
 /**
- * 壳模式解析：由 pathname / 视口 / UA 推导产品上下文、前台活动与平台能力。
+ * 壳模式解析：由 pathname / 视口 / 显式平台输入推导产品上下文、前台活动与平台能力。
  * 纯函数；不读写 store，供 ModeShell 装配契约。
  */
 import type {
@@ -21,13 +21,13 @@ export type ShellModeInput = {
   pointer: PointerKind;
 };
 
-/** 平台能力解析输入；缺省从 navigator / window 补。 */
+/** 平台能力解析输入；OS 必须由 runtime owner 显式提供。 */
 export type PlatformInput = {
+  kind: PlatformKind;
   width: number;
   height: number;
   hover: HoverKind;
   pointer: PointerKind;
-  userAgent?: string;
   tauri?: boolean;
 };
 
@@ -44,16 +44,6 @@ export function resolveForegroundActivity(pathname: string): ForegroundActivity 
   return { kind: 'browse', id: resolveProductContext(pathname) };
 }
 
-function resolvePlatformKind(userAgent: string): PlatformKind {
-  const value = userAgent.toLowerCase();
-  if (value.includes('android')) return 'android';
-  if (value.includes('iphone') || value.includes('ipad')) return 'ios';
-  if (value.includes('windows')) return 'windows';
-  if (value.includes('mac')) return 'macos';
-  if (value.includes('linux')) return 'linux';
-  return 'browser';
-}
-
 function resolveWindowControls(kind: PlatformKind, tauri: boolean): NativeWindowControlMode {
   if (!tauri) return 'browser-preview';
   // macOS：交通灯由平台覆盖配置提供，不重复渲染 HTML 控件。
@@ -65,17 +55,11 @@ function resolveWindowControls(kind: PlatformKind, tauri: boolean): NativeWindow
 
 /** 汇总平台能力：OS 类、朝向、指针与窗口控件模式。 */
 export function resolvePlatformCapabilities(input: PlatformInput): PlatformCapabilities {
-  const userAgent =
-    input.userAgent ?? (typeof navigator === 'undefined' ? '' : navigator.userAgent);
-  const tauri =
-    input.tauri ??
-    (typeof window !== 'undefined' &&
-      ('__TAURI_INTERNALS__' in window || userAgent.toLowerCase().includes('tauri')));
-  const kind = resolvePlatformKind(userAgent);
+  const tauri = input.tauri ?? (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window);
   const orientation: Orientation = input.width >= input.height ? 'landscape' : 'portrait';
 
   return {
-    kind,
+    kind: input.kind,
     orientation,
     viewportWidth: input.width,
     viewportHeight: input.height,
@@ -83,7 +67,7 @@ export function resolvePlatformCapabilities(input: PlatformInput): PlatformCapab
     pointer: input.pointer,
     keyboard: input.pointer === 'fine',
     touch: input.pointer === 'coarse',
-    windowControls: resolveWindowControls(kind, tauri),
+    windowControls: resolveWindowControls(input.kind, tauri),
   };
 }
 

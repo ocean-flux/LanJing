@@ -1,6 +1,14 @@
 <script lang="ts">
+  import { beforeNavigate, goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
+  import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { getAppearancePack, getMode } from '$lib/stores/theme.svelte';
+  import type { BeforeNavigate } from '@sveltejs/kit';
+  import type { Pathname } from '$app/types';
+  import { interceptRouteLeave, startTauriCloseRequested } from './leave-coordinator.svelte';
+  import { resolveRuntimePlatform, type RuntimePlatform } from './platform-runtime';
+  import { setPlatformContext } from './platform-context.svelte';
   import AppShell from './AppShell.svelte';
   import {
     resolveForegroundActivity,
@@ -24,7 +32,7 @@
   let { children, shell }: Props = $props();
   let viewportWidth = $state(typeof window === 'undefined' ? 1280 : window.innerWidth);
   let viewportHeight = $state(typeof window === 'undefined' ? 800 : window.innerHeight);
-  let previousPathname: string | undefined;
+  let runtimePlatform = $state<RuntimePlatform>('unknown');
   // 系统 a11y 偏好需随 media change 重绑，保证壳层 data-* / 材质与系统一致。
   let reducedMotion = $state(
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -41,22 +49,41 @@
       ? 'fine'
       : 'coarse';
 
-  const platform = $derived(
-    resolvePlatformCapabilities({ width: viewportWidth, height: viewportHeight, hover, pointer }),
+  const providedRuntimePlatform = $derived<RuntimePlatform>(
+    shell ? (shell.platform.kind === 'browser' ? 'unknown' : shell.platform.kind) : runtimePlatform,
   );
-
-  // 路径变化时先清除活动覆盖再渲染；环境音频仍由会话拥有。
-  $effect.pre(() => {
-    const pathname = page.url.pathname;
-    if (previousPathname !== undefined && previousPathname !== pathname) {
-      notifyPathnameChanged();
-    }
-    previousPathname = pathname;
+  setPlatformContext({
+    get platform() {
+      return providedRuntimePlatform;
+    },
   });
 
-  $effect(() => {
-    if (typeof window === 'undefined') return;
+  function replayRouteNavigation(navigation: BeforeNavigate): Promise<void> | void {
+    if (!navigation.to) return;
+    const target =
+      `${navigation.to.url.pathname}${navigation.to.url.search}${navigation.to.url.hash}` as Pathname;
+    if (navigation.type === 'popstate') {
+      return goto(resolve(target), { replaceState: true });
+    }
+    return goto(resolve(target));
+  }
 
+  beforeNavigate((navigation) => {
+    const focusTarget =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const outcome = interceptRouteLeave(
+      navigation,
+      () => replayRouteNavigation(navigation),
+      focusTarget,
+    );
+    if (outcome === 'allow' && navigation.from?.url.pathname !== navigation.to?.url.pathname) {
+      notifyPathnameChanged();
+    }
+  });
+
+  onMount(() => {
+    let cancelled = false;
+    let stopTauriClose: (() => void) | undefined;
     const motionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const transparencyMq = window.matchMedia('(prefers-reduced-transparency: reduce)');
 
@@ -72,11 +99,45 @@
     motionMq.addEventListener('change', syncMotion);
     transparencyMq.addEventListener('change', syncTransparency);
 
+    if ('__TAURI_INTERNALS__' in window) {
+      void startTauriCloseRequested().then((stop) => {
+        if (cancelled) stop();
+        else stopTauriClose = stop;
+      });
+    }
+
+    if (!shell) {
+      void resolveRuntimePlatform().then(
+        (resolvedPlatform) => {
+          if (cancelled || shell) return;
+          runtimePlatform = resolvedPlatform;
+        },
+        () => {
+          if (!cancelled && !shell) runtimePlatform = 'unknown';
+        },
+      );
+    }
+
     return () => {
+      cancelled = true;
+      stopTauriClose?.();
       motionMq.removeEventListener('change', syncMotion);
       transparencyMq.removeEventListener('change', syncTransparency);
     };
   });
+
+  const platform = $derived(
+    resolvePlatformCapabilities({
+      width: viewportWidth,
+      height: viewportHeight,
+      hover,
+      pointer,
+      kind: runtimePlatform === 'unknown' ? 'browser' : runtimePlatform,
+      tauri: runtimePlatform !== 'unknown',
+    }),
+  );
+
+  // beforeNavigate 由 SvelteKit 随组件释放；runtime、media 与 Tauri close listener 在 onMount teardown 清理。
 
   const orchestratedShell = $derived.by<ModeShellContract>(() => {
     const pathname = page.url.pathname;

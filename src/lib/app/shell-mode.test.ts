@@ -44,11 +44,11 @@ describe('resolveShellMode', () => {
   it('keeps platform capabilities explicit across orientation changes', () => {
     expect(
       resolvePlatformCapabilities({
+        kind: 'android',
         width: 390,
         height: 844,
         hover: 'none',
         pointer: 'coarse',
-        userAgent: 'Android',
         tauri: true,
       }),
     ).toMatchObject({
@@ -60,11 +60,11 @@ describe('resolveShellMode', () => {
     });
     expect(
       resolvePlatformCapabilities({
+        kind: 'windows',
         width: 1440,
         height: 900,
         hover: 'hover',
         pointer: 'fine',
-        userAgent: 'Windows NT',
         tauri: true,
       }),
     ).toMatchObject({
@@ -73,6 +73,25 @@ describe('resolveShellMode', () => {
       keyboard: true,
       touch: false,
       windowControls: 'windows-overlay',
+    });
+  });
+
+  it('keeps explicit OS independent from viewport and pointer capabilities', () => {
+    expect(
+      resolvePlatformCapabilities({
+        kind: 'ios',
+        width: 1440,
+        height: 900,
+        hover: 'hover',
+        pointer: 'fine',
+        tauri: true,
+      }),
+    ).toMatchObject({
+      kind: 'ios',
+      orientation: 'landscape',
+      keyboard: true,
+      touch: false,
+      windowControls: 'system-decorated',
     });
   });
 });
