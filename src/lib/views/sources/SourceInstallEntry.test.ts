@@ -17,11 +17,15 @@ vi.mock('$lib/stores/rules.svelte', () => ({
 
 const legadoCandidate: InstallCandidate = {
   id: 'candidate:legado',
+  document_ref: null,
+  transient: true,
+  expected_installed_revision: 0,
   profile: {
     id: 'profile:legado',
     title: 'Legado Source',
     icon_url: null,
     version: '1.0.0',
+    group: null,
     supported_intents: ['Search'],
     risk_notes: [],
   },
@@ -29,7 +33,7 @@ const legadoCandidate: InstallCandidate = {
     network: false,
     system: { fs: false, env: false, process: false },
   },
-  diagnostics: [{ code: 'INFO', message: 'ready' }],
+  diagnostics: [{ code: 'INFO', severity: 'info', message: 'ready' }],
   definition_hash: 'definition-hash-abcdef012345',
   plan_hash: 'plan-hash-abcdef012345',
   expires_at_ms: Date.now() + 60_000,

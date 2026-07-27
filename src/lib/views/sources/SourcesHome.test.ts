@@ -65,6 +65,10 @@ const installedSource: InstalledSource = {
   source_id: 'source:one',
   version: '2.3.1',
   revision: 7,
+  document_ref: {
+    document_id: 'document:one',
+    document_revision: 7,
+  },
   profile: {
     id: 'profile:one',
     title: '真实来源',
@@ -80,6 +84,7 @@ const ungroupedSource: InstalledSource = {
   source_id: 'source:two',
   version: '1.0.0',
   revision: 1,
+  document_ref: null,
   profile: {
     id: 'profile:two',
     title: '未分组来源',
@@ -143,6 +148,12 @@ describe('SourcesHome', () => {
     expect(within(article!).queryByText('7')).toBeNull();
     expect(within(article!).getByText('搜索')).toBeTruthy();
     expect(within(article!).getByText('解析条目')).toBeTruthy();
+    expect(within(article!).getByRole('link', { name: '编辑规则' }).getAttribute('href')).toBe(
+      '/sources/rules?document_id=document%3Aone',
+    );
+    expect(screen.getByRole('link', { name: '打开规则工作区' }).getAttribute('href')).toBe(
+      '/sources/rules',
+    );
     expect(within(article!).getByText('仅访问目标站点')).toBeTruthy();
 
     const add = screen.getByRole('button', { name: '添加来源' });
@@ -170,6 +181,19 @@ describe('SourcesHome', () => {
     await fireEvent.click(screen.getByRole('button', { name: '全部' }));
     expect(screen.getByRole('heading', { name: '真实来源' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: '未分组来源' })).toBeTruthy();
+  });
+
+  it('routes legacy installed sources into the no-snapshot paste flow', async () => {
+    store.setSnapshot({ sources: [ungroupedSource] });
+    render(SourcesHome);
+
+    const sourceHeading = await screen.findByRole('heading', { name: '未分组来源' });
+    const article = sourceHeading.closest('article');
+    expect(article).toBeTruthy();
+    expect(within(article!).getByText('原文不可用')).toBeTruthy();
+    expect(within(article!).getByRole('link', { name: '重新粘贴原文' }).getAttribute('href')).toBe(
+      '/sources/rules?legacy_source_id=source%3Atwo',
+    );
   });
 
   it('opens the shared sheet from the successful empty state CTA', async () => {

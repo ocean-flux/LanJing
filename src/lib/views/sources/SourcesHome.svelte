@@ -135,13 +135,11 @@
 <section class="mx-auto flex w-full max-w-6xl flex-col gap-6">
   <PageHeader
     title={m.sources_title()}
-    action={!loading && !loadError && sources.length > 0
-      ? {
-          label: m.action_add_source(),
-          icon: 'plus',
-          onclick: openInstaller,
-        }
-      : undefined}
+    action={{
+      label: m.sources_rules_open_workspace(),
+      icon: 'arrow-right',
+      href: '/sources/rules',
+    }}
   />
 
   {#if loading}
@@ -185,9 +183,15 @@
     </div>
   {:else}
     <section aria-labelledby="installed-sources-title" class="flex flex-col gap-3">
-      <h2 id="installed-sources-title" class="text-sm font-semibold text-ink">
-        {m.sources_installed_title()}
-      </h2>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="installed-sources-title" class="text-sm font-semibold text-ink">
+          {m.sources_installed_title()}
+        </h2>
+        <Button type="button" variant="outline" onclick={openInstaller} class="min-h-11">
+          <Icon name="plus" class="size-4" />
+          <span>{m.action_add_source()}</span>
+        </Button>
+      </div>
 
       <div
         class="-mx-1 flex [scrollbar-width:none] gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden"

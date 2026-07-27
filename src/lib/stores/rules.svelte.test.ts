@@ -6,10 +6,13 @@ vi.mock('@tauri-apps/api/core', () => ({ invoke }));
 
 import {
   getInstalledSources,
+  getError,
+  getLoading,
   installCandidate,
   loadInstalledSources,
   prepareInstall,
   prepareMaccmsInstall,
+  refreshInstalledSources,
 } from './rules.svelte';
 
 describe('rules RuleSystem wire', () => {
@@ -17,34 +20,58 @@ describe('rules RuleSystem wire', () => {
     invoke.mockReset();
   });
 
-  it('uses prepare_install for the Legado source input', async () => {
-    const candidate = { id: 'candidate:one', profile: {}, diagnostics: [] };
+  it('uses transient prepare_install staging for the Legado source input', async () => {
+    const candidate = {
+      id: 'candidate:one',
+      document_ref: null,
+      transient: true,
+      expected_installed_revision: 0,
+      profile: {},
+      diagnostics: [],
+    };
     invoke.mockResolvedValue(candidate);
 
-    await expect(prepareInstall('{"bookSourceUrl":"https://example.test"}')).resolves.toBe(
-      candidate,
-    );
+    const result = await prepareInstall('{"bookSourceUrl":"https://example.test"}');
+    expect(result).toBe(candidate);
+    expect(result).toMatchObject({
+      document_ref: null,
+      transient: true,
+      expected_installed_revision: 0,
+    });
     expect(invoke).toHaveBeenCalledWith('prepare_install', {
       request: {
         kind: 'legado',
         source_json: '{"bookSourceUrl":"https://example.test"}',
       },
     });
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 
-  it('uses prepare_install for Maccms JSON URL input', async () => {
-    const candidate = { id: 'candidate:maccms', profile: {}, diagnostics: [] };
+  it('uses transient prepare_install staging for the Maccms JSON URL input', async () => {
+    const candidate = {
+      id: 'candidate:maccms',
+      document_ref: null,
+      transient: true,
+      expected_installed_revision: 0,
+      profile: {},
+      diagnostics: [],
+    };
     invoke.mockResolvedValue(candidate);
 
-    await expect(prepareMaccmsInstall('https://api.example.test/provide/vod')).resolves.toBe(
-      candidate,
-    );
+    const result = await prepareMaccmsInstall('https://api.example.test/provide/vod');
+    expect(result).toBe(candidate);
+    expect(result).toMatchObject({
+      document_ref: null,
+      transient: true,
+      expected_installed_revision: 0,
+    });
     expect(invoke).toHaveBeenCalledWith('prepare_install', {
       request: {
         kind: 'maccms_json',
         url: 'https://api.example.test/provide/vod',
       },
     });
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 
   it('installs an opaque candidate and refreshes installed sources', async () => {
@@ -67,5 +94,24 @@ describe('rules RuleSystem wire', () => {
     await loadInstalledSources();
 
     expect(invoke).toHaveBeenCalledWith('list_installed_sources');
+  });
+
+  it('rejects coordinator refresh failures while retaining observable store state', async () => {
+    let rejectRefresh!: (reason?: unknown) => void;
+    invoke.mockImplementationOnce(
+      () =>
+        new Promise<never>((_resolve, reject) => {
+          rejectRefresh = reject;
+        }),
+    );
+
+    const refresh = refreshInstalledSources();
+    expect(getLoading()).toBe(true);
+    expect(getError()).toBeNull();
+
+    rejectRefresh(new Error('installed list unavailable'));
+    await expect(refresh).rejects.toThrow('installed list unavailable');
+    expect(getLoading()).toBe(false);
+    expect(getError()).toBe('Error: installed list unavailable');
   });
 });

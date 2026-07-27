@@ -14,11 +14,15 @@ const sourceInput = '{"bookSourceName":"保留输入"}';
 
 const candidate: InstallCandidate = {
   id: 'candidate:one',
+  document_ref: null,
+  transient: true,
+  expected_installed_revision: 0,
   profile: {
     id: 'profile:one',
     title: '示例来源',
     icon_url: null,
     version: '2.3.1',
+    group: null,
     supported_intents: ['Search'],
     risk_notes: ['仅访问目标站点'],
   },
@@ -34,6 +38,7 @@ const candidate: InstallCandidate = {
 
 const installedSource: InstalledSource = {
   source_id: 'source:one',
+  document_ref: null,
   version: '2.3.1',
   profile: candidate.profile,
   revision: 1,

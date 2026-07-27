@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tokenizeJson, type JsonToken } from './json-highlight';
+  import type { Attachment } from 'svelte/attachments';
 
   type Props = {
     id?: string;
@@ -8,6 +9,9 @@
     disabled?: boolean;
     rows?: number;
     class?: string;
+    ref?: HTMLTextAreaElement | null;
+    ariaLabel?: string;
+    onValueChange?: (value: string) => void;
   };
 
   let {
@@ -17,10 +21,12 @@
     disabled = false,
     rows = 7,
     class: className = '',
+    ref = $bindable(null),
+    ariaLabel,
+    onValueChange,
   }: Props = $props();
 
-  let textareaEl = $state<HTMLTextAreaElement | null>(null);
-  let mirrorEl = $state<HTMLPreElement | null>(null);
+  let mirrorEl: HTMLPreElement | null = null;
 
   const tokens = $derived.by((): JsonToken[] => {
     try {
@@ -51,10 +57,33 @@
     }
   }
 
+  const attachMirror: Attachment<HTMLPreElement> = (element) => {
+    mirrorEl = element;
+    return () => {
+      if (mirrorEl === element) mirrorEl = null;
+    };
+  };
+
+  const attachTextarea: Attachment<HTMLTextAreaElement> = (element) => {
+    ref = element;
+    return () => {
+      if (ref === element) ref = null;
+    };
+  };
+
+  function handleInput(event: Event): void {
+    const nextValue = (event.currentTarget as HTMLTextAreaElement).value;
+    if (onValueChange) {
+      onValueChange(nextValue);
+      return;
+    }
+    value = nextValue;
+  }
+
   function syncScroll(): void {
-    if (!textareaEl || !mirrorEl) return;
-    mirrorEl.scrollTop = textareaEl.scrollTop;
-    mirrorEl.scrollLeft = textareaEl.scrollLeft;
+    if (!ref || !mirrorEl) return;
+    mirrorEl.scrollTop = ref.scrollTop;
+    mirrorEl.scrollLeft = ref.scrollLeft;
   }
 </script>
 
@@ -63,7 +92,7 @@
   data-testid="json-highlight-editor"
 >
   <pre
-    bind:this={mirrorEl}
+    {@attach attachMirror}
     class="json-highlight-mirror pointer-events-none absolute inset-0 m-0 overflow-auto px-3 py-2 font-mono text-sm leading-5 break-words whitespace-pre-wrap text-ink"
     aria-hidden="true">{#if tokens.length === 0 || !(value ?? '')}<span class="jh-placeholder"
         >{placeholder}</span
@@ -71,10 +100,10 @@
             class={tokenClass(token.kind)}>{token.text}</span
           >{/if}{/each}{/if}</pre>
   <textarea
-    bind:this={textareaEl}
+    {@attach attachTextarea}
     {id}
-    bind:value
-    {placeholder}
+    value={value ?? ''}
+    aria-label={ariaLabel}
     {disabled}
     {rows}
     spellcheck="false"
@@ -82,6 +111,7 @@
     autocapitalize="off"
     data-testid="json-highlight-input"
     class="relative z-10 min-h-32 w-full resize-y bg-transparent px-3 py-2 font-mono text-sm leading-5 break-words text-transparent caret-ink outline-none placeholder:text-transparent focus-visible:ring-2 focus-visible:ring-lantern/35 focus-visible:ring-inset disabled:cursor-not-allowed disabled:opacity-50"
+    oninput={handleInput}
     onscroll={syncScroll}></textarea>
 </div>
 

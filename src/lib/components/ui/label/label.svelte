@@ -1,12 +1,13 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+  import type { HTMLLabelAttributes } from 'svelte/elements';
   import { cn } from '$lib/utils.js';
 
-  let {
-    class: className,
-    ...rest
-  }: {
-    class?: string;
-  } & import('svelte/elements').HTMLLabelAttributes = $props();
+  type Props = Omit<HTMLLabelAttributes, 'children'> & {
+    children?: Snippet;
+  };
+
+  let { class: className, children, ...rest }: Props = $props();
 </script>
 
 <label
@@ -18,5 +19,3 @@
 >
   {@render children?.()}
 </label>
-
-{#snippet children()}{/snippet}

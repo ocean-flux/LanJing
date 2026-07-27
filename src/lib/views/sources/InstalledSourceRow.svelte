@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
+  import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';
   import type { InstalledSource, StandardIntent } from '$lib/stores/rules.svelte';
 
@@ -23,6 +25,14 @@
     source.profile.group && source.profile.group.trim().length > 0
       ? source.profile.group.trim()
       : m.sources_group_ungrouped(),
+  );
+
+  const workspaceBase = resolve('/sources/rules');
+
+  const workspaceHref = $derived(
+    source.document_ref
+      ? `${workspaceBase}?document_id=${encodeURIComponent(source.document_ref.document_id)}`
+      : `${workspaceBase}?legacy_source_id=${encodeURIComponent(source.source_id)}`,
   );
 </script>
 
@@ -73,8 +83,21 @@
       </div>
     {/if}
   </div>
-  <div class="flex min-h-6 items-center gap-1.5 text-xs font-medium text-positive">
-    <Icon name="check-circle" class="size-5" />
-    <span>{m.sources_status_installed()}</span>
+  <div class="flex min-w-44 flex-col items-start gap-2 md:items-end">
+    <div class="flex min-h-6 items-center gap-1.5 text-xs font-medium text-positive">
+      <Icon name="check-circle" class="size-5" />
+      <span>{m.sources_status_installed()}</span>
+    </div>
+    {#if !source.document_ref}
+      <p class="max-w-52 text-xs leading-5 text-ink-muted md:text-right">
+        {m.sources_rules_original_unavailable()}
+      </p>
+    {/if}
+    <Button href={workspaceHref} variant="outline" class="min-h-11 max-w-full whitespace-normal">
+      <Icon name={source.document_ref ? 'pencil-simple' : 'file-text'} class="size-4" />
+      <span>
+        {source.document_ref ? m.sources_rules_edit_source() : m.sources_rules_repaste_action()}
+      </span>
+    </Button>
   </div>
 </article>

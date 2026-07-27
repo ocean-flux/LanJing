@@ -7,6 +7,7 @@
     StandardIntent,
   } from '$lib/stores/rules.svelte';
   import { classifyExpiresAt, truncateHash } from './candidate-preview';
+  import { localizeSourceDiagnostic } from './source-diagnostics';
 
   type Props = {
     candidate: InstallCandidate;
@@ -155,10 +156,33 @@
         class="space-y-1.5 rounded-lg border border-hairline bg-surface-2 px-2.5 py-2 text-xs"
         data-testid="install-diagnostics"
       >
-        {#each candidate.diagnostics as diagnostic (diagnostic.code + diagnostic.message)}
-          <li class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-            <span class="shrink-0 font-medium text-ink">{diagnostic.code}</span>
-            <span class="min-w-0 text-ink-muted">{diagnostic.message}</span>
+        {#each candidate.diagnostics as diagnostic, index (`${index}:${diagnostic.code}:${diagnostic.span?.path ?? ''}:${diagnostic.span?.start ?? ''}:${diagnostic.span?.end ?? ''}`)}
+          <li
+            class="space-y-1"
+            data-diagnostic-code={diagnostic.code}
+            data-diagnostic-path={diagnostic.span?.path}
+            data-diagnostic-span-start={diagnostic.span?.start}
+            data-diagnostic-span-end={diagnostic.span?.end}
+          >
+            <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+              <code class="shrink-0 font-mono font-medium text-ink">{diagnostic.code}</code>
+              <p class="min-w-0 text-ink-muted">{localizeSourceDiagnostic(diagnostic.code)}</p>
+            </div>
+            {#if diagnostic.span}
+              <p
+                class="flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-[0.6875rem] text-ink-subtle"
+              >
+                {#if diagnostic.span.path !== null}
+                  <span>{m.sources_diagnostic_path({ path: diagnostic.span.path || '/' })}</span>
+                {/if}
+                <span>
+                  {m.sources_diagnostic_span({
+                    start: diagnostic.span.start,
+                    end: diagnostic.span.end,
+                  })}
+                </span>
+              </p>
+            {/if}
           </li>
         {/each}
       </ul>
