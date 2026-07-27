@@ -24,7 +24,9 @@
 <script lang="ts">
   import { getPlatformContext } from '$lib/app/platform-context.svelte';
   import type { RuntimePlatform } from '$lib/app/platform-runtime';
+  import Notice from '$lib/components/Notice.svelte';
   import { Button } from '$lib/components/ui/button';
+  import { cn } from '$lib/utils.js';
   import { onDestroy, untrack } from 'svelte';
   import type { Attachment } from 'svelte/attachments';
   import type { SourceDocumentEditorHost } from './source-document-editor-host';
@@ -195,10 +197,10 @@
 </script>
 
 <section
-  class={[
-    'glass-panel flex max-w-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border border-hairline p-3 sm:p-4',
+  class={cn(
+    'glass-panel flex h-full min-h-[20rem] max-w-full min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-panel)] border border-hairline',
     className,
-  ]}
+  )}
   aria-labelledby={labelId}
   aria-describedby={statusId}
   data-source-document-editor
@@ -210,26 +212,26 @@
   {@attach startHost}
 >
   <h2 id={labelId} class="sr-only">{labels.editor}</h2>
-
-  <div id={statusId} class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+  <div
+    id={statusId}
+    class="flex min-h-(--density-control-sm) min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-hairline px-3 py-1.5 text-xs"
+  >
     <span class="font-semibold text-ink" role="status" aria-live="polite">
       {labels.status[snapshot.status]}
     </span>
   </div>
 
   {#if snapshot.languageInputLimit}
-    <p
-      class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2 text-sm break-words"
-      role="alert"
-      data-language-input-limit={snapshot.languageInputLimit}
-    >
-      {labels.languageInputLimit(snapshot.languageInputLimit)}
-    </p>
+    <div class="px-3 pt-2.5" data-language-input-limit={snapshot.languageInputLimit}>
+      <Notice tone="danger" role="alert" icon="warning-circle">
+        {labels.languageInputLimit(snapshot.languageInputLimit)}
+      </Notice>
+    </div>
   {/if}
 
   {#if retryFailed}
     <p
-      class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2 text-sm break-words"
+      class="mx-3 mt-2.5 rounded-[var(--radius-control)] border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm break-words text-destructive"
       role="alert"
       data-operation-error="retry"
     >
@@ -238,40 +240,45 @@
   {/if}
 
   {#if snapshot.advancedStateReset}
-    <p
-      class="rounded-lg border border-lantern/35 bg-lantern-soft/25 px-3 py-2 text-sm text-ink"
-      role="status"
-      data-advanced-state-reset-notice
-    >
-      {labels.advancedStateReset}
-    </p>
+    <div class="px-3 pt-2.5" data-advanced-state-reset-notice>
+      <Notice tone="info" role="status" icon="warning-circle">
+        {labels.advancedStateReset}
+      </Notice>
+    </div>
   {/if}
 
   {#if snapshot.fallbackReason}
-    <div
-      class="border-danger/35 bg-danger/10 flex min-w-0 flex-wrap items-start justify-between gap-2 rounded-lg border px-3 py-2"
-    >
-      <p class="text-danger min-w-0 flex-1 text-sm break-words" role="alert">
-        {labels.fallbackReason(snapshot.fallbackReason)}
-      </p>
+    <div class="px-3 pt-2.5">
       {#if retryable}
-        <Button
-          bind:ref={retryButton}
-          type="button"
-          variant="outline"
-          class="min-h-11 max-w-full text-center whitespace-normal active:scale-[0.98]"
-          onclick={() => void retry()}
-        >
-          {labels.retry}
-        </Button>
+        <Notice tone="danger" role="alert" icon="warning-circle">
+          {labels.fallbackReason(snapshot.fallbackReason)}
+          {#snippet action()}
+            <Button
+              bind:ref={retryButton}
+              type="button"
+              variant="outline"
+              class="h-auto min-h-(--density-control-md) max-w-full text-center whitespace-normal"
+              onclick={() => void retry()}
+            >
+              {labels.retry}
+            </Button>
+          {/snippet}
+        </Notice>
+      {:else}
+        <Notice tone="danger" role="alert" icon="warning-circle">
+          {labels.fallbackReason(snapshot.fallbackReason)}
+        </Notice>
       {/if}
     </div>
   {/if}
 
-  <div class="grid min-h-[20rem] min-w-0 overflow-hidden rounded-xl" data-editor-stage>
+  <div
+    class="editor-stage grid min-h-0 min-w-0 flex-1 overflow-hidden bg-surface-2"
+    data-editor-stage
+  >
     <div
       class={[
-        'col-start-1 row-start-1 min-h-[20rem] min-w-0 overflow-hidden rounded-xl border border-hairline bg-surface-2',
+        'col-start-1 row-start-1 h-full min-h-0 min-w-0 overflow-hidden bg-surface-2',
         (snapshot.status === 'fallback' || snapshot.status === 'disposed') &&
           'pointer-events-none invisible',
       ]}
@@ -283,26 +290,26 @@
     ></div>
 
     {#if snapshot.status === 'fallback'}
-      <div class="col-start-1 row-start-1 min-h-0 min-w-0">
+      <div class="col-start-1 row-start-1 h-full min-h-0 min-w-0">
         <JsonHighlightEditor
           bind:ref={fallbackTextarea}
           value={snapshot.text}
           onValueChange={editFallbackText}
           ariaLabel={labels.editor}
           rows={18}
-          class="glass-control h-full min-h-[20rem] rounded-xl border-hairline focus-within:border-lantern-strong/50"
+          class="h-full min-h-0! rounded-none! border-0!"
         />
       </div>
     {:else if snapshot.status === 'idle' || snapshot.status === 'loading'}
       <div
-        class="pointer-events-none col-start-1 row-start-1 grid min-h-[20rem] place-items-center px-4 text-center text-sm text-ink-muted"
+        class="pointer-events-none col-start-1 row-start-1 grid h-full min-h-0 place-items-center px-3 text-center text-sm text-ink-muted"
         aria-hidden="true"
       >
         {labels.status[snapshot.status]}
       </div>
     {:else if snapshot.status === 'disposed'}
       <div
-        class="col-start-1 row-start-1 grid min-h-[20rem] place-items-center px-4 text-center text-sm text-ink-muted"
+        class="col-start-1 row-start-1 grid h-full min-h-0 place-items-center px-3 text-center text-sm text-ink-muted"
         aria-hidden="true"
       >
         {labels.status.disposed}
@@ -310,3 +317,99 @@
     {/if}
   </div>
 </section>
+
+<style>
+  .editor-stage :global(.monaco-editor) {
+    --vscode-editor-background: var(--surface-2);
+    --vscode-editor-foreground: var(--ink);
+    --vscode-editorGutter-background: var(--surface-2);
+    --vscode-editorLineNumber-foreground: var(--ink-subtle);
+    --vscode-editorLineNumber-activeForeground: var(--ink);
+    --vscode-editorCursor-foreground: var(--lantern-strong);
+    --vscode-editor-selectionBackground: var(--lantern-soft);
+    --vscode-editor-inactiveSelectionBackground: var(--lantern-soft);
+    --vscode-focusBorder: var(--lantern-strong);
+    font-family: var(--font-code) !important;
+  }
+
+  .editor-stage :global(.monaco-editor .view-line),
+  .editor-stage :global(.monaco-editor textarea) {
+    font-family: var(--font-code) !important;
+  }
+
+  .editor-stage :global(.cm-editor) {
+    height: 100%;
+    min-height: 0;
+    background: var(--surface-2);
+    color: var(--ink);
+    font-family: var(--font-code);
+  }
+
+  .editor-stage :global(.cm-content),
+  .editor-stage :global(.cm-gutters) {
+    font-family: var(--font-code);
+  }
+
+  .editor-stage :global(.cm-gutters) {
+    border-color: var(--hairline);
+    background: var(--surface-2);
+    color: var(--ink-subtle);
+  }
+
+  .editor-stage :global(.cm-cursor) {
+    border-left-color: var(--lantern-strong);
+  }
+
+  .editor-stage :global(.cm-selectionBackground),
+  .editor-stage :global(.cm-content ::selection) {
+    background: var(--lantern-soft) !important;
+  }
+
+  .editor-stage :global(.json-highlight-editor),
+  .editor-stage :global(.json-highlight-editor pre),
+  .editor-stage :global(.json-highlight-editor textarea) {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  .editor-stage :global(.json-highlight-editor textarea) {
+    resize: none;
+  }
+
+  @media (forced-colors: active) {
+    .editor-stage {
+      border-color: CanvasText;
+      background: Canvas;
+    }
+
+    .editor-stage :global(.monaco-editor) {
+      --vscode-editor-background: Canvas;
+      --vscode-editor-foreground: CanvasText;
+      --vscode-editorGutter-background: Canvas;
+      --vscode-editorLineNumber-foreground: CanvasText;
+      --vscode-editorLineNumber-activeForeground: Highlight;
+      --vscode-editorCursor-foreground: Highlight;
+      --vscode-editor-selectionBackground: Highlight;
+      --vscode-editor-inactiveSelectionBackground: Highlight;
+      --vscode-focusBorder: Highlight;
+      forced-color-adjust: auto;
+    }
+
+    .editor-stage :global(.cm-editor),
+    .editor-stage :global(.cm-gutters) {
+      background: Canvas !important;
+      color: CanvasText !important;
+      forced-color-adjust: auto;
+    }
+
+    .editor-stage :global(.cm-cursor) {
+      border-left-color: Highlight !important;
+    }
+
+    .editor-stage :global(.cm-selectionBackground),
+    .editor-stage :global(.cm-content ::selection) {
+      background: Highlight !important;
+      color: HighlightText !important;
+    }
+  }
+</style>

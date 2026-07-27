@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Notice from '$lib/components/Notice.svelte';
   import { Button } from '$lib/components/ui/button';
   import {
     Sheet,
@@ -25,39 +26,28 @@
   import SourcePickList from './SourcePickList.svelte';
 
   const isMobile = new IsMobile();
+  const uid = $props.id();
+  const grantId = `${uid}-network-grant`;
+  const summaryId = `${uid}-selected-summary`;
   const surface = $derived(getDeepLinkSurface());
 
-  let open = $state(false);
+  type InstallPhase = 'pick' | 'grant' | 'working' | 'done';
+  type PreparedEntry = { item: CatalogItem; candidate: InstallCandidate };
+
   let selectedIds = $state<string[]>([]);
-  let phase = $state<'pick' | 'grant' | 'working' | 'done'>('pick');
-  let prepared = $state<Array<{ item: CatalogItem; candidate: InstallCandidate }>>([]);
+  let phase = $state<InstallPhase>('pick');
+  let prepared = $state<PreparedEntry[]>([]);
   let grant = $state<CapabilityGrantPreset>('none');
   let error = $state<string | null>(null);
   let successMessage = $state<string | null>(null);
 
-  const isInteractive = $derived(
+  const open = $derived(
     surface.kind === 'loading' ||
       surface.kind === 'pick' ||
       surface.kind === 'reject' ||
       surface.kind === 'fetch-error' ||
       surface.kind === 'catalog-error',
   );
-
-  $effect(() => {
-    open = isInteractive;
-    if (surface.kind === 'pick') {
-      selectedIds = [];
-      phase = 'pick';
-      prepared = [];
-      grant = 'none';
-      error = null;
-      successMessage = null;
-    } else if (surface.kind === 'loading') {
-      phase = 'pick';
-      error = null;
-      successMessage = null;
-    }
-  });
 
   const pickItems = $derived(surface.kind === 'pick' ? surface.catalog.items : []);
   const pickTruncated = $derived(surface.kind === 'pick' ? surface.catalog.truncated : false);
@@ -120,11 +110,7 @@
   }
 
   function handleOpenChange(next: boolean): void {
-    if (next) {
-      open = true;
-      return;
-    }
-    open = false;
+    if (next) return;
     if (surface.kind === 'pick' || surface.kind === 'loading') {
       completeDeepLinkPick();
     } else {
@@ -144,7 +130,7 @@
     error = null;
     const selected = new Set(selectedIds);
     const chosen = surface.catalog.items.filter((item) => selected.has(item.id));
-    const next: Array<{ item: CatalogItem; candidate: InstallCandidate }> = [];
+    const next: PreparedEntry[] = [];
     try {
       for (const item of chosen) {
         const candidate = await prepareInstall(item.rawJson);
@@ -205,7 +191,7 @@
 <Sheet {open} onOpenChange={handleOpenChange}>
   <SheetContent
     side={isMobile.current ? 'bottom' : 'right'}
-    class="flex w-full flex-col gap-0 overflow-hidden p-0 data-[side=bottom]:!h-[90dvh] data-[side=bottom]:max-h-[90dvh] data-[side=right]:sm:max-w-xl data-[side=right]:lg:max-w-2xl"
+    class="flex w-full flex-col gap-0 overflow-hidden p-0 data-[side=bottom]:!h-[90dvh] data-[side=bottom]:max-h-[90dvh] data-[side=right]:sm:max-w-2xl data-[side=right]:lg:max-w-4xl"
     data-testid="deeplink-install-host"
   >
     <SheetHeader class="border-b border-hairline pr-12">
@@ -216,34 +202,37 @@
     </SheetHeader>
 
     <div
-      class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4 sm:px-5"
+      class={[
+        'flex min-h-0 flex-1 flex-col gap-3 p-(--density-panel-padding-compact) sm:p-(--density-panel-padding)',
+        surface.kind === 'pick' &&
+        (phase === 'pick' || (phase === 'working' && prepared.length === 0))
+          ? 'overflow-hidden'
+          : 'overflow-y-auto',
+      ]}
       data-testid="deeplink-install-body"
+      aria-busy={phase === 'working' || surface.kind === 'loading'}
     >
       {#if surface.kind === 'loading'}
-        <p class="text-sm text-ink-muted" role="status">{m.sources_deeplink_fetching()}</p>
+        <Notice tone="info" role="status" icon="arrow-clockwise">
+          {m.sources_deeplink_fetching()}
+        </Notice>
       {:else if surface.kind === 'reject'}
-        <div
-          class="border-danger/35 bg-danger/10 text-danger rounded-xl border px-4 py-3 text-sm"
-          role="alert"
-          data-testid="deeplink-reject"
-        >
-          {rejectMessage()}
+        <div data-testid="deeplink-reject">
+          <Notice tone="danger" role="alert" icon="warning-circle">
+            {rejectMessage()}
+          </Notice>
         </div>
       {:else if surface.kind === 'fetch-error'}
-        <div
-          class="border-danger/35 bg-danger/10 text-danger rounded-xl border px-4 py-3 text-sm break-words"
-          role="alert"
-        >
-          {m.sources_deeplink_fetch_failed({ detail: surface.message })}
-        </div>
+        <Notice tone="danger" role="alert" icon="warning-circle">
+          <span class="break-words">
+            {m.sources_deeplink_fetch_failed({ detail: surface.message })}
+          </span>
+        </Notice>
       {:else if surface.kind === 'catalog-error'}
-        <div
-          class="border-danger/35 bg-danger/10 text-danger rounded-xl border px-4 py-3 text-sm"
-          role="alert"
-        >
+        <Notice tone="danger" role="alert" icon="warning-circle">
           {catalogErrorMessage()}
-        </div>
-      {:else if surface.kind === 'pick' && (phase === 'pick' || phase === 'working')}
+        </Notice>
+      {:else if surface.kind === 'pick' && (phase === 'pick' || (phase === 'working' && prepared.length === 0))}
         <SourcePickList
           items={pickItems}
           truncated={pickTruncated}
@@ -252,75 +241,72 @@
           disabled={phase === 'working'}
         />
         {#if error}
-          <div
-            class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2 text-sm break-words"
-            role="alert"
-          >
-            {error}
-          </div>
+          <Notice tone="danger" role="alert" icon="warning-circle">
+            <span class="break-words">{error}</span>
+          </Notice>
         {/if}
       {:else if phase === 'grant' || phase === 'working' || phase === 'done'}
-        <div class="glass-panel space-y-3 rounded-xl border border-hairline p-4">
-          <p class="text-sm font-semibold text-ink">
-            {m.sources_deeplink_selected_summary({ count: prepared.length })}
-          </p>
-          <ul class="max-h-40 space-y-1 overflow-y-auto text-sm text-ink-muted">
-            {#each prepared as entry (entry.item.id)}
-              <li class="truncate">{entry.item.name}</li>
-            {/each}
-          </ul>
-          {#if hasUnsupportedSystem}
-            <p
-              class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2 text-xs"
+        <div class="grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] lg:gap-0">
+          <section class="min-w-0 lg:pr-4" aria-labelledby={summaryId}>
+            <h3 id={summaryId} class="text-sm font-semibold text-ink">
+              {m.sources_deeplink_selected_summary({ count: prepared.length })}
+            </h3>
+            <ul
+              class="mt-2 max-h-52 divide-y divide-hairline overflow-y-auto text-sm text-ink-muted"
             >
-              {m.sources_install_system_unsupported()}
-            </p>
-          {:else if needsNetwork}
-            <p
-              class="rounded-lg border border-lantern/35 bg-lantern-soft/25 px-3 py-2 text-xs font-medium text-ink"
-            >
-              {m.sources_deeplink_network_required_notice()}
-            </p>
-            <label class="flex flex-col gap-1.5 text-sm text-ink" for="deeplink-network-grant">
-              <span class="text-xs font-medium text-ink-muted"
-                >{m.sources_install_network_grant()}</span
-              >
-              <select
-                id="deeplink-network-grant"
-                bind:value={grant}
-                disabled={phase === 'working'}
-                class="glass-control min-h-11 w-full rounded-lg border border-hairline px-2.5 text-sm text-ink outline-none focus-visible:border-lantern-strong/50 focus-visible:shadow-[var(--focus-ring)]"
-                data-testid="deeplink-network-grant"
-              >
-                <option value="none">{m.sources_install_grant_prompt()}</option>
-                <option value="network_only">{m.sources_install_grant_network_only()}</option>
-              </select>
-            </label>
-          {:else}
-            <p class="text-xs text-ink-muted">{m.sources_install_network_not_required()}</p>
-          {/if}
-        </div>
-        {#if error}
-          <div
-            class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2 text-sm break-words whitespace-pre-wrap"
-            role="alert"
+              {#each prepared as entry (entry.item.id)}
+                <li class="min-w-0 py-1.5 break-words">{entry.item.name}</li>
+              {/each}
+            </ul>
+          </section>
+
+          <section
+            class="min-w-0 border-t border-hairline pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4"
           >
-            {error}
-          </div>
+            {#if hasUnsupportedSystem}
+              <Notice tone="danger" role="alert" icon="warning-circle">
+                {m.sources_install_system_unsupported()}
+              </Notice>
+            {:else if needsNetwork}
+              <Notice tone="info" role="note" icon="warning-circle">
+                {m.sources_deeplink_network_required_notice()}
+              </Notice>
+              <label class="mt-3 flex flex-col gap-1.5 text-sm text-ink" for={grantId}>
+                <span class="text-xs font-medium text-ink-muted">
+                  {m.sources_install_network_grant()}
+                </span>
+                <select
+                  id={grantId}
+                  bind:value={grant}
+                  disabled={phase === 'working'}
+                  class="glass-control h-(--density-control-md) w-full rounded-md border border-hairline px-2.5 text-sm text-ink outline-none focus-visible:border-lantern-strong/60 focus-visible:shadow-[var(--focus-ring)]"
+                  data-testid="deeplink-network-grant"
+                >
+                  <option value="none">{m.sources_install_grant_prompt()}</option>
+                  <option value="network_only">{m.sources_install_grant_network_only()}</option>
+                </select>
+              </label>
+            {:else}
+              <p class="text-xs text-ink-muted">{m.sources_install_network_not_required()}</p>
+            {/if}
+          </section>
+        </div>
+
+        {#if error}
+          <Notice tone="danger" role="alert" icon="warning-circle">
+            <span class="break-words whitespace-pre-wrap">{error}</span>
+          </Notice>
         {/if}
         {#if successMessage}
-          <div
-            class="rounded-lg border border-positive/40 bg-positive/10 px-3 py-2.5 text-sm text-positive"
-            role="status"
-          >
+          <Notice tone="success" role="status" icon="check-circle">
             {successMessage}
-          </div>
+          </Notice>
         {/if}
       {/if}
     </div>
 
     <SheetFooter
-      class="sticky bottom-0 z-10 border-t border-hairline bg-surface-1/95 px-4 py-3 backdrop-blur-sm sm:px-5"
+      class="bg-surface-1 px-(--density-panel-padding-compact) py-2.5 pb-[max(var(--density-panel-padding-compact),var(--safe-area-bottom))] sm:px-(--density-panel-padding)"
     >
       {#if surface.kind === 'pick' && phase === 'pick'}
         <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -329,7 +315,7 @@
           </p>
           <Button
             type="button"
-            class="min-h-11 w-full active:scale-[0.98] sm:w-auto"
+            class="w-full sm:w-auto"
             disabled={!canConfirmSelection}
             onclick={() => void prepareSelected()}
             data-testid="deeplink-install-selected"
@@ -342,7 +328,7 @@
           <Button
             type="button"
             variant="outline"
-            class="min-h-11 w-full sm:w-auto"
+            class="w-full sm:w-auto"
             onclick={() => {
               phase = 'pick';
               prepared = [];
@@ -354,7 +340,7 @@
           </Button>
           <Button
             type="button"
-            class="min-h-11 w-full active:scale-[0.98] sm:w-auto"
+            class="w-full sm:w-auto"
             disabled={!canInstallPrepared}
             onclick={() => void installPrepared()}
             data-testid="deeplink-confirm-install"
@@ -365,7 +351,7 @@
       {:else if surface.kind === 'reject' || surface.kind === 'fetch-error' || surface.kind === 'catalog-error' || phase === 'done'}
         <Button
           type="button"
-          class="min-h-11 w-full sm:w-auto"
+          class="w-full sm:ml-auto sm:w-auto"
           onclick={() => handleOpenChange(false)}
         >
           {m.action_close()}
@@ -374,10 +360,11 @@
         <p class="w-full text-sm text-ink-muted" role="status">
           {surface.kind === 'loading'
             ? m.sources_deeplink_fetching()
-            : m.sources_install_installing()}
+            : prepared.length === 0
+              ? m.sources_install_validating()
+              : m.sources_install_installing()}
         </p>
       {/if}
-      <div class="h-[env(safe-area-inset-bottom)] lg:hidden" aria-hidden="true"></div>
     </SheetFooter>
   </SheetContent>
 </Sheet>

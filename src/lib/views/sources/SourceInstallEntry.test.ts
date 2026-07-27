@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InstallCandidate } from '$lib/stores/rules.svelte';
 import SourceInstallEntry from './SourceInstallEntry.svelte';
@@ -62,6 +62,49 @@ describe('SourceInstallEntry format segment', () => {
     store.installCandidate.mockReset();
   });
 
+  it('exposes format choices as a pressed group without toolbar keyboard claims', async () => {
+    render(SourceInstallEntry);
+
+    const formats = screen.getByRole('group', { name: '来源格式' });
+    const legado = within(formats).getByRole('button', { name: 'Legado' });
+    const maccms = within(formats).getByRole('button', { name: 'Maccms' });
+    expect(screen.queryByRole('toolbar', { name: '来源格式' })).toBeNull();
+    expect(legado.getAttribute('aria-pressed')).toBe('true');
+    expect(maccms.getAttribute('aria-pressed')).toBe('false');
+
+    await fireEvent.click(maccms);
+
+    expect(legado.getAttribute('aria-pressed')).toBe('false');
+    expect(maccms.getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('textbox', { name: '规则 JSON' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Maccms JSON 采集地址' })).toBeTruthy();
+  });
+
+  it('keeps prepare visibly pending and prevents duplicate submission', async () => {
+    const pending = Promise.withResolvers<InstallCandidate>();
+    store.prepareInstall.mockReturnValueOnce(pending.promise);
+    render(SourceInstallEntry);
+
+    const input = await typeLegadoJson('{"bookSourceUrl":"https://example.test"}');
+    await fireEvent.click(screen.getByRole('button', { name: '校验' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '正在校验…' })).toBeTruthy();
+      expect((input as HTMLTextAreaElement).disabled).toBe(true);
+    });
+    expect((screen.getByRole('button', { name: '正在校验…' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(
+      (screen.getByRole('button', { name: '打开本地文件' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(store.prepareInstall).toHaveBeenCalledOnce();
+
+    pending.resolve(legadoCandidate);
+    expect(await screen.findByTestId('install-candidate-preview')).toBeTruthy();
+    expect((input as HTMLTextAreaElement).disabled).toBe(false);
+  });
+
   it('clears legado candidate when switching to maccms', async () => {
     store.prepareInstall.mockResolvedValue(legadoCandidate);
 
@@ -120,7 +163,7 @@ describe('SourceInstallEntry format segment', () => {
     expect(store.prepareInstall).not.toHaveBeenCalled();
   });
 
-  it('prepares object JSON and shows thickened candidate preview', async () => {
+  it('prepares object JSON and shows the full candidate safety review', async () => {
     store.prepareInstall.mockResolvedValue(legadoCandidate);
 
     render(SourceInstallEntry);
@@ -130,7 +173,9 @@ describe('SourceInstallEntry format segment', () => {
 
     await waitFor(() => {
       expect(store.prepareInstall).toHaveBeenCalledWith('{"bookSourceUrl":"https://example.test"}');
-      expect(screen.getByTestId('install-candidate-preview')).toBeTruthy();
+      expect(screen.getByTestId('install-candidate-preview').getAttribute('data-density')).toBe(
+        'full',
+      );
       expect(screen.getByTestId('install-validated-hint')).toBeTruthy();
       expect(screen.getByTestId('install-definition-hash')).toBeTruthy();
       expect(screen.getByTestId('install-supported-intents')).toBeTruthy();

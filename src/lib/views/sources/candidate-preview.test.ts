@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '$lib/i18n';
 import type { InstallCandidate } from '$lib/stores/rules.svelte';
 import CandidatePreview from './CandidatePreview.svelte';
@@ -7,6 +7,37 @@ import { localizeSourceDiagnostic } from './source-diagnostics';
 import { classifyExpiresAt, truncateHash } from './candidate-preview';
 
 const mountedViews: Array<{ unmount(): void }> = [];
+
+const safetyCandidate: InstallCandidate = {
+  id: 'candidate:safety',
+  document_ref: null,
+  transient: true,
+  expected_installed_revision: 0,
+  profile: {
+    id: 'profile:safety',
+    title: 'Safety source',
+    icon_url: null,
+    version: '4.2.0',
+    group: 'Research',
+    supported_intents: ['Search', 'ResolveItem'],
+    risk_notes: ['Only contacts the configured host'],
+  },
+  required_grant: {
+    network: true,
+    system: { fs: false, env: false, process: false },
+  },
+  diagnostics: [
+    {
+      code: 'unknown_field',
+      severity: 'warning',
+      message: 'backend text must not render',
+      span: { start: 2, end: 8, path: '/custom' },
+    },
+  ],
+  definition_hash: 'definition-hash-0123456789',
+  plan_hash: 'plan-hash-0123456789',
+  expires_at_ms: Date.now() + 60_000,
+};
 
 afterEach(async () => {
   for (const view of mountedViews.splice(0)) view.unmount();
@@ -112,5 +143,82 @@ describe('candidate diagnostics', () => {
     expect(screen.queryByText(backendKnownMessage)).toBeNull();
     expect(screen.queryByText(backendUnknownMessage)).toBeNull();
     expect(localizeSourceDiagnostic('__proto__')).toBe('An unrecognized diagnostic was reported.');
+  });
+});
+
+describe('CandidatePreview safety surface', () => {
+  beforeEach(async () => {
+    await setLocale('en', { reload: false });
+  });
+
+  it.each(['compact', 'full'] as const)(
+    'keeps the complete safety summary in %s density without exposing internals',
+    (density) => {
+      const candidateWithInternals = {
+        ...safetyCandidate,
+        definition: 'INTERNAL_DEFINITION_VALUE',
+        plan: 'INTERNAL_PLAN_VALUE',
+        body: 'INTERNAL_BODY_VALUE',
+        secret: 'INTERNAL_SECRET_VALUE',
+      } as InstallCandidate;
+      const view = render(CandidatePreview, {
+        props: {
+          candidate: candidateWithInternals,
+          grant: 'none',
+          density,
+          onInstall: () => undefined,
+        },
+      });
+      mountedViews.push(view);
+
+      const preview = screen.getByTestId('install-candidate-preview');
+      expect(preview.getAttribute('data-density')).toBe(density);
+      expect(screen.getByRole('heading', { name: 'Install candidate' })).toBeTruthy();
+      expect(screen.getByText('Safety source')).toBeTruthy();
+      expect(screen.getByText('Research')).toBeTruthy();
+      expect(screen.getByText('4.2.0')).toBeTruthy();
+      expect(screen.getByText('Required')).toBeTruthy();
+      expect(screen.getByText('Search')).toBeTruthy();
+      expect(screen.getByText('Resolve item')).toBeTruthy();
+      expect(screen.getByText('Only contacts the configured host')).toBeTruthy();
+      expect(screen.getByText('unknown_field')).toBeTruthy();
+      expect(screen.getByTestId('install-definition-hash').getAttribute('title')).toBe(
+        safetyCandidate.definition_hash,
+      );
+      expect(screen.getByTestId('install-plan-hash').getAttribute('title')).toBe(
+        safetyCandidate.plan_hash,
+      );
+      expect(preview.outerHTML).not.toContain('INTERNAL_DEFINITION_VALUE');
+      expect(preview.outerHTML).not.toContain('INTERNAL_PLAN_VALUE');
+      expect(preview.outerHTML).not.toContain('INTERNAL_BODY_VALUE');
+      expect(preview.outerHTML).not.toContain('INTERNAL_SECRET_VALUE');
+      expect(preview.outerHTML).not.toContain('backend text must not render');
+    },
+  );
+
+  it('blocks unsupported system capabilities without offering a misleading grant', async () => {
+    const onInstall = vi.fn();
+    const blockedCandidate: InstallCandidate = {
+      ...safetyCandidate,
+      required_grant: {
+        network: false,
+        system: { fs: true, env: false, process: false },
+      },
+    };
+    const view = render(CandidatePreview, {
+      props: { candidate: blockedCandidate, grant: 'none', onInstall },
+    });
+    mountedViews.push(view);
+
+    expect(
+      screen.getByText(
+        'This source requests system capabilities that this installer cannot grant.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: 'Network grant' })).toBeNull();
+    const install = screen.getByRole('button', { name: 'Install source' });
+    expect((install as HTMLButtonElement).disabled).toBe(true);
+    await fireEvent.click(install);
+    expect(onInstall).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button';
+  import Notice from '$lib/components/Notice.svelte';
   import { Input } from '$lib/components/ui/input';
   import { m } from '$lib/i18n';
   import {
@@ -133,23 +134,16 @@
   const prepareDisabled = $derived(
     loading || (format === 'legado' ? !sourceJson.trim() : !maccmsUrl.trim()),
   );
-
-  function formatPillClass(active: boolean): string {
-    return `inline-flex min-h-11 shrink-0 items-center rounded-lg border px-3 text-sm font-medium outline-none focus-visible:shadow-[var(--focus-ring)] ${
-      active
-        ? 'border-hairline-strong bg-lantern-soft text-ink'
-        : 'border-hairline bg-surface-1 text-ink-muted hover:bg-surface-2'
-    }`;
-  }
 </script>
 
 <section
-  class="flex w-full flex-col gap-4"
+  class="flex w-full min-w-0 flex-col gap-3"
   data-testid="install-source"
   aria-labelledby={showHeading ? 'install-source-title' : undefined}
+  aria-busy={loading}
 >
   {#if showHeading}
-    <header>
+    <header class="border-b border-hairline pb-2">
       <h2 id="install-source-title" class="text-base font-semibold text-ink">
         {m.sources_install_title()}
       </h2>
@@ -157,43 +151,45 @@
   {/if}
 
   <div
-    class="flex flex-wrap gap-2"
-    role="toolbar"
+    class="flex flex-wrap gap-1"
+    role="group"
     aria-label={m.sources_install_format_label()}
     data-testid="install-format"
   >
-    <button
+    <Button
       type="button"
-      class={formatPillClass(format === 'legado')}
+      size="sm"
+      variant={format === 'legado' ? 'secondary' : 'ghost'}
       aria-pressed={format === 'legado'}
       data-testid="install-format-legado"
       onclick={() => selectFormat('legado')}
     >
       {m.sources_install_format_legado()}
-    </button>
-    <button
+    </Button>
+    <Button
       type="button"
-      class={formatPillClass(format === 'maccms')}
+      size="sm"
+      variant={format === 'maccms' ? 'secondary' : 'ghost'}
       aria-pressed={format === 'maccms'}
       data-testid="install-format-maccms"
       onclick={() => selectFormat('maccms')}
     >
       {m.sources_install_format_maccms()}
-    </button>
+    </Button>
   </div>
 
   <div
     class={[
-      'grid min-w-0 gap-4',
-      candidate && 'lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start lg:gap-5',
+      'grid min-w-0 gap-3',
+      candidate && 'lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-0',
     ]}
   >
-    <div class="flex min-w-0 flex-col gap-4">
-      <div class="glass-panel flex flex-col gap-3 rounded-xl border border-hairline p-4">
+    <div class={['flex min-w-0 flex-col gap-3', candidate && 'lg:pr-4']}>
+      <div class="flex min-w-0 flex-col gap-2.5 border-t border-hairline pt-3">
         {#if format === 'legado'}
-          <label for={fieldId} class="text-sm font-medium text-ink"
-            >{m.sources_install_json_label()}</label
-          >
+          <label for={fieldId} class="text-sm font-medium text-ink">
+            {m.sources_install_json_label()}
+          </label>
           <JsonHighlightEditor
             id={fieldId}
             bind:value={sourceJson}
@@ -214,16 +210,16 @@
               onclick={handlePrepare}
               disabled={prepareDisabled}
               data-testid="install-legado-prepare"
-              class="min-h-11 w-full active:scale-[0.98] sm:w-auto"
+              class="w-full sm:w-auto"
             >
               {loading ? m.sources_install_validating() : m.sources_install_validate()}
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onclick={openLocalFile}
               disabled={loading}
-              class="min-h-11 w-full sm:w-auto"
+              class="w-full sm:w-auto"
             >
               {m.sources_install_open_file()}
             </Button>
@@ -239,9 +235,9 @@
             />
           </div>
         {:else}
-          <label for={maccmsUrlId} class="text-sm font-medium text-ink"
-            >{m.sources_install_maccms_url_label()}</label
-          >
+          <label for={maccmsUrlId} class="text-sm font-medium text-ink">
+            {m.sources_install_maccms_url_label()}
+          </label>
           <Input
             id={maccmsUrlId}
             type="url"
@@ -249,7 +245,6 @@
             placeholder={m.sources_install_maccms_url_placeholder()}
             disabled={loading}
             data-testid="install-maccms-url"
-            class="glass-control min-h-11 border-hairline px-3 text-sm text-ink placeholder:text-ink-subtle focus-visible:border-lantern-strong/50 focus-visible:ring-2 focus-visible:ring-lantern/35"
           />
           <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <Button
@@ -258,7 +253,7 @@
               onclick={handlePrepare}
               disabled={prepareDisabled}
               data-testid="install-maccms-prepare"
-              class="min-h-11 w-full active:scale-[0.98] sm:w-auto"
+              class="w-full sm:w-auto"
             >
               {loading ? m.sources_install_validating() : m.sources_install_validate()}
             </Button>
@@ -267,34 +262,32 @@
       </div>
 
       {#if error}
-        <div
-          class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2.5 text-sm break-words"
-          role="alert"
-          data-testid="install-error"
-        >
-          {error}
+        <div data-testid="install-error">
+          <Notice tone="danger" role="alert" icon="warning-circle">
+            <span class="break-words">{error}</span>
+          </Notice>
         </div>
       {/if}
 
       {#if success}
-        <div
-          class="rounded-lg border border-positive/40 bg-positive/10 px-3 py-2.5 text-sm break-words text-positive"
-          role="status"
-        >
-          {success}
-        </div>
+        <Notice tone="success" role="status" icon="check-circle">
+          <span class="break-words">{success}</span>
+        </Notice>
       {/if}
     </div>
 
     {#if candidate}
-      <CandidatePreview
-        {candidate}
-        bind:grant
-        {loading}
-        {stickyActions}
-        validated={true}
-        onInstall={handleInstall}
-      />
+      <div class="min-w-0 border-t border-hairline pt-3 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
+        <CandidatePreview
+          {candidate}
+          bind:grant
+          {loading}
+          {stickyActions}
+          density="full"
+          validated={true}
+          onInstall={handleInstall}
+        />
+      </div>
     {/if}
   </div>
 </section>

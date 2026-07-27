@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import type { CatalogItem } from '$lib/deeplink/catalog';
 import SourcePickList from './SourcePickList.svelte';
@@ -25,12 +25,12 @@ const items: CatalogItem[] = [
 ];
 
 describe('SourcePickList', () => {
-  it('groups rows and supports group select-all', async () => {
+  it('groups rows and changes only the selected group', async () => {
     const onSelectedIdsChange = vi.fn();
     render(SourcePickList, {
       props: {
         items,
-        selectedIds: [],
+        selectedIds: ['catalog:2'],
         onSelectedIdsChange,
       },
     });
@@ -38,25 +38,43 @@ describe('SourcePickList', () => {
     expect(screen.getByText('甲源')).toBeTruthy();
     expect(screen.getByText('乙源')).toBeTruthy();
     expect(screen.getByText('丙源')).toBeTruthy();
-    expect(screen.getByText('玄幻')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '折叠分组：玄幻' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '折叠分组：未分组' })).toBeTruthy();
 
-    const groupHeaders = screen.getAllByTestId('source-pick-group-header');
-    const fantasyHeader = groupHeaders.find(
-      (node) => node.getAttribute('data-group-id') === 'group:玄幻',
-    );
-    expect(fantasyHeader).toBeTruthy();
-    const groupSelect = within(fantasyHeader as HTMLElement).getByTestId(
-      'source-pick-group-select',
-    );
-    const checkbox = within(groupSelect).getByRole('checkbox');
-    await fireEvent.click(checkbox);
+    const groupSelect = screen.getByRole('checkbox', { name: '全选分组 玄幻' });
+    expect(groupSelect.getAttribute('aria-checked')).toBe('false');
+    await fireEvent.click(groupSelect);
 
-    expect(onSelectedIdsChange).toHaveBeenCalled();
-    const last = onSelectedIdsChange.mock.calls.at(-1)?.[0] as string[];
-    expect(last.sort()).toEqual(['catalog:0', 'catalog:1']);
+    const selectedAll = onSelectedIdsChange.mock.calls.at(-1)?.[0] as string[];
+    expect([...selectedAll].sort()).toEqual(['catalog:0', 'catalog:1', 'catalog:2']);
+    expect(groupSelect.getAttribute('aria-checked')).toBe('true');
+
+    await fireEvent.click(groupSelect);
+    const selectedOutsideGroup = onSelectedIdsChange.mock.calls.at(-1)?.[0] as string[];
+    expect(selectedOutsideGroup).toEqual(['catalog:2']);
+    expect(groupSelect.getAttribute('aria-checked')).toBe('false');
   });
 
-  it('shows install cap notice when selection exceeds the limit', async () => {
+  it('updates group names and row reachability when collapsed and expanded', async () => {
+    render(SourcePickList, {
+      props: { items, selectedIds: [] },
+    });
+
+    const collapse = screen.getByRole('button', { name: '折叠分组：玄幻' });
+    expect(collapse.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByRole('checkbox', { name: '甲源' })).toBeTruthy();
+
+    await fireEvent.click(collapse);
+
+    const expand = screen.getByRole('button', { name: '展开分组：玄幻' });
+    expect(expand.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('checkbox', { name: '甲源' })).toBeNull();
+
+    await fireEvent.click(expand);
+    expect(screen.getByRole('checkbox', { name: '甲源' })).toBeTruthy();
+  });
+
+  it('reports display truncation and an over-cap selection without hiding choices', () => {
     render(SourcePickList, {
       props: {
         items,
@@ -67,7 +85,14 @@ describe('SourcePickList', () => {
       },
     });
 
-    expect(screen.getByTestId('source-pick-install-cap').textContent).toMatch(/3/);
-    expect(screen.getByTestId('source-pick-display-cap').textContent).toMatch(/99/);
+    const installCap = screen.getByRole('status');
+    expect(installCap.textContent).toMatch(/已选 3 条，单次最多安装 2 条/);
+    expect(screen.getByTestId('source-pick-display-cap').textContent).toMatch(/3 \/ 99/);
+    expect(screen.getByRole('checkbox', { name: '甲源' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('checkbox', { name: '丙源' }).getAttribute('aria-checked')).toBe(
+      'true',
+    );
   });
 });

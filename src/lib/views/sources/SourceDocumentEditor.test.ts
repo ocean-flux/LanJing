@@ -103,17 +103,18 @@ describe('SourceDocumentEditor', () => {
       expect(fake.implementation.attach).toHaveBeenCalledTimes(1);
       expect(fake.implementation.start).toHaveBeenCalledWith('windows');
     });
-    expect(screen.getAllByText('Idle').length).toBeGreaterThan(0);
+    const status = screen.getByRole('status');
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    expect(status.textContent).toBe('Idle');
 
     fake.emit({ status: 'loading' });
-    expect((await screen.findAllByText('Loading editor')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(status.textContent).toBe('Loading editor'));
 
     fake.emit({ status: 'ready', editorKind: 'monaco' });
     await waitFor(() => {
-      expect(screen.getByText('Editor ready')).toBeTruthy();
-      expect(screen.getByRole('group', { name: 'Rule JSON' }).getAttribute('aria-hidden')).not.toBe(
-        'true',
-      );
+      expect(status.textContent).toBe('Editor ready');
+      const adapter = screen.getByRole('group', { name: 'Rule JSON' });
+      expect(adapter.getAttribute('aria-hidden')).not.toBe('true');
     });
     expect(screen.queryByRole('textbox', { name: 'Rule JSON' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
@@ -201,9 +202,13 @@ describe('SourceDocumentEditor', () => {
 
     const textarea = await screen.findByRole('textbox', { name: 'Rule JSON' });
     expect((textarea as HTMLTextAreaElement).value).toBe('{"oversized":true}');
-    expect(
-      screen.getAllByRole('alert').some((alert) => alert.textContent?.includes('too large')),
-    ).toBe(true);
+    const limitNotice = document.querySelector<HTMLElement>(
+      '[data-language-input-limit="document_too_large"]',
+    );
+    expect(limitNotice).toBeTruthy();
+    const limitAlert = limitNotice?.querySelector('[role="alert"]');
+    expect(limitAlert).toBeTruthy();
+    expect(limitAlert?.textContent).toContain('too large');
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 

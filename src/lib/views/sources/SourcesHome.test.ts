@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InstalledSource } from '$lib/stores/rules.svelte';
 import SourcesHome from './SourcesHome.svelte';
 
+const appState = vi.hoisted(() => ({
+  page: { url: new URL('https://lanjing.test/sources') },
+}));
+
+vi.mock('$app/state', () => appState);
+
 const store = vi.hoisted(() => {
   const snapshot: {
     sources: InstalledSource[];
@@ -97,6 +103,7 @@ const ungroupedSource: InstalledSource = {
 };
 
 beforeEach(() => {
+  appState.page.url = new URL('https://lanjing.test/sources');
   store.setSnapshot({ sources: [], loading: false, error: null });
   store.loadInstalledSources.mockReset().mockResolvedValue(undefined);
   store.prepareInstall.mockReset();
@@ -141,6 +148,8 @@ describe('SourcesHome', () => {
     render(SourcesHome);
 
     const sourceHeading = await screen.findByRole('heading', { name: '真实来源' });
+    const frame = document.querySelector('[data-slot="page-frame"]');
+    expect(frame?.getAttribute('data-width')).toBe('standard');
     const article = sourceHeading.closest('article');
     expect(article).toBeTruthy();
     expect(within(article!).getByText('2.3.1')).toBeTruthy();
@@ -163,24 +172,60 @@ describe('SourcesHome', () => {
     expect(await screen.findByRole('textbox', { name: '规则 JSON' })).toBeTruthy();
   });
 
-  it('filters the denselist by group chips', async () => {
+  it('filters the source list with honest pressed-group semantics', async () => {
     store.setSnapshot({ sources: [installedSource, ungroupedSource] });
     render(SourcesHome);
 
     expect(await screen.findByRole('heading', { name: '真实来源' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: '未分组来源' })).toBeTruthy();
 
-    await fireEvent.click(screen.getByRole('button', { name: '玄幻' }));
+    const filters = screen.getByRole('group', { name: '按分组筛选' });
+    const allFilter = within(filters).getByRole('button', { name: '全部' });
+    const fantasyFilter = within(filters).getByRole('button', { name: '玄幻' });
+    const ungroupedFilter = within(filters).getByRole('button', { name: '未分组' });
+    expect(allFilter.getAttribute('aria-pressed')).toBe('true');
+    expect(fantasyFilter.getAttribute('aria-pressed')).toBe('false');
+
+    await fireEvent.click(fantasyFilter);
+    expect(allFilter.getAttribute('aria-pressed')).toBe('false');
+    expect(fantasyFilter.getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('heading', { name: '真实来源' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: '未分组来源' })).toBeNull();
 
-    await fireEvent.click(screen.getByRole('button', { name: '未分组' }));
+    await fireEvent.click(ungroupedFilter);
+    expect(fantasyFilter.getAttribute('aria-pressed')).toBe('false');
+    expect(ungroupedFilter.getAttribute('aria-pressed')).toBe('true');
     expect(screen.queryByRole('heading', { name: '真实来源' })).toBeNull();
     expect(screen.getByRole('heading', { name: '未分组来源' })).toBeTruthy();
 
-    await fireEvent.click(screen.getByRole('button', { name: '全部' }));
+    await fireEvent.click(allFilter);
+    expect(allFilter.getAttribute('aria-pressed')).toBe('true');
+    expect(ungroupedFilter.getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByRole('heading', { name: '真实来源' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: '未分组来源' })).toBeTruthy();
+  });
+
+  it('highlights the deep-linked source and announces collapsible group state', async () => {
+    appState.page.url = new URL('https://lanjing.test/sources?highlight=source%3Aone');
+    store.setSnapshot({ sources: [installedSource, ungroupedSource] });
+    render(SourcesHome);
+
+    const sourceHeading = await screen.findByRole('heading', { name: '真实来源' });
+    const sourceArticle = sourceHeading.closest('article');
+    const ungroupedArticle = screen.getByRole('heading', { name: '未分组来源' }).closest('article');
+    expect(sourceArticle?.getAttribute('data-highlighted')).toBe('true');
+    expect(ungroupedArticle?.getAttribute('data-highlighted')).toBe('false');
+
+    const collapse = screen.getByRole('button', { name: '折叠分组：玄幻' });
+    expect(collapse.getAttribute('aria-expanded')).toBe('true');
+    await fireEvent.click(collapse);
+
+    const expand = screen.getByRole('button', { name: '展开分组：玄幻' });
+    expect(expand.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('heading', { name: '真实来源' })).toBeNull();
+
+    await fireEvent.click(expand);
+    expect(await screen.findByRole('heading', { name: '真实来源' })).toBeTruthy();
   });
 
   it('routes legacy installed sources into the no-snapshot paste flow', async () => {

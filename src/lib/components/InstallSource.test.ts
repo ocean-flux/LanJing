@@ -58,9 +58,10 @@ beforeEach(() => {
 });
 
 describe('InstallSource', () => {
-  it('prepares a preview and requires an explicit network-only grant before install', async () => {
+  it('requires an explicit network grant and keeps working and done states observable', async () => {
+    const installation = Promise.withResolvers<InstalledSource>();
     storeMocks.prepareInstall.mockResolvedValueOnce(candidate);
-    storeMocks.installCandidate.mockResolvedValueOnce(installedSource);
+    storeMocks.installCandidate.mockReturnValueOnce(installation.promise);
     render(InstallSource);
 
     const input = await prepareCandidate();
@@ -80,8 +81,20 @@ describe('InstallSource', () => {
 
     await waitFor(() => {
       expect(storeMocks.installCandidate).toHaveBeenCalledWith('candidate:one', 'network_only');
+      expect(screen.getByRole('button', { name: '正在安装…' })).toBeTruthy();
+    });
+    expect((screen.getByRole('button', { name: '正在安装…' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect((grant as HTMLSelectElement).disabled).toBe(true);
+    expect(input.disabled).toBe(true);
+    expect(input.value).toBe(sourceInput);
+
+    installation.resolve(installedSource);
+    await waitFor(() => {
       expect(screen.getByText(/已安装：source:one/)).toBeTruthy();
     });
+    expect(input.disabled).toBe(false);
     expect(input.value).toBe('');
     expect(screen.queryByTestId('install-candidate-preview')).toBeNull();
     expect(screen.queryByRole('combobox', { name: '网络授权' })).toBeNull();

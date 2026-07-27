@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Notice from '$lib/components/Notice.svelte';
   import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';
   import type {
@@ -8,12 +9,14 @@
   } from '$lib/stores/rules.svelte';
   import { classifyExpiresAt, truncateHash } from './candidate-preview';
   import { localizeSourceDiagnostic } from './source-diagnostics';
+  type CandidatePreviewDensity = 'compact' | 'full';
 
   type Props = {
     candidate: InstallCandidate;
     grant: CapabilityGrantPreset;
     loading?: boolean;
     stickyActions?: boolean;
+    density?: CandidatePreviewDensity;
     /** When true, show subtle "validated only" status (prepare succeeded). */
     validated?: boolean;
     onInstall: () => void | Promise<void>;
@@ -24,9 +27,14 @@
     grant = $bindable(),
     loading = false,
     stickyActions = false,
+    density = 'compact',
     validated = true,
     onInstall,
   }: Props = $props();
+
+  const uid = $props.id();
+  const titleId = `${uid}-title`;
+  const grantId = `${uid}-network-grant`;
 
   const intentLabels: Record<StandardIntent, () => string> = {
     Search: () => m.sources_intent_search(),
@@ -70,16 +78,22 @@
         return m.sources_install_expires_at({ time: expiresHint.isoDate });
     }
   }
+
+  function handleInstall(): void {
+    if (!canInstall) return;
+    void onInstall();
+  }
 </script>
 
 <section
-  class="flex min-w-0 flex-col gap-4"
+  class={['flex min-w-0 flex-col', density === 'full' ? 'gap-3' : 'gap-2']}
   data-testid="install-candidate-preview"
-  aria-labelledby="install-candidate-title"
+  data-density={density}
+  aria-labelledby={titleId}
 >
-  <div class="glass-panel space-y-3 rounded-xl border border-hairline p-4">
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
-      <h3 id="install-candidate-title" class="text-sm font-semibold text-ink">
+  <div class={density === 'full' ? 'space-y-3' : 'space-y-2'}>
+    <div class="flex flex-wrap items-baseline justify-between gap-2 border-b border-hairline pb-2">
+      <h3 id={titleId} class="text-sm font-semibold text-ink">
         {m.sources_install_preview_title()}
       </h3>
       {#if validated}
@@ -88,49 +102,70 @@
         </p>
       {/if}
     </div>
-    <dl class="grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
-      <dt class="text-ink-muted">{m.sources_install_source_name()}</dt>
-      <dd class="min-w-0 font-medium wrap-break-word text-ink">{candidate.profile.title}</dd>
+
+    <dl class={['grid min-w-0 gap-x-4 gap-y-2 text-sm', density === 'full' && 'sm:grid-cols-2']}>
+      <div class="min-w-0">
+        <dt class="text-xs text-ink-muted">{m.sources_install_source_name()}</dt>
+        <dd class="mt-0.5 min-w-0 font-medium wrap-break-word text-ink">
+          {candidate.profile.title}
+        </dd>
+      </div>
       {#if groupLabel}
-        <dt class="text-ink-muted">{m.sources_group_label()}</dt>
-        <dd class="min-w-0 font-medium wrap-break-word text-ink">{groupLabel}</dd>
+        <div class="min-w-0">
+          <dt class="text-xs text-ink-muted">{m.sources_group_label()}</dt>
+          <dd class="mt-0.5 min-w-0 font-medium wrap-break-word text-ink">{groupLabel}</dd>
+        </div>
       {/if}
       {#if candidate.profile.version}
-        <dt class="text-ink-muted">{m.sources_install_version()}</dt>
-        <dd class="min-w-0 font-medium wrap-break-word text-ink">{candidate.profile.version}</dd>
+        <div class="min-w-0">
+          <dt class="text-xs text-ink-muted">{m.sources_install_version()}</dt>
+          <dd class="mt-0.5 min-w-0 font-medium wrap-break-word text-ink">
+            {candidate.profile.version}
+          </dd>
+        </div>
       {/if}
-      <dt class="text-ink-muted">{m.sources_install_network_grant()}</dt>
-      <dd class="font-medium text-ink">
-        {requiresNetworkGrant
-          ? m.sources_install_network_required()
-          : m.sources_install_network_not_required()}
-      </dd>
-      <dt class="text-ink-muted">{m.sources_install_definition_hash()}</dt>
-      <dd
-        class="min-w-0 font-mono text-xs wrap-break-word text-ink"
-        data-testid="install-definition-hash"
-        title={candidate.definition_hash}
-      >
-        {definitionHashLabel}
-      </dd>
-      <dt class="text-ink-muted">{m.sources_install_plan_hash()}</dt>
-      <dd
-        class="min-w-0 font-mono text-xs wrap-break-word text-ink"
-        data-testid="install-plan-hash"
-        title={candidate.plan_hash}
-      >
-        {planHashLabel}
-      </dd>
-      <dt class="text-ink-muted">{m.sources_install_expires()}</dt>
-      <dd class="min-w-0 text-ink" data-testid="install-expires">{expiresText()}</dd>
+      <div class="min-w-0">
+        <dt class="text-xs text-ink-muted">{m.sources_install_network_grant()}</dt>
+        <dd class="mt-0.5 font-medium text-ink">
+          {requiresNetworkGrant
+            ? m.sources_install_network_required()
+            : m.sources_install_network_not_required()}
+        </dd>
+      </div>
+      <div class="min-w-0">
+        <dt class="text-xs text-ink-muted">{m.sources_install_definition_hash()}</dt>
+        <dd
+          class="mt-0.5 min-w-0 font-mono text-xs wrap-break-word text-ink"
+          data-testid="install-definition-hash"
+          title={candidate.definition_hash}
+        >
+          {definitionHashLabel}
+        </dd>
+      </div>
+      <div class="min-w-0">
+        <dt class="text-xs text-ink-muted">{m.sources_install_plan_hash()}</dt>
+        <dd
+          class="mt-0.5 min-w-0 font-mono text-xs wrap-break-word text-ink"
+          data-testid="install-plan-hash"
+          title={candidate.plan_hash}
+        >
+          {planHashLabel}
+        </dd>
+      </div>
+      <div class="min-w-0">
+        <dt class="text-xs text-ink-muted">{m.sources_install_expires()}</dt>
+        <dd class="mt-0.5 min-w-0 text-ink" data-testid="install-expires">{expiresText()}</dd>
+      </div>
     </dl>
 
     <div data-testid="install-supported-intents">
       <p class="text-xs font-medium text-ink-muted">{m.sources_supported_intents()}</p>
       {#if candidate.profile.supported_intents.length > 0}
-        <ul class="mt-1.5 flex flex-wrap gap-1.5" aria-label={m.sources_supported_intents()}>
+        <ul class="mt-1 flex flex-wrap gap-1" aria-label={m.sources_supported_intents()}>
           {#each candidate.profile.supported_intents as intent (intent)}
-            <li class="rounded-md border border-hairline bg-surface-2 px-2 py-1 text-xs text-ink">
+            <li
+              class="rounded-md border border-hairline bg-surface-2 px-1.5 py-0.5 text-xs text-ink"
+            >
               {intentLabel(intent)}
             </li>
           {/each}
@@ -143,7 +178,7 @@
     {#if candidate.profile.risk_notes.length > 0}
       <div>
         <p class="text-xs font-medium text-ink-muted">{m.sources_risk_notes()}</p>
-        <ul class="mt-1 list-disc space-y-1 pl-5 text-xs leading-5 text-ink-muted">
+        <ul class="mt-1 list-disc space-y-0.5 pl-4 text-xs leading-5 break-words text-ink-muted">
           {#each candidate.profile.risk_notes as note (note)}
             <li>{note}</li>
           {/each}
@@ -153,19 +188,20 @@
 
     {#if candidate.diagnostics.length > 0}
       <ul
-        class="space-y-1.5 rounded-lg border border-hairline bg-surface-2 px-2.5 py-2 text-xs"
+        class="divide-y divide-hairline rounded-[var(--radius-control)] border border-hairline bg-surface-2/60 px-2.5 text-xs"
         data-testid="install-diagnostics"
       >
         {#each candidate.diagnostics as diagnostic, index (`${index}:${diagnostic.code}:${diagnostic.span?.path ?? ''}:${diagnostic.span?.start ?? ''}:${diagnostic.span?.end ?? ''}`)}
           <li
-            class="space-y-1"
+            class="space-y-1 py-2"
             data-diagnostic-code={diagnostic.code}
             data-diagnostic-path={diagnostic.span?.path}
             data-diagnostic-span-start={diagnostic.span?.start}
             data-diagnostic-span-end={diagnostic.span?.end}
           >
             <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-              <code class="shrink-0 font-mono font-medium text-ink">{diagnostic.code}</code>
+              <code class="min-w-0 font-mono font-medium break-all text-ink">{diagnostic.code}</code
+              >
               <p class="min-w-0 text-ink-muted">{localizeSourceDiagnostic(diagnostic.code)}</p>
             </div>
             {#if diagnostic.span}
@@ -173,7 +209,9 @@
                 class="flex flex-wrap gap-x-2 gap-y-0.5 font-mono text-[0.6875rem] text-ink-subtle"
               >
                 {#if diagnostic.span.path !== null}
-                  <span>{m.sources_diagnostic_path({ path: diagnostic.span.path || '/' })}</span>
+                  <span class="min-w-0 break-all">
+                    {m.sources_diagnostic_path({ path: diagnostic.span.path || '/' })}
+                  </span>
                 {/if}
                 <span>
                   {m.sources_diagnostic_span({
@@ -191,28 +229,27 @@
 
   <div
     class={[
-      'glass-panel space-y-3 rounded-xl border border-hairline p-4',
-      stickyActions && 'sticky bottom-0 z-10 lg:static lg:z-auto',
+      'space-y-2.5 border-t border-hairline pt-3',
+      stickyActions &&
+        'sticky bottom-0 bg-surface-1 pb-[max(var(--density-panel-padding-compact),var(--safe-area-bottom))] lg:static lg:pb-0',
     ]}
     data-testid="install-actions"
   >
     {#if requiresUnsupportedSystemGrant}
-      <p class="border-danger/35 bg-danger/10 text-danger rounded-lg border px-3 py-2 text-xs">
+      <Notice tone="danger" role="alert" icon="warning-circle">
         {m.sources_install_system_unsupported()}
-      </p>
+      </Notice>
     {:else if requiresNetworkGrant}
-      <p
-        class="rounded-lg border border-lantern/35 bg-lantern-soft/25 px-3 py-2 text-xs font-medium text-ink"
-      >
+      <Notice tone="info" role="note" icon="warning-circle">
         {m.sources_install_network_required_notice()}
-      </p>
-      <label class="flex flex-col gap-1.5 text-sm text-ink" for="network-grant">
+      </Notice>
+      <label class="flex flex-col gap-1.5 text-sm text-ink" for={grantId}>
         <span class="text-xs font-medium text-ink-muted">{m.sources_install_network_grant()}</span>
         <select
-          id="network-grant"
+          id={grantId}
           bind:value={grant}
           disabled={loading}
-          class="glass-control min-h-11 w-full rounded-lg border border-hairline px-2.5 text-sm text-ink outline-none focus-visible:border-lantern-strong/50 focus-visible:shadow-[var(--focus-ring)]"
+          class="glass-control h-(--density-control-md) w-full rounded-md border border-hairline px-2.5 text-sm text-ink outline-none focus-visible:border-lantern-strong/60 focus-visible:shadow-[var(--focus-ring)]"
         >
           <option value="none">{m.sources_install_grant_prompt()}</option>
           <option value="network_only">{m.sources_install_grant_network_only()}</option>
@@ -224,15 +261,12 @@
 
     <Button
       type="button"
-      onclick={() => void onInstall()}
+      onclick={handleInstall}
       disabled={!canInstall}
-      class="min-h-11 w-full active:scale-[0.98]"
+      class="w-full"
       data-testid="install-candidate-action"
     >
       {loading ? m.sources_install_installing() : m.sources_install_action()}
     </Button>
-    {#if stickyActions}
-      <div class="h-[env(safe-area-inset-bottom)] lg:hidden" aria-hidden="true"></div>
-    {/if}
   </div>
 </section>
