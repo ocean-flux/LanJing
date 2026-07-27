@@ -1,0 +1,146 @@
+{
+  "cases": [
+    {
+      "diagnostics": [
+        {
+          "byte_length": 1,
+          "byte_offset": 82,
+          "code": "invalid_json",
+          "path": "",
+          "severity": "error",
+          "support": "blocked"
+        }
+      ],
+      "name": "invalid_json_trailing_comma",
+      "scope": "document",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 7,
+          "byte_offset": 0,
+          "code": "invalid_root",
+          "path": "",
+          "severity": "error",
+          "support": "blocked"
+        }
+      ],
+      "name": "invalid_root_array",
+      "scope": "document",
+      "text": "[\"源\"]"
+    },
+    {
+      "diagnostics": [],
+      "name": "known_executable_fields",
+      "scope": "document",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"searchUrl\":\"/search?q={{key}}\",\"ruleSearch\":{\"name\":\"h1@text\"}}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 6,
+          "byte_offset": 109,
+          "code": "duplicate_key",
+          "path": "/ruleSearch/name",
+          "severity": "error",
+          "support": "blocked"
+        }
+      ],
+      "name": "duplicate_key_uses_second_utf8_key_token",
+      "scope": "document",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"ruleSearch\":{\"name\":\"甲\",\"name\":\"乙\"}}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 19,
+          "byte_offset": 82,
+          "code": "known_field_preserved",
+          "path": "/bookSourceComment",
+          "severity": "info",
+          "support": "preserved"
+        }
+      ],
+      "name": "known_preserved_field",
+      "scope": "document",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"bookSourceComment\":\"备注\"}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 10,
+          "byte_offset": 82,
+          "code": "known_field_blocked",
+          "path": "/loginUrl",
+          "severity": "error",
+          "support": "blocked"
+        }
+      ],
+      "name": "known_blocked_field",
+      "scope": "document",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"loginUrl\":\"https://example.test/login\"}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 13,
+          "byte_offset": 82,
+          "code": "unknown_field",
+          "path": "/未知~1键~0",
+          "severity": "warning",
+          "support": "unknown"
+        }
+      ],
+      "name": "unknown_field_escapes_rfc6901_pointer",
+      "scope": "document",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"未知/键~\":\"值\"}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 43,
+          "byte_offset": 91,
+          "code": "credential_sentinel_invalid",
+          "path": "/header",
+          "severity": "error",
+          "support": "blocked"
+        }
+      ],
+      "name": "invalid_credential_sentinel",
+      "scope": "document",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"header\":\"__LANJING_CREDENTIAL_SLOT_V1__:not-a-uuid\"}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 55,
+          "byte_offset": 91,
+          "code": "credential_duplicate_sensitive_key",
+          "path": "/header",
+          "severity": "error",
+          "support": "blocked"
+        }
+      ],
+      "name": "duplicate_sensitive_header_is_normalized",
+      "scope": "credential_adapter",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"header\":\"{\\\"Authorization\\\":\\\"一\\\",\\\"authorization\\\":\\\"二\\\"}\"}"
+    },
+    {
+      "diagnostics": [
+        {
+          "byte_length": 38,
+          "byte_offset": 91,
+          "code": "credential_request_header_blocked",
+          "path": "/header",
+          "severity": "error",
+          "support": "blocked"
+        }
+      ],
+      "name": "proxy_authorization_request_header_is_blocked",
+      "scope": "credential_adapter",
+      "text": "{\"bookSourceType\":0,\"bookSourceUrl\":\"https://example.test\",\"bookSourceName\":\"源\",\"header\":\"{\\\"Proxy-Authorization\\\":\\\"secret\\\"}\"}"
+    }
+  ],
+  "fixture_version": 1
+}

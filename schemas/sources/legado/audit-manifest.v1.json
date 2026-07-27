@@ -1,0 +1,54 @@
+{
+  "audit_inputs": [
+    {
+      "path": "app/src/main/java/io/legado/app/data/entities/BookSource.kt",
+      "purpose": "BookSource root fields"
+    },
+    {
+      "path": "modules/web/src/config/bookSourceEditConfig.ts",
+      "purpose": "authoring groups, types, required flags and hints"
+    },
+    {
+      "path": "app/src/main/java/io/legado/app/data/entities/rule/SearchRule.kt",
+      "purpose": "search rule fields"
+    },
+    {
+      "path": "app/src/main/java/io/legado/app/data/entities/rule/ExploreRule.kt",
+      "purpose": "explore rule fields"
+    },
+    {
+      "path": "app/src/main/java/io/legado/app/data/entities/rule/BookInfoRule.kt",
+      "purpose": "book info rule fields"
+    },
+    {
+      "path": "app/src/main/java/io/legado/app/data/entities/rule/TocRule.kt",
+      "purpose": "toc rule fields"
+    },
+    {
+      "path": "app/src/main/java/io/legado/app/data/entities/rule/ContentRule.kt",
+      "purpose": "content rule fields"
+    },
+    {
+      "path": "app/src/main/java/io/legado/app/data/entities/rule/ReviewRule.kt",
+      "purpose": "review rule fields"
+    }
+  ],
+  "generated_outputs": [
+    {
+      "blake3": "ef4c725f8c4b3e0a093dc30d0e9239d464ad0d9d41db05e15af7c97a3cb56e85",
+      "path": "schemas/sources/legado/field-catalog.v1.json"
+    },
+    {
+      "blake3": "4472f05f5e6d21d687150437e522be6f289fa08ac1bf9ae0b86ac30ab9bca45d",
+      "path": "schemas/sources/legado/source.schema.v1.json"
+    },
+    {
+      "blake3": "c063cc7a31c4d4ca6f8cc56d986d7a34ac4ceaa6bae9b83b2f6461f903177c6e",
+      "path": "schemas/sources/legado/fixtures/diagnostic-parity.v1.json"
+    }
+  ],
+  "generator_version": 1,
+  "manifest_version": 1,
+  "upstream_commit": "0486da3c0255bb5b2d13427c7c4cb829ac37dd0d",
+  "upstream_repository": "https://github.com/gedoor/legado"
+}
