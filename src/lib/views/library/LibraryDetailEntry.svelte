@@ -28,7 +28,7 @@
 
     {#if hasId}
       <div
-        class="glass-panel overflow-hidden rounded-[var(--radius-panel)] border border-hairline p-(--density-panel-padding-compact) sm:p-(--density-panel-padding)"
+        class="glass-panel w-full max-w-2xl overflow-hidden rounded-[var(--radius-panel)] border border-hairline p-(--density-panel-padding-compact) sm:p-(--density-panel-padding)"
         data-resource-id={resourceId}
       >
         <p class="text-xs font-medium text-ink-muted">{m.library_detail_resource_label()}</p>
@@ -44,7 +44,7 @@
       </div>
     {:else}
       <div data-testid="library-detail-missing-id">
-        <Notice tone="danger" role="alert" icon="warning-circle">
+        <Notice tone="danger" role="alert" icon="warning-circle" class="w-full max-w-2xl">
           {m.library_detail_missing_id()}
         </Notice>
       </div>

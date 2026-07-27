@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getDarkThemeId,
   getLightThemeId,
@@ -11,7 +11,15 @@ import {
 } from '$lib/stores/theme.svelte';
 import SettingsHome from './SettingsHome.svelte';
 
+const setLocale = vi.hoisted(() => vi.fn<(locale: 'en' | 'zh-CN') => void>());
+
+vi.mock('$lib/i18n', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('$lib/i18n');
+  return { ...actual, setLocale };
+});
+
 beforeEach(() => {
+  setLocale.mockReset();
   localStorage.removeItem(WEB_PREFERENCES_STORAGE_KEY);
   setMode('system');
   setLightThemeId('porcelain-day');
@@ -26,12 +34,19 @@ afterEach(() => {
 });
 
 describe('SettingsHome', () => {
-  it('shows a visible page heading and grouped production preferences', () => {
-    render(SettingsHome);
+  it('uses the standard page frame and keeps the production preference regions', () => {
+    const { container } = render(SettingsHome);
 
+    expect(container.querySelector('[data-slot="page-frame"]')?.getAttribute('data-width')).toBe(
+      'standard',
+    );
     expect(screen.getByRole('heading', { level: 1, name: '设置' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '外观' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: '语言' })).toBeTruthy();
+
+    const appearance = screen.getByRole('region', { name: '外观' });
+    const language = screen.getByRole('region', { name: '语言' });
+    expect(within(appearance).getAllByRole('radiogroup')).toHaveLength(3);
+    expect(within(language).getAllByRole('radiogroup')).toHaveLength(1);
+
     expect(screen.getByText('明暗模式')).toBeTruthy();
     expect(screen.getByText('亮色主题')).toBeTruthy();
     expect(screen.getByText('暗色主题')).toBeTruthy();
@@ -39,7 +54,7 @@ describe('SettingsHome', () => {
     expect(screen.queryByRole('link', { name: /境场|应用|来源|资料库/ })).toBeNull();
   });
 
-  it('binds labeled mode choices and dual-track themes', async () => {
+  it('binds labeled choices to theme and locale owners', async () => {
     render(SettingsHome);
 
     const dark = screen.getByRole('radio', { name: '深色' });
@@ -62,6 +77,11 @@ describe('SettingsHome', () => {
     await fireEvent.click(darkRadios[1]!);
     expect(getLightThemeId()).toBe('porcelain-day');
     expect(getDarkThemeId()).toBe('graphite-atelier');
+    const english = screen.getByRole('radio', { name: 'EN' });
+    await fireEvent.click(english);
+    expect(english.getAttribute('aria-checked')).toBe('true');
+    expect(setLocale).toHaveBeenCalledTimes(1);
+    expect(setLocale).toHaveBeenCalledWith('en');
   });
 
   it('keeps one tab stop per group and supports arrows, Home, and End', async () => {

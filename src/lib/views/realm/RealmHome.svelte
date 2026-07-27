@@ -11,7 +11,7 @@
 <PageFrame width="standard">
   <PageHeader title={m.realm_title()} />
 
-  <EmptyState title={m.realm_empty_title()} icon="compass">
+  <EmptyState title={m.realm_empty_title()} icon="compass" class="w-full max-w-2xl">
     {#snippet action()}
       <Button href={resolve('/sources' as '/')} variant="outline">
         <span>{m.action_manage_sources()}</span>

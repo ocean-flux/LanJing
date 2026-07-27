@@ -219,7 +219,7 @@
       {/each}
     </ul>
   {:else if viewState.kind === 'load-error'}
-    <Notice tone="danger" role="alert" icon="warning-circle">
+    <Notice tone="danger" role="alert" icon="warning-circle" class="w-full max-w-2xl">
       {m.library_load_error()}
       {#snippet action()}
         <Button type="button" variant="outline" onclick={loadProjection}>
@@ -246,7 +246,7 @@
     </ul>
   {:else}
     <div data-testid="library-empty">
-      <EmptyState title={m.library_empty_title()} icon="list-bullets">
+      <EmptyState title={m.library_empty_title()} icon="list-bullets" class="w-full max-w-2xl">
         {#snippet action()}
           <Button href={resolve('/sources' as '/')} variant="outline">
             <span>{m.action_manage_sources()}</span>
@@ -258,7 +258,7 @@
   {/if}
 
   {#if updateError}
-    <Notice tone="danger" role="alert" icon="warning-circle">
+    <Notice tone="danger" role="alert" icon="warning-circle" class="w-full max-w-2xl">
       {m.library_update_error()}
     </Notice>
   {/if}

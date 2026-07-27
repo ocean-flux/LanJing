@@ -11,7 +11,7 @@
 <PageFrame width="standard">
   <PageHeader title={m.apps_title()} />
 
-  <EmptyState title={m.apps_empty_title()} icon="squares-four">
+  <EmptyState title={m.apps_empty_title()} icon="squares-four" class="w-full max-w-2xl">
     {#snippet action()}
       <Button href={resolve('/sources' as '/')} variant="outline">
         <span>{m.action_manage_sources()}</span>
