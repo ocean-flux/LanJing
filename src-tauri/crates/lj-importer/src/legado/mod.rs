@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use lj_capability::IntentInput;
-use lj_rule_model::{Error, RuleDefinition, canonical_json};
+use lj_rule_model::{Error, RuleDefinition, SensitiveNamePolicy, canonical_json};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -261,9 +261,7 @@ fn validate_action_target(url: &str) -> Result<(), ContinueActionError> {
     if trimmed.is_empty()
         || trimmed.len() > 8_192
         || trimmed.contains(['\r', '\n'])
-        || ["token=", "authorization=", "cookie="]
-            .iter()
-            .any(|needle| trimmed.to_ascii_lowercase().contains(needle))
+        || SensitiveNamePolicy::url_contains_sensitive_query_name(trimmed)
     {
         return Err(ContinueActionError::StateInvalid);
     }

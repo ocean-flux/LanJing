@@ -43,6 +43,29 @@ pub enum StorageError {
     /// source credential staging 缺失、已过期或与安装来源不匹配。
     #[error("source credential snapshot 不可用")]
     SourceCredentialUnavailable,
+    /// candidate 的 document/source baseline 已变化。
+    #[error("candidate 基线已过期")]
+    CandidateStale,
+    /// candidate schema 与当前 writer/consumer 不一致。
+    #[error("candidate schema 不兼容")]
+    CandidateSchemaMismatch,
+    /// 已安装规则、package 或 Plan 使用 reader 不认识的合同版本。
+    #[error("规则合同 schema 不兼容: {contract:?} schema_version={version}")]
+    ContractSchemaIncompatible {
+        /// 无法读取的合同种类。
+        contract: lj_rule_model::SchemaContract,
+        /// artifact 声明的未知 wire 版本。
+        version: u32,
+    },
+    /// 来源文档不存在。
+    #[error("来源文档不存在")]
+    DocumentMissing,
+    /// 已关联来源或仍被 pin 的文档不能删除。
+    #[error("来源文档仍被关联或固定")]
+    DocumentDeleteUnsafe,
+    /// credential slot 不属于请求的 document revision。
+    #[error("credential slot ownership 不匹配")]
+    CredentialOwnershipMismatch,
     /// 来源尚未安装。
     #[error("来源尚未安装")]
     SourceMissing,
@@ -67,6 +90,21 @@ pub enum StorageError {
     /// 文件系统操作失败。
     #[error("artifact 文件操作失败：{0}")]
     FileSystem(String),
+    /// 当前平台没有可用的原生 secure store。
+    #[error("原生 secure store 不可用")]
+    KeyringUnavailable,
+    /// 原生 secure store 暂时锁定。
+    #[error("原生 secure store 已锁定")]
+    KeyringLocked,
+    /// `SQLite` 记录的随机 key ID 已不在 secure store 中。
+    #[error("vault key 已丢失")]
+    KeyLost,
+    /// secret envelope、ciphertext hash 或 AEAD 认证失败。
+    #[error("secret artifact 密文损坏")]
+    ArtifactCorrupt,
+    /// vault schema/data migration 未能完成；旧数据未被删除。
+    #[error("来源文档保险库迁移失败")]
+    VaultMigrationFailed,
     /// keyring 操作失败。
     #[error("keyring 操作失败")]
     Keyring,

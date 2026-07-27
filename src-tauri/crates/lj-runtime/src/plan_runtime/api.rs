@@ -19,16 +19,11 @@ use crate::effect::{CancellationHandle, EffectArchive, EffectHandlers, HttpExecu
 
 use super::{scheduler, validation};
 
-/// 当前 runtime 支持的 Plan schema 版本。
-pub const SUPPORTED_PLAN_SCHEMA_VERSION: u32 = 1;
-
 /// Plan runtime 的固定并发与版本配置。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlanRuntimeConfig {
     /// runtime 接受的 compiler 身份；必须与 Plan 内版本完全一致。
     pub compiler_version: String,
-    /// runtime 接受的 Plan schema 版本。
-    pub plan_schema_version: u32,
     /// session event channel 的固定容量。
     pub event_channel_capacity: usize,
     /// 同时运行的 execution 上限。
@@ -37,6 +32,15 @@ pub struct PlanRuntimeConfig {
     pub max_concurrent_effects: usize,
     /// 单一来源的同时 effect 上限。
     pub max_concurrent_effects_per_source: usize,
+}
+
+/// 当前 runtime 对已读取 typed Plan 的支持类别。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlanSupport {
+    /// 当前线性 Plan 可由 scheduler 执行与 replay。
+    Linear,
+    /// Plan 含已编译控制流，须等待控制流 runtime 开放。
+    ControlFlowUnavailable,
 }
 
 /// Plan 在启动前的验证失败。
@@ -49,15 +53,6 @@ pub enum PlanRuntimeError {
     /// 当前线程没有 Tokio runtime，无法启动异步执行会话。
     #[error("Plan runtime 需要正在运行的 Tokio runtime")]
     MissingTokioRuntime,
-
-    /// Plan schema 与 runtime 支持版本不一致。
-    #[error("Plan schema 版本不匹配: 期望 {expected}，实际 {actual}")]
-    SchemaVersionMismatch {
-        /// runtime 支持的版本。
-        expected: u32,
-        /// Plan 声明的版本。
-        actual: u32,
-    },
 
     /// Plan compiler 身份与安装时 pin 的身份不一致。
     #[error("Plan compiler 版本不匹配")]
@@ -311,11 +306,6 @@ impl PlanRuntime {
                 "compiler_version 不能为空",
             ));
         }
-        if config.plan_schema_version == 0 {
-            return Err(PlanRuntimeError::InvalidConfiguration(
-                "plan_schema_version 必须大于零",
-            ));
-        }
         if config.event_channel_capacity == 0 {
             return Err(PlanRuntimeError::InvalidConfiguration(
                 "event_channel_capacity 必须大于零",
@@ -347,11 +337,20 @@ impl PlanRuntime {
         })
     }
 
-    /// 校验 immutable Plan 的版本、hash、effect 声明和节点配置。
+    /// 返回 current typed Plan 的唯一 runtime 支持分类。
+    ///
+    /// wire artifact 必须先通过 `lj-rule-model` 的 current-contract reader；runtime 不解析、迁移
+    /// 或执行历史 shape。
+    #[must_use]
+    pub fn check_plan_support(&self, plan: &ExecutionPlan) -> PlanSupport {
+        validation::plan_support(plan)
+    }
+
+    /// 校验 immutable Plan 的 runtime 支持、compiler、hash、effect 声明和节点配置。
     ///
     /// # Errors
     ///
-    /// Plan schema/compiler/hash 不匹配，或 Plan 结构/节点配置无效时返回
+    /// Plan 含当前未开放的控制流、compiler/hash 不匹配，或结构/节点配置无效时返回
     /// [`PlanRuntimeError`]。本函数不解析 `RuleDefinition` 或作者 JSON。
     pub fn validate_plan(&self, plan: &ExecutionPlan) -> Result<(), PlanRuntimeError> {
         validation::validate_plan(plan, &self.state.config)

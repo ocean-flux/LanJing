@@ -27,6 +27,6 @@ pub use effect::{
 pub use node_data::{HttpResponse, NodeData};
 pub use plan_runtime::{
     ExecutionEvent, ExecutionEventKind, ExecutionFailure, ExecutionMode, ExecutionSession,
-    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, PlanRuntimeError, RuntimeFailureCode,
-    SUPPORTED_PLAN_SCHEMA_VERSION,
+    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, PlanRuntimeError, PlanSupport,
+    RuntimeFailureCode,
 };

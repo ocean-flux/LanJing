@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// 与 `PolicyCapabilities.network` 分开以不超过 clippy `struct_excessive_bools` 阈值。
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SystemCapabilities {
     /// 是否允许文件系统访问。
     pub fs: bool,
@@ -17,6 +18,7 @@ pub struct SystemCapabilities {
 
 /// 策略能力配置（安装 grant / 执行沙箱边界）。
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PolicyCapabilities {
     /// 是否允许网络请求。
     pub network: bool,

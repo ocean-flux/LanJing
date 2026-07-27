@@ -12,16 +12,16 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use blake3::Hasher;
 use futures::StreamExt;
 use lj_capability::{IntentExport, IntentInput, StandardIntent};
 use lj_compiler::Compiler;
 use lj_rule_model::definition::MapperOutputKind;
 use lj_rule_model::{
-    CapabilityManifest, ControlledMapper, EffectDeclaration, EffectKind, ExpectedDataType,
-    ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeKind, HttpMethod, HttpSpec, IntentEntry,
-    PlanNode, PlanNodeKind, PlanPort, PolicyCapabilities, RuleDefinition, SourceIdentity,
-    SystemCapabilities, canonical_json,
+    CapabilityManifest, ControlledMapper, ExecutionPlan, ExpectedDataType, ExtractSpec, FlowEdge,
+    FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec, JsConfig, JsOutputKind,
+    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MergeConfig, MergeInput, MergeInputActivation,
+    MergeStrategy, PlanNode, PlanNodeConfig, PolicyCapabilities, RuleDefinition, SourceIdentity,
+    SystemCapabilities, execution_plan_hash, read_execution_plan,
 };
 use lj_runtime::{
     CapturedEffectOutput, DurableCaptureReceipt, EffectArchive, EffectArchiveError,
@@ -29,7 +29,7 @@ use lj_runtime::{
     EffectOutput, EffectReplayLookup, EffectWitness, ExtractEffectHandler, ExtractEffectRequest,
     ExtractEffectWitness, ExtractOutput, HttpEffectErrorKind, HttpEffectHandler, HttpEffectRequest,
     HttpEffectWitness, HttpExecutionCredentials, HttpRequestWitness, HttpResponse,
-    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, QuickJsEffectHandler,
+    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, PlanSupport, QuickJsEffectHandler,
     QuickJsEffectRequest, QuickJsEffectWitness, QuickJsOutput, RuntimeFailureCode,
     effect_input_hash, effect_output_hash, quickjs_script_hash,
 };
@@ -388,7 +388,6 @@ fn handlers(http: FixtureHttp, extract_calls: Arc<AtomicUsize>) -> EffectHandler
 fn runtime(event_channel_capacity: usize) -> PlanRuntime {
     PlanRuntime::new(PlanRuntimeConfig {
         compiler_version: "runtime-test-compiler@1".to_string(),
-        plan_schema_version: 1,
         event_channel_capacity,
         max_concurrent_executions: 2,
         max_concurrent_effects: 2,
@@ -397,127 +396,64 @@ fn runtime(event_channel_capacity: usize) -> PlanRuntime {
     .expect("runtime config")
 }
 
-fn sample_plan() -> lj_rule_model::ExecutionPlan {
-    let http = Uuid::from_u128(1);
-    let extract = Uuid::from_u128(2);
-    let mapper = Uuid::from_u128(3);
-    let mut intent_entries = BTreeMap::new();
-    intent_entries.insert(
-        StandardIntent::Search,
-        IntentEntry {
-            intent: StandardIntent::Search,
-            entry_node: http,
-            mapper_output: mapper,
-        },
-    );
-    let mut plan = lj_rule_model::ExecutionPlan {
-        schema_version: 1,
-        compiler_version: "runtime-test-compiler@1".to_string(),
-        definition_hash: "definition-hash".to_string(),
-        plan_hash: String::new(),
-        nodes: vec![
-            PlanNode {
-                id: http,
-                kind: PlanNodeKind::Http,
-                inputs: vec![port("value")],
-                outputs: vec![port("http_response")],
-                config: serde_json::to_value(HttpSpec {
-                    method: HttpMethod::Get,
-                    url: "https://example.invalid/search?q={{key}}".to_string(),
-                    headers: HashMap::new(),
-                    body: None,
-                    charset: None,
-                    expected_type: ExpectedDataType::Html,
-                })
-                .expect("HTTP config"),
-            },
-            PlanNode {
-                id: extract,
-                kind: PlanNodeKind::Extract,
-                inputs: vec![port("http_response")],
-                outputs: vec![port("json")],
-                config: serde_json::to_value(ExtractSpec {
-                    rules: Vec::new(),
-                    field_rules: HashMap::new(),
-                    expected_type: ExpectedDataType::Html,
-                    output_target: lj_rule_model::OutputTarget::default(),
-                })
-                .expect("Extract config"),
-            },
-            PlanNode {
-                id: mapper,
-                kind: PlanNodeKind::Mapper,
-                inputs: vec![port("json")],
-                outputs: vec![port("delta")],
-                config: serde_json::to_value(ControlledMapper {
-                    output: MapperOutputKind::Items,
-                    identity_fields: vec!["url".to_string()],
-                })
-                .expect("Mapper config"),
-            },
-        ],
-        edges: vec![(http, extract), (extract, mapper)],
-        intent_entries,
-        effects: vec![
-            EffectDeclaration {
-                node_id: http,
-                kind: EffectKind::Http,
-                required_capabilities: vec!["network".to_string()],
-            },
-            EffectDeclaration {
-                node_id: extract,
-                kind: EffectKind::Extract,
-                required_capabilities: Vec::new(),
-            },
-        ],
-        capability_requirements: vec!["network".to_string()],
-    };
-    plan.plan_hash = hash(&plan);
-    plan
+fn sample_plan() -> ExecutionPlan {
+    Compiler::with_version("runtime-test-compiler@1".to_string())
+        .compile(&compiler_definition())
+        .expect("linear Definition must compile")
 }
 
-fn quickjs_plan() -> lj_rule_model::ExecutionPlan {
-    let quickjs = Uuid::from_u128(1);
-    let extract = Uuid::from_u128(2);
-    let mapper = Uuid::from_u128(3);
-    let mut plan = sample_plan();
-    plan.nodes.retain(|node| node.id != extract);
-    let quickjs_node = plan
-        .nodes
-        .iter_mut()
-        .find(|node| node.id == quickjs)
-        .expect("sample Plan must include the first effect node");
-    quickjs_node.kind = PlanNodeKind::Js;
-    quickjs_node.outputs = vec![port("json")];
-    quickjs_node.config = serde_json::json!({
-        "code": "JSON.stringify([{ title: 'fixture', url: 'https://example.invalid/item' }])"
-    });
-    plan.edges = vec![(quickjs, mapper)];
-    plan.effects = vec![EffectDeclaration {
-        node_id: quickjs,
-        kind: EffectKind::QuickJs,
-        required_capabilities: vec!["network".to_string()],
-    }];
-    plan.plan_hash.clear();
-    plan.plan_hash = hash(&plan);
-    plan
+fn quickjs_plan() -> ExecutionPlan {
+    Compiler::with_version("runtime-test-compiler@1".to_string())
+        .compile(&quickjs_definition())
+        .expect("QuickJS Definition must compile")
 }
 
-fn port(type_tag: &str) -> PlanPort {
-    PlanPort {
-        name: "value".to_string(),
-        type_tag: type_tag.to_string(),
+fn control_plan() -> ExecutionPlan {
+    ExecutionPlan::new(
+        "runtime-test-compiler@1",
+        "control-definition-hash",
+        vec![PlanNode {
+            id: Uuid::from_u128(900),
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            config: PlanNodeConfig::Merge(MergeConfig {
+                inputs: vec![MergeInput {
+                    handle: "primary".to_string(),
+                    activation: MergeInputActivation::Required,
+                }],
+                strategy: MergeStrategy::SingleActive,
+            }),
+        }],
+        Vec::new(),
+        BTreeMap::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+    )
+    .expect("control Plan must seal")
+}
+
+fn plan_json(plan: &ExecutionPlan) -> serde_json::Value {
+    serde_json::to_value(plan).expect("serialize current Plan fixture")
+}
+
+fn rewrite_plan(
+    plan: &ExecutionPlan,
+    mutate: impl FnOnce(&mut serde_json::Value),
+    reseal: bool,
+) -> ExecutionPlan {
+    let mut value = plan_json(plan);
+    mutate(&mut value);
+    if reseal {
+        value["plan_hash"] = serde_json::Value::String(String::new());
+        let bytes = serde_json::to_vec(&value).expect("serialize unsealed Plan fixture");
+        let unsealed = read_execution_plan(&bytes).expect("read unsealed current Plan fixture");
+        value["plan_hash"] = serde_json::Value::String(
+            execution_plan_hash(&unsealed).expect("hash rewritten current Plan fixture"),
+        );
     }
-}
-
-fn hash<T>(value: &T) -> String
-where
-    T: serde::Serialize,
-{
-    let canonical = canonical_json(value).expect("canonical JSON");
-    let mut hasher = Hasher::new();
-    hasher.update(canonical.as_bytes());
-    hasher.finalize().to_hex().to_string()
+    read_execution_plan(&serde_json::to_vec(&value).expect("serialize rewritten Plan fixture"))
+        .expect("read rewritten current Plan fixture")
 }
 
 fn request(
@@ -575,71 +511,103 @@ fn compiler_definition() -> RuleDefinition {
     let http = Uuid::from_u128(101);
     let extract = Uuid::from_u128(102);
     let mapper = Uuid::from_u128(103);
-    let mut http_node = flow_node(http, FlowNodeKind::Http);
-    http_node.http = Some(HttpSpec {
-        method: HttpMethod::Get,
-        url: "https://example.invalid/search?q={{key}}".to_string(),
-        headers: HashMap::new(),
-        body: None,
-        charset: None,
-        expected_type: ExpectedDataType::Html,
-    });
-    let mut extract_node = flow_node(extract, FlowNodeKind::Extract);
-    extract_node.extract = Some(ExtractSpec {
-        rules: Vec::new(),
-        field_rules: HashMap::new(),
-        expected_type: ExpectedDataType::Html,
-        output_target: lj_rule_model::OutputTarget::default(),
-    });
-    let mut mapper_node = flow_node(mapper, FlowNodeKind::Mapper);
-    mapper_node.mapper = Some(ControlledMapper {
-        output: MapperOutputKind::Items,
-        identity_fields: vec!["url".to_string()],
-    });
-    let mut intent_exports = BTreeMap::new();
-    intent_exports.insert(StandardIntent::Search, IntentExport::new(http, mapper));
-    RuleDefinition {
-        schema_version: 1,
-        source_identity: SourceIdentity {
+    let nodes = vec![
+        FlowNode::new(
+            http,
+            FlowNodeConfig::Http(HttpSpec {
+                method: HttpMethod::Get,
+                url: "https://example.invalid/search?q={{key}}".to_string(),
+                headers: HashMap::new(),
+                body: None,
+                charset: None,
+                expected_type: ExpectedDataType::Html,
+            }),
+        ),
+        FlowNode::new(
+            extract,
+            FlowNodeConfig::Extract(ExtractSpec {
+                rules: Vec::new(),
+                field_rules: HashMap::new(),
+                expected_type: ExpectedDataType::Html,
+                output_target: lj_rule_model::OutputTarget::default(),
+            }),
+        ),
+        FlowNode::new(
+            mapper,
+            FlowNodeConfig::Mapper(ControlledMapper {
+                output: MapperOutputKind::Items,
+                identity_fields: vec!["url".to_string()],
+            }),
+        ),
+    ];
+    let intent_exports =
+        BTreeMap::from([(StandardIntent::Search, IntentExport::new(http, mapper))]);
+    RuleDefinition::new(
+        SourceIdentity {
             id: "compiler-runtime-test".to_string(),
         },
-        base_url: "https://example.invalid".to_string(),
+        "https://example.invalid",
         intent_exports,
-        flow: FlowGraph {
-            nodes: vec![http_node, extract_node, mapper_node],
-            edges: vec![
-                FlowEdge {
-                    from: http,
-                    to: extract,
-                    condition_branch: None,
-                },
-                FlowEdge {
-                    from: extract,
-                    to: mapper,
-                    condition_branch: None,
-                },
-            ],
+        FlowGraph {
+            nodes,
+            edges: vec![linear_edge(http, extract), linear_edge(extract, mapper)],
         },
-        capability_manifest: CapabilityManifest {
+        CapabilityManifest {
             required: PolicyCapabilities {
                 network: true,
                 system: SystemCapabilities::default(),
             },
         },
-        source_id_rules: vec!["url".to_string()],
-    }
+        vec!["url".to_string()],
+    )
 }
 
-fn flow_node(id: Uuid, kind: FlowNodeKind) -> FlowNode {
-    FlowNode {
-        id,
-        kind,
-        http: None,
-        js_code: None,
-        extract: None,
-        mapper: None,
-        span: None,
-    }
+fn quickjs_definition() -> RuleDefinition {
+    let quickjs = Uuid::from_u128(1);
+    let mapper = Uuid::from_u128(3);
+    RuleDefinition::new(
+        SourceIdentity {
+            id: "quickjs-runtime-test".to_string(),
+        },
+        "https://example.invalid",
+        BTreeMap::from([(
+            StandardIntent::Search,
+            IntentExport::new(quickjs, mapper),
+        )]),
+        FlowGraph {
+            nodes: vec![
+                FlowNode::new(
+                    quickjs,
+                    FlowNodeConfig::Js(JsConfig {
+                        code: "JSON.stringify([{ title: 'fixture', url: 'https://example.invalid/item' }])".to_string(),
+                        output: JsOutputKind::Json,
+                    }),
+                ),
+                FlowNode::new(
+                    mapper,
+                    FlowNodeConfig::Mapper(ControlledMapper {
+                        output: MapperOutputKind::Items,
+                        identity_fields: vec!["url".to_string()],
+                    }),
+                ),
+            ],
+            edges: vec![linear_edge(quickjs, mapper)],
+        },
+        CapabilityManifest {
+            required: PolicyCapabilities {
+                network: true,
+                system: SystemCapabilities::default(),
+            },
+        },
+        vec!["url".to_string()],
+    )
+}
+
+fn linear_edge(from: Uuid, to: Uuid) -> FlowEdge {
+    FlowEdge::new(
+        FlowPortRef::new(from, LINEAR_OUTPUT_HANDLE),
+        FlowPortRef::new(to, LINEAR_INPUT_HANDLE),
+    )
 }
 
 #[path = "plan_runtime_test/replay_contract.rs"]

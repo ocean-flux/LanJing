@@ -8,35 +8,47 @@ fn compiler_produced_plan_passes_runtime_hash_validation() {
     let plan = compiler
         .compile(&compiler_definition())
         .expect("valid Definition must compile");
+    assert_eq!(runtime(4).check_plan_support(&plan), PlanSupport::Linear);
     runtime(4)
         .validate_plan(&plan)
         .expect("runtime must accept compiler canonical Plan hash");
 }
 
 #[test]
-fn runtime_rejects_tampered_plan_hash_and_versions() {
+fn runtime_rejects_tampered_plan_hash_and_compiler_identity() {
     let runtime = runtime(4);
-    let mut hash_mismatch = sample_plan();
-    hash_mismatch.plan_hash = "tampered".to_string();
+    let hash_mismatch = rewrite_plan(
+        &sample_plan(),
+        |value| value["plan_hash"] = serde_json::json!("tampered"),
+        false,
+    );
     assert!(matches!(
         runtime.validate_plan(&hash_mismatch),
         Err(lj_runtime::PlanRuntimeError::PlanHashMismatch)
     ));
 
-    let mut compiler_mismatch = sample_plan();
-    compiler_mismatch.compiler_version = "other-compiler@1".to_string();
-    compiler_mismatch.plan_hash = hash(&compiler_mismatch);
+    let compiler_mismatch = rewrite_plan(
+        &sample_plan(),
+        |value| value["compiler_version"] = serde_json::json!("other-compiler@1"),
+        true,
+    );
     assert!(matches!(
         runtime.validate_plan(&compiler_mismatch),
         Err(lj_runtime::PlanRuntimeError::CompilerVersionMismatch)
     ));
+}
 
-    let mut schema_mismatch = sample_plan();
-    schema_mismatch.schema_version = 2;
-    schema_mismatch.plan_hash = hash(&schema_mismatch);
+#[test]
+fn current_control_plan_has_stable_runtime_unavailable_category() {
+    let plan = control_plan();
+    let runtime = runtime(4);
+    assert_eq!(
+        runtime.check_plan_support(&plan),
+        PlanSupport::ControlFlowUnavailable
+    );
     assert!(matches!(
-        runtime.validate_plan(&schema_mismatch),
-        Err(lj_runtime::PlanRuntimeError::SchemaVersionMismatch { .. })
+        runtime.validate_plan(&plan),
+        Err(lj_runtime::PlanRuntimeError::UnsupportedControlFlow)
     ));
 }
 
@@ -180,7 +192,7 @@ async fn replay_missing_capture_fails_with_single_attributed_terminal() {
         panic!("缺 capture 必须进入 Failed 终态");
     };
     assert_eq!(failure.code, RuntimeFailureCode::ReplayCaptureMissing);
-    assert_eq!(failure.node_id, Some(Uuid::from_u128(1)));
+    assert_eq!(failure.node_id, Some(Uuid::from_u128(101)));
     assert!(failure.effect_id.is_some());
     assert_eq!(failure.trace_id, "runtime-test-trace");
 }

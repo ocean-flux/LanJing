@@ -8,7 +8,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 
 use blake3::Hasher;
-use lj_rule_model::{EffectKind, HttpMethod, canonical_json};
+use lj_rule_model::{EffectKind, HttpMethod, SensitiveNamePolicy, canonical_json};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -396,13 +396,7 @@ fn is_safe_header_name(name: &str) -> bool {
 }
 
 fn is_sensitive_header_name(name: &str) -> bool {
-    let name = name.to_ascii_lowercase();
-    matches!(
-        name.as_str(),
-        "authorization" | "cookie" | "set-cookie" | "proxy-authorization"
-    ) || name.contains("token")
-        || name.contains("secret")
-        || name.contains("api-key")
+    SensitiveNamePolicy::is_sensitive(name)
 }
 
 fn validate_quickjs_witness(witness: &QuickJsEffectWitness) -> Result<(), EffectWitnessError> {

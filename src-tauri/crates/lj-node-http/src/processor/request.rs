@@ -12,7 +12,7 @@ use reqwest::header::{self, HeaderMap, HeaderName, HeaderValue};
 
 use lj_capability::IntentInput;
 use lj_media::{parse_item_resource_id, parse_unit_resource_id};
-use lj_rule_model::{Error, HttpMethod};
+use lj_rule_model::{Error, HttpMethod, RequestHeaderDisposition, SensitiveNamePolicy};
 use lj_runtime::{
     EffectCancellation, EffectError, EffectErrorCode, EffectInput, EffectOutput,
     HttpEffectErrorKind, HttpExecutionCredentials, HttpRequestHeaderWitness, HttpResponse,
@@ -110,12 +110,29 @@ pub(super) fn build_request(
     };
     let mut headers = HeaderMap::new();
     for (name, value) in &spec.headers {
+        if SensitiveNamePolicy::request_header_disposition(name) != RequestHeaderDisposition::Public
+        {
+            return Err(HttpRequestError::Request);
+        }
         insert_header(&mut headers, name, value, false)?;
     }
     let secret_headers = credentials
         .decode_headers()
         .map_err(|_| HttpRequestError::Request)?;
+    let mut credential_names: Vec<&str> = Vec::with_capacity(secret_headers.iter().size_hint().0);
     for (name, value) in secret_headers.iter() {
+        if credential_names
+            .iter()
+            .any(|seen| SensitiveNamePolicy::equivalent(seen, name))
+        {
+            return Err(HttpRequestError::Request);
+        }
+        credential_names.push(name);
+        if SensitiveNamePolicy::request_header_disposition(name)
+            != RequestHeaderDisposition::Credential
+        {
+            return Err(HttpRequestError::Request);
+        }
         let header_name =
             HeaderName::from_bytes(name.as_bytes()).map_err(|_| HttpRequestError::Request)?;
         if forbidden_secret_header(&header_name) {
@@ -300,7 +317,7 @@ pub(super) fn safe_request_headers(
         .iter()
         .filter_map(|(name, value)| {
             let name = name.to_ascii_lowercase();
-            if !is_safe_header_name(&name) || is_sensitive_header_name(&name) {
+            if !is_safe_header_name(&name) || SensitiveNamePolicy::is_sensitive(&name) {
                 return None;
             }
             Some(HttpRequestHeaderWitness {
@@ -322,15 +339,6 @@ fn is_safe_header_name(name: &str) -> bool {
         && name
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
-}
-
-fn is_sensitive_header_name(name: &str) -> bool {
-    matches!(
-        name,
-        "authorization" | "cookie" | "set-cookie" | "proxy-authorization"
-    ) || name.contains("token")
-        || name.contains("secret")
-        || name.contains("api-key")
 }
 
 pub(super) fn resolve_request_url(url_str: &str, base_url: &str) -> String {

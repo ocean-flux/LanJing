@@ -6,6 +6,7 @@
 mod artifact;
 mod candidate;
 mod config;
+mod document;
 mod error;
 mod event;
 mod execution;
@@ -15,17 +16,32 @@ mod retention;
 
 pub use artifact::{ArtifactInput, ArtifactKind};
 pub use candidate::{
-    CandidateDraft, CandidateSummary, InstallCandidateRequest, InstalledSource,
-    InstalledSourceRecord, SourceCredentialInput, SourceCredentialSnapshot,
+    CandidateDocumentInput, CandidateDraft, CandidateSummary, INSTALL_CANDIDATE_SCHEMA_VERSION,
+    InstallCandidateRequest, InstalledSource, InstalledSourceRecord, RuntimeCredentialMaterial,
+    TransientSourceDocumentInput,
 };
 pub use config::{
     DEFAULT_ARCHIVE_TTL_MS, DEFAULT_CANDIDATE_TTL_MS, StorageConfig, WRITER_CAPACITY,
+};
+pub use document::{
+    CreateSourceDocumentInput, CredentialSlotMaterial, CredentialSlotSummary,
+    DeleteSourceDocumentInput, DocumentMutationOutcome, DocumentRef, DocumentValidationIssue,
+    EditSourceDocumentCredentialInput, LoadSourceDocumentRebaseMaterialInput,
+    MAX_SOURCE_DOCUMENT_BYTES, MaskedSourceDocument, PinSourceDocumentRevisionInput,
+    RebaseSourceDocumentInput, RenameSourceDocumentInput, RevealedSourceDocumentCredential,
+    SOURCE_DOCUMENT_SCHEMA_VERSION, SaveSourceDocumentInput, SecretArtifactId,
+    SourceDocumentCredentialTarget, SourceDocumentId, SourceDocumentMaterial,
+    SourceDocumentRebaseCommitMode, SourceDocumentRebaseInvalidReason,
+    SourceDocumentRebaseMaterialOutcome, SourceDocumentRebaseMaterials,
+    SourceDocumentRevisionInput, SourceDocumentRevisionPin, SourceDocumentState,
+    SourceDocumentSummary,
 };
 pub use error::StorageError;
 pub use event::{AppendRequest, CommitReceipt, StoredEvent};
 pub use execution::{
     ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionReplayPin, ExecutionSourceCredentials,
-    ExecutionStart, ExecutionStatus, GcState, ReplayExecutionStart,
+    ExecutionStart, ExecutionStartReceipt, ExecutionStatus, GcState, InstalledSourceSnapshot,
+    ReplayExecutionStart, ReplayUnavailableReason,
 };
 pub use library::{
     LibraryEntry, LibraryProgress, LibraryProjection, LibraryProjectionEntry,

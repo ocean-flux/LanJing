@@ -1,9 +1,11 @@
 //! Legado JSON 类型定义 — 反序列化目标 struct。
 
+use std::fmt;
+
 use serde::Deserialize;
 
 /// Legado 书源 JSON(反序列化目标,字段名 `camelCase`)。
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LegadoSourceJson {
     /// 书源名称。
@@ -28,6 +30,25 @@ pub struct LegadoSourceJson {
     pub rule_content: Option<RuleContent>,
     /// HTTP 请求头(JSON 字符串)。
     pub header: Option<String>,
+}
+
+impl fmt::Debug for LegadoSourceJson {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LegadoSourceJson")
+            .field("has_name", &!self.book_source_name.trim().is_empty())
+            .field("has_base_url", &!self.book_source_url.trim().is_empty())
+            .field("has_group", &self.book_source_group.is_some())
+            .field("has_search", &self.search_url.is_some())
+            .field("has_explore", &self.explore_url.is_some())
+            .field("has_rule_search", &self.rule_search.is_some())
+            .field("has_rule_explore", &self.rule_explore.is_some())
+            .field("has_rule_book_info", &self.rule_book_info.is_some())
+            .field("has_rule_toc", &self.rule_toc.is_some())
+            .field("has_rule_content", &self.rule_content.is_some())
+            .field("has_header", &self.header.is_some())
+            .finish()
+    }
 }
 
 /// `Search` 来源规则段。

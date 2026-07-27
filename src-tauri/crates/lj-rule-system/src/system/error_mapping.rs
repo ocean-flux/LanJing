@@ -135,9 +135,7 @@ pub(super) fn runtime_error(error: &PlanRuntimeError, trace_id: &str) -> RuleErr
         PlanRuntimeError::MissingIntent => {
             ("unsupported_intent", "immutable Plan 未声明该标准意图")
         }
-        PlanRuntimeError::SchemaVersionMismatch { .. }
-        | PlanRuntimeError::CompilerVersionMismatch
-        | PlanRuntimeError::PlanHashMismatch => {
+        PlanRuntimeError::CompilerVersionMismatch | PlanRuntimeError::PlanHashMismatch => {
             ("plan_pin_invalid", "immutable Plan 版本或 hash 无效")
         }
         PlanRuntimeError::InvalidConfiguration(_) => {
@@ -199,6 +197,24 @@ pub(super) fn storage_error(
             "candidate durable metadata 与安装内容不一致",
             false,
         ),
+        StorageError::CandidateStale => (
+            RuleErrorStage::Candidate,
+            "candidate_stale",
+            "candidate 的 document/source 基线已经变化",
+            false,
+        ),
+        StorageError::CandidateSchemaMismatch => (
+            RuleErrorStage::Candidate,
+            "candidate_schema_mismatch",
+            "candidate schema 已不受当前版本支持",
+            false,
+        ),
+        StorageError::ContractSchemaIncompatible { .. } => (
+            default_stage,
+            "contract_schema_incompatible",
+            "已安装规则合同版本不受当前版本支持",
+            false,
+        ),
         StorageError::GrantInsufficient => (
             RuleErrorStage::Capability,
             "grant_insufficient",
@@ -209,6 +225,21 @@ pub(super) fn storage_error(
             default_stage,
             "source_credentials_unavailable",
             "来源凭证快照缺失、篡改或不可读取",
+            false,
+        ),
+        StorageError::DocumentMissing => {
+            (default_stage, "document_not_found", "来源文档不存在", false)
+        }
+        StorageError::DocumentDeleteUnsafe => (
+            default_stage,
+            "document_delete_unsafe",
+            "已关联或仍被固定的来源文档不能删除",
+            false,
+        ),
+        StorageError::CredentialOwnershipMismatch => (
+            default_stage,
+            "credential_owner_mismatch",
+            "credential slot 不属于请求的文档 revision",
             false,
         ),
         StorageError::SourceMissing => (
@@ -238,6 +269,36 @@ pub(super) fn storage_error(
             "历史 execution 的固定 archive 不可 replay",
             false,
         ),
+        StorageError::KeyringUnavailable => (
+            default_stage,
+            "keyring_unavailable",
+            "当前平台没有可用的安全凭证存储",
+            false,
+        ),
+        StorageError::KeyringLocked => (
+            default_stage,
+            "keyring_locked",
+            "安全凭证存储当前已锁定",
+            true,
+        ),
+        StorageError::KeyLost => (
+            default_stage,
+            "vault_key_lost",
+            "来源文档加密密钥已经丢失",
+            false,
+        ),
+        StorageError::ArtifactCorrupt => (
+            default_stage,
+            "vault_artifact_corrupt",
+            "来源文档加密内容已损坏",
+            false,
+        ),
+        StorageError::VaultMigrationFailed => (
+            RuleErrorStage::Persistence,
+            "vault_migration_failed",
+            "来源文档保险库迁移未完成",
+            false,
+        ),
         StorageError::IdempotencyMismatch => (
             default_stage,
             "idempotency_mismatch",
@@ -261,6 +322,14 @@ pub(super) fn storage_error(
             false,
         ),
     };
+    storage_rule_error((stage, code, message, retryable), trace_id)
+}
+
+fn storage_rule_error(
+    contract: (RuleErrorStage, &'static str, &'static str, bool),
+    trace_id: &str,
+) -> RuleError {
+    let (stage, code, message, retryable) = contract;
     RuleError::new(
         stage,
         code,

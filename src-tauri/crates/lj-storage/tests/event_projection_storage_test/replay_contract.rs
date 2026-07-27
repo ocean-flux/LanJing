@@ -1,6 +1,11 @@
 //! Historical Plan pin、source version、credential 与 snapshot replay 合同。
 
 use super::*;
+#[derive(diesel::QueryableByName)]
+struct ReplaySecretLocatorRow {
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    value: String,
+}
 
 #[tokio::test]
 async fn execution_replay_pin_uses_verified_artifact_and_rejects_tampering() {
@@ -28,7 +33,7 @@ async fn execution_replay_pin_uses_verified_artifact_and_rejects_tampering() {
     assert_eq!(pin.execution_id, execution_id);
     assert_eq!(pin.source_identity, "source:test");
     assert_eq!(pin.source_version, "v1");
-    assert_eq!(pin.plan.plan_hash, pin.plan_hash);
+    assert_eq!(pin.plan.plan_hash(), pin.plan_hash);
     assert_eq!(
         pin.mode,
         ExecutionMode::Replay {
@@ -49,14 +54,14 @@ async fn execution_replay_pin_uses_verified_artifact_and_rejects_tampering() {
     let tampered_result = storage.load_execution_replay_pin(execution_id).await;
     assert!(matches!(
         &tampered_result,
-        Err(StorageError::ArtifactUnavailable(hash)) if hash == &pin.plan_artifact_hash
+        Err(StorageError::ReplayUnavailable(_))
     ));
 
     fs::remove_file(&artifact_path).expect("remove pinned Plan artifact");
     let missing_result = storage.load_execution_replay_pin(execution_id).await;
     assert!(matches!(
         &missing_result,
-        Err(StorageError::ArtifactUnavailable(hash)) if hash == &pin.plan_artifact_hash
+        Err(StorageError::ReplayUnavailable(_))
     ));
     storage.shutdown().await.expect("writer shutdown");
 }
@@ -69,8 +74,8 @@ async fn replay_start_keeps_historical_source_snapshot_after_source_update() {
     let first = candidate(now);
     let first_profile = first.profile.clone();
     let first_grant = first.required_grant.clone();
-    let first_base_url = first.package.definition.base_url.clone();
-    let first_plan_hash = first.plan.plan_hash.clone();
+    let first_base_url = first.package.definition().base_url().to_string();
+    let first_plan_hash = first.plan.plan_hash().to_string();
     install_draft(&storage, first, 0, first_grant.clone(), now + 1).await;
 
     let archived_execution_id = Uuid::new_v4();
@@ -116,7 +121,7 @@ async fn replay_start_keeps_historical_source_snapshot_after_source_update() {
         .expect("updated source exists");
     assert_eq!(current.version, "v2");
     assert_eq!(
-        current.package.definition.base_url,
+        current.package.definition().base_url(),
         "https://updated.example.test"
     );
 
@@ -169,7 +174,7 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
     let storage = temp.open().await;
     let now = 1_750_001_100_000;
 
-    let first_secret_hash = install_draft_with_source_credentials(
+    install_draft_with_source_credentials(
         &storage,
         candidate(now),
         0,
@@ -177,6 +182,15 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
         now + 2,
     )
     .await;
+    let database_url = temp.config.database_path.to_string_lossy().into_owned();
+    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
+    let first_secret_locator = sql_query(
+        "SELECT secret.blob_locator AS value FROM source_versions AS version JOIN secret_artifact_projection AS secret ON secret.secret_id = version.runtime_credential_secret_id WHERE version.source_identity = 'source:test' AND version.source_revision = 1",
+    )
+    .get_result::<ReplaySecretLocatorRow>(&mut conn)
+    .expect("read v1 random runtime credential locator")
+    .value;
+    drop(conn);
 
     let original_execution_id = Uuid::new_v4();
     storage
@@ -260,19 +274,19 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
         .shutdown()
         .await
         .expect("close before key-loss read");
-    wipe_master_key(&temp.config.keyring_service);
+    wipe_master_key(&temp);
     let restarted = temp.open().await;
     assert!(matches!(
         restarted
             .load_execution_source_credentials(original_execution_id)
             .await,
-        Err(StorageError::MasterKeyUnavailable)
+        Err(StorageError::KeyLost)
     ));
     assert!(matches!(
         restarted
             .load_execution_replay_pin(original_execution_id)
             .await,
-        Err(StorageError::ReplayUnavailable(_))
+        Err(StorageError::KeyLost)
     ));
     assert!(matches!(
         restarted
@@ -285,16 +299,10 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
                 correlation_id: None,
             })
             .await,
-        Err(StorageError::ReplayUnavailable(_))
+        Err(StorageError::KeyLost)
     ));
     restarted.shutdown().await.expect("close key-loss storage");
-    let secret_path = temp
-        .config
-        .artifact_root
-        .join("secret")
-        .join(&first_secret_hash[..2])
-        .join(&first_secret_hash[2..4])
-        .join(format!("{first_secret_hash}.secret"));
+    let secret_path = temp.config.artifact_root.join(&first_secret_locator);
     fs::remove_file(secret_path).expect("remove pinned source secret artifact");
     let missing_secret = temp.open().await;
     assert!(matches!(

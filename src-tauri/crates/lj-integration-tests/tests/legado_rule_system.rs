@@ -7,16 +7,23 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
 
+use diesel::sql_types::Text;
+use diesel::sqlite::SqliteConnection;
+use diesel::{Connection, QueryableByName, RunQueryDsl};
 use futures::StreamExt;
 use keyring_core::{Entry, mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_importer::legado::{CONTINUE_ACTION_TTL_MS, LegadoImporter};
 use lj_media::{MediaAssetLocator, MediaGraphDelta, MediaKind};
 use lj_rule_system::{
-    CapabilityGrant, EffectWitnessCaptureForTest, EffectWitnessForTest, ExecuteRequest,
-    ExecutionEvent, ExecutionEventKind, ExecutionId, ExecutionMode, HttpDnsTargetKindForTest,
-    HttpMethodForTest, QuickJsHostCallForTest, RuleErrorStage, RuleInput, RuleSystem,
-    RuleSystemConfig, SourceId,
+    CapabilityGrant, CreateSourceDocumentRequest, DeleteSourceDocumentRequest,
+    DocumentMutationOutcome, DocumentRef, EffectWitnessCaptureForTest, EffectWitnessForTest,
+    ExecuteRequest, ExecutionEvent, ExecutionEventKind, ExecutionId, ExecutionMode,
+    GetSourceDocumentRequest, HttpDnsTargetKindForTest, HttpMethodForTest,
+    ListSourceDocumentsRequest, MaskedSourceDocument, QuickJsHostCallForTest,
+    RenameSourceDocumentRequest, ReplaceSourceDocumentCredentialRequest,
+    RevealSourceDocumentCredentialRequest, RuleErrorStage, RuleInput, RuleSystem, RuleSystemConfig,
+    SaveSourceDocumentRequest, SourceDocumentCredentialTarget, SourceDocumentFormat, SourceId,
 };
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -68,9 +75,47 @@ fn init_mock_keyring() {
     });
 }
 
-fn wipe_master_key(keyring_service: &str) {
-    let entry = Entry::new(keyring_service, "master-key-v1").expect("master-key entry");
-    entry.delete_credential().expect("删除 mock master key");
+#[derive(QueryableByName)]
+struct VaultKeyRow {
+    #[diesel(sql_type = Text)]
+    key_id: String,
+}
+
+#[derive(QueryableByName)]
+struct VaultBlobLocatorRow {
+    #[diesel(sql_type = Text)]
+    blob_locator: String,
+}
+
+fn captured_response_secret_files(database_path: &Path, artifact_root: &Path) -> Vec<PathBuf> {
+    let mut connection = SqliteConnection::establish(
+        database_path
+            .to_str()
+            .expect("测试 SQLite 路径必须是 UTF-8"),
+    )
+    .expect("打开 effect capture SQLite");
+    diesel::sql_query(
+        "SELECT secret.blob_locator FROM effect_captures AS capture JOIN secret_artifact_projection AS secret ON secret.secret_id = capture.response_headers_secret_id WHERE capture.response_headers_secret_id IS NOT NULL ORDER BY capture.effect_id",
+    )
+    .load::<VaultBlobLocatorRow>(&mut connection)
+    .expect("读取 response header secret locators")
+    .into_iter()
+    .map(|row| artifact_root.join(row.blob_locator))
+    .collect()
+}
+fn wipe_vault_key(database_path: &Path, keyring_service: &str) {
+    let mut connection = SqliteConnection::establish(
+        database_path
+            .to_str()
+            .expect("测试 SQLite 路径必须是 UTF-8"),
+    )
+    .expect("打开 vault SQLite");
+    let row = diesel::sql_query("SELECT key_id FROM vault_key_metadata WHERE id = 1")
+        .get_result::<VaultKeyRow>(&mut connection)
+        .expect("读取 vault key ID");
+    let entry = Entry::new(keyring_service, &format!("vault-key-v1/{}", row.key_id))
+        .expect("vault key entry");
+    entry.delete_credential().expect("删除 mock vault key");
 }
 
 fn legado_input(base_url: &str) -> RuleInput {
@@ -81,6 +126,7 @@ fn legado_input(base_url: &str) -> RuleInput {
         .unwrap_or_else(|error| panic!("read fixture {}: {error}", fixture.display()));
     let mut source = serde_json::from_str::<Value>(&raw).expect("parse fixture JSON");
     source["bookSourceUrl"] = Value::String(base_url.to_string());
+    source["enabledCookieJar"] = Value::Bool(false);
     let instrumented_explore = source["exploreUrl"]
         .as_str()
         .expect("fixture should contain Explore QuickJS")
@@ -110,6 +156,28 @@ fn legado_input_without_source_credentials(base_url: &str) -> RuleInput {
         source_json: serde_json::to_string(&source)
             .expect("serialize local Legado source without credentials"),
     }
+}
+
+fn legado_document_text(base_url: &str) -> String {
+    let RuleInput::Legado { source_json } = legado_input(base_url) else {
+        unreachable!("fixture must construct a Legado document")
+    };
+    source_json
+}
+
+fn expect_saved_document(outcome: DocumentMutationOutcome) -> MaskedSourceDocument {
+    match outcome {
+        DocumentMutationOutcome::Saved {
+            document: Some(document),
+        } => document,
+        _ => panic!("document mutation must save a masked document"),
+    }
+}
+
+fn masked_with_book_source_name(masked_text: &str, name: &str) -> String {
+    let mut document = serde_json::from_str::<Value>(masked_text).expect("masked Legado JSON");
+    document["bookSourceName"] = Value::String(name.to_string());
+    serde_json::to_string(&document).expect("serialize edited masked Legado JSON")
 }
 async fn mount_legado_routes(server: &MockServer) {
     Mock::given(method("GET"))
@@ -588,14 +656,445 @@ async fn assert_live_http_and_quickjs_witnesses(
 }
 
 #[tokio::test]
+async fn legado_document_vault_persists_conflicts_renames_and_deletes_masked_revisions() {
+    init_mock_keyring();
+    let temp = TempRuleSystem::new("document-vault-crud");
+    let system = temp.open().await;
+    let created = expect_saved_document(
+        system
+            .create_source_document(CreateSourceDocumentRequest {
+                format: SourceDocumentFormat::Legado,
+                title: "本地 Legado 文档".to_string(),
+                text: legado_document_text("https://document.example"),
+            })
+            .await
+            .expect("create Legado source document"),
+    );
+    assert_eq!(created.summary.revision, 1);
+    assert_eq!(created.credential_slots.len(), 1);
+    assert!(!created.masked_text.contains(SOURCE_STATIC_SECRET));
+    let document_id = created.summary.document_id;
+    let target = SourceDocumentCredentialTarget {
+        document_id,
+        document_revision: 1,
+        slot_id: created.credential_slots[0].slot_id,
+    };
+    let revealed = system
+        .reveal_source_document_credential(RevealSourceDocumentCredentialRequest { target })
+        .await
+        .expect("explicit current slot reveal");
+    assert_eq!(revealed.target, target);
+    assert!(revealed.value.contains(SOURCE_STATIC_SECRET));
+    let listed = system
+        .list_source_documents(ListSourceDocumentsRequest {})
+        .await
+        .expect("list source documents");
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].document_id, document_id);
+
+    system
+        .shutdown_for_test()
+        .await
+        .expect("shutdown document storage before restart");
+    drop(system);
+    let reopened = temp.open().await;
+    let persisted = reopened
+        .get_source_document(GetSourceDocumentRequest { document_id })
+        .await
+        .expect("reopen masked source document")
+        .expect("persisted source document");
+    assert_eq!(persisted, created);
+
+    let first_text = masked_with_book_source_name(&persisted.masked_text, "并发保存甲");
+    let second_text = masked_with_book_source_name(&persisted.masked_text, "并发保存乙");
+    let (first, second) = tokio::join!(
+        reopened.save_source_document(SaveSourceDocumentRequest {
+            document_id,
+            expected_revision: 1,
+            masked_text: first_text,
+        }),
+        reopened.save_source_document(SaveSourceDocumentRequest {
+            document_id,
+            expected_revision: 1,
+            masked_text: second_text,
+        }),
+    );
+    let mut saved_count = 0;
+    let mut conflict_count = 0;
+    for outcome in [
+        first.expect("first concurrent save"),
+        second.expect("second concurrent save"),
+    ] {
+        match outcome {
+            DocumentMutationOutcome::Saved {
+                document: Some(document),
+            } => {
+                saved_count += 1;
+                assert_eq!(document.summary.revision, 2);
+            }
+            DocumentMutationOutcome::Conflict {
+                expected_revision,
+                actual_revision,
+                current,
+            } => {
+                conflict_count += 1;
+                assert_eq!(expected_revision, 1);
+                assert_eq!(actual_revision, 2);
+                assert_eq!(current.summary.revision, 2);
+                assert!(!current.masked_text.contains(SOURCE_STATIC_SECRET));
+            }
+            _ => panic!("concurrent save must be saved or conflict"),
+        }
+    }
+    assert_eq!((saved_count, conflict_count), (1, 1));
+    let current = reopened
+        .get_source_document(GetSourceDocumentRequest { document_id })
+        .await
+        .expect("read concurrent winner")
+        .expect("current source document");
+    assert_eq!(current.summary.revision, 2);
+
+    let renamed = expect_saved_document(
+        reopened
+            .rename_source_document(RenameSourceDocumentRequest {
+                document_id,
+                expected_revision: 2,
+                title: "重命名后的文档".to_string(),
+            })
+            .await
+            .expect("rename draft"),
+    );
+    assert_eq!(renamed.summary.revision, 2);
+    assert_eq!(renamed.summary.title, "重命名后的文档");
+    let deleted = reopened
+        .delete_source_document(DeleteSourceDocumentRequest {
+            document_id,
+            expected_revision: 2,
+        })
+        .await
+        .expect("delete unlinked draft");
+    assert!(matches!(
+        deleted,
+        DocumentMutationOutcome::Saved { document: None }
+    ));
+    assert!(
+        reopened
+            .list_source_documents(ListSourceDocumentsRequest {})
+            .await
+            .expect("list after delete")
+            .is_empty()
+    );
+}
+
+#[tokio::test]
+// 单个并发场景必须共享 source revisions，才能证明 rotation、stale update 与 pin 的原子性。
+#[allow(clippy::too_many_lines)]
+async fn credential_rotation_stale_update_and_concurrent_execute_pin_source_revisions() {
+    init_mock_keyring();
+    let server = MockServer::start().await;
+    mount_legado_routes(&server).await;
+    for secret in ["rotated-source-secret", "third-source-secret"] {
+        Mock::given(method("GET"))
+            .and(path("/search"))
+            .and(query_param("q", "修罗"))
+            .and(header("authorization", format!("Bearer {secret}")))
+            .and(header("cookie", format!("sid={secret}")))
+            .respond_with(ResponseTemplate::new(302).insert_header("location", "/search-result"))
+            .mount(&server)
+            .await;
+    }
+
+    let temp = TempRuleSystem::new("document-revision-install");
+    let system = temp.open().await;
+    let created = expect_saved_document(
+        system
+            .create_source_document(CreateSourceDocumentRequest {
+                format: SourceDocumentFormat::Legado,
+                title: "可更新 Legado 来源".to_string(),
+                text: legado_document_text(&server.uri()),
+            })
+            .await
+            .expect("create installed document"),
+    );
+    let document_id = created.summary.document_id;
+    let revision_one = DocumentRef {
+        document_id,
+        document_revision: 1,
+    };
+    let first_candidate = system
+        .prepare_install_from_document(revision_one)
+        .await
+        .expect("prepare saved revision one");
+    assert_eq!(first_candidate.document_ref, Some(revision_one));
+    assert!(!first_candidate.transient);
+    assert_eq!(first_candidate.expected_installed_revision, 0);
+    let first = system
+        .install(first_candidate.id, CapabilityGrant::network_only())
+        .await
+        .expect("install saved revision one");
+
+    let first_target = SourceDocumentCredentialTarget {
+        document_id,
+        document_revision: 1,
+        slot_id: created.credential_slots[0].slot_id,
+    };
+    let rotated_header = json!({
+        "User-Agent": "legado-golden",
+        "Authorization": "Bearer rotated-source-secret",
+        "Cookie": "sid=rotated-source-secret",
+    })
+    .to_string();
+    let revision_two = expect_saved_document(
+        system
+            .replace_source_document_credential(ReplaceSourceDocumentCredentialRequest {
+                target: first_target,
+                value: rotated_header,
+            })
+            .await
+            .expect("rotate revision one credential"),
+    );
+    assert_eq!(revision_two.summary.revision, 2);
+    assert_ne!(
+        revision_two.credential_slots[0].slot_id,
+        first_target.slot_id
+    );
+    assert!(
+        system
+            .reveal_source_document_credential(RevealSourceDocumentCredentialRequest {
+                target: first_target,
+            })
+            .await
+            .is_err(),
+        "old revision slot must not reveal after rotation"
+    );
+    let second_target = SourceDocumentCredentialTarget {
+        document_id,
+        document_revision: 2,
+        slot_id: revision_two.credential_slots[0].slot_id,
+    };
+    assert!(
+        system
+            .reveal_source_document_credential(RevealSourceDocumentCredentialRequest {
+                target: second_target,
+            })
+            .await
+            .expect("reveal rotated current slot")
+            .value
+            .contains("rotated-source-secret")
+    );
+
+    let revision_two_ref = DocumentRef {
+        document_id,
+        document_revision: 2,
+    };
+    let second_candidate = system
+        .prepare_install_from_document(revision_two_ref)
+        .await
+        .expect("prepare credential-only update");
+    assert_eq!(second_candidate.expected_installed_revision, first.revision);
+    let second = system
+        .install(second_candidate.id, CapabilityGrant::network_only())
+        .await
+        .expect("install credential-only update");
+    assert_eq!(second.source_id, first.source_id);
+    assert_eq!(second.version, first.version);
+    assert!(second.revision > first.revision);
+
+    let stale_candidate = system
+        .prepare_install_from_document(revision_two_ref)
+        .await
+        .expect("stage candidate before document changes");
+    let third_header = json!({
+        "User-Agent": "legado-golden",
+        "Authorization": "Bearer third-source-secret",
+        "Cookie": "sid=third-source-secret",
+    })
+    .to_string();
+    let revision_three = expect_saved_document(
+        system
+            .replace_source_document_credential(ReplaceSourceDocumentCredentialRequest {
+                target: second_target,
+                value: third_header,
+            })
+            .await
+            .expect("rotate revision two credential"),
+    );
+    assert_eq!(revision_three.summary.revision, 3);
+    let stale_error = system
+        .install(stale_candidate.id, CapabilityGrant::network_only())
+        .await
+        .expect_err("candidate cannot cross document revision");
+    assert_eq!(stale_error.stage, RuleErrorStage::Candidate);
+
+    let revision_three_ref = DocumentRef {
+        document_id,
+        document_revision: 3,
+    };
+    let update_candidate = system
+        .prepare_install_from_document(revision_three_ref)
+        .await
+        .expect("prepare current revision three");
+    assert_eq!(
+        update_candidate.expected_installed_revision,
+        second.revision
+    );
+    let update_id = update_candidate.id.clone();
+    let denied = system
+        .install(update_candidate.id, CapabilityGrant::none())
+        .await
+        .expect_err("failed update must not consume or advance candidate baseline");
+    assert_eq!(denied.stage, RuleErrorStage::Capability);
+    let installed_after_failure = system
+        .list_installed_sources()
+        .await
+        .expect("list installed source after failed update");
+    assert_eq!(installed_after_failure[0].revision, second.revision);
+
+    let execute_request = ExecuteRequest {
+        source_id: second.source_id.clone(),
+        intent: StandardIntent::Search,
+        input: IntentInput::Query("修罗".to_string()),
+        mode: ExecutionMode::Live,
+    };
+    let (session, third) = tokio::join!(
+        system.execute(execute_request),
+        system.install(update_id, CapabilityGrant::network_only()),
+    );
+    let third = third.expect("concurrent update must commit atomically");
+    assert!(third.revision > second.revision);
+    let session = session.expect("concurrent execution must pin one installed revision");
+    let execution_id = session.id;
+    let events = session.into_events().collect::<Vec<_>>().await;
+    assert_completed(&events, true);
+    let pinned_revisions = events
+        .iter()
+        .filter_map(|event| match &event.kind {
+            ExecutionEventKind::DeltaCommitted {
+                source_revision, ..
+            } => Some(*source_revision),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(!pinned_revisions.is_empty());
+    assert!(
+        pinned_revisions
+            .iter()
+            .all(|revision| *revision == pinned_revisions[0])
+    );
+    assert!(matches!(
+        pinned_revisions[0],
+        revision if revision == second.revision || revision == third.revision
+    ));
+    let live_delta = committed_delta(&events).clone();
+
+    system
+        .shutdown_for_test()
+        .await
+        .expect("shutdown before replay restart");
+    drop(system);
+    drop(server);
+    let restarted = temp.open().await;
+    let replay = execute_replay(
+        &restarted,
+        &third.source_id,
+        StandardIntent::Search,
+        IntentInput::Query("修罗".to_string()),
+        execution_id,
+    )
+    .await;
+    assert_eq!(committed_delta(&replay), &live_delta);
+}
+
+#[tokio::test]
+async fn legado_prepare_install_enforces_authoring_safety_contract() {
+    init_mock_keyring();
+    let temp = TempRuleSystem::new("authoring-safety");
+    let system = temp.open().await;
+
+    let RuleInput::Legado {
+        source_json: mut duplicate,
+    } = legado_input_without_source_credentials("https://example.test")
+    else {
+        unreachable!("fixture must construct a Legado input");
+    };
+    duplicate.pop();
+    duplicate.push_str(",\"bookSourceName\":\"重复名称\"}");
+    let duplicate_error = system
+        .prepare_install(RuleInput::Legado {
+            source_json: duplicate,
+        })
+        .await
+        .expect_err("duplicate key 必须在 candidate staging 前阻断");
+    assert_eq!(duplicate_error.stage, RuleErrorStage::Import);
+    assert_eq!(
+        duplicate_error.code, "duplicate_key",
+        "{duplicate_error:#?}"
+    );
+
+    let RuleInput::Legado { source_json } =
+        legado_input_without_source_credentials("https://example.test")
+    else {
+        unreachable!("fixture must construct a Legado input");
+    };
+    let mut blocked = serde_json::from_str::<Value>(&source_json).expect("parse blocked fixture");
+    blocked["loginUrl"] = Value::String("https://example.test/login".to_string());
+    let blocked_error = system
+        .prepare_install(RuleInput::Legado {
+            source_json: serde_json::to_string(&blocked).expect("serialize blocked fixture"),
+        })
+        .await
+        .expect_err("blocked known behavior 必须在 candidate staging 前阻断");
+    assert_eq!(blocked_error.stage, RuleErrorStage::Import);
+    assert_eq!(blocked_error.code, "known_field_blocked");
+
+    let mut oversized = blocked;
+    oversized
+        .as_object_mut()
+        .expect("fixture root object")
+        .remove("loginUrl");
+    oversized["bookSourceComment"] = Value::String("x".repeat(2 * 1024 * 1024));
+    let oversized_error = system
+        .prepare_install(RuleInput::Legado {
+            source_json: serde_json::to_string(&oversized).expect("serialize oversized fixture"),
+        })
+        .await
+        .expect_err("超过 2 MiB 的文档必须在 candidate staging 前阻断");
+    assert_eq!(oversized_error.stage, RuleErrorStage::Import);
+    assert_eq!(oversized_error.code, "document_bytes_exceeded");
+
+    oversized["bookSourceComment"] = Value::String("保留说明".to_string());
+    oversized["futureField"] = Value::String("future value".to_string());
+    let candidate = system
+        .prepare_install(RuleInput::Legado {
+            source_json: serde_json::to_string(&oversized).expect("serialize warning fixture"),
+        })
+        .await
+        .expect("preserved 与 unknown 字段应无损保留但不阻断 candidate");
+    assert!(
+        candidate
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "known_field_preserved")
+    );
+    assert!(
+        candidate
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "unknown_field")
+    );
+}
+
+#[tokio::test]
 async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() {
     init_mock_keyring();
     let temp = TempRuleSystem::new("six-intents");
     let server = MockServer::start().await;
     mount_legado_routes(&server).await;
     let system = temp.open().await;
+    let input = legado_input(&server.uri());
+    assert!(!format!("{input:?}").contains(SOURCE_STATIC_SECRET));
     let source = system
-        .prepare_install(legado_input(&server.uri()))
+        .prepare_install(input)
         .await
         .expect("Legado candidate should be durable and opaque");
     let wire = serde_json::to_value(&source).expect("candidate should serialize safely");
@@ -777,7 +1276,7 @@ async fn legado_replay_refuses_lost_master_key_before_effects() {
         .await
         .expect("close C2 writer before key-loss restart");
     drop(system);
-    wipe_master_key(&temp.keyring_service);
+    wipe_vault_key(&temp.root.join("event-store.db"), &temp.keyring_service);
     let restarted = temp.open().await;
 
     let Err(error) = restarted
@@ -794,7 +1293,7 @@ async fn legado_replay_refuses_lost_master_key_before_effects() {
         panic!("replay must reject a lost C2 master key before effects");
     };
     assert_eq!(error.stage, RuleErrorStage::Replay);
-    assert_eq!(error.code, "replay_pin_unavailable");
+    assert_eq!(error.code, "vault_key_lost");
 }
 
 #[tokio::test]
@@ -876,12 +1375,11 @@ async fn legado_replay_refuses_missing_effect_secret_without_live_fallback() {
         IntentInput::Query("修罗".to_string()),
     )
     .await;
-    let secret_files = collect_files(&temp.root.join("artifacts").join("secret"));
-    assert_eq!(
-        secret_files.len(),
-        1,
-        "only the response secret should exist without source credentials"
+    let secret_files = captured_response_secret_files(
+        &temp.root.join("event-store.db"),
+        &temp.root.join("artifacts"),
     );
+    assert_eq!(secret_files.len(), 1, "应只有一个 response header secret");
     fs::remove_file(&secret_files[0]).expect("remove captured response secret artifact");
 
     drop(server);

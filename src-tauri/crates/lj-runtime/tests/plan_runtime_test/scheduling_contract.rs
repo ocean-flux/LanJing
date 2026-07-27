@@ -115,7 +115,6 @@ async fn source_effect_semaphore_blocks_second_execution_until_first_releases() 
 async fn global_effect_semaphore_blocks_distinct_sources() {
     let runtime = PlanRuntime::new(PlanRuntimeConfig {
         compiler_version: "runtime-test-compiler@1".to_string(),
-        plan_schema_version: 1,
         event_channel_capacity: 8,
         max_concurrent_executions: 2,
         max_concurrent_effects: 1,
@@ -212,7 +211,7 @@ async fn effect_error_becomes_one_failed_terminal_with_attribution() {
         panic!("effect error 必须进入 Failed 终态");
     };
     assert_eq!(failure.code, RuntimeFailureCode::EffectFailed);
-    assert_eq!(failure.node_id, Some(Uuid::from_u128(1)));
+    assert_eq!(failure.node_id, Some(Uuid::from_u128(101)));
     assert!(failure.effect_id.is_some());
     assert_eq!(failure.execution_id, events[0].execution_id);
 }

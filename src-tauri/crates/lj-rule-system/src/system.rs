@@ -1,14 +1,16 @@
 //! concrete `RuleSystem` 的私有组合根。
 //!
-//! `RuleSystem` 是规则生命周期唯一 concrete façade：调用方只能准备 candidate、安装来源、
-//! 启动已安装来源的 session，或通过独立 query adapter 读取安全投影。Definition、immutable
-//! Plan、node effect adapter、C2 storage transaction 与 execution registry 始终保持私有。
+//! `RuleSystem` 是规则生命周期与来源文档保险库的唯一 concrete façade：调用方只能保存/读取
+//! masked document、准备并安装 candidate、启动已安装来源 session，或读取安全投影。
+//! Definition、immutable Plan、node effect adapter、C2 storage transaction 与 secret material
+//! 始终保持私有。
 //!
-//! 具体职责拆分为：`lifecycle` 处理 candidate/install/execute，`session_delivery` 保证持久化
-//! 事件顺序和取消语义，`query_adapter` 映射安全查询，`capture` 提供 test-only witness seam，
-//! `error_mapping` 收敛脱敏错误。
+//! `document_vault` 组合 authoring codec 与 storage；`lifecycle` 处理 candidate/install/execute；
+//! `session_delivery` 保证持久化事件顺序和取消语义；`query_adapter` 映射安全查询；`capture` 提供
+//! test-only witness seam；`error_mapping` 收敛脱敏错误。
 
 mod capture;
+mod document_vault;
 mod error_mapping;
 mod lifecycle;
 mod query_adapter;
@@ -25,11 +27,10 @@ use lj_node_js::processor::QuickJsEffectAdapter;
 #[cfg(feature = "test-support")]
 use lj_runtime::EffectReplayLookup;
 use lj_runtime::{CancellationHandle, EffectHandlers, PlanRuntime, PlanRuntimeConfig};
-use lj_storage::{CandidateSummary, EventProjectionStorage, StorageConfig};
+use lj_storage::{EventProjectionStorage, StorageConfig};
 use uuid::Uuid;
 
 use self::error_mapping::{runtime_error, storage_error};
-use self::lifecycle::PlanCache;
 use crate::{ExecutionEvent, ExecutionId, RuleError, RuleErrorStage, RuleSystemConfig};
 
 /// 规则生命周期唯一 concrete façade。
@@ -43,8 +44,9 @@ pub struct RuleSystem {
 
 /// 所有跨命令共享的私有基础设施。
 ///
-/// `executions` 只保存取消句柄；session runner 在唯一 terminal 后必定移除相应条目。candidate
-/// preview 和 Plan LRU 都是缓存，C2 durable record 才是安装与 replay 的唯一真相。
+/// `executions` 只保存取消句柄；session runner 在唯一 terminal 后必定移除相应条目。candidate、
+/// installed snapshot 与 execution revision 均只以 C2 durable receipt 为真相，不保留 identity-keyed
+/// Plan/current cache。
 struct RuleSystemState {
     storage: EventProjectionStorage,
     compiler: Compiler,
@@ -52,8 +54,6 @@ struct RuleSystemState {
     handlers: EffectHandlers,
     candidate_ttl_ms: i64,
     session_event_capacity: usize,
-    candidates: Mutex<HashMap<Uuid, CandidateSummary>>,
-    plans: Mutex<PlanCache>,
     executions: Mutex<HashMap<Uuid, CancellationHandle>>,
     #[cfg(feature = "test-support")]
     effect_capture_lookups: Mutex<HashMap<(Uuid, Uuid), EffectReplayLookup>>,
@@ -62,9 +62,9 @@ struct RuleSystemState {
 impl RuleSystem {
     /// 打开真实 C2 Event Store，并私有装配 compiler、`PlanRuntime` 与 Plan effect adapter。
     ///
-    /// 配置中的缓存、delivery channel 与 runtime 并发上限必须为正值，以保证 LRU 和 stream
-    /// 背压有界。`local_fixture` 仅在 test-support 配置中关闭 loopback SSRF 拒绝，仍使用真实
-    /// SQLite、artifact archive 和 adapter。
+    /// delivery channel 与 runtime 并发上限必须为正值，以保证 stream 背压有界。`local_fixture`
+    /// 仅在 test-support 配置中关闭 loopback SSRF 拒绝，仍使用真实 SQLite、artifact archive 和
+    /// adapter。
     ///
     /// # Errors
     ///
@@ -83,11 +83,11 @@ impl RuleSystem {
                 Vec::new(),
             ));
         }
-        if config.plan_cache_capacity == 0 || config.session_event_capacity == 0 {
+        if config.session_event_capacity == 0 {
             return Err(RuleError::new(
                 RuleErrorStage::Internal,
                 "bounded_capacity_invalid",
-                "RuleSystem 的缓存与 session 容量必须大于零",
+                "RuleSystem 的 session 容量必须大于零",
                 trace_id,
                 false,
                 Vec::new(),
@@ -102,7 +102,6 @@ impl RuleSystem {
         let compiler = Compiler::default();
         let runtime = PlanRuntime::new(PlanRuntimeConfig {
             compiler_version: compiler.version().to_string(),
-            plan_schema_version: lj_runtime::SUPPORTED_PLAN_SCHEMA_VERSION,
             event_channel_capacity: config.session_event_capacity,
             max_concurrent_executions: config.max_concurrent_executions,
             max_concurrent_effects: config.max_concurrent_effects,
@@ -128,8 +127,6 @@ impl RuleSystem {
                 handlers,
                 candidate_ttl_ms,
                 session_event_capacity: config.session_event_capacity,
-                candidates: Mutex::new(HashMap::new()),
-                plans: Mutex::new(PlanCache::new(config.plan_cache_capacity)),
                 executions: Mutex::new(HashMap::new()),
                 #[cfg(feature = "test-support")]
                 effect_capture_lookups: Mutex::new(HashMap::new()),

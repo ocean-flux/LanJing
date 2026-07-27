@@ -8,6 +8,7 @@ pub type FieldRules = HashMap<String, Vec<ExtractRule>, std::collections::hash_m
 
 /// 提取规则(闭集 enum，compiler 解析规则字符串产出)。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum ExtractRule {
     /// CSS 选择器(scraper)。
     CssSelector {
@@ -66,6 +67,7 @@ pub enum ExtractType {
 
 /// 正则清理(##regex##replacement)。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RegexClean {
     /// 正则模式。
     pub pattern: String,
@@ -75,6 +77,7 @@ pub struct RegexClean {
 
 /// 提取 spec(Extract 节点的 spec)。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ExtractSpec {
     /// 多选回退链(|| 分隔，按优先级尝试)。
     /// 列表模式下为 bookList 选择器，单值模式下为值回退链。

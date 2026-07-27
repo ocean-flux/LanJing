@@ -2,14 +2,13 @@
 
 use blake3::Hasher;
 
-use crate::definition::RuleDefinition;
+use crate::definition::{FlowNodeConfig, RuleDefinition};
 use crate::error::Error;
 
 /// 将值序列化为递归规范化的确定性 JSON。
 ///
-/// object key 会在每一层按字节序排序；因此 `HashMap` 的随机迭代顺序不能影响
-/// Definition、Plan 或 effect fingerprint 的 content hash。数组顺序保持不变，因为
-/// 它是作者合同的一部分。
+/// object key 会在每一层按字节序排序；数组顺序保持不变。Definition/Plan 中声明顺序不
+/// 承载语义的数组由各自 typed hash projection 在调用本函数前排序。
 ///
 /// # Errors
 ///
@@ -20,16 +19,67 @@ pub fn canonical_json<T: serde::Serialize>(value: &T) -> Result<String, Error> {
     Ok(serde_json::to_string(&value)?)
 }
 
-/// 计算 Definition 的稳定 canonical BLAKE3 hash（hex）。
+/// 计算 Definition 的版本正确 canonical BLAKE3 hash（hex）。
+///
+/// v1 reader object 使用保留的精确旧 wire material；普通 authoring object 使用 writer-only
+/// v2 semantic projection。v2 projection 忽略节点、边、声明顺序与源码 span。
 ///
 /// # Errors
 ///
 /// 序列化失败时返回 [`Error::Json`]。
 pub fn definition_hash(definition: &RuleDefinition) -> Result<String, Error> {
-    let canonical = canonical_json(definition)?;
+    let canonical = if let Some(legacy) = definition.legacy_hash_material() {
+        let mut value = serde_json::to_value(legacy)?;
+        if let Some(object) = value.as_object_mut() {
+            object.insert(
+                "contract".to_string(),
+                serde_json::Value::String("rule_definition".to_string()),
+            );
+        }
+        canonicalize_json_value(&mut value);
+        serde_json::to_string(&value)?
+    } else {
+        canonical_json(&canonical_v2_definition(definition))?
+    };
     let mut hasher = Hasher::new();
     hasher.update(canonical.as_bytes());
     Ok(hasher.finalize().to_hex().to_string())
+}
+
+fn canonical_v2_definition(definition: &RuleDefinition) -> RuleDefinition {
+    let mut flow = definition.flow().clone();
+    for node in &mut flow.nodes {
+        node.span = None;
+        match &mut node.config {
+            FlowNodeConfig::Mapper(config) => config.identity_fields.sort(),
+            FlowNodeConfig::Merge(config) => {
+                config
+                    .inputs
+                    .sort_by(|left, right| left.handle.as_bytes().cmp(right.handle.as_bytes()));
+            }
+            FlowNodeConfig::Condition(config) => {
+                config
+                    .branches
+                    .sort_by(|left, right| left.as_bytes().cmp(right.as_bytes()));
+            }
+            FlowNodeConfig::Http(_)
+            | FlowNodeConfig::Js(_)
+            | FlowNodeConfig::Extract(_)
+            | FlowNodeConfig::Loop(_) => {}
+        }
+    }
+    flow.nodes.sort_by_key(|node| node.id);
+    flow.edges.sort();
+    let mut source_id_rules = definition.source_id_rules().to_vec();
+    source_id_rules.sort_by(|left, right| left.as_bytes().cmp(right.as_bytes()));
+    RuleDefinition::new(
+        definition.source_identity().clone(),
+        definition.base_url(),
+        definition.intent_exports().clone(),
+        flow,
+        definition.capability_manifest().clone(),
+        source_id_rules,
+    )
 }
 
 fn canonicalize_json_value(value: &mut serde_json::Value) {

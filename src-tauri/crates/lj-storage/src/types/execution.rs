@@ -1,10 +1,11 @@
-//! Execution archive、replay pin 与两阶段 GC DTO。
+//! Execution archive、revision-keyed installed snapshot 与两阶段 GC DTO。
 //!
-//! replay DTO 只在 source-version、Plan 与 artifact 引用已经验证后返回；GC 状态必须按
-//! `active → marked → external_refs_removed → finalized` 单向推进。
+//! live start 的唯一成功 receipt 同时包含持久 `ExecutionRecord` 与同一 source revision 的
+//! package/Plan/grant/base URL/runtime credential。secret-bearing receipt 不实现 `Debug`、`Clone` 或
+//! serde；replay 只消费可证明的历史 revision pin。
 
 use lj_media::SourceProfile;
-use lj_rule_model::{ExecutionPlan, PolicyCapabilities};
+use lj_rule_model::{ExecutionPlan, PolicyCapabilities, RulePackage};
 use lj_runtime::ExecutionMode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -39,14 +40,14 @@ impl ExecutionSourceCredentials {
         self.secret_bytes.as_deref()
     }
 
-    /// 消费 carrier 并把 secret bytes 的所有权移交给执行适配器，避免额外复制。
+    /// 消费 carrier 并把 secret bytes 所有权移交给执行适配器，避免额外复制。
     #[must_use]
     pub fn into_secret_bytes(self) -> Option<Vec<u8>> {
         self.secret_bytes
     }
 }
 
-/// 建立一个 execution archive 的请求。
+/// 建立一个 live execution archive 的请求。
 #[derive(Debug, Clone)]
 pub struct ExecutionStart {
     /// 新 execution ID。
@@ -129,6 +130,52 @@ impl ExecutionStatus {
             "incomplete" => Ok(Self::Incomplete),
             _ => Err(StorageError::InvalidInput(
                 "未知 execution 状态".to_string(),
+            )),
+        }
+    }
+}
+
+/// legacy execution 无法唯一固定 source revision 的原因。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReplayUnavailableReason {
+    /// 缺少能包围 Started Event 的 Installed/Updated 证据。
+    LegacyEvidenceMissing,
+    /// 多个历史 source snapshot 同时匹配，不能猜测。
+    LegacyEvidenceAmbiguous,
+    /// 已固定 revision 的 immutable snapshot 缺失。
+    SourceSnapshotMissing,
+    /// Event、package、Plan 或 credential 一致性证据不匹配。
+    ArtifactMismatch,
+}
+
+impl ReplayUnavailableReason {
+    /// 返回 `SQLite` 使用的稳定文本。
+    #[must_use]
+    pub const fn as_db(self) -> &'static str {
+        match self {
+            Self::LegacyEvidenceMissing => "legacy_evidence_missing",
+            Self::LegacyEvidenceAmbiguous => "legacy_evidence_ambiguous",
+            Self::SourceSnapshotMissing => "source_snapshot_missing",
+            Self::ArtifactMismatch => "artifact_mismatch",
+        }
+    }
+
+    /// 从 `SQLite` 稳定文本恢复 typed reason。
+    ///
+    /// # Errors
+    ///
+    /// 数据库出现未知 reason 时返回 [`StorageError::InvalidInput`]。
+    pub fn from_db(value: &str) -> Result<Self, StorageError> {
+        match value {
+            "legacy_evidence_missing" | "legacy_source_revision_unavailable" => {
+                Ok(Self::LegacyEvidenceMissing)
+            }
+            "legacy_evidence_ambiguous" => Ok(Self::LegacyEvidenceAmbiguous),
+            "source_snapshot_missing" => Ok(Self::SourceSnapshotMissing),
+            "artifact_mismatch" => Ok(Self::ArtifactMismatch),
+            _ => Err(StorageError::InvalidInput(
+                "未知 replay unavailable reason".to_string(),
             )),
         }
     }
@@ -218,6 +265,8 @@ pub struct ExecutionRecord {
     pub execution_id: Uuid,
     /// 关联来源。
     pub source_identity: String,
+    /// transaction 固定的权威 source revision；legacy unavailable 时为 `None`。
+    pub source_revision: Option<u64>,
     /// 已 pin 的 Plan hash。
     pub plan_hash: String,
     /// 当前状态。
@@ -226,6 +275,8 @@ pub struct ExecutionRecord {
     pub pinned: bool,
     /// archive 是否还可 replay。
     pub replayable: bool,
+    /// legacy/source snapshot 无法 replay 的 typed reason。
+    pub replay_unavailable_reason: Option<ReplayUnavailableReason>,
     /// 两阶段 archive 回收状态。
     pub gc_state: GcState,
     /// 起始时刻。
@@ -236,23 +287,57 @@ pub struct ExecutionRecord {
     pub revision: u64,
 }
 
-/// 从 execution archive 读取的不可变 replay pin。
+/// live start transaction 返回的 immutable installed source snapshot。
 ///
-/// 此 DTO 只在 archive 仍可 replay，且 source-version snapshot、artifact BLAKE3 与 Plan
-/// canonical hash 均已验证后返回；调用方必须使用其中字段，不得回退到当前安装来源配置。
+/// runtime credential 为短生命周期 plaintext carrier，因此此类型不实现 `Debug`、`Clone` 或 serde。
+pub struct InstalledSourceSnapshot {
+    /// 稳定来源身份。
+    pub source_identity: String,
+    /// transaction 固定的权威 source revision。
+    pub source_revision: u64,
+    /// Definition/package version，仅作一致性字段。
+    pub version: String,
+    /// 固定 revision 的 profile。
+    pub profile: SourceProfile,
+    /// 固定 revision 的用户 grant。
+    pub grant: PolicyCapabilities,
+    /// 固定 revision 的 canonical base URL。
+    pub base_url: String,
+    /// 固定 revision 的作者包。
+    pub package: RulePackage,
+    /// 固定 revision 的 immutable Plan。
+    pub plan: ExecutionPlan,
+    /// 固定 revision 的 runtime credential carrier。
+    pub runtime_credentials: ExecutionSourceCredentials,
+}
+
+/// `start_execution` 的唯一成功 receipt。
+///
+/// writer 在同一个 transaction 内写 Started Event/execution projection 并选择 installed snapshot；
+/// `RuleSystem` 必须只使用此 receipt，不得在前后读取 identity-keyed current/cache。
+pub struct ExecutionStartReceipt {
+    /// 已 durable 持久化的 execution record。
+    pub record: ExecutionRecord,
+    /// 与 `record.source_revision` 完全一致的 immutable installed snapshot。
+    pub installed_snapshot: InstalledSourceSnapshot,
+}
+
+/// 从 execution archive 读取的不可变 replay pin。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExecutionReplayPin {
     /// 被固定的历史 execution。
     pub execution_id: Uuid,
     /// 历史 execution 所属的稳定来源身份。
     pub source_identity: String,
-    /// execution 启动时固定的来源版本。
+    /// execution 启动时固定的权威 source revision。
+    pub source_revision: u64,
+    /// Definition/package version，仅作一致性字段。
     pub source_version: String,
-    /// 固定 source version 的展示资料。
+    /// 固定 source revision 的展示资料。
     pub profile: SourceProfile,
-    /// 固定 source version 的已批准能力。
+    /// 固定 source revision 的已批准能力。
     pub grant: PolicyCapabilities,
-    /// 固定 source version 的 canonical base URL。
+    /// 固定 source revision 的 canonical base URL。
     pub base_url: String,
     /// source package body artifact 的 BLAKE3 ref。
     pub package_artifact_hash: String,

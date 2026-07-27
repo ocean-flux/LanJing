@@ -9,8 +9,9 @@ use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::definition::MapperOutputKind;
 use lj_rule_model::{
     CapabilityManifest, ControlledMapper, ExpectedDataType, ExtractRule, ExtractSpec, ExtractType,
-    FlowEdge, FlowGraph, FlowNode, FlowNodeKind, HttpMethod, HttpSpec, PolicyCapabilities,
-    RuleDefinition, SourceIdentity, SystemCapabilities,
+    FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec,
+    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, PolicyCapabilities, RuleDefinition, SourceIdentity,
+    SystemCapabilities,
 };
 use uuid::Uuid;
 
@@ -25,6 +26,16 @@ use super::vocab::{
 /// 从已验证的 Maccms 端点构造只含标准意图的 Definition。
 #[must_use]
 pub(crate) fn definition(base_url: String, format: MaccmsFormat) -> RuleDefinition {
+    definition_with_headers(base_url, format, HashMap::new())
+}
+
+/// 从已验证端点与非敏感 request headers 构造 Definition。
+#[must_use]
+pub(crate) fn definition_with_headers(
+    base_url: String,
+    format: MaccmsFormat,
+    headers: HashMap<String, String>,
+) -> RuleDefinition {
     let source_identity = source_identity(&base_url, format);
     let expected_type = match format {
         MaccmsFormat::Json => ExpectedDataType::Json,
@@ -43,8 +54,9 @@ pub(crate) fn definition(base_url: String, format: MaccmsFormat) -> RuleDefiniti
 
     let discover_url = format!("{base_url}{query_separator}ac=list&t={{{{type}}}}&pg={{{{page}}}}");
     let detail_url = format!("{base_url}{query_separator}ac=detail&ids={{{{vod_id}}}}");
+    let detail_headers = headers.clone();
     let nodes = vec![
-        http_node(discover_http, discover_url, expected_type),
+        http_node(discover_http, discover_url, expected_type, headers),
         extract_node(
             discover_extract,
             discover_rules(format),
@@ -56,7 +68,7 @@ pub(crate) fn definition(base_url: String, format: MaccmsFormat) -> RuleDefiniti
             MapperOutputKind::Discovery,
             DISCOVERY_IDENTITY_FIELDS,
         ),
-        http_node(detail_http, detail_url, expected_type),
+        http_node(detail_http, detail_url, expected_type, detail_headers),
         extract_node(
             detail_extract,
             detail_rules(format),
@@ -98,22 +110,21 @@ pub(crate) fn definition(base_url: String, format: MaccmsFormat) -> RuleDefiniti
         ),
     ]);
 
-    RuleDefinition {
-        schema_version: 1,
-        source_identity: SourceIdentity {
+    RuleDefinition::new(
+        SourceIdentity {
             id: source_identity,
         },
         base_url,
         intent_exports,
-        flow: FlowGraph { nodes, edges },
-        capability_manifest: CapabilityManifest {
+        FlowGraph { nodes, edges },
+        CapabilityManifest {
             required: PolicyCapabilities {
                 network: true,
                 system: SystemCapabilities::default(),
             },
         },
-        source_id_rules: vec![VOD_ID_FIELD.to_string()],
-    }
+        vec![VOD_ID_FIELD.to_string()],
+    )
 }
 
 fn source_identity(base_url: &str, format: MaccmsFormat) -> String {
@@ -133,30 +144,29 @@ fn node_id(source_identity: &str, role: &str) -> Uuid {
 }
 
 fn edge(from: Uuid, to: Uuid) -> FlowEdge {
-    FlowEdge {
-        from,
-        to,
-        condition_branch: None,
-    }
+    FlowEdge::new(
+        FlowPortRef::new(from, LINEAR_OUTPUT_HANDLE),
+        FlowPortRef::new(to, LINEAR_INPUT_HANDLE),
+    )
 }
 
-fn http_node(id: Uuid, url: String, expected_type: ExpectedDataType) -> FlowNode {
-    FlowNode {
+fn http_node(
+    id: Uuid,
+    url: String,
+    expected_type: ExpectedDataType,
+    headers: HashMap<String, String>,
+) -> FlowNode {
+    FlowNode::new(
         id,
-        kind: FlowNodeKind::Http,
-        http: Some(HttpSpec {
+        FlowNodeConfig::Http(HttpSpec {
             method: HttpMethod::Get,
             url,
-            headers: HashMap::new(),
+            headers,
             body: None,
             charset: None,
             expected_type,
         }),
-        js_code: None,
-        extract: None,
-        mapper: None,
-        span: None,
-    }
+    )
 }
 
 fn extract_node(
@@ -165,38 +175,28 @@ fn extract_node(
     field_rules: HashMap<String, Vec<ExtractRule>>,
     expected_type: ExpectedDataType,
 ) -> FlowNode {
-    FlowNode {
+    FlowNode::new(
         id,
-        kind: FlowNodeKind::Extract,
-        http: None,
-        js_code: None,
-        extract: Some(ExtractSpec {
+        FlowNodeConfig::Extract(ExtractSpec {
             rules,
             field_rules,
             expected_type,
             output_target: lj_rule_model::OutputTarget::default(),
         }),
-        mapper: None,
-        span: None,
-    }
+    )
 }
 
 fn mapper_node(id: Uuid, output: MapperOutputKind, identity_fields: &[&str]) -> FlowNode {
-    FlowNode {
+    FlowNode::new(
         id,
-        kind: FlowNodeKind::Mapper,
-        http: None,
-        js_code: None,
-        extract: None,
-        mapper: Some(ControlledMapper {
+        FlowNodeConfig::Mapper(ControlledMapper {
             output,
             identity_fields: identity_fields
                 .iter()
                 .map(|field| (*field).to_string())
                 .collect(),
         }),
-        span: None,
-    }
+    )
 }
 
 /// 发现列表规则（取得 Maccms 的视频数组）。

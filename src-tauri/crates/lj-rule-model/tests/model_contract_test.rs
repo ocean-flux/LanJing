@@ -1,13 +1,16 @@
-//! 规则模型合同测试：Definition/Plan 隔离、hash 稳定、EventEnvelope 字段。
+//! 规则模型基础合同：版本 reader/writer、hash、合同隔离与既有 Event/Policy DTO。
 
 use std::collections::{BTreeMap, HashMap};
 
 use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::{
-    CapabilityManifest, EventEnvelope, EventType, ExecutionPlan, FlowGraph, IntentEntry,
-    RuleDefinition, SourceIdentity, canonical_json, definition_hash,
+    CapabilityManifest, ContractSchemaVersion, EventEnvelope, EventType, ExecutionPlan, FlowGraph,
+    RuleDefinition, SchemaContract, SchemaReadError, SourceIdentity, canonical_json,
+    definition_hash, execution_plan_hash, read_execution_plan, read_rule_definition,
+    read_rule_package,
 };
 use serde::Serialize;
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 #[derive(Serialize)]
@@ -20,20 +23,19 @@ fn sample_definition() -> RuleDefinition {
     let mapper = Uuid::parse_str("22222222-2222-2222-2222-222222222222").unwrap();
     let mut intent_exports = BTreeMap::new();
     intent_exports.insert(StandardIntent::Search, IntentExport::new(entry, mapper));
-    RuleDefinition {
-        schema_version: 1,
-        source_identity: SourceIdentity {
+    RuleDefinition::new(
+        SourceIdentity {
             id: "source:demo".to_string(),
         },
-        base_url: "https://example.com".to_string(),
+        "https://example.com",
         intent_exports,
-        flow: FlowGraph {
+        FlowGraph {
             nodes: vec![],
             edges: vec![],
         },
-        capability_manifest: CapabilityManifest::default(),
-        source_id_rules: vec!["source_item_id".to_string()],
-    }
+        CapabilityManifest::default(),
+        vec!["source_item_id".to_string()],
+    )
 }
 
 fn sample_plan(definition_hash: &str) -> ExecutionPlan {
@@ -42,59 +44,189 @@ fn sample_plan(definition_hash: &str) -> ExecutionPlan {
     let mut intent_entries = BTreeMap::new();
     intent_entries.insert(
         StandardIntent::Search,
-        IntentEntry {
+        lj_rule_model::IntentEntry {
             intent: StandardIntent::Search,
             entry_node: entry,
             mapper_output: mapper,
         },
     );
-    ExecutionPlan {
-        schema_version: 1,
-        compiler_version: "test-compiler@0".to_string(),
-        definition_hash: definition_hash.to_string(),
-        plan_hash: "plan-hash-placeholder".to_string(),
-        nodes: vec![],
-        edges: vec![],
+    ExecutionPlan::new(
+        "test-compiler@2",
+        definition_hash,
+        vec![],
+        vec![],
         intent_entries,
-        effects: vec![],
-        capability_requirements: vec!["network".to_string()],
-    }
+        vec![],
+        vec!["network".to_string()],
+        vec![],
+    )
+    .expect("sample Plan must seal")
+}
+
+fn blake3_canonical(value: &impl Serialize) -> String {
+    let canonical = canonical_json(value).expect("hash material must canonicalize");
+    blake3::hash(canonical.as_bytes()).to_hex().to_string()
 }
 
 #[test]
 fn definition_and_plan_not_cross_deserializable() {
-    let def = sample_definition();
-    let def_json = serde_json::to_string(&def).expect("serialize definition");
-    let plan_err = serde_json::from_str::<ExecutionPlan>(&def_json);
+    let definition = sample_definition();
+    let definition_json = serde_json::to_string(&definition).expect("serialize definition");
     assert!(
-        plan_err.is_err(),
+        serde_json::from_str::<ExecutionPlan>(&definition_json).is_err(),
         "Definition JSON 不得作为 Plan 反序列化成功"
     );
 
-    let hash = definition_hash(&def).expect("hash");
-    let plan = sample_plan(&hash);
+    let plan = sample_plan(&definition_hash(&definition).expect("hash"));
     let plan_json = serde_json::to_string(&plan).expect("serialize plan");
-    let def_err = serde_json::from_str::<RuleDefinition>(&plan_json);
     assert!(
-        def_err.is_err(),
+        serde_json::from_str::<RuleDefinition>(&plan_json).is_err(),
         "Plan JSON 不得作为 Definition 反序列化成功"
     );
 }
 
 #[test]
-fn definition_hash_is_stable() {
-    let a = sample_definition();
-    let b = sample_definition();
-    let ha = definition_hash(&a).expect("hash a");
-    let hb = definition_hash(&b).expect("hash b");
-    assert_eq!(ha, hb);
-    assert_eq!(ha.len(), 64);
-    let canonical = canonical_json(&a).expect("canonical Definition");
-    assert_eq!(ha, blake3::hash(canonical.as_bytes()).to_hex().to_string());
-    // 字段顺序扰动：重建相同内容
-    let mut c = sample_definition();
-    c.source_id_rules = vec!["source_item_id".to_string()];
-    assert_eq!(ha, definition_hash(&c).expect("hash c"));
+fn v2_definition_and_plan_writers_use_owned_constants_and_sealed_hash() {
+    let definition = sample_definition();
+    assert_eq!(definition.schema_version(), ContractSchemaVersion::V2);
+    let definition_wire = serde_json::to_value(&definition).expect("serialize definition");
+    assert_eq!(
+        definition_wire["schema_version"],
+        lj_rule_model::RULE_DEFINITION_SCHEMA_VERSION
+    );
+
+    let definition_hash = definition_hash(&definition).expect("definition hash");
+    let plan = sample_plan(&definition_hash);
+    assert_eq!(plan.schema_version(), ContractSchemaVersion::V2);
+    assert_eq!(plan.plan_hash(), execution_plan_hash(&plan).unwrap());
+    let plan_wire = serde_json::to_value(&plan).expect("serialize Plan");
+    assert_eq!(
+        plan_wire["schema_version"],
+        lj_rule_model::EXECUTION_PLAN_SCHEMA_VERSION
+    );
+    assert_eq!(plan_wire["plan_hash"], plan.plan_hash());
+}
+
+#[test]
+fn v1_definition_package_and_plan_are_read_only_with_exact_legacy_hashes() {
+    let legacy_definition = json!({
+        "contract": "rule_definition",
+        "schema_version": ContractSchemaVersion::V1.as_u32(),
+        "source_identity": { "id": "source:legacy" },
+        "base_url": "https://legacy.example",
+        "intent_exports": {},
+        "flow": { "nodes": [], "edges": [] },
+        "capability_manifest": {
+            "required": {
+                "network": false,
+                "system": { "fs": false, "env": false, "process": false }
+            }
+        },
+        "source_id_rules": ["legacy_id"]
+    });
+    let expected_definition_hash = blake3_canonical(&legacy_definition);
+    let definition_bytes = serde_json::to_vec(&legacy_definition).unwrap();
+    let definition = read_rule_definition(&definition_bytes).expect("v1 Definition must read");
+    assert_eq!(definition.schema_version(), ContractSchemaVersion::V1);
+    assert_eq!(
+        definition_hash(&definition).unwrap(),
+        expected_definition_hash
+    );
+    assert!(
+        serde_json::to_value(&definition).is_err(),
+        "v1 Definition reader object must not become an implicit migration writer"
+    );
+
+    let legacy_package = json!({
+        "contract": "rule_package",
+        "schema_version": ContractSchemaVersion::V1.as_u32(),
+        "source_identity": { "id": "source:legacy" },
+        "version": expected_definition_hash,
+        "definition": legacy_definition
+    });
+    let package = read_rule_package(&serde_json::to_vec(&legacy_package).unwrap())
+        .expect("v1 package must read");
+    assert_eq!(package.schema_version(), ContractSchemaVersion::V1);
+    assert_eq!(
+        package.definition().schema_version(),
+        ContractSchemaVersion::V1
+    );
+    assert!(
+        serde_json::to_value(&package).is_err(),
+        "v1 Package reader object must not become an implicit migration writer"
+    );
+
+    let mut legacy_plan = json!({
+        "contract": "execution_plan",
+        "schema_version": ContractSchemaVersion::V1.as_u32(),
+        "compiler_version": "legacy-compiler@1",
+        "definition_hash": package.version(),
+        "plan_hash": "",
+        "nodes": [],
+        "edges": [],
+        "intent_entries": {},
+        "effects": [],
+        "capability_requirements": []
+    });
+    let expected_plan_hash = blake3_canonical(&legacy_plan);
+    legacy_plan["plan_hash"] = Value::String(expected_plan_hash.clone());
+    let plan = read_execution_plan(&serde_json::to_vec(&legacy_plan).unwrap())
+        .expect("v1 installed Plan must read");
+    assert_eq!(plan.schema_version(), ContractSchemaVersion::V1);
+    assert_eq!(plan.plan_hash(), expected_plan_hash);
+    assert_eq!(execution_plan_hash(&plan).unwrap(), expected_plan_hash);
+
+    assert!(
+        serde_json::to_value(&plan).is_err(),
+        "v1 Plan reader object must not become an implicit migration writer"
+    );
+}
+
+#[test]
+fn unknown_contract_versions_are_typed_incompatible() {
+    for (contract, reader) in [(
+        SchemaContract::RuleDefinition,
+        read_rule_definition as fn(&[u8]) -> Result<RuleDefinition, SchemaReadError>,
+    )] {
+        let bytes = serde_json::to_vec(&json!({
+            "contract": contract.wire_name(),
+            "schema_version": 99
+        }))
+        .unwrap();
+        assert!(matches!(
+            reader(&bytes),
+            Err(SchemaReadError::IncompatibleVersion {
+                contract: actual,
+                version: 99
+            }) if actual == contract
+        ));
+    }
+
+    let package = serde_json::to_vec(&json!({
+        "contract": "rule_package",
+        "schema_version": 99
+    }))
+    .unwrap();
+    assert!(matches!(
+        read_rule_package(&package),
+        Err(SchemaReadError::IncompatibleVersion {
+            contract: SchemaContract::RulePackage,
+            version: 99
+        })
+    ));
+
+    let plan = serde_json::to_vec(&json!({
+        "contract": "execution_plan",
+        "schema_version": 99
+    }))
+    .unwrap();
+    assert!(matches!(
+        read_execution_plan(&plan),
+        Err(SchemaReadError::IncompatibleVersion {
+            contract: SchemaContract::ExecutionPlan,
+            version: 99
+        })
+    ));
 }
 
 #[test]
@@ -111,20 +243,20 @@ fn canonical_json_sorts_nested_hash_map_keys() {
     let mut reverse_outer = HashMap::new();
     reverse_outer.insert("first".to_string(), reverse_inner);
 
-    let forward = NestedMaps {
-        values: forward_outer,
-    };
-    let reverse = NestedMaps {
-        values: reverse_outer,
-    };
     assert_eq!(
-        canonical_json(&forward).expect("canonical forward JSON"),
-        canonical_json(&reverse).expect("canonical reverse JSON")
+        canonical_json(&NestedMaps {
+            values: forward_outer
+        })
+        .unwrap(),
+        canonical_json(&NestedMaps {
+            values: reverse_outer
+        })
+        .unwrap()
     );
 }
 
 #[test]
-fn event_envelope_has_required_fields() {
+fn event_envelope_has_required_fields_without_rule_schema_cutover() {
     let envelope = EventEnvelope {
         global_seq: 42,
         stream_id: "execution/abc".to_string(),
@@ -136,25 +268,22 @@ fn event_envelope_has_required_fields() {
         causation_id: None,
         trace_id: "trace-xyz".to_string(),
         occurred_at: "2026-07-18T00:00:00Z".to_string(),
-        payload: serde_json::json!({"kind": "started"}),
+        payload: json!({"kind": "started"}),
         artifact_refs: vec![],
         secret_refs: vec![],
     };
-    let json = serde_json::to_value(&envelope).expect("serialize envelope");
-    assert_eq!(json["global_seq"], 42);
-    assert_eq!(json["stream_id"], "execution/abc");
-    assert_eq!(json["stream_version"], 7);
-    assert_eq!(json["schema_version"], 1);
-    assert!(json.get("correlation_id").is_some());
-    assert_eq!(json["trace_id"], "trace-xyz");
-    let back: EventEnvelope = serde_json::from_value(json).expect("roundtrip");
-    assert_eq!(back, envelope);
+    let wire = serde_json::to_value(&envelope).expect("serialize envelope");
+    assert_eq!(wire["schema_version"], 1);
+    assert_eq!(
+        serde_json::from_value::<EventEnvelope>(wire).unwrap(),
+        envelope
+    );
 }
 
 #[test]
 fn policy_and_capability_manifest_roundtrip() {
     use lj_rule_model::{PolicyCapabilities, SystemCapabilities};
-    let caps = PolicyCapabilities {
+    let capabilities = PolicyCapabilities {
         network: true,
         system: SystemCapabilities {
             fs: false,
@@ -162,7 +291,9 @@ fn policy_and_capability_manifest_roundtrip() {
             process: false,
         },
     };
-    let json = serde_json::to_string(&caps).unwrap();
-    let back: PolicyCapabilities = serde_json::from_str(&json).unwrap();
-    assert_eq!(caps, back);
+    let json = serde_json::to_string(&capabilities).unwrap();
+    assert_eq!(
+        serde_json::from_str::<PolicyCapabilities>(&json).unwrap(),
+        capabilities
+    );
 }

@@ -15,7 +15,10 @@ use diesel::sqlite::SqliteConnection;
 use uuid::Uuid;
 
 use crate::artifact::{ArtifactStore, PendingArtifact};
-use crate::candidate_install::{expire_candidate, get_source_row, source_stream_id};
+use crate::candidate_install::{
+    expire_candidate, get_source_row, read_rule_package_artifact, source_stream_id,
+};
+use crate::document_vault::release_expired_source_document_revision_pins;
 use crate::event_store::{
     ArtifactPathRow, ArtifactReferenceRow, BODY_KIND, I64Value, TextValue, current_global_seq,
     database_error, decrement_artifact_ref, deserialize, from_i64, now_millis, read_body_by_hash,
@@ -26,6 +29,9 @@ use crate::execution::{
     get_execution_sync,
 };
 use crate::projection_query::{list_library_entries_sync, source_projection_sync};
+use crate::secret_artifact::{
+    purge_zero_ref_secrets, referenced_secret_paths, release_secret_owner,
+};
 use crate::types::{
     ArtifactKind, CheckpointReceipt, ExecutionRecord, GcReport, GcState, LibraryProjectionSnapshot,
     OrphanRecovery, ProjectionDelta, RetentionPolicy, SourceProjectionSnapshot, StorageError,
@@ -265,7 +271,10 @@ pub(crate) fn process_gc(
         expire_candidate(conn, candidate_id)?;
         report.expired_candidates += 1;
     }
+    release_expired_source_document_revision_pins(conn, now_ms)?;
+    purge_unpinned_source_versions(conn)?;
     purge_zero_ref_artifacts(conn, artifacts)?;
+    purge_zero_ref_secrets(conn, artifacts)?;
     let rows = gc_execution_rows(conn)?;
     let soft_quota = policy.quota_bytes.saturating_mul(90) / 100;
     let mut checkpointed_sources = HashSet::new();
@@ -304,6 +313,8 @@ pub(crate) fn process_gc(
             report.finalized += 1;
         }
     }
+    purge_unpinned_source_versions(conn)?;
+    purge_zero_ref_secrets(conn, artifacts)?;
     Ok(report)
 }
 
@@ -343,6 +354,8 @@ pub(crate) fn process_clear_execution_archive(
         finalize_execution_gc(conn, artifacts, execution_id)?;
         report.finalized = 1;
     }
+    purge_unpinned_source_versions(conn)?;
+    purge_zero_ref_secrets(conn, artifacts)?;
     Ok(report)
 }
 
@@ -350,7 +363,7 @@ fn expired_candidate_ids(
     conn: &mut SqliteConnection,
     now_ms: i64,
 ) -> Result<Vec<Uuid>, StorageError> {
-    let rows = sql_query("SELECT candidate_id AS value FROM candidates WHERE status = 'staged' AND expires_at_ms <= ? ORDER BY expires_at_ms ASC")
+    let rows = sql_query("SELECT candidate_id AS value FROM candidate_projection WHERE status = 'staged' AND expires_at_ms <= ? ORDER BY expires_at_ms ASC")
         .bind::<BigInt, _>(now_ms)
         .load::<TextValue>(conn)
         .map_err(database_error)?;
@@ -364,14 +377,43 @@ fn expired_candidate_ids(
 
 fn gc_execution_rows(conn: &mut SqliteConnection) -> Result<Vec<ExecutionRow>, StorageError> {
     sql_query(
-        "SELECT execution_id, source_identity, plan_hash, status, pinned, archive_available, gc_state, started_at_ms, finished_at_ms, revision FROM execution_projection WHERE pinned = 0 AND status != 'running' AND gc_state != 'finalized' ORDER BY COALESCE(finished_at_ms, started_at_ms) ASC",
+        "SELECT execution_id, source_identity, source_revision, plan_hash, status, pinned, archive_available, replay_unavailable_reason, gc_state, started_at_ms, finished_at_ms, revision FROM execution_projection WHERE pinned = 0 AND status != 'running' AND gc_state != 'finalized' ORDER BY COALESCE(finished_at_ms, started_at_ms) ASC",
     )
     .load::<ExecutionRow>(conn)
     .map_err(database_error)
 }
 
+fn purge_unpinned_source_versions(conn: &mut SqliteConnection) -> Result<(), StorageError> {
+    let rows = sql_query(
+        "SELECT versions.source_identity, versions.source_revision FROM source_versions AS versions WHERE NOT EXISTS (SELECT 1 FROM source_projection AS current_source WHERE current_source.source_identity = versions.source_identity AND current_source.revision = versions.source_revision) AND NOT EXISTS (SELECT 1 FROM execution_projection AS execution WHERE execution.source_identity = versions.source_identity AND execution.source_revision = versions.source_revision AND execution.archive_available = 1) ORDER BY versions.source_identity, versions.source_revision",
+    )
+    .load::<SourceVersionKeyRow>(conn)
+    .map_err(database_error)?;
+    conn.immediate_transaction::<_, StorageError, _>(|conn| {
+        for row in &rows {
+            let source_revision = from_i64(row.source_revision, "source revision")?;
+            let owner_id = format!("{}:{source_revision}", row.source_identity);
+            release_secret_owner(conn, "source_version_runtime", &owner_id)?;
+            release_secret_owner(conn, "document_snapshot_masked", &owner_id)?;
+            release_secret_owner(conn, "document_snapshot_raw", &owner_id)?;
+            release_secret_owner(conn, "document_snapshot_manifest", &owner_id)?;
+            sql_query("DELETE FROM source_document_snapshots WHERE source_identity = ? AND source_revision = ?")
+                .bind::<Text, _>(&row.source_identity)
+                .bind::<BigInt, _>(row.source_revision)
+                .execute(conn)
+                .map_err(database_error)?;
+            sql_query("DELETE FROM source_versions WHERE source_identity = ? AND source_revision = ?")
+                .bind::<Text, _>(&row.source_identity)
+                .bind::<BigInt, _>(row.source_revision)
+                .execute(conn)
+                .map_err(database_error)?;
+        }
+        Ok(())
+    })
+}
+
 fn artifact_usage(conn: &mut SqliteConnection) -> Result<u64, StorageError> {
-    let value = sql_query("SELECT COALESCE(SUM(stored_bytes), 0) AS value FROM artifact_metadata")
+    let value = sql_query("SELECT (SELECT COALESCE(SUM(stored_bytes), 0) FROM artifact_metadata) + (SELECT COALESCE(SUM(stored_bytes), 0) FROM secret_artifact_projection) AS value")
         .get_result::<I64Value>(conn)
         .map_err(database_error)?;
     from_i64(value.value, "artifact usage")
@@ -434,6 +476,17 @@ fn finalize_execution_gc(
     purge_zero_ref_artifacts(conn, artifacts)?;
     let stream_id = execution_stream_id(execution_id);
     conn.immediate_transaction::<_, StorageError, _>(|conn| {
+        let effect_ids = sql_query(
+            "SELECT effect_id AS value FROM effect_captures WHERE execution_id = ?",
+        )
+        .bind::<Text, _>(execution_id.to_string())
+        .load::<TextValue>(conn)
+        .map_err(database_error)?;
+        for effect_id in effect_ids {
+            let owner_id = format!("{execution_id}:{}", effect_id.value);
+            release_secret_owner(conn, "effect_response_headers", &owner_id)?;
+            release_secret_owner(conn, "effect_request_body", &owner_id)?;
+        }
         sql_query("DELETE FROM effect_captures WHERE execution_id = ?")
             .bind::<Text, _>(execution_id.to_string())
             .execute(conn)
@@ -450,7 +503,7 @@ fn finalize_execution_gc(
     })
 }
 
-fn purge_zero_ref_artifacts(
+pub(crate) fn purge_zero_ref_artifacts(
     conn: &mut SqliteConnection,
     artifacts: &ArtifactStore,
 ) -> Result<(), StorageError> {
@@ -458,15 +511,16 @@ fn purge_zero_ref_artifacts(
         sql_query("SELECT relative_path FROM artifact_metadata WHERE ref_count = 0")
             .load::<ArtifactPathRow>(conn)
             .map_err(database_error)?;
-    for artifact in &zero_ref_artifacts {
-        artifacts.remove_file(&artifact.relative_path)?;
-    }
     conn.immediate_transaction::<_, StorageError, _>(|conn| {
         sql_query("DELETE FROM artifact_metadata WHERE ref_count = 0")
             .execute(conn)
             .map_err(database_error)?;
         Ok(())
-    })
+    })?;
+    for artifact in &zero_ref_artifacts {
+        artifacts.remove_file(&artifact.relative_path)?;
+    }
+    Ok(())
 }
 
 /// 将旧路径分隔符归一化，避免 Windows metadata 重启后无法定位 artifact。
@@ -492,10 +546,11 @@ pub(crate) fn recover_orphans_sync(
     let rows = sql_query("SELECT relative_path AS value FROM artifact_metadata")
         .load::<TextValue>(conn)
         .map_err(database_error)?;
-    let paths = rows
+    let mut paths = rows
         .into_iter()
         .map(|row| row.value)
         .collect::<HashSet<_>>();
+    paths.extend(referenced_secret_paths(conn)?);
     artifacts.recover_orphans(&paths)
 }
 
@@ -505,7 +560,7 @@ pub(crate) fn backfill_source_version_snapshots(
     artifacts: &ArtifactStore,
 ) -> Result<(), StorageError> {
     let rows = sql_query(
-        "SELECT source_identity, version, package_artifact_hash, profile_json, grant_json, base_url FROM source_versions WHERE profile_json IS NULL OR profile_json = '' OR grant_json IS NULL OR grant_json = '' OR base_url IS NULL OR base_url = ''",
+        "SELECT source_identity, source_revision, version, package_artifact_hash, profile_json, grant_json, base_url FROM source_versions WHERE profile_json IS NULL OR profile_json = '' OR grant_json IS NULL OR grant_json = '' OR base_url IS NULL OR base_url = ''",
     )
     .load::<SourceVersionBackfillRow>(conn)
     .map_err(database_error)?;
@@ -514,21 +569,21 @@ pub(crate) fn backfill_source_version_snapshots(
             || row.grant_json.as_deref().is_none_or(str::is_empty)
         {
             let current = sql_query(
-                "SELECT profile_json, grant_json FROM source_projection WHERE source_identity = ? AND version = ?",
+                "SELECT profile_json, grant_json FROM source_projection WHERE source_identity = ? AND revision = ?",
             )
             .bind::<Text, _>(&row.source_identity)
-            .bind::<Text, _>(&row.version)
+            .bind::<BigInt, _>(row.source_revision)
             .get_result::<SourceVersionCurrentSnapshotRow>(conn)
             .optional()
             .map_err(database_error)?;
             if let Some(current) = current {
                 sql_query(
-                    "UPDATE source_versions SET profile_json = CASE WHEN profile_json IS NULL OR profile_json = '' THEN ? ELSE profile_json END, grant_json = CASE WHEN grant_json IS NULL OR grant_json = '' THEN ? ELSE grant_json END WHERE source_identity = ? AND version = ?",
+                    "UPDATE source_versions SET profile_json = CASE WHEN profile_json IS NULL OR profile_json = '' THEN ? ELSE profile_json END, grant_json = CASE WHEN grant_json IS NULL OR grant_json = '' THEN ? ELSE grant_json END WHERE source_identity = ? AND source_revision = ?",
                 )
                 .bind::<Text, _>(&current.profile_json)
                 .bind::<Text, _>(&current.grant_json)
                 .bind::<Text, _>(&row.source_identity)
-                .bind::<Text, _>(&row.version)
+                .bind::<BigInt, _>(row.source_revision)
                 .execute(conn)
                 .map_err(database_error)?;
             }
@@ -544,21 +599,23 @@ pub(crate) fn backfill_source_version_snapshots(
         else {
             continue;
         };
-        let Ok(package) = deserialize::<lj_rule_model::RulePackage>(&package_bytes) else {
-            continue;
+        let package = match read_rule_package_artifact(&package_bytes) {
+            Ok(package) => package,
+            Err(error @ StorageError::ContractSchemaIncompatible { .. }) => return Err(error),
+            Err(_) => continue,
         };
-        if package.source_identity.id != row.source_identity
-            || package.version != row.version
-            || package.definition.base_url.is_empty()
+        if package.source_identity().id != row.source_identity
+            || package.version() != row.version
+            || package.definition().base_url().is_empty()
         {
             continue;
         }
         sql_query(
-            "UPDATE source_versions SET base_url = ? WHERE source_identity = ? AND version = ? AND (base_url IS NULL OR base_url = '')",
+            "UPDATE source_versions SET base_url = ? WHERE source_identity = ? AND source_revision = ? AND (base_url IS NULL OR base_url = '')",
         )
-        .bind::<Text, _>(&package.definition.base_url)
+        .bind::<Text, _>(package.definition().base_url())
         .bind::<Text, _>(&row.source_identity)
-        .bind::<Text, _>(&row.version)
+        .bind::<BigInt, _>(row.source_revision)
         .execute(conn)
         .map_err(database_error)?;
     }
@@ -575,9 +632,19 @@ pub(crate) fn mark_interrupted_executions(conn: &mut SqliteConnection) -> Result
 }
 
 #[derive(QueryableByName)]
+struct SourceVersionKeyRow {
+    #[diesel(sql_type = Text)]
+    source_identity: String,
+    #[diesel(sql_type = BigInt)]
+    source_revision: i64,
+}
+
+#[derive(QueryableByName)]
 struct SourceVersionBackfillRow {
     #[diesel(sql_type = Text)]
     source_identity: String,
+    #[diesel(sql_type = BigInt)]
+    source_revision: i64,
     #[diesel(sql_type = Text)]
     version: String,
     #[diesel(sql_type = Text)]

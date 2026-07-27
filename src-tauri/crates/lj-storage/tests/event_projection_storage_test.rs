@@ -17,9 +17,10 @@ use lj_media::{
     MediaResourceId, MediaUnit, ResourceCompleteness, SourceProfile,
 };
 use lj_rule_model::{
-    CapabilityManifest, Diagnostic, DiagnosticSeverity, EffectKind, EventType, ExecutionPlan,
-    FlowGraph, HttpMethod, PolicyCapabilities, RuleDefinition, RulePackage, SourceIdentity,
-    canonical_json, definition_hash,
+    CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, CredentialSlotManifest,
+    CredentialTargetIdentity, Diagnostic, DiagnosticSeverity, EffectKind, EventType, ExecutionPlan,
+    FlowGraph, HttpMethod, PolicyCapabilities, RuleDefinition, RulePackage, SourceDocumentFormat,
+    SourceIdentity, definition_hash, read_execution_plan,
 };
 use lj_runtime::{
     ArchivedEffectCapture, CapturedEffectOutput, EffectArchive, EffectCapture, EffectFailure,
@@ -28,11 +29,12 @@ use lj_runtime::{
     HttpRequestWitness, HttpResponse, effect_bytes_hash, effect_output_hash,
 };
 use lj_storage::{
-    AppendRequest, ArtifactInput, ArtifactKind, CandidateDraft, DEFAULT_CANDIDATE_TTL_MS,
-    DeltaCommit, EventProjectionStorage, ExecutionFinish, ExecutionPin, ExecutionStart,
-    ExecutionStatus, GcState, InstallCandidateRequest, LibraryEntry, LibraryProgress,
-    LibraryUpdate, ProjectionDelta, ProjectionTombstones, ReplayExecutionStart, RetentionPolicy,
-    SourceCredentialInput, StorageConfig, StorageError, WRITER_CAPACITY,
+    AppendRequest, ArtifactInput, ArtifactKind, CandidateDocumentInput, CandidateDraft,
+    DEFAULT_CANDIDATE_TTL_MS, DeltaCommit, EventProjectionStorage, ExecutionFinish, ExecutionPin,
+    ExecutionStart, ExecutionStatus, GcState, InstallCandidateRequest, LibraryEntry,
+    LibraryProgress, LibraryUpdate, ProjectionDelta, ProjectionTombstones, ReplayExecutionStart,
+    RetentionPolicy, RuntimeCredentialMaterial, SourceDocumentId, StorageConfig, StorageError,
+    TransientSourceDocumentInput, WRITER_CAPACITY,
 };
 use uuid::Uuid;
 
@@ -43,10 +45,27 @@ fn init_mock_keyring() {
     });
 }
 
-/// keyring-core mock 跨 Entry 持久；模拟 OS keyring 主密钥丢失时需显式删除。
-fn wipe_master_key(keyring_service: &str) {
-    let entry = Entry::new(keyring_service, "master-key-v1").expect("master-key entry");
-    entry.delete_credential().expect("删除 mock master key");
+/// keyring-core mock 跨 Entry 持久；模拟 OS secure-store key 丢失时需显式删除。
+fn wipe_master_key(temp: &TempStore) {
+    #[derive(diesel::QueryableByName)]
+    struct VaultKeyIdRow {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        value: String,
+    }
+
+    let database_url = temp.config.database_path.to_string_lossy().into_owned();
+    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
+    let keys = sql_query("SELECT key_id AS value FROM vault_key_metadata")
+        .load::<VaultKeyIdRow>(&mut conn)
+        .expect("read vault key metadata");
+    assert!(!keys.is_empty(), "vault key metadata must exist");
+    for key in keys {
+        let account = format!("vault-key-v1/{}", key.value);
+        Entry::new(&temp.config.keyring_service, &account)
+            .expect("vault key entry")
+            .delete_credential()
+            .expect("删除 mock vault key");
+    }
 }
 
 struct TempStore {
@@ -88,11 +107,11 @@ struct ArtifactMetadataTestRow {
 #[derive(diesel::QueryableByName)]
 struct ArtifactSecurityTestRow {
     #[diesel(sql_type = diesel::sql_types::Text)]
-    artifact_kind: String,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-    encryption: Option<String>,
+    key_id: String,
     #[diesel(sql_type = diesel::sql_types::Text)]
-    relative_path: String,
+    blob_locator: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    ciphertext_hash: String,
 }
 
 fn hash(label: &str) -> String {
@@ -117,46 +136,76 @@ fn http_witness(method: HttpMethod, body: Option<HttpRequestBodyWitness>) -> Eff
         duration_ms: 1,
     })
 }
+fn current_time_ms() -> i64 {
+    i64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock after Unix epoch")
+            .as_millis(),
+    )
+    .expect("test wall clock fits i64")
+}
 
-fn candidate(now_ms: i64) -> CandidateDraft {
-    let source_id = "source:test".to_string();
-    let definition = RuleDefinition {
-        schema_version: 1,
-        source_identity: SourceIdentity {
-            id: source_id.clone(),
+fn transient_document() -> CandidateDocumentInput {
+    let document_id = SourceDocumentId::new();
+    CandidateDocumentInput::Transient(TransientSourceDocumentInput {
+        format: SourceDocumentFormat::Legado,
+        masked_text: "{}".to_string(),
+        raw_text: "{}".to_string(),
+        manifest: CredentialSlotManifest {
+            schema_version: CREDENTIAL_SCHEMA_VERSION,
+            target: CredentialTargetIdentity {
+                format: SourceDocumentFormat::Legado,
+                document_id: document_id.to_string(),
+                revision: 1,
+            },
+            slots: Vec::new(),
         },
-        base_url: "https://example.test".to_string(),
-        intent_exports: BTreeMap::new(),
-        flow: FlowGraph {
+    })
+}
+
+fn package_plan(
+    source_identity: &str,
+    version: &str,
+    base_url: &str,
+    network: bool,
+) -> (RulePackage, ExecutionPlan) {
+    let definition = RuleDefinition::new(
+        SourceIdentity {
+            id: source_identity.to_string(),
+        },
+        base_url,
+        BTreeMap::new(),
+        FlowGraph {
             nodes: Vec::new(),
             edges: Vec::new(),
         },
-        capability_manifest: CapabilityManifest::default(),
-        source_id_rules: vec!["stable-id".to_string()],
-    };
-    let definition_hash = definition_hash(&definition).expect("canonical Definition hash");
-    let package = RulePackage {
-        schema_version: 1,
-        source_identity: SourceIdentity {
-            id: source_id.clone(),
+        CapabilityManifest {
+            required: PolicyCapabilities {
+                network,
+                system: Default::default(),
+            },
         },
-        version: "v1".to_string(),
-        definition,
-    };
-    let mut plan = ExecutionPlan {
-        schema_version: 1,
-        compiler_version: "storage-test@1".to_string(),
-        definition_hash,
-        plan_hash: String::new(),
-        nodes: Vec::new(),
-        edges: Vec::new(),
-        intent_entries: BTreeMap::new(),
-        effects: Vec::new(),
-        capability_requirements: Vec::new(),
-    };
-    plan.plan_hash = blake3::hash(canonical_json(&plan).expect("canonical Plan").as_bytes())
-        .to_hex()
-        .to_string();
+        vec!["stable-id".to_string()],
+    );
+    let plan = ExecutionPlan::new(
+        "storage-test@1",
+        definition_hash(&definition).expect("canonical Definition hash"),
+        Vec::new(),
+        Vec::new(),
+        BTreeMap::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+    )
+    .expect("seal storage test Plan");
+    let package = RulePackage::new(definition.source_identity().clone(), version, definition);
+    (package, plan)
+}
+
+fn candidate(now_ms: i64) -> CandidateDraft {
+    let source_id = "source:test".to_string();
+    let (package, plan) = package_plan(&source_id, "v1", "https://example.test", false);
     CandidateDraft {
         candidate_id: Uuid::new_v4(),
         package,
@@ -172,6 +221,9 @@ fn candidate(now_ms: i64) -> CandidateDraft {
         },
         required_grant: PolicyCapabilities::default(),
         diagnostics: Vec::new(),
+        document: transient_document(),
+        runtime_credentials: None,
+        expected_installed_revision: 0,
         expires_at_ms: None,
         trace_id: "trace-candidate".to_string(),
         correlation_id: None,
@@ -181,67 +233,36 @@ fn candidate(now_ms: i64) -> CandidateDraft {
 
 fn updated_candidate(now_ms: i64) -> CandidateDraft {
     let mut draft = candidate(now_ms);
-    draft.package.version = "v2".to_string();
-    draft.package.definition.base_url = "https://updated.example.test".to_string();
-    draft
-        .package
-        .definition
-        .capability_manifest
-        .required
-        .network = true;
+    (draft.package, draft.plan) =
+        package_plan("source:test", "v2", "https://updated.example.test", true);
     draft.profile.title = "更新后的测试来源".to_string();
     draft.profile.version = Some("v2".to_string());
     draft.required_grant.network = true;
-    draft.plan.definition_hash =
-        definition_hash(&draft.package.definition).expect("updated Definition hash");
-    draft.plan.plan_hash.clear();
-    draft.plan.plan_hash = blake3::hash(
-        canonical_json(&draft.plan)
-            .expect("updated canonical Plan")
-            .as_bytes(),
-    )
-    .to_hex()
-    .to_string();
     draft
 }
 
 fn candidate_for_source(now_ms: i64, source_identity: &str) -> CandidateDraft {
     let mut draft = candidate(now_ms);
-    draft.package.source_identity.id = source_identity.to_string();
-    draft.package.definition.source_identity.id = source_identity.to_string();
+    (draft.package, draft.plan) =
+        package_plan(source_identity, "v1", "https://example.test", false);
     draft.profile.id = MediaResourceId(source_identity.to_string());
     draft.profile.title = format!("测试来源 {source_identity}");
-    draft.plan.definition_hash =
-        definition_hash(&draft.package.definition).expect("source-specific Definition hash");
-    draft.plan.plan_hash.clear();
-    draft.plan.plan_hash = blake3::hash(
-        canonical_json(&draft.plan)
-            .expect("source-specific canonical Plan")
-            .as_bytes(),
-    )
-    .to_hex()
-    .to_string();
     draft
 }
 
 fn require_network_capability(draft: &mut CandidateDraft) {
-    draft
-        .package
-        .definition
-        .capability_manifest
-        .required
-        .network = true;
+    let source_identity = draft.package.source_identity().id.clone();
+    let version = draft.package.version().to_string();
+    let base_url = draft.package.definition().base_url().to_string();
+    (draft.package, draft.plan) = package_plan(&source_identity, &version, &base_url, true);
     draft.required_grant.network = true;
-    draft.plan.definition_hash =
-        definition_hash(&draft.package.definition).expect("network Definition hash");
-    draft.plan.plan_hash.clear();
-    draft.plan.plan_hash = blake3::hash(
-        canonical_json(&draft.plan)
-            .expect("network canonical Plan")
-            .as_bytes(),
-    )
-    .to_hex()
-    .to_string();
+}
+
+fn plan_with_hash(plan: &ExecutionPlan, plan_hash: String) -> ExecutionPlan {
+    let mut value = serde_json::to_value(plan).expect("serialize Plan fixture");
+    value["plan_hash"] = serde_json::Value::String(plan_hash);
+    read_execution_plan(&serde_json::to_vec(&value).expect("serialize rewritten Plan fixture"))
+        .expect("read rewritten Plan fixture")
 }
 
 async fn install_source(storage: &EventProjectionStorage, now_ms: i64) {
@@ -255,12 +276,10 @@ async fn install_source(storage: &EventProjectionStorage, now_ms: i64) {
         .install_candidate(InstallCandidateRequest {
             candidate_id,
             grant: PolicyCapabilities::default(),
-            expected_source_version: 0,
             event_id: Uuid::new_v4(),
             trace_id: "trace-install".to_string(),
             occurred_at_ms: now_ms + 1,
             correlation_id: None,
-            source_credentials: None,
         })
         .await
         .expect("candidate atomically install");
@@ -268,11 +287,12 @@ async fn install_source(storage: &EventProjectionStorage, now_ms: i64) {
 
 async fn install_draft(
     storage: &EventProjectionStorage,
-    draft: CandidateDraft,
-    expected_source_version: u64,
+    mut draft: CandidateDraft,
+    expected_installed_revision: u64,
     grant: PolicyCapabilities,
     occurred_at_ms: i64,
 ) {
+    draft.expected_installed_revision = expected_installed_revision;
     let candidate_id = draft.candidate_id;
     storage
         .stage_candidate(draft)
@@ -282,12 +302,10 @@ async fn install_draft(
         .install_candidate(InstallCandidateRequest {
             candidate_id,
             grant,
-            expected_source_version,
             event_id: Uuid::new_v4(),
             trace_id: "trace-install-draft".to_string(),
             occurred_at_ms,
             correlation_id: None,
-            source_credentials: None,
         })
         .await
         .expect("candidate atomically install");
@@ -295,42 +313,30 @@ async fn install_draft(
 
 async fn install_draft_with_source_credentials(
     storage: &EventProjectionStorage,
-    draft: CandidateDraft,
-    expected_source_version: u64,
+    mut draft: CandidateDraft,
+    expected_installed_revision: u64,
     secret_bytes: Vec<u8>,
     occurred_at_ms: i64,
-) -> String {
+) {
+    draft.expected_installed_revision = expected_installed_revision;
+    draft.runtime_credentials = Some(RuntimeCredentialMaterial::new(secret_bytes));
     let candidate_id = draft.candidate_id;
-    let source_identity = draft.package.source_identity.id.clone();
     let grant = draft.required_grant.clone();
     storage
         .stage_candidate(draft)
         .await
         .expect("candidate durable staging");
-    let snapshot = storage
-        .stage_source_credentials(SourceCredentialInput {
-            candidate_id,
-            source_identity,
-            secret_bytes,
-            created_at_ms: occurred_at_ms.saturating_sub(1),
-        })
-        .await
-        .expect("source credential durable staging");
-    let secret_hash = snapshot.secret_ref.hash.clone();
     storage
         .install_candidate(InstallCandidateRequest {
             candidate_id,
             grant,
-            expected_source_version,
             event_id: Uuid::new_v4(),
             trace_id: "trace-install-source-credential-draft".to_string(),
             occurred_at_ms,
             correlation_id: None,
-            source_credentials: Some(snapshot),
         })
         .await
         .expect("candidate installs with its source credential");
-    secret_hash
 }
 
 #[tokio::test]
@@ -340,7 +346,7 @@ async fn candidate_hashes_are_verified_before_staging_and_installation() {
     let now = 1_750_000_000_000;
 
     let mut malformed = candidate(now);
-    malformed.plan.plan_hash = hash("tampered-plan-hash");
+    malformed.plan = plan_with_hash(&malformed.plan, hash("tampered-plan-hash"));
     assert!(matches!(
         storage.stage_candidate(malformed).await,
         Err(StorageError::InvalidInput(_))
@@ -350,13 +356,13 @@ async fn candidate_hashes_are_verified_before_staging_and_installation() {
     let candidate_id = draft.candidate_id;
     let plan_bytes = serde_json::to_vec(&draft.plan).expect("serialize staged Plan");
     let artifact_hash = blake3::hash(&plan_bytes).to_hex().to_string();
+    let mut tampered_plan = serde_json::to_value(&draft.plan).expect("serialize staged Plan value");
     storage
-        .stage_candidate(draft.clone())
+        .stage_candidate(draft)
         .await
         .expect("stage valid candidate");
 
-    let mut tampered_plan = draft.plan;
-    tampered_plan.compiler_version = "tampered-compiler@1".to_string();
+    tampered_plan["compiler_version"] = serde_json::json!("tampered-compiler@1");
     let tampered_bytes = serde_json::to_vec(&tampered_plan).expect("serialize tampered Plan");
     let artifact_path = temp
         .config
@@ -377,12 +383,10 @@ async fn candidate_hashes_are_verified_before_staging_and_installation() {
             .install_candidate(InstallCandidateRequest {
                 candidate_id,
                 grant: PolicyCapabilities::default(),
-                expected_source_version: 0,
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-tampered-candidate".to_string(),
                 occurred_at_ms: now + 1,
                 correlation_id: None,
-                source_credentials: None,
             })
             .await,
         Err(StorageError::CandidateTampered)
@@ -507,12 +511,10 @@ async fn candidate_summary_round_trips_safe_preview_and_rejects_insufficient_gra
             .install_candidate(InstallCandidateRequest {
                 candidate_id,
                 grant: PolicyCapabilities::default(),
-                expected_source_version: 0,
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-insufficient-grant".to_string(),
                 occurred_at_ms: now + 1,
                 correlation_id: None,
-                source_credentials: None,
             })
             .await,
         Err(StorageError::GrantInsufficient)
@@ -522,12 +524,10 @@ async fn candidate_summary_round_trips_safe_preview_and_rejects_insufficient_gra
         .install_candidate(InstallCandidateRequest {
             candidate_id,
             grant: expected_grant,
-            expected_source_version: 0,
             event_id: Uuid::new_v4(),
             trace_id: "trace-sufficient-grant".to_string(),
             occurred_at_ms: now + 2,
             correlation_id: None,
-            source_credentials: None,
         })
         .await
         .expect("install candidate with covering grant");

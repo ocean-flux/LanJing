@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use lj_media::MediaResourceId;
 use lj_rule_model::{
-    ControlledMapper, EffectDeclaration, EffectKind, HttpSpec, PlanNode, PlanNodeKind,
+    EffectDeclaration, EffectKind, JsOutputKind, PlanNode, PlanNodeConfig, PlanNodeKind,
     PolicyCapabilities,
 };
 use tokio::sync::{OwnedSemaphorePermit, mpsc};
@@ -141,7 +141,7 @@ async fn execute_path(
     cancellation: &CancellationHandle,
     emitter: &mut EventEmitter,
 ) -> RunOutcome {
-    let Some(entry) = request.plan.intent_entries.get(&request.intent) else {
+    let Some(entry) = request.plan.intent_entries().get(&request.intent) else {
         return failed(
             request,
             RuntimeFailureCode::Internal,
@@ -156,7 +156,7 @@ async fn execute_path(
         if cancellation.is_cancelled() {
             return RunOutcome::Cancelled;
         }
-        let Some(node) = request.plan.nodes.iter().find(|node| node.id == *node_id) else {
+        let Some(node) = request.plan.nodes().iter().find(|node| node.id == *node_id) else {
             return failed(
                 request,
                 RuntimeFailureCode::Internal,
@@ -189,11 +189,11 @@ async fn execute_path(
             EffectInput::Output(output.clone())
         };
 
-        match node.kind {
+        match node.kind() {
             PlanNodeKind::Http | PlanNodeKind::Js | PlanNodeKind::Extract => {
                 let Some(declaration) = request
                     .plan
-                    .effects
+                    .effects()
                     .iter()
                     .find(|effect| effect.node_id == node.id)
                 else {
@@ -234,8 +234,7 @@ async fn execute_path(
                 }
             }
             PlanNodeKind::Mapper => {
-                let Ok(mapper) = serde_json::from_value::<ControlledMapper>(node.config.clone())
-                else {
+                let PlanNodeConfig::Mapper(mapper) = &node.config else {
                     return failed(
                         request,
                         RuntimeFailureCode::Internal,
@@ -256,10 +255,10 @@ async fn execute_path(
                 let mapper_context = MapperContext::for_plan(
                     source_media_id(&request.source_id),
                     request.base_url.clone(),
-                    request.plan.intent_entries.keys().copied().collect(),
+                    request.plan.intent_entries().keys().copied().collect(),
                 );
                 let delta =
-                    mapper_context.map_plan_json(&mapper, request.intent, &request.input, &value);
+                    mapper_context.map_plan_json(mapper, request.intent, &request.input, &value);
                 emitter
                     .emit(ExecutionEventKind::DeltaProduced {
                         node_id: node.id,
@@ -413,7 +412,9 @@ async fn execute_live_effect(
             Some(effect_id),
         )
     })?;
-    if capture.kind != declaration.kind {
+    if capture.kind != declaration.kind
+        || !js_output_matches_declaration(node, capture.output.as_ref())
+    {
         return Err(failed(
             context.request,
             RuntimeFailureCode::CaptureWitnessInvalid,
@@ -521,6 +522,7 @@ async fn execute_replay_effect(
         || record.node_id != node.id
         || record.kind != declaration.kind
         || record.output.kind() != declaration.kind
+        || !js_output_matches_declaration(node, record.output.as_ref())
     {
         return Err(failed(
             context.request,
@@ -614,6 +616,22 @@ fn replay_witness_matches(node: &PlanNode, input: &EffectInput, witness: &Effect
     }
 }
 
+fn js_output_matches_declaration(node: &PlanNode, output: &EffectOutput) -> bool {
+    let PlanNodeConfig::Js(config) = &node.config else {
+        return true;
+    };
+    match output {
+        EffectOutput::QuickJs(QuickJsOutput::Json(_)) => config.output == JsOutputKind::Json,
+        EffectOutput::QuickJs(QuickJsOutput::Raw(_)) => config.output == JsOutputKind::Raw,
+        EffectOutput::QuickJs(QuickJsOutput::Error(_))
+        | EffectOutput::Failure(EffectFailure::QuickJs { .. }) => true,
+        EffectOutput::Http(_)
+        | EffectOutput::Extract(_)
+        | EffectOutput::Failure(EffectFailure::Http { .. })
+        | EffectOutput::Failure(EffectFailure::Extract) => false,
+    }
+}
+
 async fn acquire_permit(
     semaphore: Arc<tokio::sync::Semaphore>,
     cancellation: EffectCancellation,
@@ -641,9 +659,8 @@ async fn invoke_live_effect(
     handlers: &EffectHandlers,
     cancellation: EffectCancellation,
 ) -> Result<CapturedEffectOutput, EffectError> {
-    match node.kind {
-        PlanNodeKind::Http => {
-            let spec = parse_config::<HttpSpec>(node)?;
+    match &node.config {
+        PlanNodeConfig::Http(spec) => {
             handlers
                 .http
                 .execute_http(
@@ -653,7 +670,7 @@ async fn invoke_live_effect(
                         node_id: node.id,
                         effect_id,
                         trace_id: request.trace_id.clone(),
-                        spec,
+                        spec: spec.clone(),
                         input,
                         capabilities: request.capabilities.clone(),
                         base_url: request.base_url.clone(),
@@ -663,8 +680,7 @@ async fn invoke_live_effect(
                 )
                 .await
         }
-        PlanNodeKind::Js => {
-            let code = parse_js_code(node)?;
+        PlanNodeConfig::Js(config) => {
             handlers
                 .quickjs
                 .execute_quickjs(
@@ -674,7 +690,7 @@ async fn invoke_live_effect(
                         node_id: node.id,
                         effect_id,
                         trace_id: request.trace_id.clone(),
-                        code,
+                        code: config.code.clone(),
                         input,
                         capabilities: request.capabilities.clone(),
                     },
@@ -682,8 +698,7 @@ async fn invoke_live_effect(
                 )
                 .await
         }
-        PlanNodeKind::Extract => {
-            let spec = parse_config(node)?;
+        PlanNodeConfig::Extract(spec) => {
             handlers
                 .extract
                 .execute_extract(
@@ -693,7 +708,7 @@ async fn invoke_live_effect(
                         node_id: node.id,
                         effect_id,
                         trace_id: request.trace_id.clone(),
-                        spec,
+                        spec: spec.clone(),
                         input,
                         base_url: request.base_url.clone(),
                     },
@@ -701,30 +716,25 @@ async fn invoke_live_effect(
                 )
                 .await
         }
-        PlanNodeKind::Mapper
-        | PlanNodeKind::Merge
-        | PlanNodeKind::Condition
-        | PlanNodeKind::Loop => Err(EffectError::new(
+        PlanNodeConfig::Mapper(_)
+        | PlanNodeConfig::Merge(_)
+        | PlanNodeConfig::Condition(_)
+        | PlanNodeConfig::Loop(_) => Err(EffectError::new(
             EffectErrorCode::Internal,
             "非 effect 节点不能调用 effect handler",
         )),
     }
 }
 
-fn parse_config<T>(node: &PlanNode) -> Result<T, EffectError>
-where
-    T: serde::de::DeserializeOwned,
-{
-    serde_json::from_value(node.config.clone())
-        .map_err(|_| EffectError::new(EffectErrorCode::Internal, "Plan 节点配置无法读取"))
-}
-
 fn parse_js_code(node: &PlanNode) -> Result<String, EffectError> {
-    node.config
-        .get("code")
-        .and_then(serde_json::Value::as_str)
-        .filter(|code| !code.trim().is_empty())
-        .map(ToString::to_string)
+    let PlanNodeConfig::Js(config) = &node.config else {
+        return Err(EffectError::new(
+            EffectErrorCode::Internal,
+            "Plan JS 配置无法读取",
+        ));
+    };
+    (!config.code.trim().is_empty())
+        .then(|| config.code.clone())
         .ok_or_else(|| EffectError::new(EffectErrorCode::Internal, "Plan JS 配置无法读取"))
 }
 

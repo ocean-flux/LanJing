@@ -15,16 +15,10 @@
   "lastUpdateTime": "1782022005030",
   "respondTime": 7429,
   "ruleBookInfo": {
-    "author": "a[href*='\/author\/']@text",
-    "coverUrl": "figure img@src||img@src",
-    "intro": "div[itemprop='description']@text",
-    "kind": "ol li:nth-child(3) a@text",
-    "name": "h1@text",
-    "wordCount": "span:contains('万字')@text"
+    "name": "h1@text"
   },
   "ruleContent": {
-    "content": "#article-content@html",
-    "replaceRegex": "##<p>\\s*第\\d+章\\s+.*?<\/p>||请收藏本站.*|.*记住本站域名.*|.*免费小说.*"
+    "content": "#article-content@html"
   },
   "ruleExplore": {
     "author": "p[itemprop='author']@text##\\|.*||a[href*='\/author\/']@text",

@@ -4,6 +4,7 @@
 //! HTTP/Extract/QuickJS Flow 与受控 Mapper，运行时不需要知道书源格式。
 
 use std::collections::{BTreeMap, HashMap};
+use std::fmt;
 
 use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::definition::MapperOutputKind;
@@ -14,9 +15,12 @@ use lj_rule_model::mapper_vocab::{
 };
 use lj_rule_model::{
     CapabilityManifest, ControlledMapper, Error, ExpectedDataType, ExtractRule, ExtractSpec,
-    FieldRules, FlowEdge, FlowGraph, FlowNode, FlowNodeKind, HttpMethod, HttpSpec, OutputTarget,
-    PolicyCapabilities, RuleDefinition, SourceIdentity, SystemCapabilities,
+    FieldRules, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec,
+    JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, OutputTarget,
+    PolicyCapabilities, RequestHeaderDisposition, RuleDefinition, SensitiveNamePolicy,
+    SourceIdentity, SystemCapabilities,
 };
+use serde::de::{Deserializer, MapAccess, Visitor};
 use uuid::Uuid;
 
 use super::parser::parse_legado_rule;
@@ -46,11 +50,13 @@ pub(crate) fn definition(
         .as_deref()
         .filter(|value| !value.trim().is_empty())
     {
+        let request_url = join_base_url(&base_url, search_url);
+        validate_request_url(&request_url)?;
         let (rules, fields) = collect_search_rules(source.rule_search.as_ref());
         builder.add_http_extract_mapper(HttpIntentFlow {
             intent: StandardIntent::Search,
             role: "search",
-            url: join_base_url(&base_url, search_url),
+            url: request_url,
             rules,
             field_rules: fields,
             output_target: OutputTarget::Media,
@@ -120,25 +126,24 @@ pub(crate) fn definition(
         });
     }
 
-    Ok(RuleDefinition {
-        schema_version: 1,
-        source_identity: SourceIdentity {
+    Ok(RuleDefinition::new(
+        SourceIdentity {
             id: source_identity,
         },
         base_url,
-        intent_exports: builder.intent_exports,
-        flow: FlowGraph {
+        builder.intent_exports,
+        FlowGraph {
             nodes: builder.nodes,
             edges: builder.edges,
         },
-        capability_manifest: CapabilityManifest {
+        CapabilityManifest {
             required: PolicyCapabilities {
                 network: true,
                 system: SystemCapabilities::default(),
             },
         },
-        source_id_rules: vec!["bookUrl".to_string(), "chapterUrl".to_string()],
-    })
+        vec!["bookUrl".to_string(), "chapterUrl".to_string()],
+    ))
 }
 
 /// 解析书源 header JSON，并把凭证字段与可公开进入 Definition 的字段分开。
@@ -153,21 +158,73 @@ pub(crate) fn parse_headers(header: Option<&str>) -> Result<ParsedHeaders, Error
             credentials: BTreeMap::new(),
         });
     };
-    let parsed = serde_json::from_str::<HashMap<String, String>>(header)
-        .map_err(|_| Error::Import("Legado header 不是字符串键值 JSON".to_string()))?;
+    let parsed = parse_header_entries(header)?;
     let mut safe = HashMap::new();
     let mut credentials = BTreeMap::new();
+    let mut seen_names: Vec<String> = Vec::with_capacity(parsed.len());
     for (name, value) in parsed {
+        if seen_names
+            .iter()
+            .any(|seen| SensitiveNamePolicy::equivalent(seen, &name))
+        {
+            let code = if SensitiveNamePolicy::is_sensitive(&name) {
+                "Legado header 包含重复敏感字段"
+            } else {
+                "Legado header 包含重复字段"
+            };
+            return Err(Error::Import(code.to_string()));
+        }
+        seen_names.push(name.clone());
         if name.trim().is_empty() {
             return Err(Error::Import("Legado header 包含空字段名".to_string()));
         }
-        if is_sensitive_header(&name) {
-            credentials.insert(name, value);
-        } else {
-            safe.insert(name, value);
+        match SensitiveNamePolicy::request_header_disposition(&name) {
+            RequestHeaderDisposition::Public => {
+                safe.insert(name, value);
+            }
+            RequestHeaderDisposition::Credential => {
+                credentials.insert(name, value);
+            }
+            RequestHeaderDisposition::Blocked => {
+                return Err(Error::Import(
+                    "Legado header 包含不可安全注入 request 的字段".to_string(),
+                ));
+            }
         }
     }
     Ok(ParsedHeaders { safe, credentials })
+}
+
+fn parse_header_entries(header: &str) -> Result<Vec<(String, String)>, Error> {
+    let mut deserializer = serde_json::Deserializer::from_str(header);
+    let entries = deserializer
+        .deserialize_map(HeaderEntriesVisitor)
+        .map_err(|_| Error::Import("Legado header 不是字符串键值 JSON".to_string()))?;
+    deserializer
+        .end()
+        .map_err(|_| Error::Import("Legado header 不是字符串键值 JSON".to_string()))?;
+    Ok(entries)
+}
+
+struct HeaderEntriesVisitor;
+
+impl<'de> Visitor<'de> for HeaderEntriesVisitor {
+    type Value = Vec<(String, String)>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a JSON object containing string header values")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut entries = Vec::new();
+        while let Some(entry) = map.next_entry::<String, String>()? {
+            entries.push(entry);
+        }
+        Ok(entries)
+    }
 }
 
 /// 返回来源稳定身份；同一规范化基础 URL 的书源始终得到相同值。
@@ -211,15 +268,13 @@ impl DefinitionBuilder {
     fn add_discover(&mut self, code: String) {
         let entry = self.node_id("discover-js");
         let mapper = self.node_id("discover-mapper");
-        self.nodes.push(FlowNode {
-            id: entry,
-            kind: FlowNodeKind::Js,
-            http: None,
-            js_code: Some(code),
-            extract: None,
-            mapper: None,
-            span: None,
-        });
+        self.nodes.push(FlowNode::new(
+            entry,
+            FlowNodeConfig::Js(JsConfig {
+                code,
+                output: JsOutputKind::Json,
+            }),
+        ));
         self.nodes.push(mapper_node(
             mapper,
             MapperOutputKind::Discovery,
@@ -257,11 +312,7 @@ fn normalize_base_url(raw: &str) -> Result<String, Error> {
     if base_url.is_empty() {
         return Err(Error::Import("Legado 书源 URL 不能为空".to_string()));
     }
-    if !(base_url.starts_with("http://") || base_url.starts_with("https://")) {
-        return Err(Error::Import(
-            "Legado 书源 URL 必须使用 HTTP 或 HTTPS".to_string(),
-        ));
-    }
+    validate_request_url(base_url)?;
     Ok(base_url.to_string())
 }
 
@@ -274,10 +325,30 @@ fn join_base_url(base_url: &str, path: &str) -> String {
     }
 }
 
+fn validate_request_url(raw: &str) -> Result<(), Error> {
+    let raw = raw.trim();
+    let authority = raw
+        .strip_prefix("http://")
+        .or_else(|| raw.strip_prefix("https://"))
+        .and_then(|tail| tail.split(['/', '?', '#']).next())
+        .filter(|authority| !authority.is_empty())
+        .ok_or_else(|| Error::Import("Legado 请求 URL 无效".to_string()))?;
+    if authority.contains('@')
+        || raw.chars().any(char::is_whitespace)
+        || SensitiveNamePolicy::url_contains_sensitive_query_name(raw)
+    {
+        return Err(Error::Import(
+            "Legado 请求 URL 不能携带 credential".to_string(),
+        ));
+    }
+    Ok(())
+}
+
 fn extract_js_code(explore_url: &str) -> Result<String, Error> {
     let code = explore_url
+        .trim_start()
         .strip_prefix("@js:")
-        .unwrap_or(explore_url)
+        .ok_or_else(|| Error::Import("Legado 发现入口需要受限 @js: 脚本".to_string()))?
         .trim();
     if code.is_empty() {
         return Err(Error::Import("Legado 探索脚本不能为空".to_string()));
@@ -285,27 +356,17 @@ fn extract_js_code(explore_url: &str) -> Result<String, Error> {
     Ok(code.to_string())
 }
 
-fn is_sensitive_header(header: &str) -> bool {
-    let normalized = header.trim().to_ascii_lowercase();
-    matches!(
-        normalized.as_str(),
-        "authorization" | "cookie" | "set-cookie"
-    ) || normalized.contains("token")
-}
-
 fn edge(from: Uuid, to: Uuid) -> FlowEdge {
-    FlowEdge {
-        from,
-        to,
-        condition_branch: None,
-    }
+    FlowEdge::new(
+        FlowPortRef::new(from, LINEAR_OUTPUT_HANDLE),
+        FlowPortRef::new(to, LINEAR_INPUT_HANDLE),
+    )
 }
 
 fn http_node(id: Uuid, url: String, headers: &HashMap<String, String>) -> FlowNode {
-    FlowNode {
+    FlowNode::new(
         id,
-        kind: FlowNodeKind::Http,
-        http: Some(HttpSpec {
+        FlowNodeConfig::Http(HttpSpec {
             method: HttpMethod::Get,
             url,
             headers: headers.clone(),
@@ -313,11 +374,7 @@ fn http_node(id: Uuid, url: String, headers: &HashMap<String, String>) -> FlowNo
             charset: None,
             expected_type: ExpectedDataType::Html,
         }),
-        js_code: None,
-        extract: None,
-        mapper: None,
-        span: None,
-    }
+    )
 }
 
 fn extract_node(
@@ -326,38 +383,28 @@ fn extract_node(
     field_rules: FieldRules,
     output_target: OutputTarget,
 ) -> FlowNode {
-    FlowNode {
+    FlowNode::new(
         id,
-        kind: FlowNodeKind::Extract,
-        http: None,
-        js_code: None,
-        extract: Some(ExtractSpec {
+        FlowNodeConfig::Extract(ExtractSpec {
             rules,
             field_rules,
             expected_type: ExpectedDataType::Html,
             output_target,
         }),
-        mapper: None,
-        span: None,
-    }
+    )
 }
 
 fn mapper_node(id: Uuid, output: MapperOutputKind, identity_fields: &[&str]) -> FlowNode {
-    FlowNode {
+    FlowNode::new(
         id,
-        kind: FlowNodeKind::Mapper,
-        http: None,
-        js_code: None,
-        extract: None,
-        mapper: Some(ControlledMapper {
+        FlowNodeConfig::Mapper(ControlledMapper {
             output,
             identity_fields: identity_fields
                 .iter()
                 .map(|field| (*field).to_string())
                 .collect(),
         }),
-        span: None,
-    }
+    )
 }
 
 fn parse_rule_field(field: Option<&String>) -> Vec<ExtractRule> {
@@ -416,18 +463,7 @@ fn collect_explore_rules(rule: Option<&RuleExplore>) -> (Vec<ExtractRule>, Field
 }
 
 fn collect_book_info_rules(rule: &RuleBookInfo) -> (Vec<ExtractRule>, FieldRules) {
-    let mut rules = Vec::new();
-    for field in [
-        rule.name.as_ref(),
-        rule.author.as_ref(),
-        rule.cover_url.as_ref(),
-        rule.intro.as_ref(),
-        rule.kind.as_ref(),
-        rule.word_count.as_ref(),
-    ] {
-        rules.extend(parse_rule_field(field));
-    }
-    (rules, FieldRules::new())
+    (parse_rule_field(rule.name.as_ref()), FieldRules::new())
 }
 
 fn collect_toc_rules(rule: &RuleToc) -> (Vec<ExtractRule>, FieldRules) {
@@ -446,9 +482,7 @@ fn collect_toc_rules(rule: &RuleToc) -> (Vec<ExtractRule>, FieldRules) {
 }
 
 fn collect_content_rules(rule: &RuleContent) -> (Vec<ExtractRule>, FieldRules) {
-    let mut rules = parse_rule_field(rule.content.as_ref());
-    rules.extend(parse_rule_field(rule.replace_regex.as_ref()));
-    (rules, FieldRules::new())
+    (parse_rule_field(rule.content.as_ref()), FieldRules::new())
 }
 
 fn insert_field(fields: &mut FieldRules, name: &str, rules: Vec<ExtractRule>) {

@@ -229,7 +229,7 @@ async fn effect_archive_is_durable_redacted_and_explicit_when_master_key_is_lost
     }));
 
     storage.shutdown().await.expect("writer shutdown");
-    wipe_master_key(&temp.config.keyring_service);
+    wipe_master_key(&temp);
     let restarted = temp.open().await;
     assert!(
         EffectArchive::load_replay(
@@ -309,8 +309,8 @@ async fn live_http_request_body_is_encrypted_and_events_only_carry_its_ref() {
         .find(|event| event.envelope.event_id == effect_id)
         .expect("effect capture event exists");
     assert_eq!(
-        event.envelope.payload["request_body_artifact_hash"].as_str(),
-        Some(request_body_hash.as_str())
+        event.envelope.payload["has_request_body"].as_bool(),
+        Some(true)
     );
     assert!(
         !event
@@ -328,12 +328,8 @@ async fn live_http_request_body_is_encrypted_and_events_only_carry_its_ref() {
         "request body must not be a plaintext Body Artifact ref"
     );
     assert!(
-        event
-            .envelope
-            .secret_refs
-            .iter()
-            .any(|secret| secret.hash == request_body_hash && secret.algorithm == "aes-256-gcm"),
-        "event must retain only an encrypted Secret Artifact ref"
+        event.envelope.secret_refs.is_empty(),
+        "random vault secret IDs are owned in SQLite and never published in Events"
     );
 
     let replay = EffectArchive::load_replay(
@@ -368,14 +364,21 @@ async fn live_http_request_body_is_encrypted_and_events_only_carry_its_ref() {
     let database_url = temp.config.database_path.to_string_lossy().into_owned();
     let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
     let artifact = sql_query(
-        "SELECT artifact_kind, encryption, relative_path FROM artifact_metadata WHERE hash = ? AND artifact_kind = 'secret'",
+        "SELECT secret.key_id, secret.blob_locator, secret.ciphertext_hash FROM effect_captures AS effect JOIN secret_artifact_projection AS secret ON secret.secret_id = effect.request_body_secret_id WHERE effect.execution_id = ? AND effect.effect_id = ?",
     )
-    .bind::<diesel::sql_types::Text, _>(&request_body_hash)
+    .bind::<diesel::sql_types::Text, _>(execution_id.to_string())
+    .bind::<diesel::sql_types::Text, _>(effect_id.to_string())
     .get_result::<ArtifactSecurityTestRow>(&mut conn)
-    .expect("request body secret artifact metadata");
-    assert_eq!(artifact.artifact_kind, "secret");
-    assert_eq!(artifact.encryption.as_deref(), Some("aes-256-gcm"));
-    assert!(artifact.relative_path.ends_with(".secret"));
+    .expect("request body random secret artifact metadata");
+    assert!(Uuid::parse_str(&artifact.key_id).is_ok());
+    assert!(artifact.blob_locator.starts_with("vault/"));
+    assert!(
+        std::path::Path::new(&artifact.blob_locator)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("vault"))
+    );
+    assert_eq!(artifact.ciphertext_hash.len(), 64);
+    assert_ne!(artifact.ciphertext_hash, request_body_hash);
 }
 
 #[tokio::test]

@@ -3,70 +3,77 @@
 use super::*;
 
 #[tokio::test]
-async fn candidate_bound_source_credential_ref_survives_restart_and_is_consumed() {
+async fn candidate_bound_runtime_credential_survives_restart_and_is_consumed() {
     init_mock_keyring();
-    let temp = TempStore::new("candidate-source-credential-restart");
+    let temp = TempStore::new("candidate-runtime-credential-restart");
     let storage = temp.open().await;
-    let now = 1_750_000_150_000;
-    let draft = candidate(now);
+    let now = current_time_ms();
+    let mut draft = candidate(now);
     let candidate_id = draft.candidate_id;
+    draft.runtime_credentials = Some(RuntimeCredentialMaterial::new(
+        b"candidate-only-source-secret".to_vec(),
+    ));
     storage
         .stage_candidate(draft)
         .await
-        .expect("stage candidate before its credential snapshot");
-    let snapshot = storage
-        .stage_source_credentials(SourceCredentialInput {
-            candidate_id,
-            source_identity: "source:test".to_string(),
-            secret_bytes: b"candidate-only-source-secret".to_vec(),
-            created_at_ms: now + 1,
-        })
-        .await
-        .expect("encrypt candidate-bound credential snapshot");
-    assert_eq!(snapshot.cookie_namespace, "source/source:test");
+        .expect("atomically stage candidate and runtime credential");
     storage.shutdown().await.expect("close staging writer");
 
     let storage = temp.open().await;
-    let recovered = storage
-        .get_candidate_source_credentials_ref(candidate_id)
-        .await
-        .expect("read durable candidate credential ref after restart")
-        .expect("credential ref remains staged");
-    assert_eq!(recovered, snapshot);
+    assert!(
+        storage
+            .get_candidate_summary(candidate_id)
+            .await
+            .expect("read candidate after restart")
+            .is_some()
+    );
     storage
         .install_candidate(InstallCandidateRequest {
             candidate_id,
             grant: PolicyCapabilities::default(),
-            expected_source_version: 0,
             event_id: Uuid::new_v4(),
             trace_id: "trace-install-recovered-source-secret".to_string(),
             occurred_at_ms: now + 2,
             correlation_id: None,
-            source_credentials: Some(recovered.clone()),
         })
         .await
-        .expect("install with a restart-recovered credential ref");
+        .expect("consume candidate with its staged runtime credential");
     assert!(
         storage
-            .get_candidate_source_credentials_ref(candidate_id)
+            .get_candidate_summary(candidate_id)
             .await
-            .expect("read consumed candidate credential ref")
+            .expect("read consumed candidate")
             .is_none()
+    );
+
+    let execution_id = Uuid::new_v4();
+    storage
+        .start_execution(ExecutionStart {
+            execution_id,
+            source_identity: "source:test".to_string(),
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-runtime-credential-execution".to_string(),
+            started_at_ms: now + 3,
+            correlation_id: None,
+        })
+        .await
+        .expect("start execution pinned to installed credential");
+    assert_eq!(
+        storage
+            .load_execution_source_credentials(execution_id)
+            .await
+            .expect("decrypt execution-pinned runtime credential")
+            .into_secret_bytes(),
+        Some(b"candidate-only-source-secret".to_vec())
     );
     let installed_event = storage
         .source_events_after("source:test", 0)
         .await
         .expect("read source install event")
         .into_iter()
-        .find(|event| {
-            event.envelope.event_type == EventType::Source
-                && event.envelope.payload["kind"].as_str() == Some("installed")
-        })
+        .find(|event| event.envelope.payload["kind"].as_str() == Some("installed"))
         .expect("source install event exists");
-    assert_eq!(
-        installed_event.envelope.secret_refs,
-        vec![recovered.secret_ref]
-    );
+    assert!(installed_event.envelope.secret_refs.is_empty());
     assert!(
         !installed_event
             .envelope
@@ -77,132 +84,28 @@ async fn candidate_bound_source_credential_ref_survives_restart_and_is_consumed(
     assert!(
         collect_file_bytes(&temp.config.artifact_root)
             .iter()
-            .all(|bytes| {
-                !bytes
-                    .windows(b"candidate-only-source-secret".len())
-                    .any(|window| window == b"candidate-only-source-secret")
-            })
+            .all(|bytes| !bytes
+                .windows(b"candidate-only-source-secret".len())
+                .any(|window| { window == b"candidate-only-source-secret" }))
     );
     storage.shutdown().await.expect("close installed storage");
 }
 
 #[tokio::test]
-async fn source_credential_snapshot_rejects_tampering_and_wrong_candidate() {
+async fn missing_candidate_runtime_secret_never_downgrades_to_credential_free() {
     init_mock_keyring();
-    let temp = TempStore::new("candidate-source-credential-ownership");
+    let temp = TempStore::new("candidate-runtime-credential-ref-loss");
     let storage = temp.open().await;
-    let now = 1_750_000_175_000;
-    let first = candidate(now);
-    let first_id = first.candidate_id;
-    let second = candidate(now + 1);
-    let second_id = second.candidate_id;
-    storage
-        .stage_candidate(first)
-        .await
-        .expect("stage first candidate");
-    storage
-        .stage_candidate(second)
-        .await
-        .expect("stage second candidate");
-    assert!(matches!(
-        storage
-            .stage_source_credentials(SourceCredentialInput {
-                candidate_id: first_id,
-                source_identity: "source:other".to_string(),
-                secret_bytes: b"wrong-source-secret".to_vec(),
-                created_at_ms: now + 2,
-            })
-            .await,
-        Err(StorageError::SourceCredentialUnavailable)
-    ));
-    let snapshot = storage
-        .stage_source_credentials(SourceCredentialInput {
-            candidate_id: first_id,
-            source_identity: "source:test".to_string(),
-            secret_bytes: b"owned-source-secret".to_vec(),
-            created_at_ms: now + 3,
-        })
-        .await
-        .expect("stage first candidate credential");
-    let mut tampered = snapshot.clone();
-    tampered.secret_ref.hash = hash("tampered-source-secret-ref");
-    assert!(matches!(
-        storage
-            .install_candidate(InstallCandidateRequest {
-                candidate_id: first_id,
-                grant: PolicyCapabilities::default(),
-                expected_source_version: 0,
-                event_id: Uuid::new_v4(),
-                trace_id: "trace-tampered-source-secret".to_string(),
-                occurred_at_ms: now + 4,
-                correlation_id: None,
-                source_credentials: Some(tampered),
-            })
-            .await,
-        Err(StorageError::SourceCredentialUnavailable)
-    ));
-    assert!(matches!(
-        storage
-            .install_candidate(InstallCandidateRequest {
-                candidate_id: second_id,
-                grant: PolicyCapabilities::default(),
-                expected_source_version: 0,
-                event_id: Uuid::new_v4(),
-                trace_id: "trace-wrong-candidate-source-secret".to_string(),
-                occurred_at_ms: now + 4,
-                correlation_id: None,
-                source_credentials: Some(snapshot.clone()),
-            })
-            .await,
-        Err(StorageError::SourceCredentialUnavailable)
-    ));
-    assert_eq!(
-        storage
-            .get_candidate_source_credentials_ref(first_id)
-            .await
-            .expect("failed installs retain staged credential"),
-        Some(snapshot.clone())
-    );
-    storage
-        .install_candidate(InstallCandidateRequest {
-            candidate_id: first_id,
-            grant: PolicyCapabilities::default(),
-            expected_source_version: 0,
-            event_id: Uuid::new_v4(),
-            trace_id: "trace-owned-source-secret".to_string(),
-            occurred_at_ms: now + 5,
-            correlation_id: None,
-            source_credentials: Some(snapshot),
-        })
-        .await
-        .expect("matching candidate credential installs");
-    storage
-        .shutdown()
-        .await
-        .expect("close ownership test storage");
-}
-
-#[tokio::test]
-async fn required_source_credential_never_downgrades_to_credential_free_after_ref_loss() {
-    init_mock_keyring();
-    let temp = TempStore::new("candidate-source-credential-ref-loss");
-    let storage = temp.open().await;
-    let now = 1_750_000_190_000;
-    let draft = candidate(now);
+    let now = current_time_ms();
+    let mut draft = candidate(now);
     let candidate_id = draft.candidate_id;
+    draft.runtime_credentials = Some(RuntimeCredentialMaterial::new(
+        b"must-not-fall-back-to-live".to_vec(),
+    ));
     storage
         .stage_candidate(draft)
         .await
         .expect("stage credential-bearing candidate");
-    storage
-        .stage_source_credentials(SourceCredentialInput {
-            candidate_id,
-            source_identity: "source:test".to_string(),
-            secret_bytes: b"must-not-fall-back-to-live".to_vec(),
-            created_at_ms: now + 1,
-        })
-        .await
-        .expect("mark candidate as credential-required");
     storage
         .shutdown()
         .await
@@ -210,33 +113,30 @@ async fn required_source_credential_never_downgrades_to_credential_free_after_re
 
     let database_url = temp.config.database_path.to_string_lossy().into_owned();
     let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
-    sql_query("DELETE FROM source_credential_staging WHERE candidate_id = ?")
-        .bind::<diesel::sql_types::Text, _>(candidate_id.to_string())
+    sql_query("PRAGMA foreign_keys = OFF")
         .execute(&mut conn)
-        .expect("simulate missing staged credential ref");
+        .expect("disable foreign keys for corruption injection");
+    sql_query(
+        "DELETE FROM secret_artifact_projection WHERE secret_id = (SELECT runtime_credential_secret_id FROM candidate_projection WHERE candidate_id = ?)",
+    )
+    .bind::<diesel::sql_types::Text, _>(candidate_id.to_string())
+    .execute(&mut conn)
+    .expect("simulate missing runtime credential projection");
     drop(conn);
 
     let storage = temp.open().await;
     assert!(matches!(
         storage
-            .get_candidate_source_credentials_ref(candidate_id)
-            .await,
-        Err(StorageError::SourceCredentialUnavailable)
-    ));
-    assert!(matches!(
-        storage
             .install_candidate(InstallCandidateRequest {
                 candidate_id,
                 grant: PolicyCapabilities::default(),
-                expected_source_version: 0,
                 event_id: Uuid::new_v4(),
-                trace_id: "trace-missing-source-credential-ref".to_string(),
+                trace_id: "trace-missing-runtime-secret".to_string(),
                 occurred_at_ms: now + 2,
                 correlation_id: None,
-                source_credentials: None,
             })
             .await,
-        Err(StorageError::SourceCredentialUnavailable)
+        Err(StorageError::CandidateTampered)
     ));
     storage.shutdown().await.expect("close ref-loss storage");
 }

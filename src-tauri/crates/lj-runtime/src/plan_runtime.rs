@@ -10,6 +10,6 @@ mod validation;
 
 pub use api::{
     ExecutionEvent, ExecutionEventKind, ExecutionFailure, ExecutionMode, ExecutionSession,
-    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, PlanRuntimeError, RuntimeFailureCode,
-    SUPPORTED_PLAN_SCHEMA_VERSION,
+    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, PlanRuntimeError, PlanSupport,
+    RuntimeFailureCode,
 };

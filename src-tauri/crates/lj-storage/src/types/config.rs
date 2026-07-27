@@ -17,7 +17,7 @@ pub const DEFAULT_CANDIDATE_TTL_MS: i64 = 24 * 60 * 60 * 1_000;
 pub struct StorageConfig {
     /// `SQLite` 文件路径；测试和生产都必须使用真实文件，禁止 `:memory:`。
     pub database_path: PathBuf,
-    /// artifact 根目录；body 与 secret 会在其下按 BLAKE3 fan-out 写入。
+    /// artifact 根目录；body 按 BLAKE3 fan-out，secret 按随机 blob locator 写入。
     pub artifact_root: PathBuf,
     /// 安装级主密钥的 keyring service 名。
     pub keyring_service: String,

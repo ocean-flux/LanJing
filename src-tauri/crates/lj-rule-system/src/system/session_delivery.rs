@@ -536,9 +536,24 @@ fn map_stored_event(
                     Vec::new(),
                 )
             })?;
+            let source_revision = stored
+                .envelope
+                .payload
+                .get("source_revision")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| {
+                    RuleError::new(
+                        RuleErrorStage::Persistence,
+                        "execution_source_revision_missing",
+                        "持久 Delta event 缺少固定来源 revision",
+                        trace_id.to_string(),
+                        false,
+                        Vec::new(),
+                    )
+                })?;
             ExecutionEventKind::DeltaCommitted {
                 global_revision: stored.envelope.global_seq,
-                source_revision: stored.envelope.stream_version,
+                source_revision,
                 delta: delta.upserts,
             }
         }
@@ -640,7 +655,11 @@ pub(super) fn replay_snapshot(
             Vec::new(),
         ));
     }
-    if pin.profile.id.0 != pin.source_identity || pin.base_url.trim().is_empty() {
+    if pin.source_revision == 0
+        || pin.source_version.trim().is_empty()
+        || pin.profile.id.0 != pin.source_identity
+        || pin.base_url.trim().is_empty()
+    {
         return Err(RuleError::new(
             RuleErrorStage::Replay,
             "replay_source_snapshot_invalid",

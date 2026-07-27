@@ -223,7 +223,7 @@ fn ensure_idempotent_artifacts(
                 artifacts.read_body(&hash, &row.relative_path)?;
             }
             ArtifactKind::Secret => {
-                artifacts.read_secret(&hash, &row.relative_path)?;
+                artifacts.read_legacy_secret(&hash, &row.relative_path)?;
             }
         }
     }

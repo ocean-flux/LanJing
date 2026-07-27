@@ -398,6 +398,99 @@ async fn plan_http_effect_injects_source_secret_headers() {
 }
 
 #[tokio::test]
+async fn shared_policy_blocks_unsafe_request_credentials_and_redacts_response_witness() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    for name in ["Proxy-Authorization", "Set-Cookie"] {
+        let secret = "request-secret-must-not-appear";
+        let mut request = http_effect_request("https://example.test/blocked".to_string());
+        request.credentials = HttpExecutionCredentials::from_source_secret(
+            "cookie-namespace:source-version".to_string(),
+            Some(
+                serde_json::to_vec(&BTreeMap::from([(name.to_string(), secret.to_string())]))
+                    .expect("serialize blocked source secret"),
+            ),
+        );
+        let capture = HttpEffectAdapter::new_test()
+            .execute_http(request, CancellationHandle::new().token())
+            .await
+            .expect("unsafe credential must become a typed captured failure");
+        assert!(matches!(capture.output, EffectOutput::Failure(_)));
+        let witness = serde_json::to_string(&capture.witness).expect("serialize safe witness");
+        assert!(!witness.contains(secret));
+        let normalized_name = name.to_ascii_lowercase();
+        assert!(
+            !witness
+                .to_ascii_lowercase()
+                .contains(normalized_name.as_str())
+        );
+    }
+
+    let duplicate_secret = "duplicate-secret-must-not-appear";
+    let mut duplicate_request =
+        http_effect_request("https://example.test/duplicate-credential".to_string());
+    duplicate_request.credentials = HttpExecutionCredentials::from_source_secret(
+        "cookie-namespace:source-version".to_string(),
+        Some(
+            serde_json::to_vec(&BTreeMap::from([
+                ("Authorization".to_string(), duplicate_secret.to_string()),
+                ("authorization".to_string(), duplicate_secret.to_string()),
+            ]))
+            .expect("serialize duplicate source secret"),
+        ),
+    );
+    let duplicate_capture = HttpEffectAdapter::new_test()
+        .execute_http(duplicate_request, CancellationHandle::new().token())
+        .await
+        .expect("duplicate credential names must become a typed failure");
+    assert!(matches!(duplicate_capture.output, EffectOutput::Failure(_)));
+    assert!(!format!("{:?}", duplicate_capture.witness).contains(duplicate_secret));
+
+    let server = MockServer::start().await;
+    let response_secret = "response-capture-secret";
+    Mock::given(method("GET"))
+        .and(path("/response-sensitive"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("set-cookie", "session=response-capture-secret"),
+        )
+        .mount(&server)
+        .await;
+    let capture = HttpEffectAdapter::new_test()
+        .execute_http(
+            http_effect_request(format!("{}/response-sensitive", server.uri())),
+            CancellationHandle::new().token(),
+        )
+        .await
+        .expect("response must produce a typed capture");
+    let witness = serde_json::to_string(&capture.witness).expect("serialize safe witness");
+    assert!(!witness.contains(response_secret));
+    assert!(!witness.contains("set-cookie"));
+    let output_debug = format!("{:?}", capture.output);
+    assert!(!output_debug.contains(response_secret));
+    assert!(!output_debug.contains("set-cookie"));
+}
+
+#[tokio::test]
+async fn sensitive_plan_header_is_rejected_before_request_and_never_enters_witness() {
+    let secret = "plan-secret-must-not-appear";
+    let mut request = http_effect_request("https://example.test/blocked".to_string());
+    request
+        .spec
+        .headers
+        .insert("Authorization".to_string(), secret.to_string());
+    let capture = HttpEffectAdapter::new_test()
+        .execute_http(request, CancellationHandle::new().token())
+        .await
+        .expect("sensitive Plan header must become a typed captured failure");
+    assert!(matches!(capture.output, EffectOutput::Failure(_)));
+    let witness = serde_json::to_string(&capture.witness).expect("serialize safe witness");
+    assert!(!witness.contains(secret));
+    assert!(!witness.to_ascii_lowercase().contains("authorization"));
+}
+
+#[tokio::test]
 async fn plan_http_effect_marks_request_body_secret_and_witness_redacted() {
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};

@@ -17,10 +17,14 @@ use uuid::Uuid;
 
 use crate::artifact::ArtifactStore;
 use crate::candidate_install::{
-    get_candidate_source_credentials_ref_sync, get_candidate_summary, get_installed_source_sync,
-    list_installed_sources_sync,
+    get_candidate_summary, get_installed_source_sync, list_installed_sources_sync,
+    recover_candidates_sync,
 };
 use crate::connection::{open_connection, validate_config};
+use crate::document_vault::{
+    get_source_document_sync, list_source_documents_sync, load_source_document_material_sync,
+    release_expired_source_document_revision_pins, reveal_source_document_credential_sync,
+};
 use crate::execution::{
     events_after_source_sync, events_after_stream_sync, execution_stream_id, get_execution_sync,
     load_execution_replay_pin_sync, load_execution_source_credentials_sync,
@@ -32,17 +36,27 @@ use crate::projection_query::{
 };
 use crate::retention_recovery::{
     backfill_source_version_snapshots, load_library_checkpoint_sync, load_source_checkpoint_sync,
-    mark_interrupted_executions, normalize_artifact_relative_paths, recover_orphans_sync,
-    recover_source_snapshot_sync,
+    mark_interrupted_executions, normalize_artifact_relative_paths, purge_zero_ref_artifacts,
+    recover_orphans_sync, recover_source_snapshot_sync,
+};
+use crate::schema::rollback_source_document_vault;
+use crate::secret_artifact::{
+    migrate_legacy_secret_artifacts, purge_zero_ref_secrets, uncommitted_vault_key_id,
 };
 use crate::types::{
-    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt, DeltaCommit,
-    ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionReplayPin, ExecutionSourceCredentials,
-    ExecutionStart, GcReport, InstallCandidateRequest, InstalledSource, InstalledSourceRecord,
-    LibraryEntry, LibraryProjection, LibraryProjectionSnapshot, LibraryUpdate, OrphanRecovery,
-    ReplayExecutionStart, RetentionPolicy, SourceCredentialInput, SourceCredentialSnapshot,
-    SourceProjectionSnapshot, SourceProjectionView, StorageConfig, StorageError, StoredEvent,
-    WRITER_CAPACITY,
+    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt,
+    CreateSourceDocumentInput, DeleteSourceDocumentInput, DeltaCommit, DocumentMutationOutcome,
+    DocumentRef, EditSourceDocumentCredentialInput, ExecutionFinish, ExecutionPin, ExecutionRecord,
+    ExecutionReplayPin, ExecutionSourceCredentials, ExecutionStart, ExecutionStartReceipt,
+    GcReport, InstallCandidateRequest, InstalledSource, InstalledSourceRecord, LibraryEntry,
+    LibraryProjection, LibraryProjectionSnapshot, LibraryUpdate,
+    LoadSourceDocumentRebaseMaterialInput, MaskedSourceDocument, OrphanRecovery,
+    PinSourceDocumentRevisionInput, RebaseSourceDocumentInput, RenameSourceDocumentInput,
+    ReplayExecutionStart, RetentionPolicy, RevealedSourceDocumentCredential,
+    SaveSourceDocumentInput, SourceDocumentCredentialTarget, SourceDocumentId,
+    SourceDocumentMaterial, SourceDocumentRebaseMaterialOutcome, SourceDocumentRevisionPin,
+    SourceDocumentSummary, SourceProjectionSnapshot, SourceProjectionView, StorageConfig,
+    StorageError, StoredEvent, WRITER_CAPACITY,
 };
 use crate::writer::{WriterCommand, writer_loop};
 
@@ -79,10 +93,40 @@ impl EventProjectionStorage {
     /// 数据库、artifact 根目录、migration 或 writer 启动失败时返回 [`StorageError`]。
     pub fn open_blocking(config: StorageConfig) -> Result<Self, StorageError> {
         validate_config(&config)?;
-        let mut writer_connection = open_connection(&config.database_path, true)?;
-        let artifacts = ArtifactStore::new(config.artifact_root, &config.keyring_service)?;
+        let (mut writer_connection, vault_migration_applied) =
+            open_connection(&config.database_path, true)?;
+        let artifacts = match ArtifactStore::new(config.artifact_root, &config.keyring_service) {
+            Ok(artifacts) => artifacts,
+            Err(error) => {
+                if vault_migration_applied {
+                    rollback_source_document_vault(&mut writer_connection)?;
+                }
+                return Err(error);
+            }
+        };
+        if let Err(error) = migrate_legacy_secret_artifacts(
+            &mut writer_connection,
+            &artifacts,
+            crate::event_store::now_millis(),
+        ) {
+            if vault_migration_applied {
+                let key_id = uncommitted_vault_key_id(&mut writer_connection);
+                rollback_source_document_vault(&mut writer_connection)?;
+                if let Some(key_id) = key_id? {
+                    artifacts.delete_vault_key(&key_id)?;
+                }
+            }
+            return Err(error);
+        }
         normalize_artifact_relative_paths(&mut writer_connection)?;
         backfill_source_version_snapshots(&mut writer_connection, &artifacts)?;
+        recover_candidates_sync(&mut writer_connection, crate::event_store::now_millis())?;
+        release_expired_source_document_revision_pins(
+            &mut writer_connection,
+            crate::event_store::now_millis(),
+        )?;
+        purge_zero_ref_artifacts(&mut writer_connection, &artifacts)?;
+        purge_zero_ref_secrets(&mut writer_connection, &artifacts)?;
         recover_orphans_sync(&mut writer_connection, &artifacts)?;
         mark_interrupted_executions(&mut writer_connection)?;
 
@@ -121,6 +165,228 @@ impl EventProjectionStorage {
             .await
     }
 
+    /// 按更新时间倒序读取全部来源文档安全摘要。
+    ///
+    /// # Errors
+    ///
+    /// `SQLite` row/schema 损坏或 read lane 不可用时返回 [`StorageError`]。
+    pub async fn list_source_documents(&self) -> Result<Vec<SourceDocumentSummary>, StorageError> {
+        self.read(move |conn, _| list_source_documents_sync(conn))
+            .await
+    }
+
+    /// 默认读取一个 masked 来源文档；永远不 reveal credential。
+    ///
+    /// # Errors
+    ///
+    /// SQLite、keyring、ciphertext hash、AEAD 或 UTF-8 校验失败时返回 typed [`StorageError`]。
+    pub async fn get_source_document(
+        &self,
+        document_id: SourceDocumentId,
+    ) -> Result<Option<MaskedSourceDocument>, StorageError> {
+        self.read(move |conn, artifacts| get_source_document_sync(conn, artifacts, document_id))
+            .await
+    }
+
+    /// 原子创建 revision-1 draft。
+    ///
+    /// # Errors
+    ///
+    /// writer、SQLite 或文件系统失败时返回 [`StorageError`]；codec/limit/keyring 预期失败在
+    /// [`DocumentMutationOutcome`] 中返回。
+    pub async fn create_source_document(
+        &self,
+        input: CreateSourceDocumentInput,
+    ) -> Result<DocumentMutationOutcome, StorageError> {
+        mutation_outcome(
+            self.dispatch(|reply| WriterCommand::CreateSourceDocument {
+                input: Box::new(input),
+                reply,
+            })
+            .await,
+        )
+    }
+
+    /// 以 expected revision 原子保存下一工作 revision。
+    ///
+    /// # Errors
+    ///
+    /// writer、SQLite 或文件系统失败时返回 [`StorageError`]；冲突/校验/keyring 失败返回 tagged
+    /// [`DocumentMutationOutcome`]。
+    pub async fn save_source_document(
+        &self,
+        input: SaveSourceDocumentInput,
+    ) -> Result<DocumentMutationOutcome, StorageError> {
+        mutation_outcome(
+            self.dispatch(|reply| WriterCommand::SaveSourceDocument {
+                input: Box::new(input),
+                reply,
+            })
+            .await,
+        )
+    }
+
+    /// optimistic rename；不改变 credential-bound content revision。
+    ///
+    /// # Errors
+    ///
+    /// writer、SQLite、keyring 或 artifact 读取失败时返回 [`StorageError`]。
+    pub async fn rename_source_document(
+        &self,
+        input: RenameSourceDocumentInput,
+    ) -> Result<DocumentMutationOutcome, StorageError> {
+        mutation_outcome(
+            self.dispatch(|reply| WriterCommand::RenameSourceDocument { input, reply })
+                .await,
+        )
+    }
+
+    /// 删除未关联且未 pin 的 draft。
+    ///
+    /// # Errors
+    ///
+    /// writer、SQLite、keyring 或 artifact 读取失败时返回 [`StorageError`]。
+    pub async fn delete_source_document(
+        &self,
+        input: DeleteSourceDocumentInput,
+    ) -> Result<DocumentMutationOutcome, StorageError> {
+        mutation_outcome(
+            self.dispatch(|reply| WriterCommand::DeleteSourceDocument { input, reply })
+                .await,
+        )
+    }
+
+    /// 读取 current exact `DocumentRef` 的完整 material，供可信 codec reconstitute/prepare。
+    ///
+    /// stale 普通 revision 返回 `Ok(None)`；该方法永远不进入 Tauri/default query。
+    ///
+    /// # Errors
+    ///
+    /// SQLite、keyring、ciphertext hash、AEAD、manifest ownership 或 UTF-8 校验失败时返回
+    /// typed [`StorageError`]。
+    pub async fn load_source_document_material(
+        &self,
+        document_ref: DocumentRef,
+    ) -> Result<Option<SourceDocumentMaterial>, StorageError> {
+        self.read(move |conn, artifacts| {
+            load_source_document_material_sync(conn, artifacts, document_ref)
+        })
+        .await
+    }
+
+    /// 显式 reveal 一个 current revision slot 的短生命周期 plaintext carrier。
+    ///
+    /// # Errors
+    ///
+    /// revision/slot ownership 不匹配、keyring 四态、AEAD/ciphertext 损坏或 read lane 失败时返回
+    /// typed [`StorageError`]。
+    pub async fn reveal_source_document_credential(
+        &self,
+        target: SourceDocumentCredentialTarget,
+    ) -> Result<Option<RevealedSourceDocumentCredential>, StorageError> {
+        self.read(move |conn, artifacts| {
+            reveal_source_document_credential_sync(conn, artifacts, target)
+        })
+        .await
+    }
+
+    /// 原子提交 codec 已重新签发的 credential replacement revision。
+    ///
+    /// # Errors
+    ///
+    /// writer、SQLite 或文件系统失败时返回 [`StorageError`]；冲突/校验/keyring 失败返回 tagged
+    /// [`DocumentMutationOutcome`]。
+    pub async fn replace_source_document_credential(
+        &self,
+        input: EditSourceDocumentCredentialInput,
+    ) -> Result<DocumentMutationOutcome, StorageError> {
+        mutation_outcome(
+            self.dispatch(|reply| WriterCommand::ReplaceSourceDocumentCredential {
+                input: Box::new(input),
+                reply,
+            })
+            .await,
+        )
+    }
+
+    /// 原子提交 codec 已清除 slot 并重新签发的下一 revision。
+    ///
+    /// # Errors
+    ///
+    /// writer、SQLite 或文件系统失败时返回 [`StorageError`]；冲突/校验/keyring 失败返回 tagged
+    /// [`DocumentMutationOutcome`]。
+    pub async fn clear_source_document_credential(
+        &self,
+        input: EditSourceDocumentCredentialInput,
+    ) -> Result<DocumentMutationOutcome, StorageError> {
+        mutation_outcome(
+            self.dispatch(|reply| WriterCommand::ClearSourceDocumentCredential {
+                input: Box::new(input),
+                reply,
+            })
+            .await,
+        )
+    }
+    /// 固定 current exact revision 的全部 secret refs，供后续 conflict rebase 使用。
+    ///
+    /// # Errors
+    ///
+    /// document/revision 不存在或已漂移、secret owner/密文无效、writer/SQLite 失败时返回
+    /// [`StorageError`]。
+    pub async fn pin_source_document_revision(
+        &self,
+        input: PinSourceDocumentRevisionInput,
+    ) -> Result<SourceDocumentRevisionPin, StorageError> {
+        self.dispatch(|reply| WriterCommand::PinSourceDocumentRevision { input, reply })
+            .await
+    }
+
+    /// 幂等释放 revision pin；未知或已释放 pin 同样成功。
+    ///
+    /// # Errors
+    ///
+    /// owner/ref-count 或 `SQLite` transaction 失败时返回 [`StorageError`]。
+    pub async fn release_source_document_revision_pin(
+        &self,
+        pin_id: Uuid,
+    ) -> Result<(), StorageError> {
+        self.dispatch(|reply| WriterCommand::ReleaseSourceDocumentRevisionPin { pin_id, reply })
+            .await
+    }
+
+    /// 在 single writer 顺序点恢复可信 pin base 与 current material。
+    ///
+    /// # Errors
+    ///
+    /// secret owner、keyring、密文、manifest 或 `SQLite` 验证失败时返回 [`StorageError`]；pin 与
+    /// current 的预期失败保留在 [`SourceDocumentRebaseMaterialOutcome`]。
+    pub async fn load_source_document_rebase_material(
+        &self,
+        input: LoadSourceDocumentRebaseMaterialInput,
+    ) -> Result<SourceDocumentRebaseMaterialOutcome, StorageError> {
+        self.dispatch(|reply| WriterCommand::LoadSourceDocumentRebaseMaterial { input, reply })
+            .await
+    }
+
+    /// 在 writer 内重新验证 pin/current 后原子 merge 或 fork。
+    ///
+    /// # Errors
+    ///
+    /// writer、SQLite 或文件系统失败时返回 [`StorageError`]；冲突、pin 拒绝、校验与 keyring
+    /// 状态保留在 tagged [`DocumentMutationOutcome`]。
+    pub async fn rebase_source_document(
+        &self,
+        input: RebaseSourceDocumentInput,
+    ) -> Result<DocumentMutationOutcome, StorageError> {
+        mutation_outcome(
+            self.dispatch(|reply| WriterCommand::RebaseSourceDocument {
+                input: Box::new(input),
+                reply,
+            })
+            .await,
+        )
+    }
+
     /// 将 opaque candidate、作者包和 immutable Plan durable staging。
     ///
     /// # Errors
@@ -133,47 +399,6 @@ impl EventProjectionStorage {
         self.dispatch(|reply| WriterCommand::StageCandidate {
             draft: Box::new(draft),
             reply,
-        })
-        .await
-    }
-
-    /// 将 source-owned credential snapshot 加密为可由安装原子消费的 Secret Artifact。
-    ///
-    /// 返回值仅含 namespace 与 Secret Artifact ref；凭证明文不会写入 Event、投影或 body
-    /// artifact。
-    ///
-    /// 成功后 candidate 被标记为需要该 snapshot；因此 staging 行在安装前丢失会显式失败，而不会
-    /// 被误判为 credential-free。
-    ///
-    /// # Errors
-    ///
-    /// 输入无效、keyring/文件系统/`SQLite` 写入失败或 writer 停止时返回 [`StorageError`]。
-    pub async fn stage_source_credentials(
-        &self,
-        input: SourceCredentialInput,
-    ) -> Result<SourceCredentialSnapshot, StorageError> {
-        self.dispatch(|reply| WriterCommand::StageSourceCredentials {
-            input: Box::new(input),
-            reply,
-        })
-        .await
-    }
-
-    /// 读取绑定到 opaque candidate 的 durable source credential ref。
-    ///
-    /// 此方法只返回 cookie namespace 和 Secret Artifact ref，绝不解密或返回凭证明文；它让
-    /// prepare 与 install 之间的进程重启无需回退到 live credential。
-    ///
-    /// # Errors
-    ///
-    /// `SQLite` 读取失败、staging metadata 损坏，或已标记为需要 credential 的 staged candidate
-    /// 缺少其 ref 时返回 [`StorageError`]。只有 credential-free candidate 才返回 `Ok(None)`。
-    pub async fn get_candidate_source_credentials_ref(
-        &self,
-        candidate_id: Uuid,
-    ) -> Result<Option<SourceCredentialSnapshot>, StorageError> {
-        self.read(move |conn, artifacts| {
-            get_candidate_source_credentials_ref_sync(conn, artifacts, candidate_id)
         })
         .await
     }
@@ -233,16 +458,16 @@ impl EventProjectionStorage {
             .await
     }
 
-    /// 创建 execution archive，并把当前 source version 的 immutable Plan 引用固定下来。
+    /// 在同一 writer transaction 写 Started + revision pin，并返回同 revision installed snapshot。
     ///
     /// # Errors
     ///
-    /// 来源不存在、execution ID 冲突、artifact ref/SQLite transaction 失败时返回
-    /// [`StorageError`]。
+    /// 来源或 immutable snapshot 不存在、keyring/secret/artifact 校验失败、execution ID 冲突或
+    /// `SQLite` transaction 失败时返回 [`StorageError`]。
     pub async fn start_execution(
         &self,
         request: ExecutionStart,
-    ) -> Result<ExecutionRecord, StorageError> {
+    ) -> Result<ExecutionStartReceipt, StorageError> {
         self.dispatch(|reply| WriterCommand::StartExecution { request, reply })
             .await
     }
@@ -711,7 +936,7 @@ impl EventProjectionStorage {
         let artifacts = self.artifacts.clone();
         tokio::task::spawn_blocking(move || {
             let _permit = permit;
-            let mut conn = open_connection(&database_path, false)?;
+            let (mut conn, _) = open_connection(&database_path, false)?;
             operation(&mut conn, &artifacts)
         })
         .await
@@ -734,5 +959,23 @@ impl EventProjectionStorage {
             crate::execution_archive::load_effect_capture(conn, artifacts, &lookup)
         })
         .await
+    }
+}
+
+fn mutation_outcome(
+    result: Result<DocumentMutationOutcome, StorageError>,
+) -> Result<DocumentMutationOutcome, StorageError> {
+    match result {
+        Err(StorageError::KeyringLocked) => Ok(DocumentMutationOutcome::Locked),
+        Err(StorageError::KeyringUnavailable) => Ok(DocumentMutationOutcome::KeyUnavailable),
+        Err(StorageError::KeyLost | StorageError::MasterKeyUnavailable) => {
+            Ok(DocumentMutationOutcome::KeyLost)
+        }
+        Err(
+            StorageError::ArtifactCorrupt
+            | StorageError::ArtifactUnavailable(_)
+            | StorageError::SecretUnavailable,
+        ) => Ok(DocumentMutationOutcome::Corrupt),
+        other => other,
     }
 }

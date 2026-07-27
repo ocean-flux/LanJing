@@ -15,10 +15,12 @@ use aes_gcm::{Aes256Gcm, Nonce};
 use keyring_core::{Entry, Error as KeyringError};
 use uuid::Uuid;
 
-use crate::types::{ArtifactKind, OrphanRecovery, StorageError};
+use crate::types::{ArtifactKind, OrphanRecovery, SecretArtifactId, StorageError};
 
 const MASTER_KEY_ACCOUNT: &str = "master-key-v1";
-const SECRET_FILE_VERSION: u8 = 1;
+const VAULT_KEY_ACCOUNT_PREFIX: &str = "vault-key-v1/";
+const LEGACY_SECRET_FILE_VERSION: u8 = 1;
+const VAULT_SECRET_FILE_VERSION: u8 = 2;
 const AES_GCM_NONCE_LEN: usize = 12;
 
 /// 已写入磁盘、尚待 `SQLite` ref transaction 认领的 artifact metadata。
@@ -32,60 +34,62 @@ pub(crate) struct PendingArtifact {
     pub(crate) stored_bytes: u64,
 }
 
-/// 独占 artifact 根目录与同一安装级 keyring credential 的同步实现。
+/// 已写入随机 locator、尚待 ownership transaction 认领的 secret metadata。
+///
+/// 此类型不实现 `Debug`，避免未来新增敏感 metadata 后被整值记录。
+pub(crate) struct PendingSecretArtifact {
+    pub(crate) secret_id: SecretArtifactId,
+    pub(crate) blob_locator: String,
+    pub(crate) key_id: String,
+    pub(crate) ciphertext_hash: String,
+    pub(crate) stored_bytes: u64,
+}
+
+/// 独占 artifact 根目录与同一安装级 keyring service 的同步实现。
 #[derive(Clone)]
 pub(crate) struct ArtifactStore {
     root: PathBuf,
-    master_key_entry: Arc<Entry>,
+    keyring_service: Arc<str>,
+    legacy_master_key_entry: Arc<Entry>,
 }
 
 impl ArtifactStore {
-    /// 创建 artifact 根目录描述，并固定同一个 keyring credential 实例。
-    ///
-    /// 固定实例既符合生产 keyring 的安装级语义，也让 keyring-core mock 在同一 storage
-    /// 生命周期内正确模拟持久凭据。
+    /// 创建 artifact 根目录描述，并固定 legacy keyring credential 供一次性迁移读取。
     pub(crate) fn new(root: PathBuf, keyring_service: &str) -> Result<Self, StorageError> {
         crate::keyring_init::ensure_default_keyring_store()?;
-        let master_key_entry =
-            Entry::new(keyring_service, MASTER_KEY_ACCOUNT).map_err(|_| StorageError::Keyring)?;
+        let legacy_master_key_entry = Entry::new(keyring_service, MASTER_KEY_ACCOUNT)
+            .map_err(|error| map_keyring_setup_error(&error))?;
         Ok(Self {
             root,
-            master_key_entry: Arc::new(master_key_entry),
+            keyring_service: Arc::from(keyring_service),
+            legacy_master_key_entry: Arc::new(legacy_master_key_entry),
         })
     }
 
-    /// 将逻辑内容写成 body 或 secret artifact。
+    /// 将非 secret 逻辑内容写成 zstd body artifact。
     ///
-    /// 文件写入顺序固定为 temp → write → flush → fsync → rename。返回的 metadata 尚未
-    /// 被数据库认领，调用方必须紧接着在 Event/ref transaction 中使用它。
+    /// legacy `ArtifactInput` 不再允许 secret；所有新敏感路径必须使用随机
+    /// [`SecretArtifactId`] 与 [`Self::write_secret`]。
     pub(crate) fn write(
         &self,
         kind: ArtifactKind,
         logical_bytes: &[u8],
     ) -> Result<PendingArtifact, StorageError> {
+        if kind != ArtifactKind::Body {
+            return Err(StorageError::InvalidInput(
+                "legacy artifact API 不接受 secret".to_string(),
+            ));
+        }
         let hash = blake3::hash(logical_bytes).to_hex().to_string();
-        let (stored, codec, encryption, extension) = match kind {
-            ArtifactKind::Body => (
-                zstd::stream::encode_all(Cursor::new(logical_bytes), 3).map_err(file_error)?,
-                "zstd".to_string(),
-                None,
-                "zst",
-            ),
-            ArtifactKind::Secret => (
-                self.encrypt_secret(logical_bytes)?,
-                "none".to_string(),
-                Some("aes-256-gcm".to_string()),
-                "secret",
-            ),
-        };
-        let relative = Self::relative_path(kind, &hash, extension)?;
+        let stored = zstd::stream::encode_all(Cursor::new(logical_bytes), 3).map_err(file_error)?;
+        let relative = Self::relative_path(&hash, "zst")?;
         let target = self.root.join(&relative);
         let stored_bytes = Self::atomic_write(&target, &stored)?;
         Ok(PendingArtifact {
             hash,
             kind,
-            codec,
-            encryption,
+            codec: "zstd".to_string(),
+            encryption: None,
             relative_path: relative.to_string_lossy().replace('\\', "/"),
             stored_bytes,
         })
@@ -103,52 +107,143 @@ impl ArtifactStore {
         Ok(logical_bytes)
     }
 
-    /// 读取并认证/解密 secret artifact。
-    pub(crate) fn read_secret(
+    /// 创建随机 key ID 对应的 AES-256 key，并写入平台 secure store。
+    pub(crate) fn create_vault_key(&self, key_id: &str) -> Result<Vec<u8>, StorageError> {
+        validate_key_id(key_id)?;
+        let key = Key::<Aes256Gcm>::generate();
+        let encoded = encode_hex(&key);
+        self.vault_key_entry(key_id)?
+            .set_password(&encoded)
+            .map_err(|error| map_keyring_operation_error(&error))?;
+        decode_key(&encoded).map_err(|_| StorageError::KeyLost)
+    }
+
+    /// 读取 `SQLite` 固定 key ID 对应的 AES-256 key。
+    pub(crate) fn load_vault_key(&self, key_id: &str) -> Result<Vec<u8>, StorageError> {
+        validate_key_id(key_id)?;
+        let encoded = self
+            .vault_key_entry(key_id)?
+            .get_password()
+            .map_err(map_keyring_load_error)?;
+        decode_key(&encoded).map_err(|_| StorageError::KeyLost)
+    }
+
+    /// 回滚尚未被 `SQLite` 认领的随机 key；不存在视为幂等成功。
+    pub(crate) fn delete_vault_key(&self, key_id: &str) -> Result<(), StorageError> {
+        validate_key_id(key_id)?;
+        match self.vault_key_entry(key_id)?.delete_credential() {
+            Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
+            Err(error) => Err(map_keyring_operation_error(&error)),
+        }
+    }
+
+    /// 计算随机高熵 key 的独立 verifier；该值不能用于推导任何文档或 credential plaintext。
+    pub(crate) fn key_verifier(key: &[u8]) -> Result<String, StorageError> {
+        if key.len() != 32 {
+            return Err(StorageError::KeyLost);
+        }
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(b"lanjing-vault-key-verifier-v1");
+        hasher.update(key);
+        Ok(hasher.finalize().to_hex().to_string())
+    }
+
+    /// 用已验证 key 写入随机 identity、随机 locator 的 AES-256-GCM secret。
+    ///
+    /// ciphertext hash 只覆盖带随机 nonce 的密文 envelope，不再对 plaintext 形成可预计算 oracle。
+    pub(crate) fn write_secret(
+        &self,
+        key_id: &str,
+        key: &[u8],
+        logical_bytes: &[u8],
+    ) -> Result<PendingSecretArtifact, StorageError> {
+        validate_key_id(key_id)?;
+        let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| StorageError::KeyLost)?;
+        let nonce = Nonce::generate();
+        let ciphertext = cipher
+            .encrypt(&nonce, logical_bytes)
+            .map_err(|_| StorageError::ArtifactCorrupt)?;
+        let mut stored = Vec::with_capacity(1 + nonce.len() + ciphertext.len());
+        stored.push(VAULT_SECRET_FILE_VERSION);
+        stored.extend_from_slice(&nonce);
+        stored.extend_from_slice(&ciphertext);
+
+        let secret_id = SecretArtifactId::new();
+        let locator = Uuid::new_v4().simple().to_string();
+        let relative = Self::secret_relative_path(&locator)?;
+        let target = self.root.join(&relative);
+        let stored_bytes = Self::atomic_write(&target, &stored)?;
+        Ok(PendingSecretArtifact {
+            secret_id,
+            blob_locator: relative.to_string_lossy().replace('\\', "/"),
+            key_id: key_id.to_string(),
+            ciphertext_hash: blake3::hash(&stored).to_hex().to_string(),
+            stored_bytes,
+        })
+    }
+
+    /// 按随机 identity/locator 认证并解密 secret artifact。
+    pub(crate) fn read_secret_artifact(
+        &self,
+        secret_id: SecretArtifactId,
+        blob_locator: &str,
+        key_id: &str,
+        ciphertext_hash: &str,
+    ) -> Result<Vec<u8>, StorageError> {
+        ensure_blake3_hex(ciphertext_hash)?;
+        let encrypted = self.read_secret_file(blob_locator, secret_id)?;
+        if blake3::hash(&encrypted).to_hex().as_str() != ciphertext_hash {
+            return Err(StorageError::ArtifactCorrupt);
+        }
+        if encrypted.len() <= 1 + AES_GCM_NONCE_LEN || encrypted[0] != VAULT_SECRET_FILE_VERSION {
+            return Err(StorageError::ArtifactCorrupt);
+        }
+        let key = self.load_vault_key(key_id)?;
+        let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| StorageError::KeyLost)?;
+        let nonce = Nonce::try_from(&encrypted[1..=AES_GCM_NONCE_LEN])
+            .map_err(|_| StorageError::ArtifactCorrupt)?;
+        cipher
+            .decrypt(&nonce, &encrypted[1 + AES_GCM_NONCE_LEN..])
+            .map_err(|_| StorageError::ArtifactCorrupt)
+    }
+
+    /// 验证随机 secret 文件和 ciphertext hash，不解密 plaintext。
+    pub(crate) fn ensure_vault_secret_exists(
+        &self,
+        secret_id: SecretArtifactId,
+        blob_locator: &str,
+        ciphertext_hash: &str,
+    ) -> Result<(), StorageError> {
+        ensure_blake3_hex(ciphertext_hash)?;
+        let encrypted = self.read_secret_file(blob_locator, secret_id)?;
+        if encrypted.len() <= 1 + AES_GCM_NONCE_LEN
+            || encrypted[0] != VAULT_SECRET_FILE_VERSION
+            || blake3::hash(&encrypted).to_hex().as_str() != ciphertext_hash
+        {
+            return Err(StorageError::ArtifactCorrupt);
+        }
+        Ok(())
+    }
+
+    /// 读取历史 deterministic Secret Artifact，仅供 0007 启动迁移。
+    pub(crate) fn read_legacy_secret(
         &self,
         hash: &str,
         relative_path: &str,
     ) -> Result<Vec<u8>, StorageError> {
         let encrypted = self.read_file(relative_path, hash)?;
-        if encrypted.len() <= 1 + AES_GCM_NONCE_LEN || encrypted[0] != SECRET_FILE_VERSION {
-            return Err(StorageError::SecretUnavailable);
+        if encrypted.len() <= 1 + AES_GCM_NONCE_LEN || encrypted[0] != LEGACY_SECRET_FILE_VERSION {
+            return Err(StorageError::ArtifactCorrupt);
         }
-        let key = self.master_key(false)?;
-        let cipher =
-            Aes256Gcm::new_from_slice(&key).map_err(|_| StorageError::SecretUnavailable)?;
+        let key = self.legacy_master_key(false)?;
+        let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| StorageError::KeyLost)?;
         let nonce = Nonce::try_from(&encrypted[1..=AES_GCM_NONCE_LEN])
-            .map_err(|_| StorageError::SecretUnavailable)?;
+            .map_err(|_| StorageError::ArtifactCorrupt)?;
         let logical_bytes = cipher
             .decrypt(&nonce, &encrypted[1 + AES_GCM_NONCE_LEN..])
-            .map_err(|_| StorageError::SecretUnavailable)?;
-        verify_logical_hash(&logical_bytes, hash).map_err(|_| StorageError::SecretUnavailable)?;
+            .map_err(|_| StorageError::ArtifactCorrupt)?;
+        verify_logical_hash(&logical_bytes, hash).map_err(|_| StorageError::ArtifactCorrupt)?;
         Ok(logical_bytes)
-    }
-
-    /// 验证安装级 secret 主密钥可用，而不读取或解密任何 Secret Artifact。
-    ///
-    /// # Errors
-    ///
-    /// keyring 缺少或拒绝该主密钥时返回 [`StorageError`]。
-    pub(crate) fn ensure_secret_key_available(&self) -> Result<(), StorageError> {
-        self.master_key(false).map(|_| ())
-    }
-
-    /// 验证 Secret Artifact 文件存在且具有受支持的密文 envelope，不解密其内容。
-    ///
-    /// # Errors
-    ///
-    /// artifact 文件缺失、不可读取或 envelope 损坏时返回 [`StorageError`]。
-    pub(crate) fn ensure_secret_artifact_exists(
-        &self,
-        hash: &str,
-        relative_path: &str,
-    ) -> Result<(), StorageError> {
-        let encrypted = self.read_file(relative_path, hash)?;
-        if encrypted.len() <= 1 + AES_GCM_NONCE_LEN || encrypted[0] != SECRET_FILE_VERSION {
-            return Err(StorageError::SecretUnavailable);
-        }
-        Ok(())
     }
 
     /// 从根目录删除 temp 或没有 `SQLite` metadata 的 orphan 文件。
@@ -189,27 +284,21 @@ impl ArtifactStore {
         }
     }
 
-    fn encrypt_secret(&self, logical_bytes: &[u8]) -> Result<Vec<u8>, StorageError> {
-        let key = self.master_key(true)?;
-        let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| StorageError::Keyring)?;
-        let nonce = Nonce::generate();
-        let ciphertext = cipher
-            .encrypt(&nonce, logical_bytes)
-            .map_err(|_| StorageError::SecretUnavailable)?;
-        let mut stored = Vec::with_capacity(1 + nonce.len() + ciphertext.len());
-        stored.push(SECRET_FILE_VERSION);
-        stored.extend_from_slice(&nonce);
-        stored.extend_from_slice(&ciphertext);
-        Ok(stored)
+    fn vault_key_entry(&self, key_id: &str) -> Result<Entry, StorageError> {
+        Entry::new(
+            &self.keyring_service,
+            &format!("{VAULT_KEY_ACCOUNT_PREFIX}{key_id}"),
+        )
+        .map_err(|error| map_keyring_setup_error(&error))
     }
 
-    fn master_key(&self, create: bool) -> Result<Vec<u8>, StorageError> {
-        match self.master_key_entry.get_password() {
+    fn legacy_master_key(&self, create: bool) -> Result<Vec<u8>, StorageError> {
+        match self.legacy_master_key_entry.get_password() {
             Ok(encoded) => decode_key(&encoded),
             Err(KeyringError::NoEntry) if create => {
                 let key = Key::<Aes256Gcm>::generate();
                 let encoded = encode_hex(&key);
-                self.master_key_entry
+                self.legacy_master_key_entry
                     .set_password(&encoded)
                     .map_err(|_| StorageError::Keyring)?;
                 decode_key(&encoded)
@@ -219,24 +308,28 @@ impl ArtifactStore {
         }
     }
 
-    fn relative_path(
-        kind: ArtifactKind,
-        hash: &str,
-        extension: &str,
-    ) -> Result<PathBuf, StorageError> {
+    fn relative_path(hash: &str, extension: &str) -> Result<PathBuf, StorageError> {
         if hash.len() != 64 || !hash.as_bytes().iter().all(u8::is_ascii_hexdigit) {
             return Err(StorageError::InvalidInput(
                 "artifact hash 不是 BLAKE3 hex".to_string(),
             ));
         }
-        let category = match kind {
-            ArtifactKind::Body => "body",
-            ArtifactKind::Secret => "secret",
-        };
-        Ok(PathBuf::from(category)
+        Ok(PathBuf::from("body")
             .join(&hash[..2])
             .join(&hash[2..4])
             .join(format!("{hash}.{extension}")))
+    }
+
+    fn secret_relative_path(locator: &str) -> Result<PathBuf, StorageError> {
+        if locator.len() != 32 || !locator.as_bytes().iter().all(u8::is_ascii_hexdigit) {
+            return Err(StorageError::InvalidInput(
+                "secret blob locator 无效".to_string(),
+            ));
+        }
+        Ok(PathBuf::from("vault")
+            .join(&locator[..2])
+            .join(&locator[2..4])
+            .join(format!("{locator}.vault")))
     }
 
     fn atomic_write(target: &Path, bytes: &[u8]) -> Result<u64, StorageError> {
@@ -275,11 +368,29 @@ impl ArtifactStore {
             .map_err(|_| StorageError::FileSystem("artifact 大小超过 u64".to_string()))
     }
 
-    fn read_file(&self, relative_path: &str, hash: &str) -> Result<Vec<u8>, StorageError> {
+    fn read_file(&self, relative_path: &str, identity: &str) -> Result<Vec<u8>, StorageError> {
         let path = self.root.join(relative_path);
         let mut file = File::open(path).map_err(|error| {
             if error.kind() == std::io::ErrorKind::NotFound {
-                StorageError::ArtifactUnavailable(hash.to_string())
+                StorageError::ArtifactUnavailable(identity.to_string())
+            } else {
+                file_error(error)
+            }
+        })?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).map_err(file_error)?;
+        Ok(bytes)
+    }
+
+    fn read_secret_file(
+        &self,
+        relative_path: &str,
+        secret_id: SecretArtifactId,
+    ) -> Result<Vec<u8>, StorageError> {
+        let path = self.root.join(relative_path);
+        let mut file = File::open(path).map_err(|error| {
+            if error.kind() == std::io::ErrorKind::NotFound {
+                StorageError::ArtifactUnavailable(secret_id.to_string())
             } else {
                 file_error(error)
             }
@@ -334,8 +445,84 @@ fn verify_logical_hash(bytes: &[u8], expected: &str) -> Result<(), StorageError>
     }
 }
 
+fn validate_key_id(key_id: &str) -> Result<(), StorageError> {
+    let parsed = Uuid::parse_str(key_id).map_err(|_| StorageError::KeyLost)?;
+    if parsed.hyphenated().to_string() != key_id {
+        return Err(StorageError::KeyLost);
+    }
+    Ok(())
+}
+
+fn ensure_blake3_hex(value: &str) -> Result<(), StorageError> {
+    if value.len() == 64 && value.as_bytes().iter().all(u8::is_ascii_hexdigit) {
+        Ok(())
+    } else {
+        Err(StorageError::ArtifactCorrupt)
+    }
+}
+
+fn map_keyring_setup_error(error: &KeyringError) -> StorageError {
+    match error {
+        KeyringError::NoStorageAccess(_) => StorageError::KeyringLocked,
+        KeyringError::NoDefaultStore | KeyringError::NotSupportedByStore(_) => {
+            StorageError::KeyringUnavailable
+        }
+        _ => StorageError::KeyringUnavailable,
+    }
+}
+
+fn map_keyring_operation_error(error: &KeyringError) -> StorageError {
+    match error {
+        KeyringError::NoStorageAccess(_) => StorageError::KeyringLocked,
+        KeyringError::NoDefaultStore | KeyringError::NotSupportedByStore(_) => {
+            StorageError::KeyringUnavailable
+        }
+        KeyringError::NoEntry
+        | KeyringError::BadEncoding(_)
+        | KeyringError::BadDataFormat(_, _) => StorageError::KeyLost,
+        _ => StorageError::KeyringUnavailable,
+    }
+}
+
+fn map_keyring_load_error(error: KeyringError) -> StorageError {
+    match error {
+        KeyringError::NoEntry => StorageError::KeyLost,
+        other => map_keyring_operation_error(&other),
+    }
+}
+
 fn file_error(error: std::io::Error) -> StorageError {
     let message = error.to_string();
     let _ = error.into_inner();
     StorageError::FileSystem(message)
+}
+
+#[cfg(test)]
+mod tests {
+    use keyring_core::Error as KeyringError;
+
+    use super::{ensure_blake3_hex, map_keyring_load_error, map_keyring_setup_error};
+    use crate::types::StorageError;
+
+    #[test]
+    fn keyring_and_ciphertext_failures_keep_four_typed_states() {
+        assert!(matches!(
+            map_keyring_setup_error(&KeyringError::NoDefaultStore),
+            StorageError::KeyringUnavailable
+        ));
+        assert!(matches!(
+            map_keyring_setup_error(&KeyringError::NoStorageAccess(Box::new(
+                std::io::Error::new(std::io::ErrorKind::PermissionDenied, "locked"),
+            ))),
+            StorageError::KeyringLocked
+        ));
+        assert!(matches!(
+            map_keyring_load_error(KeyringError::NoEntry),
+            StorageError::KeyLost
+        ));
+        assert!(matches!(
+            ensure_blake3_hex("not-a-ciphertext-hash"),
+            Err(StorageError::ArtifactCorrupt)
+        ));
+    }
 }

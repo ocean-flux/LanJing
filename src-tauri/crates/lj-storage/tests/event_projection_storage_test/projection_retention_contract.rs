@@ -127,7 +127,7 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
     );
     assert!(sources.iter().all(|source| {
         source.profile.id.0 == source.source_identity
-            && source.revision == 1
+            && source.source_revision == 1
             && !source.version.is_empty()
     }));
     assert!(!sources[0].grant.network);
@@ -316,15 +316,13 @@ async fn policy_gc_expires_candidates_and_honors_pins() {
             .install_candidate(InstallCandidateRequest {
                 candidate_id: expired_id,
                 grant: PolicyCapabilities::default(),
-                expected_source_version: 0,
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-expired".to_string(),
                 occurred_at_ms: now,
                 correlation_id: None,
-                source_credentials: None,
             })
             .await,
-        Err(StorageError::CandidateExpired)
+        Err(StorageError::CandidateMissing)
     ));
 
     install_source(&storage, now).await;

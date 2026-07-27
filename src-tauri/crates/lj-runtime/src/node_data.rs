@@ -2,9 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 
 /// HTTP 响应(不绑 reqwest)。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HttpResponse {
     /// HTTP 状态码。
     pub status: u16,
@@ -14,6 +15,17 @@ pub struct HttpResponse {
     pub body: Vec<u8>,
     /// 字符集(如 "utf-8", "gbk")。
     pub charset: Option<String>,
+}
+
+impl fmt::Debug for HttpResponse {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("HttpResponse")
+            .field("status", &self.status)
+            .field("header_count", &self.headers.len())
+            .field("body_bytes", &self.body.len())
+            .finish_non_exhaustive()
+    }
 }
 
 /// Plan effect adapter 内部传递的轻量数据。

@@ -16,6 +16,7 @@ pub enum HttpMethod {
 
 /// HTTP 请求规格（方法、URL 模板、头与体）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct HttpSpec {
     /// HTTP 方法。
     pub method: HttpMethod,
