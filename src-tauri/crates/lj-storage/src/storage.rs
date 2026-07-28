@@ -11,7 +11,10 @@ use std::thread;
 
 use diesel::sqlite::SqliteConnection;
 use lj_media::{MediaAsset, MediaItem, MediaResourceId, MediaUnit};
-use lj_runtime::{DurableCaptureReceipt, EffectCapture, EffectReplayLookup};
+use lj_runtime::{
+    ControlReplayLookup, ControlTraceCapture, ControlTraceReceipt, DurableCaptureReceipt,
+    EffectCapture, EffectReplayLookup, ReplayCompletionLookup,
+};
 use tokio::sync::{Semaphore, mpsc, oneshot};
 use uuid::Uuid;
 
@@ -948,6 +951,29 @@ impl EventProjectionStorage {
         capture: EffectCapture,
     ) -> Result<DurableCaptureReceipt, StorageError> {
         self.dispatch(|reply| WriterCommand::PersistEffect { capture, reply })
+            .await
+    }
+    pub(crate) async fn persist_control_trace(
+        &self,
+        capture: ControlTraceCapture,
+    ) -> Result<ControlTraceReceipt, StorageError> {
+        self.dispatch(|reply| WriterCommand::PersistControlTrace { capture, reply })
+            .await
+    }
+
+    pub(crate) async fn replay_control_trace(
+        &self,
+        lookup: ControlReplayLookup,
+    ) -> Result<Option<ControlTraceCapture>, StorageError> {
+        self.read(move |conn, _| crate::execution_archive::load_control_trace(conn, &lookup))
+            .await
+    }
+
+    pub(crate) async fn validate_replay_invocations(
+        &self,
+        lookup: ReplayCompletionLookup,
+    ) -> Result<(), StorageError> {
+        self.read(move |conn, _| crate::execution_archive::validate_replay_complete(conn, lookup))
             .await
     }
 

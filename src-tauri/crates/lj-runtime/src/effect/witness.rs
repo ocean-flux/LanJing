@@ -463,6 +463,7 @@ pub fn effect_input_hash(input: &EffectInput) -> Result<String, EffectWitnessErr
     match input {
         EffectInput::Intent(intent) => canonical_hash(intent),
         EffectInput::Output(output) => effect_output_hash(output),
+        EffectInput::Json(value) => canonical_hash(value.as_ref()),
     }
 }
 

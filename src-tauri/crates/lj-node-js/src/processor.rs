@@ -79,6 +79,14 @@ impl QuickJsEffectHandler for QuickJsEffectAdapter {
             EffectError::new(EffectErrorCode::Internal, "QuickJS 输入 hash 计算失败")
         })?;
         let (page, key) = quickjs_template_input(&request.input);
+        let json_input = request
+            .input
+            .json()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|_| {
+                EffectError::new(EffectErrorCode::Internal, "QuickJS JSON 输入编码失败")
+            })?;
         let code = request.code;
         let blocking_cancellation = cancellation.clone();
         let started = Instant::now();
@@ -87,6 +95,7 @@ impl QuickJsEffectHandler for QuickJsEffectAdapter {
                 &code,
                 page,
                 key.as_deref(),
+                json_input.as_deref(),
                 JS_TIMEOUT_MS,
                 &blocking_cancellation,
             )
@@ -161,9 +170,9 @@ fn quickjs_template_input(input: &EffectInput) -> (Option<u32>, Option<String>) 
         EffectInput::Intent(lj_capability::IntentInput::Opaque(value)) => {
             (Some(1), serde_json::to_string(value).ok())
         }
-        EffectInput::Intent(lj_capability::IntentInput::None) | EffectInput::Output(_) => {
-            (Some(1), None)
-        }
+        EffectInput::Json(_)
+        | EffectInput::Intent(lj_capability::IntentInput::None)
+        | EffectInput::Output(_) => (Some(1), None),
     }
 }
 
@@ -209,13 +218,14 @@ pub fn execute_js_blocking_cancellable(
     timeout_ms: u64,
     cancellation: &EffectCancellation,
 ) -> Result<String, JsError> {
-    execute_js_blocking_with_witness(code, page, key, timeout_ms, cancellation).result
+    execute_js_blocking_with_witness(code, page, key, None, timeout_ms, cancellation).result
 }
 
 fn execute_js_blocking_with_witness(
     code: &str,
     page: Option<u32>,
     key: Option<&str>,
+    json_input: Option<&str>,
     timeout_ms: u64,
     cancellation: &EffectCancellation,
 ) -> JsExecution {
@@ -224,6 +234,7 @@ fn execute_js_blocking_with_witness(
         code,
         page,
         key,
+        json_input,
         timeout_ms,
         cancellation,
         host_calls.clone(),
@@ -243,6 +254,7 @@ fn execute_js_inner(
     code: &str,
     page: Option<u32>,
     key: Option<&str>,
+    json_input: Option<&str>,
     timeout_ms: u64,
     cancellation: &EffectCancellation,
     host_calls: Arc<Mutex<Vec<QuickJsHostCall>>>,
@@ -295,6 +307,12 @@ fn execute_js_inner(
     let evaluation = context
         .with(|context| -> Result<String, rquickjs::Error> {
             install_host_functions(&context, host_calls)?;
+            if let Some(json_input) = json_input {
+                context.globals().set("__lanjing_input_json", json_input)?;
+                context.eval::<(), _>(
+                    "globalThis.input=JSON.parse(globalThis.__lanjing_input_json);delete globalThis.__lanjing_input_json;",
+                )?;
+            }
             let value: rquickjs::Value = context.eval(replaced_code.as_str())?;
             if value.is_undefined() {
                 return try_extract_global_result(&context);

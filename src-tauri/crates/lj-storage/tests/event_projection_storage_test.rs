@@ -17,16 +17,18 @@ use lj_media::{
     MediaResourceId, MediaUnit, ResourceCompleteness, SourceProfile,
 };
 use lj_rule_model::{
-    CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, CredentialSlotManifest,
+    CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, ControlTrace, CredentialSlotManifest,
     CredentialTargetIdentity, Diagnostic, DiagnosticSeverity, EffectKind, EventType, ExecutionPlan,
-    ExecutionPlanParts, FlowGraph, HttpMethod, PolicyCapabilities, RuleDefinition, RulePackage,
-    SourceDocumentFormat, SourceIdentity, SystemCapabilities, definition_hash, read_execution_plan,
+    ExecutionPlanParts, FlowGraph, HttpMethod, InvocationPath, LoopInvocationSegment,
+    PolicyCapabilities, RuleDefinition, RulePackage, SourceDocumentFormat, SourceIdentity,
+    SystemCapabilities, definition_hash, read_execution_plan,
 };
 use lj_runtime::{
-    ArchivedEffectCapture, CapturedEffectOutput, EffectArchive, EffectCapture, EffectFailure,
-    EffectOutput, EffectReplayLookup, EffectWitness, ExecutionMode, HttpDnsTargetKind,
-    HttpDnsTargetWitness, HttpEffectErrorKind, HttpEffectWitness, HttpRequestBodyWitness,
-    HttpRequestWitness, HttpResponse, effect_bytes_hash, effect_output_hash,
+    ArchivedEffectCapture, CapturedEffectOutput, ControlReplayLookup, ControlTraceCapture,
+    EffectArchive, EffectArchiveErrorCode, EffectCapture, EffectFailure, EffectOutput,
+    EffectReplayLookup, EffectWitness, ExecutionMode, HttpDnsTargetKind, HttpDnsTargetWitness,
+    HttpEffectErrorKind, HttpEffectWitness, HttpRequestBodyWitness, HttpRequestWitness,
+    HttpResponse, ReplayCompletionLookup, effect_bytes_hash, effect_output_hash,
 };
 use lj_storage::{
     AppendRequest, ArtifactInput, ArtifactKind, CandidateDocumentInput, CandidateDraft,

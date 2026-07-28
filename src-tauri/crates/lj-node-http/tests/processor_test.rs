@@ -11,8 +11,7 @@ use lj_capability::IntentInput;
 use lj_node_http::processor::{HttpEffectAdapter, convert_response};
 use lj_node_http::ssrf::is_blocked_ip;
 use lj_node_http::util::{parse_charset, render_url_template};
-use lj_rule_model::Error;
-use lj_rule_model::PolicyCapabilities;
+use lj_rule_model::{Error, InvocationPath, PolicyCapabilities};
 use lj_runtime::{
     CancellationHandle, EffectCapture, EffectCaptureMaterialSensitivity, EffectErrorCode,
     EffectInput, EffectOutput, EffectWitness, HttpDnsTargetKind, HttpEffectErrorKind,
@@ -515,7 +514,7 @@ async fn plan_http_effect_marks_request_body_secret_and_witness_redacted() {
     let capture = EffectCapture::from_live(
         execution_id,
         effect_id,
-        node_id,
+        InvocationPath::new(node_id, Vec::new(), 1).expect("valid HTTP invocation fixture"),
         "request-body-contract".to_string(),
         captured,
     )

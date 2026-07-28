@@ -6,7 +6,7 @@
 //! 合并事务或改变 receipt 的顺序边界。
 
 use diesel::sqlite::SqliteConnection;
-use lj_runtime::{DurableCaptureReceipt, EffectCapture};
+use lj_runtime::{ControlTraceCapture, ControlTraceReceipt, DurableCaptureReceipt, EffectCapture};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
@@ -123,6 +123,10 @@ pub(crate) enum WriterCommand {
     PersistEffect {
         capture: EffectCapture,
         reply: oneshot::Sender<Result<DurableCaptureReceipt, StorageError>>,
+    },
+    PersistControlTrace {
+        capture: ControlTraceCapture,
+        reply: oneshot::Sender<Result<ControlTraceReceipt, StorageError>>,
     },
     CheckpointSource {
         source_identity: String,
@@ -248,6 +252,11 @@ fn handle_writer_command(
         WriterCommand::PersistEffect { capture, reply } => {
             let _ = reply.send(crate::execution_archive::persist_effect_capture(
                 conn, artifacts, capture,
+            ));
+        }
+        WriterCommand::PersistControlTrace { capture, reply } => {
+            let _ = reply.send(crate::execution_archive::persist_control_trace(
+                conn, &capture,
             ));
         }
         WriterCommand::CheckpointSource {

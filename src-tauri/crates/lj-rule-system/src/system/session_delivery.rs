@@ -63,9 +63,9 @@ pub(super) async fn run_session(
             RuntimeEventKind::Started | RuntimeEventKind::EffectReplayed { .. } => Ok(()),
             #[cfg(feature = "test-support")]
             RuntimeEventKind::EffectCaptured {
-                node_id,
                 effect_id,
                 kind,
+                invocation_path,
                 ..
             } => {
                 let result = flush_persisted(
@@ -83,7 +83,7 @@ pub(super) async fn run_session(
                         effect_id,
                         EffectReplayLookup {
                             archived_execution_id: execution_id,
-                            node_id,
+                            invocation_path,
                             kind,
                         },
                     );

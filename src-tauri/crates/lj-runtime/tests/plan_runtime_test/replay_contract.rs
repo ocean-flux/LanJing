@@ -39,16 +39,13 @@ fn runtime_rejects_tampered_plan_hash_and_compiler_identity() {
 }
 
 #[test]
-fn current_control_plan_has_stable_runtime_unavailable_category() {
+fn control_support_classification_still_requires_a_valid_program() {
     let plan = control_plan();
     let runtime = runtime(4);
-    assert_eq!(
-        runtime.check_plan_support(&plan),
-        PlanSupport::ControlFlowUnavailable
-    );
+    assert_eq!(runtime.check_plan_support(&plan), PlanSupport::ControlFlow);
     assert!(matches!(
         runtime.validate_plan(&plan),
-        Err(lj_runtime::PlanRuntimeError::UnsupportedControlFlow)
+        Err(lj_runtime::PlanRuntimeError::InvalidPlan(_))
     ));
 }
 

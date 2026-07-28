@@ -2,6 +2,62 @@
 
 use super::*;
 
+fn invocation(node_id: Uuid, ordinal: u64) -> InvocationPath {
+    InvocationPath::new(node_id, Vec::new(), ordinal).expect("valid invocation fixture")
+}
+
+fn loop_invocation(
+    node_id: Uuid,
+    loop_id: Uuid,
+    iteration_index: u32,
+    ordinal: u64,
+) -> InvocationPath {
+    InvocationPath::new(
+        node_id,
+        vec![LoopInvocationSegment {
+            loop_id,
+            iteration_index,
+        }],
+        ordinal,
+    )
+    .expect("valid Loop invocation fixture")
+}
+
+fn http_capture(
+    execution_id: Uuid,
+    effect_id: Uuid,
+    invocation_path: InvocationPath,
+    label: &str,
+) -> EffectCapture {
+    EffectCapture::from_live(
+        execution_id,
+        effect_id,
+        invocation_path,
+        hash(label),
+        CapturedEffectOutput::new(
+            EffectOutput::Http(HttpResponse {
+                status: 200,
+                headers: HashMap::new(),
+                body: label.as_bytes().to_vec(),
+                charset: Some("utf-8".to_string()),
+            }),
+            http_witness(HttpMethod::Get, None),
+        ),
+    )
+    .expect("valid invocation capture fixture")
+}
+
+fn tamper_control_trace(temp: &TempStore, execution_id: Uuid) {
+    let database_url = temp.config.database_path.to_string_lossy().into_owned();
+    let mut conn = SqliteConnection::establish(&database_url).expect("open trace SQLite fixture");
+    sql_query(
+        "UPDATE control_traces SET trace_json = '{\"kind\":\"loop\",\"iteration_count\":1}' WHERE execution_id = ? AND invocation_ordinal = 1",
+    )
+    .bind::<diesel::sql_types::Text, _>(execution_id.to_string())
+    .execute(&mut conn)
+    .expect("tamper control trace without matching hash");
+}
+
 #[tokio::test]
 async fn event_projection_is_atomic_idempotent_and_catchable() {
     let temp = TempStore::new("atomic");
@@ -189,7 +245,7 @@ async fn effect_archive_is_durable_redacted_and_explicit_when_master_key_is_lost
     let capture = EffectCapture::from_archived(ArchivedEffectCapture {
         execution_id,
         effect_id,
-        node_id,
+        invocation_path: invocation(node_id, 1),
         kind: EffectKind::Http,
         fingerprint: hash("fingerprint"),
         output_hash,
@@ -210,7 +266,7 @@ async fn effect_archive_is_durable_redacted_and_explicit_when_master_key_is_lost
         &storage,
         EffectReplayLookup {
             archived_execution_id: execution_id,
-            node_id,
+            invocation_path: invocation(node_id, 1),
             kind: EffectKind::Http,
         },
     )
@@ -236,7 +292,7 @@ async fn effect_archive_is_durable_redacted_and_explicit_when_master_key_is_lost
             &restarted,
             EffectReplayLookup {
                 archived_execution_id: execution_id,
-                node_id,
+                invocation_path: invocation(node_id, 1),
                 kind: EffectKind::Http,
             },
         )
@@ -244,6 +300,306 @@ async fn effect_archive_is_durable_redacted_and_explicit_when_master_key_is_lost
         .is_err()
     );
     restarted.shutdown().await.expect("writer shutdown");
+}
+
+#[test]
+fn invocation_path_round_trips_nested_segments_without_opening_nested_execution() {
+    let outer = Uuid::new_v4();
+    let inner = Uuid::new_v4();
+    let path = InvocationPath::new(
+        Uuid::new_v4(),
+        vec![
+            LoopInvocationSegment {
+                loop_id: outer,
+                iteration_index: 2,
+            },
+            LoopInvocationSegment {
+                loop_id: inner,
+                iteration_index: 7,
+            },
+        ],
+        9,
+    )
+    .expect("nested identity wire is representable");
+    let wire = serde_json::to_vec(&path).expect("serialize nested invocation path");
+    let decoded: InvocationPath =
+        serde_json::from_slice(&wire).expect("deserialize nested invocation path");
+    assert_eq!(decoded, path);
+    assert_eq!(decoded.loop_iterations()[0].loop_id, outer);
+    assert_eq!(decoded.loop_iterations()[1].loop_id, inner);
+}
+
+#[tokio::test]
+async fn invocation_ledger_replays_same_node_iterations_and_control_trace_exactly() {
+    init_mock_keyring();
+    let temp = TempStore::new("invocation-ledger");
+    let storage = temp.open().await;
+    let now = 1_750_000_110_000;
+    install_source(&storage, now).await;
+    let execution_id = Uuid::new_v4();
+    storage
+        .start_execution(ExecutionStart {
+            execution_id,
+            source_identity: "source:test".to_string(),
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-invocation-ledger".to_string(),
+            started_at_ms: now + 1,
+            correlation_id: None,
+        })
+        .await
+        .expect("execution start");
+
+    let loop_id = Uuid::new_v4();
+    let effect_node_id = Uuid::new_v4();
+    let trace_path = invocation(loop_id, 1);
+    let trace = ControlTraceCapture::new(
+        execution_id,
+        trace_path.clone(),
+        ControlTrace::Loop { iteration_count: 2 },
+    )
+    .expect("valid Loop trace");
+    EffectArchive::persist_control_trace(&storage, trace.clone())
+        .await
+        .expect("persist Loop trace");
+
+    let first_path = loop_invocation(effect_node_id, loop_id, 0, 2);
+    let second_path = loop_invocation(effect_node_id, loop_id, 1, 3);
+    let first = http_capture(
+        execution_id,
+        Uuid::new_v4(),
+        first_path.clone(),
+        "iteration-0",
+    );
+    let second = http_capture(
+        execution_id,
+        Uuid::new_v4(),
+        second_path.clone(),
+        "iteration-1",
+    );
+    EffectArchive::persist_durable(&storage, first.clone())
+        .await
+        .expect("persist first iteration");
+    EffectArchive::persist_durable(&storage, second.clone())
+        .await
+        .expect("persist second iteration");
+    let mut mismatched_current = first.clone();
+    mismatched_current.invocation_path =
+        loop_invocation(effect_node_id, loop_id, 0, second_path.ordinal());
+    let mismatch = EffectArchive::persist_durable(&storage, mismatched_current).await;
+    assert!(matches!(
+        mismatch,
+        Err(error) if error.code == EffectArchiveErrorCode::Integrity
+    ));
+
+    let replayed_trace = EffectArchive::load_control_trace(
+        &storage,
+        ControlReplayLookup {
+            archived_execution_id: execution_id,
+            invocation_path: trace_path.clone(),
+        },
+    )
+    .await
+    .expect("read Loop trace")
+    .expect("Loop trace exists");
+    assert_eq!(replayed_trace.trace, trace.trace);
+    for (path, expected) in [(first_path.clone(), &first), (second_path.clone(), &second)] {
+        let replay = EffectArchive::load_replay(
+            &storage,
+            EffectReplayLookup {
+                archived_execution_id: execution_id,
+                invocation_path: path,
+                kind: EffectKind::Http,
+            },
+        )
+        .await
+        .expect("read exact iteration")
+        .expect("iteration capture exists");
+        assert_eq!(replay.effect_id, expected.effect_id);
+        assert_eq!(replay.output, expected.output);
+    }
+
+    let wrong_order = EffectArchive::load_replay(
+        &storage,
+        EffectReplayLookup {
+            archived_execution_id: execution_id,
+            invocation_path: loop_invocation(effect_node_id, loop_id, 0, 3),
+            kind: EffectKind::Http,
+        },
+    )
+    .await;
+    assert!(matches!(
+        wrong_order,
+        Err(error) if error.code == EffectArchiveErrorCode::Integrity
+    ));
+    let missing = EffectArchive::load_replay(
+        &storage,
+        EffectReplayLookup {
+            archived_execution_id: execution_id,
+            invocation_path: loop_invocation(effect_node_id, loop_id, 2, 4),
+            kind: EffectKind::Http,
+        },
+    )
+    .await
+    .expect("missing exact iteration is represented as None");
+    assert!(missing.is_none());
+    EffectArchive::validate_replay_complete(
+        &storage,
+        ReplayCompletionLookup {
+            archived_execution_id: execution_id,
+            observed_invocation_count: 3,
+        },
+    )
+    .await
+    .expect("complete invocation sequence");
+    let extra = EffectArchive::validate_replay_complete(
+        &storage,
+        ReplayCompletionLookup {
+            archived_execution_id: execution_id,
+            observed_invocation_count: 2,
+        },
+    )
+    .await;
+    assert!(matches!(
+        extra,
+        Err(error) if error.code == EffectArchiveErrorCode::Integrity
+    ));
+    storage.shutdown().await.expect("close before trace tamper");
+    tamper_control_trace(&temp, execution_id);
+    let storage = temp.open().await;
+    let tampered_trace = EffectArchive::load_control_trace(
+        &storage,
+        ControlReplayLookup {
+            archived_execution_id: execution_id,
+            invocation_path: trace_path,
+        },
+    )
+    .await;
+    assert!(matches!(
+        tampered_trace,
+        Err(error) if error.code == EffectArchiveErrorCode::Integrity
+    ));
+    storage
+        .shutdown()
+        .await
+        .expect("close tampered trace storage");
+}
+
+#[tokio::test]
+async fn invocation_ledger_tamper_and_legacy_rows_are_typed_rejections() {
+    init_mock_keyring();
+    let temp = TempStore::new("invocation-ledger-tamper");
+    let storage = temp.open().await;
+    let now = 1_750_000_112_000;
+    install_source(&storage, now).await;
+    let execution_id = Uuid::new_v4();
+    storage
+        .start_execution(ExecutionStart {
+            execution_id,
+            source_identity: "source:test".to_string(),
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-invocation-tamper".to_string(),
+            started_at_ms: now + 1,
+            correlation_id: None,
+        })
+        .await
+        .expect("execution start");
+    let node_id = Uuid::new_v4();
+    let path = invocation(node_id, 1);
+    let capture = http_capture(execution_id, Uuid::new_v4(), path.clone(), "tamper-ledger");
+    EffectArchive::persist_durable(&storage, capture)
+        .await
+        .expect("persist current capture");
+    storage.shutdown().await.expect("close before tamper");
+
+    let database_url = temp.config.database_path.to_string_lossy().into_owned();
+    let mut conn = SqliteConnection::establish(&database_url).expect("open SQLite for tamper");
+    sql_query(
+        "UPDATE execution_invocation_ledger SET payload_id = 'tampered-effect-id' WHERE execution_id = ?",
+    )
+    .bind::<diesel::sql_types::Text, _>(execution_id.to_string())
+    .execute(&mut conn)
+    .expect("tamper invocation ledger payload ownership");
+    drop(conn);
+    let storage = temp.open().await;
+    let tampered = EffectArchive::load_replay(
+        &storage,
+        EffectReplayLookup {
+            archived_execution_id: execution_id,
+            invocation_path: path,
+            kind: EffectKind::Http,
+        },
+    )
+    .await;
+    assert!(matches!(
+        tampered,
+        Err(error) if error.code == EffectArchiveErrorCode::Integrity
+    ));
+    storage.shutdown().await.expect("close tampered storage");
+
+    let legacy_temp = TempStore::new("legacy-invocation-row");
+    let legacy_storage = legacy_temp.open().await;
+    install_source(&legacy_storage, now + 10).await;
+    let legacy_execution_id = Uuid::new_v4();
+    legacy_storage
+        .start_execution(ExecutionStart {
+            execution_id: legacy_execution_id,
+            source_identity: "source:test".to_string(),
+            event_id: Uuid::new_v4(),
+            trace_id: "trace-legacy-invocation".to_string(),
+            started_at_ms: now + 11,
+            correlation_id: None,
+        })
+        .await
+        .expect("legacy execution start");
+    let legacy_node_id = Uuid::new_v4();
+    let legacy_path = invocation(legacy_node_id, 1);
+    EffectArchive::persist_durable(
+        &legacy_storage,
+        http_capture(
+            legacy_execution_id,
+            Uuid::new_v4(),
+            legacy_path.clone(),
+            "legacy-row",
+        ),
+    )
+    .await
+    .expect("persist row before simulating legacy schema");
+    legacy_storage
+        .shutdown()
+        .await
+        .expect("close before legacy mutation");
+    let legacy_database_url = legacy_temp
+        .config
+        .database_path
+        .to_string_lossy()
+        .into_owned();
+    let mut conn =
+        SqliteConnection::establish(&legacy_database_url).expect("open legacy SQLite fixture");
+    sql_query(
+        "UPDATE effect_captures SET invocation_path_json = NULL, invocation_ordinal = NULL WHERE execution_id = ?",
+    )
+    .bind::<diesel::sql_types::Text, _>(legacy_execution_id.to_string())
+    .execute(&mut conn)
+    .expect("simulate pre-invocation archive row");
+    drop(conn);
+    let legacy_storage = legacy_temp.open().await;
+    let legacy = EffectArchive::load_replay(
+        &legacy_storage,
+        EffectReplayLookup {
+            archived_execution_id: legacy_execution_id,
+            invocation_path: legacy_path,
+            kind: EffectKind::Http,
+        },
+    )
+    .await;
+    assert!(matches!(
+        legacy,
+        Err(error) if error.code == EffectArchiveErrorCode::LegacyRuleContractUnsupported
+    ));
+    legacy_storage
+        .shutdown()
+        .await
+        .expect("close legacy storage");
 }
 
 #[tokio::test]
@@ -290,7 +646,7 @@ async fn live_http_request_body_is_encrypted_and_events_only_carry_its_ref() {
     let capture = EffectCapture::from_live(
         execution_id,
         effect_id,
-        node_id,
+        invocation(node_id, 1),
         hash("request-body-secret-fingerprint"),
         captured,
     )
@@ -336,7 +692,7 @@ async fn live_http_request_body_is_encrypted_and_events_only_carry_its_ref() {
         &storage,
         EffectReplayLookup {
             archived_execution_id: execution_id,
-            node_id,
+            invocation_path: invocation(node_id, 1),
             kind: EffectKind::Http,
         },
     )
@@ -412,7 +768,7 @@ async fn request_body_material_mismatch_is_rejected_before_a_durable_receipt() {
     let capture = EffectCapture::from_live(
         execution_id,
         Uuid::new_v4(),
-        Uuid::new_v4(),
+        invocation(Uuid::new_v4(), 1),
         hash("request-body-mismatch-fingerprint"),
         CapturedEffectOutput::new(
             EffectOutput::Http(HttpResponse {
@@ -474,7 +830,7 @@ async fn typed_http_failure_is_archived_without_a_fake_response() {
     let capture = EffectCapture::from_live(
         execution_id,
         effect_id,
-        node_id,
+        invocation(node_id, 1),
         hash("typed-http-failure-fingerprint"),
         CapturedEffectOutput::new(
             EffectOutput::Failure(EffectFailure::Http {
@@ -492,7 +848,7 @@ async fn typed_http_failure_is_archived_without_a_fake_response() {
         &storage,
         EffectReplayLookup {
             archived_execution_id: execution_id,
-            node_id,
+            invocation_path: invocation(node_id, 1),
             kind: EffectKind::Http,
         },
     )
@@ -545,7 +901,7 @@ async fn effect_witness_artifact_tampering_and_loss_block_replay() {
     let capture = EffectCapture::from_archived(ArchivedEffectCapture {
         execution_id,
         effect_id,
-        node_id,
+        invocation_path: invocation(node_id, 1),
         kind: EffectKind::Http,
         fingerprint: hash("witness-integrity-fingerprint"),
         output_hash: effect_output_hash(output.as_ref()).expect("canonical output hash"),
@@ -585,7 +941,7 @@ async fn effect_witness_artifact_tampering_and_loss_block_replay() {
             &storage,
             EffectReplayLookup {
                 archived_execution_id: execution_id,
-                node_id,
+                invocation_path: invocation(node_id, 1),
                 kind: EffectKind::Http,
             },
         )
@@ -608,7 +964,7 @@ async fn effect_witness_artifact_tampering_and_loss_block_replay() {
             &storage,
             EffectReplayLookup {
                 archived_execution_id: execution_id,
-                node_id,
+                invocation_path: invocation(node_id, 1),
                 kind: EffectKind::Http,
             },
         )
@@ -625,7 +981,7 @@ async fn effect_witness_artifact_tampering_and_loss_block_replay() {
             &storage,
             EffectReplayLookup {
                 archived_execution_id: execution_id,
-                node_id,
+                invocation_path: invocation(node_id, 1),
                 kind: EffectKind::Http,
             },
         )

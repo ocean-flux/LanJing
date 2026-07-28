@@ -11,8 +11,9 @@ mod credentials;
 mod witness;
 
 pub use archive::{
-    ArchivedEffectCapture, DurableCaptureReceipt, EffectArchive, EffectArchiveError, EffectCapture,
-    EffectReplayLookup,
+    ArchivedEffectCapture, ControlReplayLookup, ControlTraceCapture, ControlTraceReceipt,
+    DurableCaptureReceipt, EffectArchive, EffectArchiveError, EffectArchiveErrorCode,
+    EffectCapture, EffectReplayLookup, ReplayCompletionLookup, control_trace_hash,
 };
 pub use cancellation::{CancellationHandle, EffectCancellation};
 pub use contracts::{

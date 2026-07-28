@@ -11,6 +11,7 @@ pub mod error;
 pub mod event;
 pub mod extract_rule;
 pub mod hash;
+pub mod invocation;
 pub mod literal;
 pub mod mapper_vocab;
 pub mod plan;
@@ -39,6 +40,7 @@ pub use extract_rule::{
     ExpectedDataType, ExtractRule, ExtractSpec, ExtractType, FieldRules, OutputTarget, RegexClean,
 };
 pub use hash::{canonical_json, definition_hash};
+pub use invocation::{ControlTrace, InvocationPath, InvocationPathError, LoopInvocationSegment};
 pub use literal::{
     CanonicalNumber, TypedLiteral, canonical_json_deep_eq, canonical_number_cmp,
     canonical_number_eq, typed_literal_matches_json,

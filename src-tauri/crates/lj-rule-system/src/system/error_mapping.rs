@@ -41,12 +41,12 @@ pub(super) fn runtime_failure_error(code: RuntimeFailureCode, trace_id: &str) ->
         RuntimeFailureCode::ReplayCaptureMissing => (
             RuleErrorStage::Replay,
             "replay_capture_missing",
-            "历史 execution 缺少 effect capture",
+            "历史 execution 缺少 invocation archive",
         ),
         RuntimeFailureCode::ReplayRecordMismatch => (
             RuleErrorStage::Replay,
             "replay_record_mismatch",
-            "历史 effect capture 不属于固定 replay pin",
+            "历史 invocation archive 不属于固定 replay pin",
         ),
         RuntimeFailureCode::ReplayFingerprintMismatch => (
             RuleErrorStage::Replay,
@@ -67,6 +67,11 @@ pub(super) fn runtime_failure_error(code: RuntimeFailureCode, trace_id: &str) ->
             RuleErrorStage::Execution,
             "runtime_input_type_mismatch",
             "immutable Plan 节点输入类型不匹配",
+        ),
+        RuntimeFailureCode::LegacyRuleContractUnsupported => (
+            RuleErrorStage::Replay,
+            "LEGACY_RULE_CONTRACT_UNSUPPORTED",
+            "历史 invocation archive 不受当前版本支持",
         ),
         RuntimeFailureCode::Internal => (
             RuleErrorStage::Internal,
@@ -147,10 +152,6 @@ pub(super) fn runtime_error(error: &PlanRuntimeError, trace_id: &str) -> RuleErr
         PlanRuntimeError::MissingNode(_) | PlanRuntimeError::InvalidPlan(_) => {
             ("plan_invalid", "immutable Plan 结构无效")
         }
-        PlanRuntimeError::UnsupportedControlFlow => (
-            "plan_control_flow_unsupported",
-            "immutable Plan 包含不支持的控制流",
-        ),
         PlanRuntimeError::CanonicalSerialization => (
             "plan_canonicalization_failed",
             "immutable Plan 无法验证 canonical hash",
@@ -182,6 +183,7 @@ pub(super) fn storage_error(
         | StorageError::CandidateSchemaMismatch => candidate_storage_contract(error),
         StorageError::ContractSchemaUnsupported { .. }
         | StorageError::LegacyRuleContractUnsupported { .. }
+        | StorageError::LegacyInvocationArchiveUnsupported
         | StorageError::GrantInsufficient
         | StorageError::SourceCredentialUnavailable
         | StorageError::DocumentMissing
@@ -252,6 +254,12 @@ fn contract_storage_contract(
             default_stage,
             "LEGACY_RULE_CONTRACT_UNSUPPORTED",
             "历史规则合同不受当前版本支持",
+            false,
+        ),
+        StorageError::LegacyInvocationArchiveUnsupported => (
+            RuleErrorStage::Replay,
+            "LEGACY_RULE_CONTRACT_UNSUPPORTED",
+            "历史 invocation archive 不受当前版本支持",
             false,
         ),
         StorageError::GrantInsufficient => (
@@ -421,13 +429,24 @@ mod tests {
         assert!(legacy.diagnostics.is_empty());
         assert!(!legacy.message.contains("Authorization"));
         assert!(!legacy.message.contains("cookie"));
+
+        let legacy_invocation = storage_error(
+            &StorageError::LegacyInvocationArchiveUnsupported,
+            RuleErrorStage::Replay,
+            "trace-legacy-invocation",
+        );
+        assert_eq!(legacy_invocation.stage, RuleErrorStage::Replay);
+        assert_eq!(legacy_invocation.code, "LEGACY_RULE_CONTRACT_UNSUPPORTED");
     }
 
     #[test]
-    fn runtime_control_unavailable_stays_execution_safe() {
-        let error = runtime_error(&PlanRuntimeError::UnsupportedControlFlow, "trace-control");
-        assert_eq!(error.stage, RuleErrorStage::Execution);
-        assert_eq!(error.code, "plan_control_flow_unsupported");
+    fn runtime_legacy_archive_rejection_stays_replay_safe() {
+        let error = runtime_failure_error(
+            RuntimeFailureCode::LegacyRuleContractUnsupported,
+            "trace-legacy-invocation",
+        );
+        assert_eq!(error.stage, RuleErrorStage::Replay);
+        assert_eq!(error.code, "LEGACY_RULE_CONTRACT_UNSUPPORTED");
         assert!(error.diagnostics.is_empty());
         assert!(!error.message.contains("script"));
         assert!(!error.message.contains("result"));

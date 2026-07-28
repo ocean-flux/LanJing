@@ -8,7 +8,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use lj_rule_model::EffectKind;
+use lj_rule_model::{ControlTrace, EffectKind, InvocationPath, canonical_json};
 use uuid::Uuid;
 
 use super::contracts::EffectOutput;
@@ -28,8 +28,8 @@ pub struct EffectCapture {
     pub execution_id: Uuid,
     /// effect 的执行唯一 ID。
     pub effect_id: Uuid,
-    /// 所属 Plan 节点 ID。
-    pub node_id: Uuid,
+    /// effect 的 execution-local invocation identity。
+    pub invocation_path: InvocationPath,
     /// effect 类型。
     pub kind: EffectKind,
     /// 由 Plan、节点配置与上游输入得出的稳定 fingerprint。
@@ -55,8 +55,8 @@ pub struct ArchivedEffectCapture {
     pub execution_id: Uuid,
     /// 历史 effect ID。
     pub effect_id: Uuid,
-    /// 所属 Plan 节点 ID。
-    pub node_id: Uuid,
+    /// effect 的 execution-local invocation identity。
+    pub invocation_path: InvocationPath,
     /// effect 类型。
     pub kind: EffectKind,
     /// 历史 Plan/input fingerprint。
@@ -84,7 +84,7 @@ impl EffectCapture {
     pub fn from_live(
         execution_id: Uuid,
         effect_id: Uuid,
-        node_id: Uuid,
+        invocation_path: InvocationPath,
         fingerprint: String,
         captured: CapturedEffectOutput,
     ) -> Result<Self, EffectWitnessError> {
@@ -100,7 +100,7 @@ impl EffectCapture {
         Ok(Self {
             execution_id,
             effect_id,
-            node_id,
+            invocation_path,
             kind,
             fingerprint,
             output_hash,
@@ -123,7 +123,7 @@ impl EffectCapture {
         let ArchivedEffectCapture {
             execution_id,
             effect_id,
-            node_id,
+            invocation_path,
             kind,
             fingerprint,
             output_hash,
@@ -134,7 +134,7 @@ impl EffectCapture {
         let capture = Self {
             execution_id,
             effect_id,
-            node_id,
+            invocation_path,
             kind,
             fingerprint,
             output_hash,
@@ -189,6 +189,8 @@ impl EffectCapture {
 pub struct DurableCaptureReceipt {
     /// 已持久化的 effect ID。
     pub effect_id: Uuid,
+    /// 已持久化的 exact invocation identity。
+    pub invocation_path: InvocationPath,
     /// 已持久化的 effect fingerprint。
     pub fingerprint: String,
     /// 已持久化的输出 hash。
@@ -197,29 +199,110 @@ pub struct DurableCaptureReceipt {
     pub witness_hash: String,
 }
 
-/// replay archive 的查找键。
+/// replay archive 的 exact effect 查找键。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EffectReplayLookup {
     /// 被 replay 的历史执行 ID。
     pub archived_execution_id: Uuid,
-    /// 需要重放的 Plan 节点 ID。
-    pub node_id: Uuid,
+    /// 需要重放的 exact invocation identity。
+    pub invocation_path: InvocationPath,
     /// 需要重放的 effect 类型。
     pub kind: EffectKind,
+}
+
+/// 待 durable 保存的 control decision。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ControlTraceCapture {
+    /// 当前 execution ID。
+    pub execution_id: Uuid,
+    /// control invocation identity。
+    pub invocation_path: InvocationPath,
+    /// closed control trace。
+    pub trace: ControlTrace,
+    /// trace canonical hash。
+    pub trace_hash: String,
+}
+
+impl ControlTraceCapture {
+    /// 创建并 hash 一个 current control trace。
+    ///
+    /// # Errors
+    ///
+    /// trace 无法 canonicalize 时返回 [`EffectArchiveErrorCode::Integrity`]。
+    pub fn new(
+        execution_id: Uuid,
+        invocation_path: InvocationPath,
+        trace: ControlTrace,
+    ) -> Result<Self, EffectArchiveError> {
+        let trace_hash = control_trace_hash(&trace)?;
+        Ok(Self {
+            execution_id,
+            invocation_path,
+            trace,
+            trace_hash,
+        })
+    }
+}
+
+/// control trace durable receipt。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ControlTraceReceipt {
+    /// 已持久化的 exact invocation identity。
+    pub invocation_path: InvocationPath,
+    /// 已持久化的 trace hash。
+    pub trace_hash: String,
+}
+
+/// exact control trace replay 查找键。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ControlReplayLookup {
+    /// 被 replay 的历史 execution ID。
+    pub archived_execution_id: Uuid,
+    /// 需要重放的 exact control invocation。
+    pub invocation_path: InvocationPath,
+}
+
+/// replay 结束时的 invocation ledger 完整性检查。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReplayCompletionLookup {
+    /// 被 replay 的历史 execution ID。
+    pub archived_execution_id: Uuid,
+    /// 本次 scheduler 按序消费的 invocation 数量。
+    pub observed_invocation_count: u64,
+}
+
+/// archive seam 的稳定错误类别。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EffectArchiveErrorCode {
+    /// 本地 artifact/key/storage 当前不可读取。
+    Unavailable,
+    /// current archive identity、顺序或 hash 被破坏。
+    Integrity,
+    /// archive 缺少 current invocation identity。
+    LegacyRuleContractUnsupported,
 }
 
 /// archive seam 的安全错误。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EffectArchiveError {
+    /// 稳定错误类别。
+    pub code: EffectArchiveErrorCode,
     /// 可安全展示的简短消息。
     pub message: String,
 }
 
 impl EffectArchiveError {
-    /// 用安全消息创建 archive 错误。
+    /// 创建 unavailable archive 错误。
     #[must_use]
     pub fn new(message: impl Into<String>) -> Self {
+        Self::with_code(EffectArchiveErrorCode::Unavailable, message)
+    }
+
+    /// 用稳定类别创建安全 archive 错误。
+    #[must_use]
+    pub fn with_code(code: EffectArchiveErrorCode, message: impl Into<String>) -> Self {
         Self {
+            code,
             message: message.into(),
         }
     }
@@ -233,36 +316,51 @@ impl fmt::Display for EffectArchiveError {
 
 impl std::error::Error for EffectArchiveError {}
 
-/// effect capture/replay 的真实持久化 seam。
+/// 计算 control trace 的 canonical BLAKE3 hash。
 ///
-/// runtime 不提供 no-op 实现：live 模式必须由调用方注入会在返回前完成 artifact/secret
-/// 写入及 event/WAL 追加的 archive。这样 runtime 才能在确认 durable receipt 前阻止
-/// 依赖节点推进。
+/// # Errors
+///
+/// trace 无法 canonicalize 时返回 [`EffectArchiveErrorCode::Integrity`]。
+pub fn control_trace_hash(trace: &ControlTrace) -> Result<String, EffectArchiveError> {
+    let canonical = canonical_json(trace).map_err(|_| {
+        EffectArchiveError::with_code(
+            EffectArchiveErrorCode::Integrity,
+            "control trace 无法 canonicalize",
+        )
+    })?;
+    Ok(blake3::hash(canonical.as_bytes()).to_hex().to_string())
+}
+
+/// effect capture/control trace 的真实持久化 seam。
 #[async_trait]
 pub trait EffectArchive: Send + Sync {
-    /// 将 live effect 的输出 durable 持久化，并在完成后返回匹配收据。
-    ///
-    /// archive 事务一旦开始不得因 cancellation 被中间抢占；它必须自行完成 commit 或
-    /// rollback。runtime 会在收据后检查取消状态，确保不会用未确认结果推进下游。
-    ///
-    /// # Errors
-    ///
-    /// artifact/secret 写入、event/WAL 追加或事务提交失败时返回 [`EffectArchiveError`]。
+    /// durable 保存 live effect capture。
     async fn persist_durable(
         &self,
         capture: EffectCapture,
     ) -> Result<DurableCaptureReceipt, EffectArchiveError>;
 
-    /// 读取历史 execution 的 effect capture 供 replay 使用。
-    ///
-    /// `None` 表示该历史 execution 没有对应记录；runtime 会将其视为硬失败，而不是
-    /// 回退到 live effect。
-    ///
-    /// # Errors
-    ///
-    /// archive 不可读、artifact 缺失或密钥不可用时返回 [`EffectArchiveError`]。
+    /// exact 读取历史 effect invocation；`None` 是硬失败，不允许 live fallback。
     async fn load_replay(
         &self,
         lookup: EffectReplayLookup,
     ) -> Result<Option<EffectCapture>, EffectArchiveError>;
+
+    /// durable 保存一个 typed/JS control decision，收据返回前不得推进。
+    async fn persist_control_trace(
+        &self,
+        capture: ControlTraceCapture,
+    ) -> Result<ControlTraceReceipt, EffectArchiveError>;
+
+    /// exact 读取并验证历史 control trace。
+    async fn load_control_trace(
+        &self,
+        lookup: ControlReplayLookup,
+    ) -> Result<Option<ControlTraceCapture>, EffectArchiveError>;
+
+    /// 验证 replay 已按 execution-global ordinal 消费全部且仅全部 invocation。
+    async fn validate_replay_complete(
+        &self,
+        lookup: ReplayCompletionLookup,
+    ) -> Result<(), EffectArchiveError>;
 }

@@ -191,6 +191,42 @@ async fn plan_quickjs_effect_archives_typed_evaluation_failure() {
 }
 
 #[tokio::test]
+async fn plan_quickjs_effect_accepts_closed_json_control_inputs() {
+    let mut condition = quickjs_effect_request("input.ok ? 'alpha' : 'beta'");
+    condition.input = EffectInput::Json(Arc::new(serde_json::json!({ "ok": true })));
+    let condition_output = QuickJsEffectAdapter
+        .execute_quickjs(condition, CancellationHandle::new().token())
+        .await
+        .expect("Condition control input 应执行");
+    assert_eq!(
+        condition_output.output,
+        EffectOutput::QuickJs(QuickJsOutput::Raw("alpha".to_string()))
+    );
+    condition_output
+        .validate()
+        .expect("Condition control output 必须绑定 JSON input witness");
+
+    let mut loop_selector = quickjs_effect_request("input.items");
+    loop_selector.input = EffectInput::Json(Arc::new(serde_json::json!({
+        "items": [{ "id": 1 }, { "id": 2 }]
+    })));
+    let loop_output = QuickJsEffectAdapter
+        .execute_quickjs(loop_selector, CancellationHandle::new().token())
+        .await
+        .expect("Loop selector control input 应执行");
+    assert_eq!(
+        loop_output.output,
+        EffectOutput::QuickJs(QuickJsOutput::Json(serde_json::json!([
+            { "id": 1 },
+            { "id": 2 }
+        ])))
+    );
+    loop_output
+        .validate()
+        .expect("Loop selector output 必须绑定 JSON input witness");
+}
+
+#[tokio::test]
 async fn plan_quickjs_effect_cancellation_interrupts_watchdog() {
     let cancellation = CancellationHandle::new();
     let processor = Arc::new(QuickJsEffectAdapter);

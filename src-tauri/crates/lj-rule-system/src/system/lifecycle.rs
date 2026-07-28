@@ -18,12 +18,11 @@ use lj_importer::legado::{LegadoImporter, LegadoSourceJson};
 use lj_importer::maccms::MaccmsImporter;
 use lj_media::{MediaResourceId, SourceProfile};
 use lj_rule_model::{
-    AuthoringDiagnostic, CredentialTargetIdentity, Diagnostic, DiagnosticSeverity,
-    PolicyCapabilities, RulePackage, SourceSpan,
+    AuthoringDiagnostic, CredentialTargetIdentity, Diagnostic, PolicyCapabilities, RulePackage,
+    SourceSpan,
 };
 use lj_runtime::{
     ExecutionMode as RuntimeExecutionMode, HttpExecutionCredentials, PlanExecutionRequest,
-    PlanSupport,
 };
 use lj_storage::{
     CandidateDocumentInput, CandidateDraft, CandidateSummary, ExecutionFinish, ExecutionRecord,
@@ -68,34 +67,6 @@ fn authoring_diagnostic(diagnostic: &AuthoringDiagnostic) -> Diagnostic {
                 .saturating_add(diagnostic.byte_length),
             path: Some(diagnostic.path.clone()),
         }),
-    }
-}
-
-const RUNTIME_CONTROL_UNAVAILABLE_DIAGNOSTIC: &str = "RUNTIME_CONTROL_UNAVAILABLE";
-
-fn candidate_runtime_support(
-    support: PlanSupport,
-    mut diagnostics: Vec<Diagnostic>,
-    trace_id: &str,
-) -> Result<Vec<Diagnostic>, RuleError> {
-    match support {
-        PlanSupport::Linear => Ok(diagnostics),
-        PlanSupport::ControlFlowUnavailable => {
-            diagnostics.push(Diagnostic {
-                code: RUNTIME_CONTROL_UNAVAILABLE_DIAGNOSTIC.to_string(),
-                severity: DiagnosticSeverity::Error,
-                message: "当前 runtime 尚未开放控制流执行".to_string(),
-                span: None,
-            });
-            Err(RuleError::new(
-                RuleErrorStage::Candidate,
-                "runtime_control_unavailable",
-                "当前 runtime 尚未开放控制流执行",
-                trace_id.to_string(),
-                false,
-                diagnostics,
-            ))
-        }
     }
 }
 
@@ -444,11 +415,20 @@ impl RuleSystem {
             .compiler
             .compile(&definition)
             .map_err(|error| compiler_error(&error, trace_id))?;
-        diagnostics = candidate_runtime_support(
-            self.state.runtime.check_plan_support(&plan),
-            diagnostics,
-            trace_id,
-        )?;
+        // Candidate staging remains the single RuleSystem support gate. Compiler success is not
+        // enough on its own: the exact runtime configuration must accept the sealed current Plan
+        // before storage can make it installable.
+        if let Err(error) = self.state.runtime.validate_plan(&plan) {
+            let mapped = runtime_error(&error, trace_id);
+            return Err(RuleError::new(
+                RuleErrorStage::Candidate,
+                mapped.code,
+                mapped.message,
+                trace_id,
+                mapped.retryable,
+                diagnostics,
+            ));
+        }
         let now = now_millis(trace_id)?;
         let expires_at_ms = now
             .checked_add(self.state.candidate_ttl_ms)
@@ -1011,25 +991,245 @@ fn source_profile(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+    use std::fs;
+    use std::sync::Once;
+
+    use futures::StreamExt as _;
+    use keyring_core::{mock, set_default_store};
+    use lj_capability::{IntentExport, IntentInput, StandardIntent};
+    use lj_rule_model::definition::MapperOutputKind;
+    use lj_rule_model::{
+        CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, ConditionConfig, ControlExpression,
+        ControlledMapper, CredentialSlotManifest, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
+        FlowPortRef, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
+        MERGE_OUTPUT_HANDLE, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy,
+        RuleDefinition, SourceIdentity, SystemCapabilities,
+    };
+
     use super::*;
+    use crate::{CapabilityGrant, ExecutionEventKind, RuleSystemConfig};
 
-    #[test]
-    fn control_support_is_blocked_with_stable_authoring_diagnostic_before_staging() {
-        let error = candidate_runtime_support(
-            PlanSupport::ControlFlowUnavailable,
-            Vec::new(),
-            "trace-control-gate",
+    fn init_mock_keyring() {
+        static INIT: Once = Once::new();
+        INIT.call_once(|| {
+            set_default_store(mock::Store::new().expect("keyring-core mock store"));
+        });
+    }
+
+    fn current_control_definition() -> RuleDefinition {
+        let entry = Uuid::from_u128(2_001);
+        let condition = Uuid::from_u128(2_002);
+        let alpha = Uuid::from_u128(2_003);
+        let beta = Uuid::from_u128(2_004);
+        let merge = Uuid::from_u128(2_005);
+        let mapper = Uuid::from_u128(2_006);
+        RuleDefinition::new(
+            SourceIdentity {
+                id: "source:rule-system-control-test".to_string(),
+            },
+            "https://example.invalid",
+            BTreeMap::from([(
+                StandardIntent::Search,
+                IntentExport::new(entry, mapper),
+            )]),
+            FlowGraph {
+                nodes: vec![
+                    FlowNode::new(
+                        entry,
+                        FlowNodeConfig::Js(JsConfig {
+                            code: "JSON.stringify([{ enabled: true, title: '入口', url: 'https://example.invalid/entry' }])".to_string(),
+                            output: JsOutputKind::Json,
+                        }),
+                    ),
+                    FlowNode::new(
+                        condition,
+                        FlowNodeConfig::Condition(ConditionConfig {
+                            branches: vec!["alpha".to_string(), "beta".to_string()],
+                            expression: ControlExpression::Js {
+                                code: "'alpha'".to_string(),
+                            },
+                        }),
+                    ),
+                    FlowNode::new(
+                        alpha,
+                        FlowNodeConfig::Js(JsConfig {
+                            code: "JSON.stringify([{ title: '命中', url: 'https://example.invalid/alpha' }])".to_string(),
+                            output: JsOutputKind::Json,
+                        }),
+                    ),
+                    FlowNode::new(
+                        beta,
+                        FlowNodeConfig::Js(JsConfig {
+                            code: "JSON.stringify([{ title: '未命中', url: 'https://example.invalid/beta' }])".to_string(),
+                            output: JsOutputKind::Json,
+                        }),
+                    ),
+                    FlowNode::new(
+                        merge,
+                        FlowNodeConfig::Merge(MergeConfig {
+                            inputs: vec![
+                                MergeInput {
+                                    input_id: "alpha".to_string(),
+                                    handle: "alpha".to_string(),
+                                    order: 0,
+                                    activation: MergeInputActivation::Required,
+                                },
+                                MergeInput {
+                                    input_id: "beta".to_string(),
+                                    handle: "beta".to_string(),
+                                    order: 1,
+                                    activation: MergeInputActivation::Optional,
+                                },
+                            ],
+                            strategy: MergeStrategy::SingleActive,
+                        }),
+                    ),
+                    FlowNode::new(
+                        mapper,
+                        FlowNodeConfig::Mapper(ControlledMapper {
+                            output: MapperOutputKind::Items,
+                            identity_fields: vec!["url".to_string()],
+                        }),
+                    ),
+                ],
+                edges: vec![
+                    FlowEdge::new(
+                        FlowPortRef::new(entry, LINEAR_OUTPUT_HANDLE),
+                        FlowPortRef::new(condition, lj_rule_model::CONDITION_INPUT_HANDLE),
+                    ),
+                    FlowEdge::new(
+                        FlowPortRef::new(condition, "alpha"),
+                        FlowPortRef::new(alpha, LINEAR_INPUT_HANDLE),
+                    ),
+                    FlowEdge::new(
+                        FlowPortRef::new(condition, "beta"),
+                        FlowPortRef::new(beta, LINEAR_INPUT_HANDLE),
+                    ),
+                    FlowEdge::new(
+                        FlowPortRef::new(alpha, LINEAR_OUTPUT_HANDLE),
+                        FlowPortRef::new(merge, "alpha"),
+                    ),
+                    FlowEdge::new(
+                        FlowPortRef::new(beta, LINEAR_OUTPUT_HANDLE),
+                        FlowPortRef::new(merge, "beta"),
+                    ),
+                    FlowEdge::new(
+                        FlowPortRef::new(merge, MERGE_OUTPUT_HANDLE),
+                        FlowPortRef::new(mapper, LINEAR_INPUT_HANDLE),
+                    ),
+                ],
+            },
+            CapabilityManifest {
+                required: PolicyCapabilities {
+                    network: true,
+                    system: SystemCapabilities::default(),
+                },
+            },
+            vec!["url".to_string()],
         )
-        .expect_err("control Plan must be blocked before candidate staging");
+    }
 
-        assert_eq!(error.stage, RuleErrorStage::Candidate);
-        assert_eq!(error.code, "runtime_control_unavailable");
-        assert_eq!(error.diagnostics.len(), 1);
-        assert_eq!(
-            error.diagnostics[0].code,
-            RUNTIME_CONTROL_UNAVAILABLE_DIAGNOSTIC
+    #[tokio::test]
+    async fn current_control_candidate_passes_gate_and_installs_executes_and_replays() {
+        init_mock_keyring();
+        let root = std::env::temp_dir().join(format!("lj-rule-system-control-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root).expect("create RuleSystem control fixture root");
+        let system = RuleSystem::open(
+            RuleSystemConfig::desktop(root.join("event-store.db"), root.join("artifacts"))
+                .with_keyring_service(format!(
+                    "lanjing.rule-system.control.test.{}",
+                    Uuid::new_v4()
+                )),
+        )
+        .await
+        .expect("open RuleSystem control fixture");
+        let format = SourceDocumentFormat::Maccms10Endpoint;
+        let candidate = system
+            .stage_prepared_candidate(
+                PreparedRuleInput {
+                    definition: current_control_definition(),
+                    runtime_credentials: None,
+                    display_title: Some("控制流测试".to_string()),
+                    display_group: None,
+                    diagnostics: Vec::new(),
+                },
+                CandidateDocumentInput::Transient(TransientSourceDocumentInput {
+                    format,
+                    masked_text: "{}".to_string(),
+                    raw_text: "{}".to_string(),
+                    manifest: CredentialSlotManifest {
+                        schema_version: CREDENTIAL_SCHEMA_VERSION,
+                        target: CredentialTargetIdentity {
+                            format,
+                            document_id: "transient-control-fixture".to_string(),
+                            revision: 1,
+                        },
+                        slots: Vec::new(),
+                    },
+                }),
+                0,
+                "trace-control-candidate",
+            )
+            .await
+            .expect("current control candidate stages");
+        assert!(
+            candidate
+                .diagnostics
+                .iter()
+                .all(|diagnostic| diagnostic.code != "RUNTIME_CONTROL_UNAVAILABLE")
         );
-        assert_eq!(error.diagnostics[0].severity, DiagnosticSeverity::Error);
-        assert!(error.diagnostics[0].span.is_none());
+        let installed = system
+            .install(candidate.id, CapabilityGrant::network_only())
+            .await
+            .expect("current control candidate installs");
+
+        let live = system
+            .execute(ExecuteRequest {
+                source_id: installed.source_id.clone(),
+                intent: StandardIntent::Search,
+                input: IntentInput::Query("control".to_string()),
+                mode: ExecutionMode::Live,
+            })
+            .await
+            .expect("current control live session starts");
+        let live_execution_id = live.id;
+        let live_events = live.into_events().collect::<Vec<_>>().await;
+        assert!(
+            matches!(
+                live_events.last().map(|event| &event.kind),
+                Some(ExecutionEventKind::Completed)
+            ),
+            "current control live events: {live_events:?}"
+        );
+        assert!(
+            live_events
+                .iter()
+                .any(|event| matches!(event.kind, ExecutionEventKind::EffectCaptured { .. }))
+        );
+
+        let replay = system
+            .execute(ExecuteRequest {
+                source_id: installed.source_id,
+                intent: StandardIntent::Search,
+                input: IntentInput::Query("control".to_string()),
+                mode: ExecutionMode::Replay {
+                    execution_id: live_execution_id,
+                },
+            })
+            .await
+            .expect("current control replay session starts");
+        let replay_events = replay.into_events().collect::<Vec<_>>().await;
+        assert!(matches!(
+            replay_events.last().map(|event| &event.kind),
+            Some(ExecutionEventKind::Completed)
+        ));
+        assert!(
+            replay_events
+                .iter()
+                .all(|event| !matches!(event.kind, ExecutionEventKind::EffectCaptured { .. }))
+        );
+        drop(system);
+        let _ = fs::remove_dir_all(root);
     }
 }

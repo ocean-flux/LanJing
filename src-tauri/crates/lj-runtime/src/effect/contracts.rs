@@ -141,6 +141,8 @@ pub enum EffectInput {
     Intent(IntentInput),
     /// 上游 effect 的已确认输出。
     Output(Arc<EffectOutput>),
+    /// runtime 控制流产生的共享 JSON 值。
+    Json(Arc<serde_json::Value>),
 }
 
 impl EffectInput {
@@ -149,7 +151,7 @@ impl EffectInput {
     pub fn intent(&self) -> Option<&IntentInput> {
         match self {
             Self::Intent(input) => Some(input),
-            Self::Output(_) => None,
+            Self::Output(_) | Self::Json(_) => None,
         }
     }
 
@@ -157,8 +159,17 @@ impl EffectInput {
     #[must_use]
     pub fn output(&self) -> Option<&EffectOutput> {
         match self {
-            Self::Intent(_) => None,
             Self::Output(output) => Some(output),
+            Self::Intent(_) | Self::Json(_) => None,
+        }
+    }
+
+    /// 返回控制流共享 JSON 输入。
+    #[must_use]
+    pub fn json(&self) -> Option<&serde_json::Value> {
+        match self {
+            Self::Json(value) => Some(value),
+            Self::Intent(_) | Self::Output(_) => None,
         }
     }
 }

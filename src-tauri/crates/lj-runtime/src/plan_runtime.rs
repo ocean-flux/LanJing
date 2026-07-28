@@ -5,6 +5,7 @@
 //! 把 durable/replay 不变量重新聚合为一个巨型文件。
 
 mod api;
+mod control;
 mod scheduler;
 mod validation;
 

@@ -188,6 +188,7 @@ pub(super) fn effect_input_to_node_data(input: &EffectInput) -> Result<NodeData,
         ) => Ok(NodeData::Raw(value.clone())),
         EffectInput::Intent(IntentInput::Opaque(value)) => Ok(NodeData::Json(value.clone())),
         EffectInput::Intent(IntentInput::None) => Ok(NodeData::Raw(String::new())),
+        EffectInput::Json(value) => Ok(NodeData::Json((**value).clone())),
         EffectInput::Output(output) => match output.as_ref() {
             EffectOutput::QuickJs(lj_runtime::QuickJsOutput::Json(value)) => {
                 Ok(NodeData::Json(value.clone()))

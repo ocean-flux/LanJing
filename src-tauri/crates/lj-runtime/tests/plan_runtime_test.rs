@@ -17,20 +17,24 @@ use lj_capability::{IntentExport, IntentInput, StandardIntent};
 use lj_compiler::Compiler;
 use lj_rule_model::definition::MapperOutputKind;
 use lj_rule_model::{
-    CapabilityManifest, ControlledMapper, ExecutionPlan, ExecutionPlanParts, ExpectedDataType,
-    ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec,
-    JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MergeConfig, MergeInput,
-    MergeInputActivation, MergeStrategy, PlanNode, PlanNodeConfig, PolicyCapabilities,
-    RuleDefinition, SourceIdentity, SystemCapabilities, execution_plan_hash, read_execution_plan,
+    CapabilityManifest, CollectionSelector, ConditionConfig, ConditionPredicate, ControlExpression,
+    ControlTrace, ControlledMapper, ExecutionPlan, ExecutionPlanParts, ExpectedDataType,
+    ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, ForEachConfig,
+    HttpMethod, HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
+    LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE,
+    MAX_LOOP_ITERATIONS, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy, PlanNode,
+    PlanNodeConfig, PolicyCapabilities, RuleDefinition, SourceIdentity, SystemCapabilities,
+    TypedLiteral, execution_plan_hash, read_execution_plan,
 };
 use lj_runtime::{
-    CapturedEffectOutput, DurableCaptureReceipt, EffectArchive, EffectArchiveError,
-    EffectCancellation, EffectCapture, EffectError, EffectErrorCode, EffectFailure, EffectHandlers,
-    EffectOutput, EffectReplayLookup, EffectWitness, ExtractEffectHandler, ExtractEffectRequest,
-    ExtractEffectWitness, ExtractOutput, HttpEffectErrorKind, HttpEffectHandler, HttpEffectRequest,
-    HttpEffectWitness, HttpExecutionCredentials, HttpRequestWitness, HttpResponse,
-    PlanExecutionRequest, PlanRuntime, PlanRuntimeConfig, PlanSupport, QuickJsEffectHandler,
-    QuickJsEffectRequest, QuickJsEffectWitness, QuickJsOutput, RuntimeFailureCode,
+    CapturedEffectOutput, ControlReplayLookup, ControlTraceCapture, ControlTraceReceipt,
+    DurableCaptureReceipt, EffectArchive, EffectArchiveError, EffectCancellation, EffectCapture,
+    EffectError, EffectErrorCode, EffectFailure, EffectHandlers, EffectOutput, EffectReplayLookup,
+    EffectWitness, ExtractEffectHandler, ExtractEffectRequest, ExtractEffectWitness, ExtractOutput,
+    HttpEffectErrorKind, HttpEffectHandler, HttpEffectRequest, HttpEffectWitness,
+    HttpExecutionCredentials, HttpRequestWitness, HttpResponse, PlanExecutionRequest, PlanRuntime,
+    PlanRuntimeConfig, PlanSupport, QuickJsEffectHandler, QuickJsEffectRequest,
+    QuickJsEffectWitness, QuickJsOutput, ReplayCompletionLookup, RuntimeFailureCode,
     effect_input_hash, effect_output_hash, quickjs_script_hash,
 };
 use tokio::sync::Notify;
@@ -45,6 +49,7 @@ enum QuickJsWitnessHashField {
 
 struct DurableFileArchive {
     captures: Mutex<Vec<EffectCapture>>,
+    control_traces: Mutex<Vec<ControlTraceCapture>>,
     path: PathBuf,
     persisted: Arc<Notify>,
 }
@@ -53,6 +58,7 @@ impl DurableFileArchive {
     fn new() -> Self {
         Self {
             captures: Mutex::new(Vec::new()),
+            control_traces: Mutex::new(Vec::new()),
             path: std::env::temp_dir().join(format!("lj-runtime-capture-{}.jsonl", Uuid::new_v4())),
             persisted: Arc::new(Notify::new()),
         }
@@ -60,6 +66,80 @@ impl DurableFileArchive {
 
     fn captures(&self) -> Vec<EffectCapture> {
         self.captures.lock().expect("archive capture mutex").clone()
+    }
+
+    fn control_traces(&self) -> Vec<ControlTraceCapture> {
+        self.control_traces
+            .lock()
+            .expect("archive control trace mutex")
+            .clone()
+    }
+
+    fn from_records(
+        captures: Vec<EffectCapture>,
+        control_traces: Vec<ControlTraceCapture>,
+    ) -> Self {
+        let archive = Self::new();
+        *archive.captures.lock().expect("archive capture mutex") = captures;
+        *archive
+            .control_traces
+            .lock()
+            .expect("archive control trace mutex") = control_traces;
+        archive
+    }
+
+    fn remove_invocation(&self, ordinal: u64) {
+        self.captures
+            .lock()
+            .expect("archive capture mutex")
+            .retain(|capture| capture.invocation_path.ordinal() != ordinal);
+        self.control_traces
+            .lock()
+            .expect("archive control trace mutex")
+            .retain(|capture| capture.invocation_path.ordinal() != ordinal);
+    }
+
+    fn append_extra_effect_invocation(&self) {
+        let next_ordinal = self
+            .captures()
+            .iter()
+            .map(|capture| capture.invocation_path.ordinal())
+            .chain(
+                self.control_traces()
+                    .iter()
+                    .map(|capture| capture.invocation_path.ordinal()),
+            )
+            .max()
+            .expect("archive fixture has invocations")
+            + 1;
+        let mut captures = self.captures.lock().expect("archive capture mutex");
+        let mut extra = captures
+            .last()
+            .cloned()
+            .expect("archive fixture has an effect capture");
+        extra.invocation_path = lj_rule_model::InvocationPath::new(
+            extra.invocation_path.node_id(),
+            extra.invocation_path.loop_iterations().to_vec(),
+            next_ordinal,
+        )
+        .expect("valid extra invocation fixture");
+        captures.push(extra);
+    }
+
+    fn tamper_first_condition_trace(&self) {
+        let mut traces = self
+            .control_traces
+            .lock()
+            .expect("archive control trace mutex");
+        let trace = traces
+            .iter_mut()
+            .find(|capture| matches!(capture.trace, ControlTrace::Condition { .. }))
+            .expect("archive fixture has a Condition trace");
+        trace.trace = ControlTrace::Condition {
+            branch: "beta".to_string(),
+        };
+        trace.trace_hash =
+            lj_runtime::control_trace_hash(&trace.trace).expect("tampered trace remains canonical");
     }
 
     fn corrupt_first_output_hash(&self) {
@@ -149,6 +229,7 @@ impl EffectArchive for DurableFileArchive {
 
         let receipt = DurableCaptureReceipt {
             effect_id: capture.effect_id,
+            invocation_path: capture.invocation_path.clone(),
             fingerprint: capture.fingerprint.clone(),
             output_hash: capture.output_hash.clone(),
             witness_hash: capture.witness_hash.clone(),
@@ -172,15 +253,91 @@ impl EffectArchive for DurableFileArchive {
             .iter()
             .find(|capture| {
                 capture.execution_id == lookup.archived_execution_id
-                    && capture.node_id == lookup.node_id
+                    && capture.invocation_path == lookup.invocation_path
                     && capture.kind == lookup.kind
             })
             .cloned())
+    }
+
+    async fn persist_control_trace(
+        &self,
+        capture: ControlTraceCapture,
+    ) -> Result<ControlTraceReceipt, EffectArchiveError> {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.path)
+            .map_err(|_| EffectArchiveError::new("测试 archive 无法创建 control trace 文件"))?;
+        file.write_all(capture.trace_hash.as_bytes())
+            .and_then(|()| file.write_all(b"\n"))
+            .and_then(|()| file.sync_all())
+            .map_err(|_| EffectArchiveError::new("测试 archive 无法同步 control trace 文件"))?;
+        let receipt = ControlTraceReceipt {
+            invocation_path: capture.invocation_path.clone(),
+            trace_hash: capture.trace_hash.clone(),
+        };
+        self.control_traces
+            .lock()
+            .expect("archive control trace mutex")
+            .push(capture);
+        Ok(receipt)
+    }
+
+    async fn load_control_trace(
+        &self,
+        lookup: ControlReplayLookup,
+    ) -> Result<Option<ControlTraceCapture>, EffectArchiveError> {
+        Ok(self
+            .control_traces
+            .lock()
+            .expect("archive control trace mutex")
+            .iter()
+            .find(|capture| {
+                capture.execution_id == lookup.archived_execution_id
+                    && capture.invocation_path == lookup.invocation_path
+            })
+            .cloned())
+    }
+
+    async fn validate_replay_complete(
+        &self,
+        lookup: ReplayCompletionLookup,
+    ) -> Result<(), EffectArchiveError> {
+        let captures = self.captures.lock().expect("archive capture mutex");
+        let traces = self
+            .control_traces
+            .lock()
+            .expect("archive control trace mutex");
+        let mut ordinals = captures
+            .iter()
+            .filter(|capture| capture.execution_id == lookup.archived_execution_id)
+            .map(|capture| capture.invocation_path.ordinal())
+            .chain(
+                traces
+                    .iter()
+                    .filter(|capture| capture.execution_id == lookup.archived_execution_id)
+                    .map(|capture| capture.invocation_path.ordinal()),
+            )
+            .collect::<Vec<_>>();
+        ordinals.sort_unstable();
+        let complete = u64::try_from(ordinals.len()).ok() == Some(lookup.observed_invocation_count)
+            && ordinals
+                .iter()
+                .copied()
+                .eq(1..=lookup.observed_invocation_count);
+        if complete {
+            Ok(())
+        } else {
+            Err(EffectArchiveError::new(
+                "测试 archive invocation ledger 不完整",
+            ))
+        }
     }
 }
 
 enum HttpBehavior {
     Success,
+    ObserveJson(Arc<Mutex<Vec<serde_json::Value>>>),
     Failure,
     WaitForCancellation(Arc<Notify>),
     WaitForRelease {
@@ -198,6 +355,13 @@ impl FixtureHttp {
     fn success(calls: Arc<AtomicUsize>) -> Self {
         Self {
             behavior: HttpBehavior::Success,
+            calls,
+        }
+    }
+
+    fn observe_json(calls: Arc<AtomicUsize>, observed: Arc<Mutex<Vec<serde_json::Value>>>) -> Self {
+        Self {
+            behavior: HttpBehavior::ObserveJson(observed),
             calls,
         }
     }
@@ -231,19 +395,24 @@ impl FixtureHttp {
 impl HttpEffectHandler for FixtureHttp {
     async fn execute_http(
         &self,
-        _request: HttpEffectRequest,
+        request: HttpEffectRequest,
         cancellation: EffectCancellation,
     ) -> Result<CapturedEffectOutput, EffectError> {
         self.calls.fetch_add(1, Ordering::SeqCst);
         match &self.behavior {
-            HttpBehavior::Success => Ok(fixture_http_capture(HttpResponse {
-                status: 200,
-                headers: HashMap::new(),
-                body: "{\"title\":\"真实 capture 输出\",\"url\":\"https://example.invalid/item\"}"
-                    .as_bytes()
-                    .to_vec(),
-                charset: Some("utf-8".to_string()),
-            })),
+            HttpBehavior::Success => Ok(fixture_http_success_capture()),
+            HttpBehavior::ObserveJson(observed) => {
+                let input = request.input.json().cloned().ok_or_else(|| {
+                    EffectError::new(EffectErrorCode::InputType, "Loop body 需要 JSON binding")
+                })?;
+                observed
+                    .lock()
+                    .map_err(|_| {
+                        EffectError::new(EffectErrorCode::Internal, "Loop binding fixture 锁损坏")
+                    })?
+                    .push(input);
+                Ok(fixture_http_success_capture())
+            }
             HttpBehavior::Failure => Ok(fixture_http_failure_capture()),
             HttpBehavior::WaitForCancellation(started) => {
                 started.notify_one();
@@ -256,18 +425,21 @@ impl HttpEffectHandler for FixtureHttp {
             HttpBehavior::WaitForRelease { started, release } => {
                 started.notify_one();
                 release.notified().await;
-                Ok(fixture_http_capture(HttpResponse {
-                    status: 200,
-                    headers: HashMap::new(),
-                    body:
-                        "{\"title\":\"真实 capture 输出\",\"url\":\"https://example.invalid/item\"}"
-                            .as_bytes()
-                            .to_vec(),
-                    charset: Some("utf-8".to_string()),
-                }))
+                Ok(fixture_http_success_capture())
             }
         }
     }
+}
+
+fn fixture_http_success_capture() -> CapturedEffectOutput {
+    fixture_http_capture(HttpResponse {
+        status: 200,
+        headers: HashMap::new(),
+        body: "{\"title\":\"真实 capture 输出\",\"url\":\"https://example.invalid/item\"}"
+            .as_bytes()
+            .to_vec(),
+        charset: Some("utf-8".to_string()),
+    })
 }
 
 fn fixture_http_capture(response: HttpResponse) -> CapturedEffectOutput {
@@ -313,6 +485,67 @@ impl QuickJsEffectHandler for FixtureQuickJs {
         let output = EffectOutput::QuickJs(QuickJsOutput::Json(serde_json::json!([
             {"title": "真实 typed QuickJS 输出", "url": "https://example.invalid/item"}
         ])));
+        let input_hash = effect_input_hash(&request.input).map_err(|_| {
+            EffectError::new(EffectErrorCode::Internal, "QuickJS 输入 hash 计算失败")
+        })?;
+        let output_hash = effect_output_hash(&output).map_err(|_| {
+            EffectError::new(EffectErrorCode::Internal, "QuickJS 输出 hash 计算失败")
+        })?;
+        Ok(CapturedEffectOutput::new(
+            output,
+            EffectWitness::QuickJs(QuickJsEffectWitness {
+                script_hash: quickjs_script_hash(&request.code),
+                input_hash,
+                output_hash,
+                error: None,
+                host_calls: Vec::new(),
+                duration_ms: 0,
+            }),
+        ))
+    }
+}
+
+struct ControlQuickJs {
+    calls: Arc<AtomicUsize>,
+}
+
+#[async_trait]
+impl QuickJsEffectHandler for ControlQuickJs {
+    async fn execute_quickjs(
+        &self,
+        request: QuickJsEffectRequest,
+        _cancellation: EffectCancellation,
+    ) -> Result<CapturedEffectOutput, EffectError> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        let value = if request.code.contains("control_condition_alpha") {
+            serde_json::Value::String("alpha".to_string())
+        } else if request.code.contains("control_loop_collection") {
+            request.input.json().cloned().ok_or_else(|| {
+                EffectError::new(EffectErrorCode::InputType, "control Loop 需要 JSON 输入")
+            })?
+        } else if request.code.contains("control_alpha_hard_max_plus_one") {
+            serde_json::Value::Array(
+                (0..=MAX_LOOP_ITERATIONS)
+                    .map(|index| serde_json::json!({ "index": index }))
+                    .collect(),
+            )
+        } else if request.code.contains("control_alpha_hard_max") {
+            serde_json::Value::Array(
+                (0..MAX_LOOP_ITERATIONS)
+                    .map(|index| serde_json::json!({ "index": index }))
+                    .collect(),
+            )
+        } else if request.code.contains("control_alpha_empty") {
+            serde_json::json!([])
+        } else if request.code.contains("control_alpha_object") {
+            serde_json::json!({"title": "非数组"})
+        } else {
+            serde_json::json!([
+                {"enabled": true, "title": "第一项", "url": "https://example.invalid/1"},
+                {"enabled": true, "title": "第二项", "url": "https://example.invalid/2"}
+            ])
+        };
+        let output = EffectOutput::QuickJs(QuickJsOutput::Json(value));
         let input_hash = effect_input_hash(&request.input).map_err(|_| {
             EffectError::new(EffectErrorCode::Internal, "QuickJS 输入 hash 计算失败")
         })?;
@@ -379,6 +612,22 @@ fn handlers(http: FixtureHttp, extract_calls: Arc<AtomicUsize>) -> EffectHandler
     EffectHandlers::new(
         Arc::new(http),
         Arc::new(FixtureQuickJs),
+        Arc::new(FixtureExtract {
+            calls: extract_calls,
+        }),
+    )
+}
+
+fn control_handlers(
+    http: FixtureHttp,
+    quickjs_calls: Arc<AtomicUsize>,
+    extract_calls: Arc<AtomicUsize>,
+) -> EffectHandlers {
+    EffectHandlers::new(
+        Arc::new(http),
+        Arc::new(ControlQuickJs {
+            calls: quickjs_calls,
+        }),
         Arc::new(FixtureExtract {
             calls: extract_calls,
         }),
@@ -607,12 +856,202 @@ fn quickjs_definition() -> RuleDefinition {
     )
 }
 
+fn compiled_control_plan(
+    expression: ControlExpression,
+    collection: CollectionSelector,
+    alpha_code: &str,
+    strategy: MergeStrategy,
+    max_iterations: u16,
+) -> ExecutionPlan {
+    Compiler::with_version("runtime-test-compiler@1".to_string())
+        .compile(&control_definition(
+            expression,
+            collection,
+            alpha_code,
+            strategy,
+            max_iterations,
+        ))
+        .expect("structured control Definition must compile")
+}
+
+fn typed_control_expression() -> ControlExpression {
+    ControlExpression::Typed {
+        predicate: ConditionPredicate::Eq {
+            pointer: "/0/enabled".to_string(),
+            value: TypedLiteral::Bool(true),
+        },
+        true_branch: "alpha".to_string(),
+        false_branch: "beta".to_string(),
+    }
+}
+
+fn control_definition(
+    expression: ControlExpression,
+    collection: CollectionSelector,
+    alpha_code: &str,
+    strategy: MergeStrategy,
+    max_iterations: u16,
+) -> RuleDefinition {
+    let entry = Uuid::from_u128(1_001);
+    let condition = Uuid::from_u128(1_002);
+    let alpha = Uuid::from_u128(1_003);
+    let beta = Uuid::from_u128(1_004);
+    let merge = Uuid::from_u128(1_005);
+    let loop_node = Uuid::from_u128(1_006);
+    let http = Uuid::from_u128(1_007);
+    let extract = Uuid::from_u128(1_008);
+    let mapper = Uuid::from_u128(1_009);
+    let nodes = vec![
+        FlowNode::new(
+            entry,
+            FlowNodeConfig::Js(JsConfig {
+                code: "control_entry".to_string(),
+                output: JsOutputKind::Json,
+            }),
+        ),
+        FlowNode::new(
+            condition,
+            FlowNodeConfig::Condition(ConditionConfig {
+                branches: vec!["alpha".to_string(), "beta".to_string()],
+                expression,
+            }),
+        ),
+        FlowNode::new(
+            alpha,
+            FlowNodeConfig::Js(JsConfig {
+                code: alpha_code.to_string(),
+                output: JsOutputKind::Json,
+            }),
+        ),
+        FlowNode::new(
+            beta,
+            FlowNodeConfig::Js(JsConfig {
+                code: "control_beta".to_string(),
+                output: JsOutputKind::Json,
+            }),
+        ),
+        FlowNode::new(
+            merge,
+            FlowNodeConfig::Merge(MergeConfig {
+                inputs: vec![
+                    MergeInput {
+                        input_id: "alpha".to_string(),
+                        handle: "alpha".to_string(),
+                        order: 0,
+                        activation: MergeInputActivation::Required,
+                    },
+                    MergeInput {
+                        input_id: "beta".to_string(),
+                        handle: "beta".to_string(),
+                        order: 1,
+                        activation: MergeInputActivation::Required,
+                    },
+                ],
+                strategy,
+            }),
+        ),
+        FlowNode::new(
+            loop_node,
+            FlowNodeConfig::Loop(ForEachConfig {
+                collection,
+                item_binding: "item".to_string(),
+                index_binding: "index".to_string(),
+                max_iterations,
+            }),
+        ),
+        FlowNode::new(
+            http,
+            FlowNodeConfig::Http(HttpSpec {
+                method: HttpMethod::Get,
+                url: "https://example.invalid/body".to_string(),
+                headers: HashMap::new(),
+                body: None,
+                charset: None,
+                expected_type: ExpectedDataType::Json,
+            }),
+        ),
+        FlowNode::new(
+            extract,
+            FlowNodeConfig::Extract(ExtractSpec {
+                rules: Vec::new(),
+                field_rules: HashMap::new(),
+                expected_type: ExpectedDataType::Json,
+                output_target: lj_rule_model::OutputTarget::default(),
+            }),
+        ),
+        FlowNode::new(
+            mapper,
+            FlowNodeConfig::Mapper(ControlledMapper {
+                output: MapperOutputKind::Items,
+                identity_fields: vec!["url".to_string()],
+            }),
+        ),
+    ];
+    let edges = vec![
+        FlowEdge::new(
+            FlowPortRef::new(entry, LINEAR_OUTPUT_HANDLE),
+            FlowPortRef::new(condition, lj_rule_model::CONDITION_INPUT_HANDLE),
+        ),
+        FlowEdge::new(
+            FlowPortRef::new(condition, "alpha"),
+            FlowPortRef::new(alpha, LINEAR_INPUT_HANDLE),
+        ),
+        FlowEdge::new(
+            FlowPortRef::new(condition, "beta"),
+            FlowPortRef::new(beta, LINEAR_INPUT_HANDLE),
+        ),
+        FlowEdge::new(
+            FlowPortRef::new(alpha, LINEAR_OUTPUT_HANDLE),
+            FlowPortRef::new(merge, "alpha"),
+        ),
+        FlowEdge::new(
+            FlowPortRef::new(beta, LINEAR_OUTPUT_HANDLE),
+            FlowPortRef::new(merge, "beta"),
+        ),
+        FlowEdge::new(
+            FlowPortRef::new(merge, lj_rule_model::MERGE_OUTPUT_HANDLE),
+            FlowPortRef::new(loop_node, LOOP_COLLECTION_HANDLE),
+        ),
+        FlowEdge::new(
+            FlowPortRef::new(loop_node, LOOP_BODY_HANDLE),
+            FlowPortRef::new(http, LINEAR_INPUT_HANDLE),
+        ),
+        linear_edge(http, extract),
+        FlowEdge::new(
+            FlowPortRef::new(extract, LINEAR_OUTPUT_HANDLE),
+            FlowPortRef::new(loop_node, LOOP_YIELD_HANDLE),
+        ),
+        FlowEdge::new(
+            FlowPortRef::new(loop_node, LOOP_DONE_HANDLE),
+            FlowPortRef::new(mapper, LINEAR_INPUT_HANDLE),
+        ),
+    ];
+    RuleDefinition::new(
+        SourceIdentity {
+            id: "control-runtime-test".to_string(),
+        },
+        "https://example.invalid",
+        BTreeMap::from([(StandardIntent::Search, IntentExport::new(entry, mapper))]),
+        FlowGraph { nodes, edges },
+        CapabilityManifest {
+            required: PolicyCapabilities {
+                network: true,
+                system: SystemCapabilities::default(),
+            },
+        },
+        vec!["url".to_string()],
+    )
+}
+
 fn linear_edge(from: Uuid, to: Uuid) -> FlowEdge {
     FlowEdge::new(
         FlowPortRef::new(from, LINEAR_OUTPUT_HANDLE),
         FlowPortRef::new(to, LINEAR_INPUT_HANDLE),
     )
 }
+
+#[path = "plan_runtime_test/control_contract.rs"]
+mod control_contract;
 
 #[path = "plan_runtime_test/replay_contract.rs"]
 mod replay_contract;

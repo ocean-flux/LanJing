@@ -12,8 +12,9 @@ pub mod plan_runtime;
 
 pub use capability::{check_capability, default_capabilities, merge};
 pub use effect::{
-    ArchivedEffectCapture, CancellationHandle, CapturedEffectOutput, DurableCaptureReceipt,
-    EffectArchive, EffectArchiveError, EffectCancellation, EffectCapture,
+    ArchivedEffectCapture, CancellationHandle, CapturedEffectOutput, ControlReplayLookup,
+    ControlTraceCapture, ControlTraceReceipt, DurableCaptureReceipt, EffectArchive,
+    EffectArchiveError, EffectArchiveErrorCode, EffectCancellation, EffectCapture,
     EffectCaptureMaterialSensitivity, EffectError, EffectErrorCode, EffectFailure, EffectHandlers,
     EffectInput, EffectOutput, EffectReplayLookup, EffectWitness, EffectWitnessError,
     ExtractEffectHandler, ExtractEffectRequest, ExtractEffectWitness, ExtractOutput,
@@ -21,8 +22,9 @@ pub use effect::{
     HttpEffectHandler, HttpEffectRequest, HttpEffectWitness, HttpExecutionCredentials,
     HttpRedirectWitness, HttpRequestBodyWitness, HttpRequestHeaderWitness, HttpRequestWitness,
     QuickJsEffectHandler, QuickJsEffectRequest, QuickJsEffectWitness, QuickJsErrorKind,
-    QuickJsHostCall, QuickJsHostCallWitness, QuickJsOutput, SecretHttpHeaders, effect_bytes_hash,
-    effect_input_hash, effect_output_hash, quickjs_script_hash,
+    QuickJsHostCall, QuickJsHostCallWitness, QuickJsOutput, ReplayCompletionLookup,
+    SecretHttpHeaders, control_trace_hash, effect_bytes_hash, effect_input_hash,
+    effect_output_hash, quickjs_script_hash,
 };
 pub use node_data::{HttpResponse, NodeData};
 pub use plan_runtime::{

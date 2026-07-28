@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex, Weak};
 use futures::stream::{self, BoxStream, StreamExt};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::MediaGraphDelta;
-use lj_rule_model::{EffectKind, ExecutionPlan, PolicyCapabilities};
+use lj_rule_model::{EffectKind, ExecutionPlan, InvocationPath, PolicyCapabilities};
 use tokio::sync::{Semaphore, mpsc};
 use tracing::Instrument;
 use uuid::Uuid;
@@ -39,8 +39,8 @@ pub struct PlanRuntimeConfig {
 pub enum PlanSupport {
     /// 当前线性 Plan 可由 scheduler 执行与 replay。
     Linear,
-    /// Plan 含已编译控制流，须等待控制流 runtime 开放。
-    ControlFlowUnavailable,
+    /// 当前 structured control Plan 可由 scheduler 执行与 replay。
+    ControlFlow,
 }
 
 /// Plan 在启动前的验证失败。
@@ -74,10 +74,6 @@ pub enum PlanRuntimeError {
     #[error("Plan 结构无效: {0}")]
     InvalidPlan(&'static str),
 
-    /// Plan 运行时不支持该控制流节点。
-    #[error("Plan 含不支持的控制流节点")]
-    UnsupportedControlFlow,
-
     /// Plan 的 canonical 序列化失败。
     #[error("Plan canonical 序列化失败")]
     CanonicalSerialization,
@@ -96,9 +92,9 @@ pub enum RuntimeFailureCode {
     CaptureWitnessInvalid,
     /// archive 收据与刚执行的 effect 不一致。
     CaptureReceiptMismatch,
-    /// replay archive 缺少记录。
+    /// replay archive 缺少 effect 或 control invocation。
     ReplayCaptureMissing,
-    /// replay archive 中的记录不属于请求的 execution/node/effect。
+    /// replay archive 中的 invocation path、顺序、kind 或归属不匹配。
     ReplayRecordMismatch,
     /// replay fingerprint 不等于当前 Plan/input fingerprint。
     ReplayFingerprintMismatch,
@@ -110,6 +106,8 @@ pub enum RuntimeFailureCode {
     InputTypeMismatch,
     /// Plan runtime 内部不变量被破坏。
     Internal,
+    /// archive 缺少 current invocation identity，属于已删除的历史规则合同。
+    LegacyRuleContractUnsupported,
 }
 
 /// 带 execution/node/effect/trace 归属的安全失败。
@@ -155,6 +153,8 @@ pub enum ExecutionEventKind {
         effect_id: Uuid,
         /// effect 类型。
         kind: EffectKind,
+        /// execution-local exact invocation identity。
+        invocation_path: InvocationPath,
         /// 不泄露 payload 的 effect fingerprint。
         fingerprint: String,
         /// 不泄露 payload 的输出 hash。
@@ -170,6 +170,8 @@ pub enum ExecutionEventKind {
         effect_id: Uuid,
         /// effect 类型。
         kind: EffectKind,
+        /// execution-local exact invocation identity。
+        invocation_path: InvocationPath,
         /// 不泄露 payload 的 effect fingerprint。
         fingerprint: String,
         /// 不泄露 payload 的输出 hash。
@@ -350,8 +352,8 @@ impl PlanRuntime {
     ///
     /// # Errors
     ///
-    /// Plan 含当前未开放的控制流、compiler/hash 不匹配，或结构/节点配置无效时返回
-    /// [`PlanRuntimeError`]。本函数不解析 `RuleDefinition` 或作者 JSON。
+    /// compiler/hash 不匹配，或 current Plan 结构、节点配置、control region 无效时返回
+    /// [`PlanRuntimeError`]。本函数不解析、迁移或执行历史规则 shape。
     pub fn validate_plan(&self, plan: &ExecutionPlan) -> Result<(), PlanRuntimeError> {
         validation::validate_plan(plan, &self.state.config)
     }

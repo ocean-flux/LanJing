@@ -491,6 +491,14 @@ fn finalize_execution_gc(
             .bind::<Text, _>(execution_id.to_string())
             .execute(conn)
             .map_err(database_error)?;
+        sql_query("DELETE FROM control_traces WHERE execution_id = ?")
+            .bind::<Text, _>(execution_id.to_string())
+            .execute(conn)
+            .map_err(database_error)?;
+        sql_query("DELETE FROM execution_invocation_ledger WHERE execution_id = ?")
+            .bind::<Text, _>(execution_id.to_string())
+            .execute(conn)
+            .map_err(database_error)?;
         sql_query("DELETE FROM events WHERE stream_id = ?")
             .bind::<Text, _>(&stream_id)
             .execute(conn)

@@ -63,6 +63,9 @@ pub enum StorageError {
         /// 仍保留但不可解释的合同种类。
         contract: lj_rule_model::SchemaContract,
     },
+    /// effect archive 缺少 current invocation path/ordinal。
+    #[error("历史 effect invocation archive 不受支持")]
+    LegacyInvocationArchiveUnsupported,
     /// 来源文档不存在。
     #[error("来源文档不存在")]
     DocumentMissing,
