@@ -627,8 +627,7 @@ fn js_output_matches_declaration(node: &PlanNode, output: &EffectOutput) -> bool
         | EffectOutput::Failure(EffectFailure::QuickJs { .. }) => true,
         EffectOutput::Http(_)
         | EffectOutput::Extract(_)
-        | EffectOutput::Failure(EffectFailure::Http { .. })
-        | EffectOutput::Failure(EffectFailure::Extract) => false,
+        | EffectOutput::Failure(EffectFailure::Http { .. } | EffectFailure::Extract) => false,
     }
 }
 

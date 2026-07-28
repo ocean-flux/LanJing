@@ -49,13 +49,19 @@ pub enum StorageError {
     /// candidate schema 与当前 writer/consumer 不一致。
     #[error("candidate schema 不兼容")]
     CandidateSchemaMismatch,
-    /// 已安装规则、package 或 Plan 使用 reader 不认识的合同版本。
-    #[error("规则合同 schema 不兼容: {contract:?} schema_version={version}")]
-    ContractSchemaIncompatible {
+    /// 已安装规则、package 或 Plan 声明了当前 reader 不认识的 schema 版本。
+    #[error("规则合同 schema 不受支持: {contract:?} schema_version={version}")]
+    ContractSchemaUnsupported {
         /// 无法读取的合同种类。
         contract: lj_rule_model::SchemaContract,
         /// artifact 声明的未知 wire 版本。
         version: u32,
+    },
+    /// 已安装规则、package 或 Plan 仍是 current schema 下的历史结构签名。
+    #[error("历史规则合同不受支持: {contract:?}")]
+    LegacyRuleContractUnsupported {
+        /// 仍保留但不可解释的合同种类。
+        contract: lj_rule_model::SchemaContract,
     },
     /// 来源文档不存在。
     #[error("来源文档不存在")]

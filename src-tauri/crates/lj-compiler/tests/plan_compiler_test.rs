@@ -1,4 +1,4 @@
-//! Compiler v2 observable contract tests：typed Plan、deterministic hash 与 stable diagnostics。
+//! Compiler current-contract tests：typed Plan、deterministic hash 与 stable diagnostics。
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -6,15 +6,15 @@ use lj_capability::{IntentExport, StandardIntent};
 use lj_compiler::Compiler;
 use lj_rule_model::{
     CONDITION_INPUT_HANDLE, CanonicalNumber, CapabilityManifest, CollectionSelector,
-    ConditionConfig, ConditionPredicate, ContractSchemaVersion, ControlExpression, ControlRegion,
-    ControlledMapper, EXECUTION_PLAN_SCHEMA_VERSION, EffectKind, ExpectedDataType, ExtractSpec,
-    FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, ForEachConfig, HttpMethod,
-    HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE,
-    LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopIterationLimit,
-    MAX_LOOP_ITERATIONS, MERGE_OUTPUT_HANDLE, MapperOutputKind, MergeConfig, MergeInput,
-    MergeInputActivation, MergeStrategy, OutputTarget, PlanNode, PlanNodeConfig,
-    PolicyCapabilities, PortValueKind, PortValueType, RuleDefinition, SourceIdentity, SourceSpan,
-    SystemCapabilities, TypedLiteral,
+    ConditionConfig, ConditionPredicate, ControlExpression, ControlRegion, ControlledMapper,
+    EffectKind, ExpectedDataType, ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
+    FlowPortRef, ForEachConfig, HttpMethod, HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE,
+    LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE,
+    LOOP_YIELD_HANDLE, LoopIterationLimit, MAX_LOOP_ITERATIONS, MERGE_OUTPUT_HANDLE,
+    MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy, OutputTarget,
+    PlanNode, PlanNodeConfig, PolicyCapabilities, PortValueKind, PortValueType,
+    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SourceIdentity, SourceSpan, SystemCapabilities,
+    TypedLiteral,
 };
 use uuid::Uuid;
 
@@ -97,6 +97,24 @@ fn manifest() -> CapabilityManifest {
     }
 }
 
+fn merge_inputs() -> Vec<MergeInput> {
+    // 物理声明顺序故意与 order 相反，证明 order 才承载语义。
+    vec![
+        MergeInput {
+            input_id: "in_beta".to_string(),
+            handle: "beta".to_string(),
+            order: 1,
+            activation: MergeInputActivation::Optional,
+        },
+        MergeInput {
+            input_id: "in_alpha".to_string(),
+            handle: "alpha".to_string(),
+            order: 0,
+            activation: MergeInputActivation::Required,
+        },
+    ]
+}
+
 fn definition(nodes: Vec<FlowNode>, edges: Vec<FlowEdge>, entry: u128) -> RuleDefinition {
     let mut intent_exports = BTreeMap::new();
     intent_exports.insert(
@@ -105,7 +123,7 @@ fn definition(nodes: Vec<FlowNode>, edges: Vec<FlowEdge>, entry: u128) -> RuleDe
     );
     RuleDefinition::new(
         SourceIdentity {
-            id: "source:compiler-v2".to_string(),
+            id: "source:compiler-current".to_string(),
         },
         "https://example.com",
         intent_exports,
@@ -150,16 +168,7 @@ fn seven_node_definition(expression: ControlExpression) -> RuleDefinition {
             FlowNode::new(
                 id(MERGE),
                 FlowNodeConfig::Merge(MergeConfig {
-                    inputs: vec![
-                        MergeInput {
-                            handle: "beta".to_string(),
-                            activation: MergeInputActivation::Optional,
-                        },
-                        MergeInput {
-                            handle: "alpha".to_string(),
-                            activation: MergeInputActivation::Required,
-                        },
-                    ],
+                    inputs: merge_inputs(),
                     strategy: MergeStrategy::CollectArray,
                 }),
             ),
@@ -201,7 +210,7 @@ fn plan_node(plan_nodes: &[PlanNode], node_id: u128) -> &PlanNode {
 fn assert_rejects(definition: &RuleDefinition, expected_code: &str) {
     let error = Compiler::default()
         .compile(definition)
-        .expect_err("invalid v2 Definition must not compile");
+        .expect_err("invalid current Definition must not compile");
     let diagnostic = error
         .diagnostics()
         .iter()
@@ -221,7 +230,7 @@ fn assert_rejects(definition: &RuleDefinition, expected_code: &str) {
 }
 
 fn plan_hash(definition: &RuleDefinition) -> String {
-    Compiler::with_version("test-compiler@2".to_string())
+    Compiler::with_version("test-compiler@1".to_string())
         .compile(definition)
         .expect("valid fixture compiles")
         .plan_hash()
@@ -241,24 +250,23 @@ fn assert_hash_change(
 }
 
 #[test]
-fn base_linear_graph_writes_only_v2_typed_plan() {
-    let plan = Compiler::with_version("test-compiler@2".to_string())
+fn base_linear_graph_writes_only_current_typed_plan() {
+    let plan = Compiler::with_version("test-compiler@1".to_string())
         .compile(&linear_definition())
-        .expect("valid linear v2 Definition compiles");
+        .expect("valid linear current Definition compiles");
 
-    assert_eq!(plan.schema_version(), ContractSchemaVersion::V2);
     assert!(!plan.has_control_flow());
     assert_eq!(plan.nodes().len(), 3);
     assert_eq!(plan.edges().len(), 2);
     assert_eq!(plan.plan_hash().len(), 64);
     assert_eq!(plan.definition_hash().len(), 64);
 
-    let serialized = serde_json::to_string(&plan).expect("v2 Plan serializes");
+    let serialized = serde_json::to_string(&plan).expect("current Plan serializes");
     let json: serde_json::Value = serde_json::from_str(&serialized).expect("Plan JSON parses");
     assert_eq!(
         json.get("schema_version")
             .and_then(serde_json::Value::as_u64),
-        Some(u64::from(EXECUTION_PLAN_SCHEMA_VERSION))
+        Some(u64::from(RULE_CONTRACT_SCHEMA_VERSION))
     );
     for forbidden in ["type_tag", "layout", "viewport", "position"] {
         assert!(
@@ -288,7 +296,7 @@ fn base_linear_graph_writes_only_v2_typed_plan() {
 
 #[test]
 fn good_seven_node_graph_compiles_typed_configs_edges_ports_and_loop_region() {
-    let plan = Compiler::with_version("test-compiler@2".to_string())
+    let plan = Compiler::with_version("test-compiler@1".to_string())
         .compile(&seven_node_definition(typed_condition_expression()))
         .expect("all seven typed node contracts compile");
 
@@ -325,6 +333,7 @@ fn good_seven_node_graph_compiles_typed_configs_edges_ports_and_loop_region() {
     ));
 
     let merge = plan_node(plan.nodes(), MERGE);
+    // ports 按显式 order 排列，而非 handle 字典序/物理声明序。
     assert_eq!(
         merge
             .inputs
@@ -435,8 +444,35 @@ fn typed_and_js_condition_and_typed_and_js_loop_emit_explicit_quickjs_effects() 
 }
 
 #[test]
+fn control_script_source_is_not_echoed_in_diagnostics() {
+    let secret_source = "control-secret-must-not-leak";
+    let mut definition = seven_node_definition(ControlExpression::Js {
+        code: secret_source.to_string(),
+    });
+    definition.capability_manifest_mut().required.network = false;
+
+    let error = Compiler::default()
+        .compile(&definition)
+        .expect_err("missing control capability must be rejected");
+    assert!(
+        error
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.code == "CAPABILITY_MISMATCH")
+    );
+    assert!(error.diagnostics().iter().all(|diagnostic| {
+        !diagnostic.message.contains(secret_source)
+            && diagnostic
+                .span
+                .as_ref()
+                .and_then(|span| span.path.as_deref())
+                .is_none_or(|path| !path.contains(secret_source))
+    }));
+}
+
+#[test]
 fn declaration_reordering_and_source_spans_do_not_change_definition_or_plan_hash() {
-    let compiler = Compiler::with_version("test-compiler@2".to_string());
+    let compiler = Compiler::with_version("test-compiler@1".to_string());
     let base = seven_node_definition(typed_condition_expression());
     let mut reordered = base.clone();
     let flow = reordered.flow_mut();
@@ -475,7 +511,7 @@ fn declaration_reordering_and_source_spans_do_not_change_definition_or_plan_hash
     );
     assert_eq!(base_plan.plan_hash(), relocated_plan.plan_hash());
 
-    let another_compiler = Compiler::with_version("test-compiler@3".to_string())
+    let another_compiler = Compiler::with_version("alternate-test-compiler@1".to_string())
         .compile(&base)
         .expect("same Definition compiles with another compiler identity");
     assert_eq!(
@@ -519,11 +555,25 @@ fn every_node_config_and_semantic_edge_change_changes_plan_hash() {
         };
         config.strategy = MergeStrategy::ConcatArrays;
     });
+    assert_hash_change(&base, "Merge input identity", |definition| {
+        let FlowNodeConfig::Merge(config) = &mut node_mut(definition, MERGE).config else {
+            panic!("fixture Merge exists");
+        };
+        config.inputs[0].input_id.push_str("-changed");
+    });
     assert_hash_change(&base, "Merge activation", |definition| {
         let FlowNodeConfig::Merge(config) = &mut node_mut(definition, MERGE).config else {
             panic!("fixture Merge exists");
         };
         config.inputs[0].activation = MergeInputActivation::Required;
+    });
+    assert_hash_change(&base, "Merge explicit order", |definition| {
+        let FlowNodeConfig::Merge(config) = &mut node_mut(definition, MERGE).config else {
+            panic!("fixture Merge exists");
+        };
+        for input in &mut config.inputs {
+            input.order = 1 - input.order;
+        }
     });
     assert_hash_change(&base, "Condition predicate", |definition| {
         let FlowNodeConfig::Condition(config) = &mut node_mut(definition, CONDITION).config else {
@@ -669,6 +719,34 @@ fn bad_condition_and_merge_contracts_are_locatable() {
     config.inputs[1].handle = config.inputs[0].handle.clone();
     assert_rejects(&duplicate_merge, "MERGE_INPUT_DUPLICATE");
 
+    let mut empty_input_id = seven_node_definition(typed_condition_expression());
+    let FlowNodeConfig::Merge(config) = &mut node_mut(&mut empty_input_id, MERGE).config else {
+        panic!("fixture Merge exists");
+    };
+    config.inputs[0].input_id.clear();
+    assert_rejects(&empty_input_id, "MERGE_INPUT_ID_INVALID");
+
+    let mut duplicate_input_id = seven_node_definition(typed_condition_expression());
+    let FlowNodeConfig::Merge(config) = &mut node_mut(&mut duplicate_input_id, MERGE).config else {
+        panic!("fixture Merge exists");
+    };
+    config.inputs[1].input_id = config.inputs[0].input_id.clone();
+    assert_rejects(&duplicate_input_id, "MERGE_INPUT_ID_DUPLICATE");
+
+    let mut invalid_order = seven_node_definition(typed_condition_expression());
+    let FlowNodeConfig::Merge(config) = &mut node_mut(&mut invalid_order, MERGE).config else {
+        panic!("fixture Merge exists");
+    };
+    config.inputs[0].order = 2;
+    assert_rejects(&invalid_order, "MERGE_ORDER_INVALID");
+
+    let mut duplicate_order = seven_node_definition(typed_condition_expression());
+    let FlowNodeConfig::Merge(config) = &mut node_mut(&mut duplicate_order, MERGE).config else {
+        panic!("fixture Merge exists");
+    };
+    config.inputs[0].order = config.inputs[1].order;
+    assert_rejects(&duplicate_order, "MERGE_ORDER_INVALID");
+
     let mut missing_merge_input = seven_node_definition(typed_condition_expression());
     missing_merge_input
         .flow_mut()
@@ -683,6 +761,13 @@ fn bad_loop_boundaries_cross_region_cycles_and_nesting_are_locatable() {
     assert!(LoopIterationLimit::new(MAX_LOOP_ITERATIONS).is_ok());
     assert!(LoopIterationLimit::new(0).is_err());
     assert!(LoopIterationLimit::new(MAX_LOOP_ITERATIONS + 1).is_err());
+
+    let mut unbounded = seven_node_definition(typed_condition_expression());
+    let FlowNodeConfig::Loop(config) = &mut node_mut(&mut unbounded, LOOP).config else {
+        panic!("fixture Loop exists");
+    };
+    config.max_iterations = 0;
+    assert_rejects(&unbounded, "LOOP_MAX_ITERATIONS_INVALID");
 
     let mut missing_collection = seven_node_definition(typed_condition_expression());
     missing_collection
@@ -795,34 +880,4 @@ fn canonical_number_literal_semantics_are_preserved_in_condition_hash_material()
         false_branch: "beta".to_string(),
     });
     assert_ne!(plan_hash(&base), plan_hash(&different));
-}
-
-#[test]
-fn v1_reader_object_is_rejected_instead_of_becoming_a_v1_writer() {
-    let legacy = serde_json::json!({
-        "contract": "rule_definition",
-        "schema_version": ContractSchemaVersion::V1.as_u32(),
-        "source_identity": { "id": "source:legacy-compiler" },
-        "base_url": "https://legacy.invalid",
-        "intent_exports": {},
-        "flow": { "nodes": [], "edges": [] },
-        "capability_manifest": {
-            "required": {
-                "network": false,
-                "system": { "fs": false, "env": false, "process": false }
-            }
-        },
-        "source_id_rules": ["legacy_id"]
-    });
-    let definition = lj_rule_model::read_rule_definition(
-        &serde_json::to_vec(&legacy).expect("legacy fixture serializes"),
-    )
-    .expect("installed v1 Definition remains readable");
-
-    assert_eq!(definition.schema_version(), ContractSchemaVersion::V1);
-    assert_rejects(&definition, "RULE_DEFINITION_SCHEMA_INCOMPATIBLE");
-    assert!(
-        serde_json::to_value(&definition).is_err(),
-        "compiler must not create an implicit v1 writer shim"
-    );
 }

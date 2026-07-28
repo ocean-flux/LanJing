@@ -11,8 +11,9 @@ use keyring_core::{Entry, mock, set_default_store};
 use lj_media::{MediaResourceId, SourceProfile};
 use lj_rule_model::{
     CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, CredentialSlot, CredentialSlotId,
-    CredentialSlotManifest, CredentialTargetIdentity, ExecutionPlan, FlowGraph, PolicyCapabilities,
-    RuleDefinition, RulePackage, SourceDocumentFormat, SourceIdentity, definition_hash,
+    CredentialSlotManifest, CredentialTargetIdentity, ExecutionPlan, ExecutionPlanParts, FlowGraph,
+    PolicyCapabilities, RuleDefinition, RulePackage, SourceDocumentFormat, SourceIdentity,
+    definition_hash,
 };
 use lj_storage::{
     CandidateDocumentInput, CandidateDraft, CreateSourceDocumentInput, CredentialSlotMaterial,
@@ -203,12 +204,14 @@ fn package_plan(source_identity: &str, version: &str) -> (RulePackage, Execution
     let plan = ExecutionPlan::new(
         "vault-test@1",
         definition_hash(&definition).expect("definition hash"),
-        Vec::new(),
-        Vec::new(),
-        BTreeMap::new(),
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
+        ExecutionPlanParts {
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            intent_entries: BTreeMap::new(),
+            effects: Vec::new(),
+            capability_requirements: Vec::new(),
+            control_regions: Vec::new(),
+        },
     )
     .expect("seal vault test Plan");
     let package = RulePackage::new(definition.source_identity().clone(), version, definition);

@@ -601,7 +601,10 @@ pub(crate) fn backfill_source_version_snapshots(
         };
         let package = match read_rule_package_artifact(&package_bytes) {
             Ok(package) => package,
-            Err(error @ StorageError::ContractSchemaIncompatible { .. }) => return Err(error),
+            Err(
+                error @ (StorageError::ContractSchemaUnsupported { .. }
+                | StorageError::LegacyRuleContractUnsupported { .. }),
+            ) => return Err(error),
             Err(_) => continue,
         };
         if package.source_identity().id != row.source_identity

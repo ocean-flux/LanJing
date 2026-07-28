@@ -534,7 +534,8 @@ fn map_replay_snapshot_error(error: StorageError) -> StorageError {
         StorageError::KeyringLocked
         | StorageError::KeyringUnavailable
         | StorageError::KeyLost
-        | StorageError::ContractSchemaIncompatible { .. } => error,
+        | StorageError::ContractSchemaUnsupported { .. }
+        | StorageError::LegacyRuleContractUnsupported { .. } => error,
         _ => StorageError::ReplayUnavailable(
             "execution pin source snapshot 缺失、损坏或不一致".to_string(),
         ),

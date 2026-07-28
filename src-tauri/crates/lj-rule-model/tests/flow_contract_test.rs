@@ -1,4 +1,4 @@
-//! RuleDefinition/ExecutionPlan v2 的七类节点、typed control、handles 与 serde golden。
+//! RuleDefinition/ExecutionPlan 唯一 current 合同：七类节点、typed control、handles 与 serde golden。
 
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
@@ -6,21 +6,20 @@ use std::collections::{BTreeMap, HashMap};
 use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::{
     CONDITION_INPUT_HANDLE, CanonicalNumber, CapabilityManifest, CollectionSelector,
-    ConditionConfig, ConditionOperator, ConditionPredicate, ContractSchemaVersion,
-    ControlExpression, ControlRegion, ControlledMapper, EffectDeclaration, EffectKind,
-    ExecutionPlan, ExpectedDataType, ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
-    FlowNodeKind, FlowPortRef, ForEachConfig, HttpMethod, HttpSpec, JsConfig, JsOutputKind,
-    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE,
-    LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopControlRegion, LoopIterationLimit,
-    MAX_LOOP_ITERATIONS, MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation,
-    MergeStrategy, OutputTarget, PlanEdge, PlanForEachConfig, PlanNode, PlanNodeConfig, PlanPort,
-    PortValueKind, PortValueType, RuleDefinition, SchemaReadError, SourceIdentity, SourceSpan,
+    ConditionConfig, ConditionOperator, ConditionPredicate, ControlExpression, ControlRegion,
+    ControlledMapper, EffectDeclaration, EffectKind, ExecutionPlan, ExecutionPlanParts,
+    ExpectedDataType, ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowNodeKind,
+    FlowPortRef, ForEachConfig, HttpMethod, HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE,
+    LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE,
+    LOOP_YIELD_HANDLE, LoopControlRegion, LoopIterationLimit, MAX_LOOP_ITERATIONS,
+    MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy, OutputTarget,
+    PlanEdge, PlanForEachConfig, PlanNode, PlanNodeConfig, PlanPort, PortValueKind, PortValueType,
+    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SchemaReadError, SourceIdentity, SourceSpan,
     TypedLiteral, canonical_json, canonical_json_deep_eq, canonical_number_cmp,
     canonical_number_eq, definition_hash, execution_plan_hash, read_execution_plan,
     read_rule_definition, typed_literal_matches_json,
 };
-use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::json;
 use uuid::Uuid;
 
 fn id(value: u128) -> Uuid {
@@ -51,11 +50,15 @@ fn merge_config(strategy: MergeStrategy) -> MergeConfig {
     MergeConfig {
         inputs: vec![
             MergeInput {
+                input_id: "in_zeta".to_string(),
                 handle: "zeta".to_string(),
+                order: 1,
                 activation: MergeInputActivation::Optional,
             },
             MergeInput {
+                input_id: "in_alpha".to_string(),
                 handle: "alpha".to_string(),
+                order: 0,
                 activation: MergeInputActivation::Required,
             },
         ],
@@ -127,7 +130,7 @@ fn control_definition() -> RuleDefinition {
     intent_exports.insert(StandardIntent::Search, IntentExport::new(id(1), id(4)));
     RuleDefinition::new(
         SourceIdentity {
-            id: "source:v2-control".to_string(),
+            id: "source:current-control".to_string(),
         },
         "https://example.invalid",
         intent_exports,
@@ -238,29 +241,31 @@ fn control_plan(definition: &RuleDefinition) -> ExecutionPlan {
         })
         .collect();
     ExecutionPlan::new(
-        "model-v2-test@2",
+        "model-current-test@1",
         definition_hash(definition).unwrap(),
-        nodes,
-        edges,
-        intent_entries,
-        vec![EffectDeclaration {
-            node_id: id(1),
-            kind: EffectKind::Http,
-            required_capabilities: vec!["network".to_string()],
-        }],
-        vec!["network".to_string()],
-        vec![ControlRegion::Loop(LoopControlRegion {
-            loop_node: id(7),
-            body_entry: FlowPortRef::new(id(2), LINEAR_INPUT_HANDLE),
-            yield_source: FlowPortRef::new(id(2), LINEAR_OUTPUT_HANDLE),
-            body_nodes: vec![id(3), id(2)],
-        })],
+        ExecutionPlanParts {
+            nodes,
+            edges,
+            intent_entries,
+            effects: vec![EffectDeclaration {
+                node_id: id(1),
+                kind: EffectKind::Http,
+                required_capabilities: vec!["network".to_string()],
+            }],
+            capability_requirements: vec!["network".to_string()],
+            control_regions: vec![ControlRegion::Loop(LoopControlRegion {
+                loop_node: id(7),
+                body_entry: FlowPortRef::new(id(2), LINEAR_INPUT_HANDLE),
+                yield_source: FlowPortRef::new(id(2), LINEAR_OUTPUT_HANDLE),
+                body_nodes: vec![id(3), id(2)],
+            })],
+        },
     )
     .unwrap()
 }
 
 #[test]
-fn seven_flow_node_configs_roundtrip_as_closed_tagged_v2() {
+fn seven_flow_node_configs_roundtrip_as_closed_tagged_current() {
     let definition = control_definition();
     let kinds = definition
         .flow()
@@ -282,6 +287,7 @@ fn seven_flow_node_configs_roundtrip_as_closed_tagged_v2() {
     );
 
     let wire = serde_json::to_value(&definition).unwrap();
+    assert_eq!(wire["schema_version"], RULE_CONTRACT_SCHEMA_VERSION);
     let wire_kinds = wire["flow"]["nodes"]
         .as_array()
         .unwrap()
@@ -305,6 +311,14 @@ fn seven_flow_node_configs_roundtrip_as_closed_tagged_v2() {
         "json"
     );
     assert!(wire["flow"]["nodes"][0].get("kind").is_none());
+    assert_eq!(
+        wire["flow"]["nodes"][4]["config"]["value"]["inputs"][0]["input_id"],
+        "in_zeta"
+    );
+    assert_eq!(
+        wire["flow"]["nodes"][4]["config"]["value"]["inputs"][0]["order"],
+        1
+    );
     let reread = read_rule_definition(&serde_json::to_vec(&wire).unwrap()).unwrap();
     assert_eq!(reread, definition);
 }
@@ -457,12 +471,12 @@ fn author_loop_limit_preserves_invalid_drafts_while_plan_limit_is_validated() {
 fn plan_uses_closed_ports_typed_edges_configs_and_control_regions() {
     let definition = control_definition();
     let plan = control_plan(&definition);
-    assert_eq!(plan.schema_version(), ContractSchemaVersion::V2);
     assert!(plan.has_control_flow());
     assert_eq!(plan.control_regions().len(), 1);
     assert_eq!(plan.plan_hash(), execution_plan_hash(&plan).unwrap());
 
     let wire = serde_json::to_value(&plan).unwrap();
+    assert_eq!(wire["schema_version"], RULE_CONTRACT_SCHEMA_VERSION);
     assert!(wire["nodes"][0].get("kind").is_none());
     assert!(wire["nodes"][0].get("config").is_some());
     assert!(wire["nodes"][0]["inputs"][0].get("type_tag").is_none());
@@ -471,6 +485,35 @@ fn plan_uses_closed_ports_typed_edges_configs_and_control_regions() {
     assert_eq!(wire["control_regions"][0]["kind"], "loop");
 
     let reread = read_execution_plan(&serde_json::to_vec(&wire).unwrap()).unwrap();
+    assert_eq!(reread, plan);
+}
+
+#[test]
+fn plan_reader_preserves_semantic_object_keys_named_contract() {
+    let mut definition = control_definition();
+    let condition = definition
+        .flow_mut()
+        .nodes
+        .iter_mut()
+        .find(|node| node.id == id(6))
+        .expect("fixture Condition exists");
+    let FlowNodeConfig::Condition(config) = &mut condition.config else {
+        panic!("fixture node is a Condition");
+    };
+    config.expression = ControlExpression::Typed {
+        predicate: ConditionPredicate::Eq {
+            pointer: "/metadata".to_string(),
+            value: TypedLiteral::Object(BTreeMap::from([(
+                "contract".to_string(),
+                TypedLiteral::String("semantic-value".to_string()),
+            )])),
+        },
+        true_branch: "true_branch".to_string(),
+        false_branch: "false_branch".to_string(),
+    };
+
+    let plan = control_plan(&definition);
+    let reread = read_execution_plan(&serde_json::to_vec(&plan).unwrap()).unwrap();
     assert_eq!(reread, plan);
 }
 
@@ -521,16 +564,19 @@ fn definition_and_plan_hashes_ignore_declaration_order_and_layout_span() {
     let reordered_plan = ExecutionPlan::new(
         plan.compiler_version(),
         plan.definition_hash(),
-        nodes,
-        edges,
-        plan.intent_entries().clone(),
-        plan.effects().iter().cloned().rev().collect(),
-        plan.capability_requirements()
-            .iter()
-            .cloned()
-            .rev()
-            .collect(),
-        regions,
+        ExecutionPlanParts {
+            nodes,
+            edges,
+            intent_entries: plan.intent_entries().clone(),
+            effects: plan.effects().iter().cloned().rev().collect(),
+            capability_requirements: plan
+                .capability_requirements()
+                .iter()
+                .cloned()
+                .rev()
+                .collect(),
+            control_regions: regions,
+        },
     )
     .unwrap();
     assert_eq!(reordered_plan.plan_hash(), plan.plan_hash());
@@ -548,6 +594,40 @@ fn every_control_semantic_change_changes_definition_and_plan_hashes() {
         }
     }
     assert_ne!(definition_hash(&merge_changed).unwrap(), base_hash);
+
+    let mut input_id_changed = base.clone();
+    for node in &mut input_id_changed.flow_mut().nodes {
+        if let FlowNodeConfig::Merge(config) = &mut node.config {
+            config.inputs[0].input_id.push_str("-changed");
+        }
+    }
+    assert_ne!(definition_hash(&input_id_changed).unwrap(), base_hash);
+
+    let mut order_changed = base.clone();
+    for node in &mut order_changed.flow_mut().nodes {
+        if let FlowNodeConfig::Merge(config) = &mut node.config {
+            for input in &mut config.inputs {
+                if input.handle == "alpha" {
+                    input.order = 1;
+                } else if input.handle == "zeta" {
+                    input.order = 0;
+                }
+            }
+        }
+    }
+    assert_ne!(definition_hash(&order_changed).unwrap(), base_hash);
+
+    let mut activation_changed = base.clone();
+    for node in &mut activation_changed.flow_mut().nodes {
+        if let FlowNodeConfig::Merge(config) = &mut node.config {
+            for input in &mut config.inputs {
+                if input.handle == "zeta" {
+                    input.activation = MergeInputActivation::Required;
+                }
+            }
+        }
+    }
+    assert_ne!(definition_hash(&activation_changed).unwrap(), base_hash);
 
     let mut condition_changed = base.clone();
     for node in &mut condition_changed.flow_mut().nodes {
@@ -570,6 +650,10 @@ fn every_control_semantic_change_changes_definition_and_plan_hashes() {
     let base_plan = control_plan(&base);
     let changed_plan = control_plan(&merge_changed);
     assert_ne!(base_plan.plan_hash(), changed_plan.plan_hash());
+    assert_ne!(
+        base_plan.plan_hash(),
+        control_plan(&input_id_changed).plan_hash()
+    );
 }
 
 #[test]
@@ -656,96 +740,4 @@ fn canonical_number_and_typed_literal_helpers_use_numeric_json_equality() {
         serde_json::from_value::<TypedLiteral>(serde_json::to_value(&literal).unwrap()).unwrap(),
         literal
     );
-}
-
-#[test]
-fn v1_linear_nodes_convert_to_typed_configs_ports_and_handle_edges() {
-    let js = id(101);
-    let mapper = id(102);
-    let legacy_definition = json!({
-        "contract": "rule_definition",
-        "schema_version": ContractSchemaVersion::V1.as_u32(),
-        "source_identity": { "id": "source:v1-linear" },
-        "base_url": "https://legacy.invalid",
-        "intent_exports": {
-            "Search": { "flow_entry": js, "mapper_output": mapper }
-        },
-        "flow": {
-            "nodes": [
-                { "id": js, "kind": "Js", "js_code": "JSON.stringify(input)" },
-                {
-                    "id": mapper,
-                    "kind": "Mapper",
-                    "mapper": { "output": "items", "identity_fields": ["id"] }
-                }
-            ],
-            "edges": [{ "from": js, "to": mapper }]
-        },
-        "capability_manifest": {
-            "required": {
-                "network": true,
-                "system": { "fs": false, "env": false, "process": false }
-            }
-        },
-        "source_id_rules": ["id"]
-    });
-    let definition =
-        read_rule_definition(&serde_json::to_vec(&legacy_definition).unwrap()).unwrap();
-    assert_eq!(definition.schema_version(), ContractSchemaVersion::V1);
-    assert!(matches!(
-        definition.flow().nodes[0].config,
-        FlowNodeConfig::Js(JsConfig {
-            output: JsOutputKind::Json,
-            ..
-        })
-    ));
-    assert_eq!(definition.flow().edges[0].from.handle, LINEAR_OUTPUT_HANDLE);
-    assert_eq!(definition.flow().edges[0].to.handle, LINEAR_INPUT_HANDLE);
-
-    let mut legacy_plan = json!({
-        "contract": "execution_plan",
-        "schema_version": ContractSchemaVersion::V1.as_u32(),
-        "compiler_version": "legacy@1",
-        "definition_hash": definition_hash(&definition).unwrap(),
-        "plan_hash": "",
-        "nodes": [
-            {
-                "id": js,
-                "kind": "Js",
-                "inputs": [{ "name": "entry", "type_tag": "value" }],
-                "outputs": [{ "name": "json", "type_tag": "json" }],
-                "config": { "code": "JSON.stringify(input)" }
-            },
-            {
-                "id": mapper,
-                "kind": "Mapper",
-                "inputs": [{ "name": "records", "type_tag": "json" }],
-                "outputs": [{ "name": "delta", "type_tag": "delta" }],
-                "config": { "output": "items", "identity_fields": ["id"] }
-            }
-        ],
-        "edges": [[js, mapper]],
-        "intent_entries": {
-            "Search": { "intent": "Search", "entry_node": js, "mapper_output": mapper }
-        },
-        "effects": [{
-            "node_id": js,
-            "kind": "QuickJs",
-            "required_capabilities": ["network"]
-        }],
-        "capability_requirements": ["network"]
-    });
-    let expected_hash = blake3_canonical(&legacy_plan);
-    legacy_plan["plan_hash"] = Value::String(expected_hash.clone());
-    let plan = read_execution_plan(&serde_json::to_vec(&legacy_plan).unwrap()).unwrap();
-    assert_eq!(plan.schema_version(), ContractSchemaVersion::V1);
-    assert_eq!(plan.plan_hash(), expected_hash);
-    assert!(matches!(plan.nodes()[0].config, PlanNodeConfig::Js(_)));
-    assert_eq!(plan.edges()[0].from.handle, "json");
-    assert_eq!(plan.edges()[0].to.handle, "records");
-}
-
-fn blake3_canonical(value: &impl Serialize) -> String {
-    let canonical = canonical_json(value).unwrap();
-    blake3::hash(canonical.as_bytes()).to_hex().to_string()
 }

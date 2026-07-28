@@ -1,16 +1,16 @@
-//! 规则模型基础合同：版本 reader/writer、hash、合同隔离与既有 Event/Policy DTO。
+//! 规则模型基础合同：唯一 current reader/writer、hash、合同隔离与既有 Event/Policy DTO。
 
 use std::collections::{BTreeMap, HashMap};
 
 use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::{
-    CapabilityManifest, ContractSchemaVersion, EventEnvelope, EventType, ExecutionPlan, FlowGraph,
-    RuleDefinition, SchemaContract, SchemaReadError, SourceIdentity, canonical_json,
-    definition_hash, execution_plan_hash, read_execution_plan, read_rule_definition,
-    read_rule_package,
+    CapabilityManifest, EventEnvelope, EventType, ExecutionPlan, ExecutionPlanParts, FlowGraph,
+    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SchemaContract, SchemaReadError, SourceIdentity,
+    canonical_json, definition_hash, execution_plan_hash, read_execution_plan,
+    read_rule_definition, read_rule_package,
 };
 use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::json;
 use uuid::Uuid;
 
 #[derive(Serialize)]
@@ -51,21 +51,18 @@ fn sample_plan(definition_hash: &str) -> ExecutionPlan {
         },
     );
     ExecutionPlan::new(
-        "test-compiler@2",
+        "test-compiler@1",
         definition_hash,
-        vec![],
-        vec![],
-        intent_entries,
-        vec![],
-        vec!["network".to_string()],
-        vec![],
+        ExecutionPlanParts {
+            nodes: vec![],
+            edges: vec![],
+            intent_entries,
+            effects: vec![],
+            capability_requirements: vec!["network".to_string()],
+            control_regions: vec![],
+        },
     )
     .expect("sample Plan must seal")
-}
-
-fn blake3_canonical(value: &impl Serialize) -> String {
-    let canonical = canonical_json(value).expect("hash material must canonicalize");
-    blake3::hash(canonical.as_bytes()).to_hex().to_string()
 }
 
 #[test]
@@ -86,36 +83,40 @@ fn definition_and_plan_not_cross_deserializable() {
 }
 
 #[test]
-fn v2_definition_and_plan_writers_use_owned_constants_and_sealed_hash() {
+fn current_definition_and_plan_writers_use_shared_schema_constant_and_sealed_hash() {
     let definition = sample_definition();
-    assert_eq!(definition.schema_version(), ContractSchemaVersion::V2);
     let definition_wire = serde_json::to_value(&definition).expect("serialize definition");
     assert_eq!(
         definition_wire["schema_version"],
-        lj_rule_model::RULE_DEFINITION_SCHEMA_VERSION
+        RULE_CONTRACT_SCHEMA_VERSION
     );
 
     let definition_hash = definition_hash(&definition).expect("definition hash");
     let plan = sample_plan(&definition_hash);
-    assert_eq!(plan.schema_version(), ContractSchemaVersion::V2);
     assert_eq!(plan.plan_hash(), execution_plan_hash(&plan).unwrap());
     let plan_wire = serde_json::to_value(&plan).expect("serialize Plan");
-    assert_eq!(
-        plan_wire["schema_version"],
-        lj_rule_model::EXECUTION_PLAN_SCHEMA_VERSION
-    );
+    assert_eq!(plan_wire["schema_version"], RULE_CONTRACT_SCHEMA_VERSION);
     assert_eq!(plan_wire["plan_hash"], plan.plan_hash());
 }
 
 #[test]
-fn v1_definition_package_and_plan_are_read_only_with_exact_legacy_hashes() {
+fn legacy_linear_shapes_are_stable_rejected_without_projection() {
     let legacy_definition = json!({
         "contract": "rule_definition",
-        "schema_version": ContractSchemaVersion::V1.as_u32(),
+        "schema_version": 1,
         "source_identity": { "id": "source:legacy" },
         "base_url": "https://legacy.example",
         "intent_exports": {},
-        "flow": { "nodes": [], "edges": [] },
+        "flow": {
+            "nodes": [
+                {
+                    "id": "11111111-1111-1111-1111-111111111111",
+                    "kind": "Js",
+                    "js_code": "return input"
+                }
+            ],
+            "edges": []
+        },
         "capability_manifest": {
             "required": {
                 "network": false,
@@ -124,83 +125,94 @@ fn v1_definition_package_and_plan_are_read_only_with_exact_legacy_hashes() {
         },
         "source_id_rules": ["legacy_id"]
     });
-    let expected_definition_hash = blake3_canonical(&legacy_definition);
-    let definition_bytes = serde_json::to_vec(&legacy_definition).unwrap();
-    let definition = read_rule_definition(&definition_bytes).expect("v1 Definition must read");
-    assert_eq!(definition.schema_version(), ContractSchemaVersion::V1);
-    assert_eq!(
-        definition_hash(&definition).unwrap(),
-        expected_definition_hash
-    );
-    assert!(
-        serde_json::to_value(&definition).is_err(),
-        "v1 Definition reader object must not become an implicit migration writer"
-    );
+    let error = read_rule_definition(&serde_json::to_vec(&legacy_definition).unwrap()).unwrap_err();
+    assert_eq!(error.code(), "LEGACY_RULE_CONTRACT_UNSUPPORTED");
+    assert!(matches!(
+        error,
+        SchemaReadError::LegacyUnsupported {
+            contract: SchemaContract::RuleDefinition
+        }
+    ));
 
     let legacy_package = json!({
         "contract": "rule_package",
-        "schema_version": ContractSchemaVersion::V1.as_u32(),
+        "schema_version": 1,
         "source_identity": { "id": "source:legacy" },
-        "version": expected_definition_hash,
+        "version": "deadbeef",
         "definition": legacy_definition
     });
-    let package = read_rule_package(&serde_json::to_vec(&legacy_package).unwrap())
-        .expect("v1 package must read");
-    assert_eq!(package.schema_version(), ContractSchemaVersion::V1);
-    assert_eq!(
-        package.definition().schema_version(),
-        ContractSchemaVersion::V1
-    );
-    assert!(
-        serde_json::to_value(&package).is_err(),
-        "v1 Package reader object must not become an implicit migration writer"
-    );
+    assert!(matches!(
+        read_rule_package(&serde_json::to_vec(&legacy_package).unwrap()),
+        Err(SchemaReadError::LegacyUnsupported {
+            contract: SchemaContract::RulePackage
+        })
+    ));
 
-    let mut legacy_plan = json!({
+    let legacy_plan = json!({
         "contract": "execution_plan",
-        "schema_version": ContractSchemaVersion::V1.as_u32(),
+        "schema_version": 1,
         "compiler_version": "legacy-compiler@1",
-        "definition_hash": package.version(),
-        "plan_hash": "",
+        "definition_hash": "deadbeef",
+        "plan_hash": "cafebabe",
+        "nodes": [{
+            "id": "11111111-1111-1111-1111-111111111111",
+            "kind": "Js",
+            "inputs": [{ "name": "entry", "type_tag": "value" }],
+            "outputs": [{ "name": "json", "type_tag": "json" }],
+            "config": { "code": "JSON.stringify(input)" }
+        }],
+        "edges": [[
+            "11111111-1111-1111-1111-111111111111",
+            "22222222-2222-2222-2222-222222222222"
+        ]],
+        "intent_entries": {},
+        "effects": [],
+        "capability_requirements": []
+    });
+    assert!(matches!(
+        read_execution_plan(&serde_json::to_vec(&legacy_plan).unwrap()),
+        Err(SchemaReadError::LegacyUnsupported {
+            contract: SchemaContract::ExecutionPlan
+        })
+    ));
+
+    let legacy_empty_plan = json!({
+        "contract": "execution_plan",
+        "schema_version": 1,
+        "compiler_version": "legacy-empty@1",
+        "definition_hash": "deadbeef",
+        "plan_hash": "cafebabe",
         "nodes": [],
         "edges": [],
         "intent_entries": {},
         "effects": [],
         "capability_requirements": []
     });
-    let expected_plan_hash = blake3_canonical(&legacy_plan);
-    legacy_plan["plan_hash"] = Value::String(expected_plan_hash.clone());
-    let plan = read_execution_plan(&serde_json::to_vec(&legacy_plan).unwrap())
-        .expect("v1 installed Plan must read");
-    assert_eq!(plan.schema_version(), ContractSchemaVersion::V1);
-    assert_eq!(plan.plan_hash(), expected_plan_hash);
-    assert_eq!(execution_plan_hash(&plan).unwrap(), expected_plan_hash);
-
-    assert!(
-        serde_json::to_value(&plan).is_err(),
-        "v1 Plan reader object must not become an implicit migration writer"
-    );
+    assert!(matches!(
+        read_execution_plan(&serde_json::to_vec(&legacy_empty_plan).unwrap()),
+        Err(SchemaReadError::LegacyUnsupported {
+            contract: SchemaContract::ExecutionPlan
+        })
+    ));
 }
 
 #[test]
-fn unknown_contract_versions_are_typed_incompatible() {
-    for (contract, reader) in [(
-        SchemaContract::RuleDefinition,
-        read_rule_definition as fn(&[u8]) -> Result<RuleDefinition, SchemaReadError>,
-    )] {
-        let bytes = serde_json::to_vec(&json!({
-            "contract": contract.wire_name(),
-            "schema_version": 99
-        }))
-        .unwrap();
-        assert!(matches!(
-            reader(&bytes),
-            Err(SchemaReadError::IncompatibleVersion {
-                contract: actual,
-                version: 99
-            }) if actual == contract
-        ));
-    }
+fn unknown_contract_versions_are_schema_unsupported() {
+    let contract = SchemaContract::RuleDefinition;
+    let bytes = serde_json::to_vec(&json!({
+        "contract": contract.wire_name(),
+        "schema_version": 99
+    }))
+    .unwrap();
+    let error = read_rule_definition(&bytes).unwrap_err();
+    assert_eq!(error.code(), "RULE_CONTRACT_SCHEMA_UNSUPPORTED");
+    assert!(matches!(
+        error,
+        SchemaReadError::SchemaUnsupported {
+            contract: actual,
+            version: 99
+        } if actual == contract
+    ));
 
     let package = serde_json::to_vec(&json!({
         "contract": "rule_package",
@@ -209,7 +221,7 @@ fn unknown_contract_versions_are_typed_incompatible() {
     .unwrap();
     assert!(matches!(
         read_rule_package(&package),
-        Err(SchemaReadError::IncompatibleVersion {
+        Err(SchemaReadError::SchemaUnsupported {
             contract: SchemaContract::RulePackage,
             version: 99
         })
@@ -222,11 +234,83 @@ fn unknown_contract_versions_are_typed_incompatible() {
     .unwrap();
     assert!(matches!(
         read_execution_plan(&plan),
-        Err(SchemaReadError::IncompatibleVersion {
+        Err(SchemaReadError::SchemaUnsupported {
             contract: SchemaContract::ExecutionPlan,
             version: 99
         })
     ));
+}
+
+#[test]
+fn package_reader_preserves_nested_definition_error_categories() {
+    let definition = sample_definition();
+    let package = lj_rule_model::RulePackage::new(
+        definition.source_identity().clone(),
+        definition_hash(&definition).unwrap(),
+        definition,
+    );
+
+    let mut unknown_schema = serde_json::to_value(&package).unwrap();
+    unknown_schema["definition"]["schema_version"] = json!(99);
+    unknown_schema["definition"]["flow"]["nodes"] = json!([{
+        "id": "11111111-1111-1111-1111-111111111111",
+        "kind": "Js",
+        "js_code": "return input"
+    }]);
+    let error = read_rule_package(&serde_json::to_vec(&unknown_schema).unwrap()).unwrap_err();
+    assert_eq!(error.code(), "RULE_CONTRACT_SCHEMA_UNSUPPORTED");
+    assert!(matches!(
+        error,
+        SchemaReadError::SchemaUnsupported {
+            contract: SchemaContract::RuleDefinition,
+            version: 99
+        }
+    ));
+
+    let mut non_object_definition = serde_json::to_value(&package).unwrap();
+    non_object_definition["definition"] = json!("not-an-object");
+    assert!(matches!(
+        read_rule_package(&serde_json::to_vec(&non_object_definition).unwrap()),
+        Err(SchemaReadError::InvalidData {
+            contract: SchemaContract::RuleDefinition,
+            ..
+        })
+    ));
+
+    let mut invalid_definition = serde_json::to_value(&package).unwrap();
+    invalid_definition["definition"]["unknown"] = json!(true);
+    assert!(matches!(
+        read_rule_package(&serde_json::to_vec(&invalid_definition).unwrap()),
+        Err(SchemaReadError::InvalidData {
+            contract: SchemaContract::RuleDefinition,
+            ..
+        })
+    ));
+}
+
+#[test]
+fn schema_one_with_current_empty_flow_still_reads() {
+    let current = sample_definition();
+    let bytes = serde_json::to_vec(&current).unwrap();
+    let reread = read_rule_definition(&bytes).expect("current empty flow must read");
+    assert_eq!(reread, current);
+
+    let package = lj_rule_model::RulePackage::new(
+        current.source_identity().clone(),
+        definition_hash(&current).unwrap(),
+        current.clone(),
+    );
+    let package_wire = serde_json::to_value(&package).unwrap();
+    assert_eq!(package_wire["schema_version"], RULE_CONTRACT_SCHEMA_VERSION);
+    assert_eq!(
+        package_wire["definition"]["schema_version"],
+        RULE_CONTRACT_SCHEMA_VERSION
+    );
+    let package_bytes = serde_json::to_vec(&package_wire).unwrap();
+    assert_eq!(
+        read_rule_package(&package_bytes).unwrap().definition(),
+        &current
+    );
 }
 
 #[test]

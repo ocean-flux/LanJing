@@ -19,8 +19,8 @@ use lj_media::{
 use lj_rule_model::{
     CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, CredentialSlotManifest,
     CredentialTargetIdentity, Diagnostic, DiagnosticSeverity, EffectKind, EventType, ExecutionPlan,
-    FlowGraph, HttpMethod, PolicyCapabilities, RuleDefinition, RulePackage, SourceDocumentFormat,
-    SourceIdentity, definition_hash, read_execution_plan,
+    ExecutionPlanParts, FlowGraph, HttpMethod, PolicyCapabilities, RuleDefinition, RulePackage,
+    SourceDocumentFormat, SourceIdentity, SystemCapabilities, definition_hash, read_execution_plan,
 };
 use lj_runtime::{
     ArchivedEffectCapture, CapturedEffectOutput, EffectArchive, EffectCapture, EffectFailure,
@@ -183,7 +183,7 @@ fn package_plan(
         CapabilityManifest {
             required: PolicyCapabilities {
                 network,
-                system: Default::default(),
+                system: SystemCapabilities::default(),
             },
         },
         vec!["stable-id".to_string()],
@@ -191,12 +191,14 @@ fn package_plan(
     let plan = ExecutionPlan::new(
         "storage-test@1",
         definition_hash(&definition).expect("canonical Definition hash"),
-        Vec::new(),
-        Vec::new(),
-        BTreeMap::new(),
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
+        ExecutionPlanParts {
+            nodes: Vec::new(),
+            edges: Vec::new(),
+            intent_entries: BTreeMap::new(),
+            effects: Vec::new(),
+            capability_requirements: Vec::new(),
+            control_regions: Vec::new(),
+        },
     )
     .expect("seal storage test Plan");
     let package = RulePackage::new(definition.source_identity().clone(), version, definition);

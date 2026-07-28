@@ -12,8 +12,6 @@ use diesel::sql_query;
 use diesel::sql_types::{BigInt, Integer, Nullable, Text};
 use diesel::sqlite::SqliteConnection;
 use lj_media::SourceProfile;
-#[cfg(test)]
-use lj_rule_model::ContractSchemaVersion;
 use lj_rule_model::{
     ArtifactRef, CREDENTIAL_SCHEMA_VERSION, EventType, ExecutionPlan, PolicyCapabilities,
     RulePackage, SchemaReadError, SecretRef, SourceDocumentFormat, definition_hash,
@@ -1323,30 +1321,40 @@ pub(crate) fn grant_covers(grant: &PolicyCapabilities, required: &PolicyCapabili
         && (!required.system.process || grant.system.process)
 }
 
-/// 读取 versioned RulePackage artifact，并保留未知版本与损坏 JSON 的区别。
+/// 读取唯一 current `RulePackage` artifact，并保留 schema/legacy 与损坏 JSON 的区别。
 ///
 /// # Errors
 ///
-/// 未知 schema 返回 [`StorageError::ContractSchemaIncompatible`]；其余 JSON/shape 错误返回
-/// [`StorageError::Serialization`]。
+/// 未知 schema 返回 [`StorageError::ContractSchemaUnsupported`]；历史结构签名返回
+/// [`StorageError::LegacyRuleContractUnsupported`]；其余 JSON/shape 错误返回
+/// [`StorageError::Serialization`]。不复制 model 的历史签名判断。
 pub(crate) fn read_rule_package_artifact(bytes: &[u8]) -> Result<RulePackage, StorageError> {
-    read_rule_package(bytes).map_err(schema_read_error)
+    read_rule_package(bytes).map_err(|error| schema_read_error(&error))
 }
 
-/// 读取 versioned ExecutionPlan artifact，并保留 v1 legacy hash material。
+/// 读取唯一 current `ExecutionPlan` artifact。
 ///
 /// # Errors
 ///
-/// 未知 schema 返回 [`StorageError::ContractSchemaIncompatible`]；其余 JSON/shape 错误返回
-/// [`StorageError::Serialization`]。
+/// 未知 schema 返回 [`StorageError::ContractSchemaUnsupported`]；历史结构签名返回
+/// [`StorageError::LegacyRuleContractUnsupported`]；其余 JSON/shape 错误返回
+/// [`StorageError::Serialization`]。不复制 model 的历史签名判断，也不迁移旧 Plan。
 pub(crate) fn read_execution_plan_artifact(bytes: &[u8]) -> Result<ExecutionPlan, StorageError> {
-    read_execution_plan(bytes).map_err(schema_read_error)
+    read_execution_plan(bytes).map_err(|error| schema_read_error(&error))
 }
 
-fn schema_read_error(error: SchemaReadError) -> StorageError {
+fn schema_read_error(error: &SchemaReadError) -> StorageError {
     match error {
-        SchemaReadError::IncompatibleVersion { contract, version } => {
-            StorageError::ContractSchemaIncompatible { contract, version }
+        SchemaReadError::SchemaUnsupported { contract, version } => {
+            StorageError::ContractSchemaUnsupported {
+                contract: *contract,
+                version: *version,
+            }
+        }
+        SchemaReadError::LegacyUnsupported { contract } => {
+            StorageError::LegacyRuleContractUnsupported {
+                contract: *contract,
+            }
         }
         SchemaReadError::Malformed(_)
         | SchemaReadError::ContractMismatch { .. }
@@ -1356,7 +1364,8 @@ fn schema_read_error(error: SchemaReadError) -> StorageError {
 
 fn candidate_contract_artifact_error(error: StorageError) -> StorageError {
     match error {
-        StorageError::ContractSchemaIncompatible { .. } => error,
+        StorageError::ContractSchemaUnsupported { .. }
+        | StorageError::LegacyRuleContractUnsupported { .. } => error,
         _ => StorageError::CandidateTampered,
     }
 }
@@ -1568,39 +1577,80 @@ struct InstalledSourceVersionRow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lj_rule_model::RULE_CONTRACT_SCHEMA_VERSION;
 
     #[test]
-    fn installed_v1_plan_reader_preserves_legacy_hash_material() {
-        let mut value = serde_json::json!({
+    fn legacy_plan_artifact_is_typed_legacy_unsupported() {
+        // schema=1 历史线性 Plan：顶层 kind + 未 tagged config，边为 [from,to] 二元组。
+        let legacy_plan = serde_json::json!({
             "contract": "execution_plan",
-            "schema_version": ContractSchemaVersion::V1.as_u32(),
+            "schema_version": RULE_CONTRACT_SCHEMA_VERSION,
             "compiler_version": "legacy-storage-test@1",
             "definition_hash": "legacy-definition-hash",
-            "plan_hash": "",
-            "nodes": [],
-            "edges": [],
+            "plan_hash": "legacy-plan-hash",
+            "nodes": [{
+                "id": "00000000-0000-0000-0000-000000000001",
+                "kind": "js",
+                "config": {
+                    "code": "1",
+                    "output": "json"
+                }
+            }],
+            "edges": [[
+                "00000000-0000-0000-0000-000000000001",
+                "00000000-0000-0000-0000-000000000002"
+            ]],
             "intent_entries": {},
             "effects": [],
             "capability_requirements": []
         });
-        let unsealed = read_execution_plan_artifact(
-            &serde_json::to_vec(&value).expect("serialize unsealed v1 Plan"),
+        let error = read_execution_plan_artifact(
+            &serde_json::to_vec(&legacy_plan).expect("serialize legacy Plan fixture"),
         )
-        .expect("read unsealed v1 Plan");
-        value["plan_hash"] = serde_json::Value::String(
-            canonical_plan_hash(&unsealed).expect("hash exact v1 Plan material"),
-        );
-        let plan = read_execution_plan_artifact(
-            &serde_json::to_vec(&value).expect("serialize sealed v1 Plan"),
-        )
-        .expect("read sealed v1 Plan");
+        .expect_err("legacy Plan must remain unsupported");
 
-        assert_eq!(plan.schema_version(), ContractSchemaVersion::V1);
-        assert_eq!(plan.plan_hash(), canonical_plan_hash(&plan).unwrap());
+        assert!(matches!(
+            error,
+            StorageError::LegacyRuleContractUnsupported {
+                contract: lj_rule_model::SchemaContract::ExecutionPlan,
+            }
+        ));
     }
 
     #[test]
-    fn unknown_package_and_plan_versions_are_typed_incompatible() {
+    fn legacy_package_artifact_is_typed_legacy_unsupported() {
+        let legacy_package = serde_json::json!({
+            "contract": "rule_package",
+            "schema_version": RULE_CONTRACT_SCHEMA_VERSION,
+            "source_identity": { "id": "source:legacy-package" },
+            "version": "legacy-definition-hash",
+            "definition": {
+                "contract": "rule_definition",
+                "schema_version": RULE_CONTRACT_SCHEMA_VERSION,
+                "flow": {
+                    "nodes": [{
+                        "id": "00000000-0000-0000-0000-000000000001",
+                        "kind": "Js",
+                        "js_code": "return input"
+                    }],
+                    "edges": []
+                }
+            }
+        });
+        let error = read_rule_package_artifact(
+            &serde_json::to_vec(&legacy_package).expect("serialize legacy package fixture"),
+        )
+        .expect_err("legacy package must remain unsupported");
+        assert!(matches!(
+            error,
+            StorageError::LegacyRuleContractUnsupported {
+                contract: lj_rule_model::SchemaContract::RulePackage,
+            }
+        ));
+    }
+
+    #[test]
+    fn unknown_package_and_plan_versions_are_typed_schema_unsupported() {
         let unknown_version = u32::MAX;
         let package_error = read_rule_package_artifact(
             &serde_json::to_vec(&serde_json::json!({
@@ -1612,8 +1662,38 @@ mod tests {
         .expect_err("unknown package version must fail");
         assert!(matches!(
             package_error,
-            StorageError::ContractSchemaIncompatible {
+            StorageError::ContractSchemaUnsupported {
                 contract: lj_rule_model::SchemaContract::RulePackage,
+                version,
+            } if version == unknown_version
+        ));
+
+        let nested_package_error = read_rule_package_artifact(
+            &serde_json::to_vec(&serde_json::json!({
+                "contract": "rule_package",
+                "schema_version": RULE_CONTRACT_SCHEMA_VERSION,
+                "source_identity": { "id": "source:nested-unknown" },
+                "version": "unknown-definition",
+                "definition": {
+                    "contract": "rule_definition",
+                    "schema_version": unknown_version,
+                    "flow": {
+                        "nodes": [{
+                            "id": "00000000-0000-0000-0000-000000000001",
+                            "kind": "Js",
+                            "js_code": "return input"
+                        }],
+                        "edges": []
+                    }
+                }
+            }))
+            .expect("serialize nested unknown package"),
+        )
+        .expect_err("unknown nested Definition version must fail");
+        assert!(matches!(
+            nested_package_error,
+            StorageError::ContractSchemaUnsupported {
+                contract: lj_rule_model::SchemaContract::RuleDefinition,
                 version,
             } if version == unknown_version
         ));
@@ -1628,7 +1708,7 @@ mod tests {
         .expect_err("unknown Plan version must fail");
         assert!(matches!(
             plan_error,
-            StorageError::ContractSchemaIncompatible {
+            StorageError::ContractSchemaUnsupported {
                 contract: lj_rule_model::SchemaContract::ExecutionPlan,
                 version,
             } if version == unknown_version

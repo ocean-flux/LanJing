@@ -17,11 +17,11 @@ use lj_capability::{IntentExport, IntentInput, StandardIntent};
 use lj_compiler::Compiler;
 use lj_rule_model::definition::MapperOutputKind;
 use lj_rule_model::{
-    CapabilityManifest, ControlledMapper, ExecutionPlan, ExpectedDataType, ExtractSpec, FlowEdge,
-    FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec, JsConfig, JsOutputKind,
-    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MergeConfig, MergeInput, MergeInputActivation,
-    MergeStrategy, PlanNode, PlanNodeConfig, PolicyCapabilities, RuleDefinition, SourceIdentity,
-    SystemCapabilities, execution_plan_hash, read_execution_plan,
+    CapabilityManifest, ControlledMapper, ExecutionPlan, ExecutionPlanParts, ExpectedDataType,
+    ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec,
+    JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MergeConfig, MergeInput,
+    MergeInputActivation, MergeStrategy, PlanNode, PlanNodeConfig, PolicyCapabilities,
+    RuleDefinition, SourceIdentity, SystemCapabilities, execution_plan_hash, read_execution_plan,
 };
 use lj_runtime::{
     CapturedEffectOutput, DurableCaptureReceipt, EffectArchive, EffectArchiveError,
@@ -412,23 +412,27 @@ fn control_plan() -> ExecutionPlan {
     ExecutionPlan::new(
         "runtime-test-compiler@1",
         "control-definition-hash",
-        vec![PlanNode {
-            id: Uuid::from_u128(900),
-            inputs: Vec::new(),
-            outputs: Vec::new(),
-            config: PlanNodeConfig::Merge(MergeConfig {
-                inputs: vec![MergeInput {
-                    handle: "primary".to_string(),
-                    activation: MergeInputActivation::Required,
-                }],
-                strategy: MergeStrategy::SingleActive,
-            }),
-        }],
-        Vec::new(),
-        BTreeMap::new(),
-        Vec::new(),
-        Vec::new(),
-        Vec::new(),
+        ExecutionPlanParts {
+            nodes: vec![PlanNode {
+                id: Uuid::from_u128(900),
+                inputs: Vec::new(),
+                outputs: Vec::new(),
+                config: PlanNodeConfig::Merge(MergeConfig {
+                    inputs: vec![MergeInput {
+                        input_id: "primary".to_string(),
+                        handle: "primary".to_string(),
+                        order: 0,
+                        activation: MergeInputActivation::Required,
+                    }],
+                    strategy: MergeStrategy::SingleActive,
+                }),
+            }],
+            edges: Vec::new(),
+            intent_entries: BTreeMap::new(),
+            effects: Vec::new(),
+            capability_requirements: Vec::new(),
+            control_regions: Vec::new(),
+        },
     )
     .expect("control Plan must seal")
 }

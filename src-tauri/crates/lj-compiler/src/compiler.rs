@@ -2,7 +2,8 @@
 //!
 //! 本模块只处理作者合同的规范化、校验与编译；不解析来源专有格式，也不依赖
 //! runtime、存储或 Tauri。closed value-kind compatibility matrix 与节点生成端口只在这里
-//! 定义，Plan writer 始终由 `lj-rule-model` 的 v2 构造器封存。
+//! 定义；Plan writer 始终由 `lj-rule-model` 的 current 构造器封存。本 crate 不维护第二套
+//! 节点/端口清单，也不做 schema 版本分支或 legacy 读取。
 
 use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 
@@ -14,12 +15,11 @@ use lj_rule_model::definition::{
 use lj_rule_model::literal::TypedLiteral;
 use lj_rule_model::plan::{
     CONDITION_INPUT_HANDLE, ControlRegion, EffectDeclaration, EffectKind, ExecutionPlan,
-    IntentEntry, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE,
+    ExecutionPlanParts, IntentEntry, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE,
     LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopControlRegion,
     MERGE_OUTPUT_HANDLE, PlanEdge, PlanForEachConfig, PlanNode, PlanNodeConfig, PlanPort,
     PortValueKind, PortValueType,
 };
-use lj_rule_model::schema::ContractSchemaVersion;
 use lj_rule_model::{Diagnostic, DiagnosticSeverity, definition_hash};
 use uuid::Uuid;
 
@@ -49,22 +49,14 @@ impl Compiler {
         &self.version
     }
 
-    /// 校验并将 Definition 编译成 immutable v2 Plan。
+    /// 校验并将 current Definition 编译成 immutable Plan。
     ///
     /// # Errors
     ///
-    /// Definition 不是 v2 writer object，或不满足 config、typed handle、端口兼容、
-    /// structured Loop、意图可达性与能力合同时返回 [`CompilerError::Validation`]；Plan
-    /// canonical hash 无法生成时返回 [`CompilerError::Serialization`]。
+    /// Definition 不满足 config、typed handle、端口兼容、structured Loop、意图可达性与
+    /// 能力合同时返回 [`CompilerError::Validation`]；Plan canonical hash 无法生成时返回
+    /// [`CompilerError::Serialization`]。
     pub fn compile(&self, definition: &RuleDefinition) -> Result<ExecutionPlan, CompilerError> {
-        if definition.schema_version() != ContractSchemaVersion::V2 {
-            return Err(CompilerError::validation(vec![diagnostic(
-                "RULE_DEFINITION_SCHEMA_INCOMPATIBLE",
-                "compiler 只接受 v2 RuleDefinition writer object",
-                schema_span("/schema_version"),
-            )]));
-        }
-
         let definition = canonicalize(definition);
         let analysis = analyze(&definition);
         if analysis
@@ -85,25 +77,19 @@ impl Default for Compiler {
     }
 }
 
-/// 将 v2 作者 Definition 规范化为与声明顺序无关的形式。
+/// 将 current 作者 Definition 规范化为与物理声明顺序无关的形式。
 ///
-/// 节点、语义边、Merge input 与 Condition branch 声明顺序不承载语义。Merge input 和
-/// Condition branch 按原始 UTF-8 bytes 排序；Mapper identity fields 等真正有序字段保持
-/// 原样。v1 read object 原样返回，避免 canonicalize 把 legacy hash material 静默升级为 v2。
+/// 节点按 id、语义边按四元组 identity 排序；Merge input 按显式 `order` 排序；
+/// Condition branch 按原始 UTF-8 bytes 排序。Mapper identity fields 等真正有序字段保持
+/// 原样。物理数组排列与 editor layout 永不进入 hash。
 #[must_use]
 pub fn canonicalize(definition: &RuleDefinition) -> RuleDefinition {
-    if definition.schema_version() != ContractSchemaVersion::V2 {
-        return definition.clone();
-    }
-
     let mut canonical = definition.clone();
     let flow = canonical.flow_mut();
     for node in &mut flow.nodes {
         match &mut node.config {
             FlowNodeConfig::Merge(config) => {
-                config
-                    .inputs
-                    .sort_by(|left, right| left.handle.as_bytes().cmp(right.handle.as_bytes()));
+                config.inputs.sort_by_key(|input| input.order);
             }
             FlowNodeConfig::Condition(config) => {
                 config
@@ -124,17 +110,10 @@ pub fn canonicalize(definition: &RuleDefinition) -> RuleDefinition {
 
 /// 返回 Definition 的全部稳定、可定位诊断。
 ///
-/// 本函数不丢弃后续错误，并先 canonicalize v2 声明顺序，因此同一非法语义不会因编辑器
+/// 本函数不丢弃后续错误，并先 canonicalize 声明顺序，因此同一非法语义不会因编辑器
 /// 数组顺序不同而改变诊断顺序。
 #[must_use]
 pub fn validate(definition: &RuleDefinition) -> Vec<Diagnostic> {
-    if definition.schema_version() != ContractSchemaVersion::V2 {
-        return vec![diagnostic(
-            "RULE_DEFINITION_SCHEMA_INCOMPATIBLE",
-            "compiler 只接受 v2 RuleDefinition writer object",
-            schema_span("/schema_version"),
-        )];
-    }
     analyze(&canonicalize(definition)).diagnostics
 }
 
@@ -374,8 +353,28 @@ fn validate_merge_config(node: &FlowNode, config: &MergeConfig, diagnostics: &mu
         return;
     }
 
+    let mut input_ids = BTreeSet::new();
     let mut handles = BTreeSet::new();
+    let mut orders = BTreeSet::new();
+    let input_count = config.inputs.len();
+
     for input in &config.inputs {
+        if input.input_id.trim().is_empty() {
+            diagnostics.push(node_diagnostic(
+                "MERGE_INPUT_ID_INVALID",
+                "Merge input_id 不能为空",
+                node,
+                "/inputs",
+            ));
+        } else if !input_ids.insert(input.input_id.as_str()) {
+            diagnostics.push(node_diagnostic(
+                "MERGE_INPUT_ID_DUPLICATE",
+                format!("Merge input_id {} 重复声明", input.input_id),
+                node,
+                &format!("/inputs/{}", pointer_token(&input.input_id)),
+            ));
+        }
+
         if input.handle.trim().is_empty() {
             diagnostics.push(node_diagnostic(
                 "MERGE_INPUT_HANDLE_INVALID",
@@ -391,6 +390,26 @@ fn validate_merge_config(node: &FlowNode, config: &MergeConfig, diagnostics: &mu
                 &format!("/inputs/{}", pointer_token(&input.handle)),
             ));
         }
+
+        if !orders.insert(input.order) {
+            diagnostics.push(node_diagnostic(
+                "MERGE_ORDER_INVALID",
+                format!("Merge input order {} 重复声明", input.order),
+                node,
+                &format!("/inputs/{}", pointer_token(&input.handle)),
+            ));
+        }
+    }
+
+    let expected_orders =
+        (0..u32::try_from(input_count).unwrap_or(u32::MAX)).collect::<BTreeSet<_>>();
+    if orders != expected_orders {
+        diagnostics.push(node_diagnostic(
+            "MERGE_ORDER_INVALID",
+            "Merge input order 必须唯一且连续覆盖 0..n-1",
+            node,
+            "/inputs",
+        ));
     }
 }
 
@@ -751,13 +770,10 @@ fn validate_loop_regions(
         let yield_ref = FlowPortRef::new(node.id, LOOP_YIELD_HANDLE);
         let done_ref = FlowPortRef::new(node.id, LOOP_DONE_HANDLE);
 
-        let collection_edges = incoming
-            .get(&collection_ref)
-            .map(Vec::as_slice)
-            .unwrap_or(&[]);
-        let body_edges = outgoing.get(&body_ref).map(Vec::as_slice).unwrap_or(&[]);
-        let yield_edges = incoming.get(&yield_ref).map(Vec::as_slice).unwrap_or(&[]);
-        let done_edges = outgoing.get(&done_ref).map(Vec::as_slice).unwrap_or(&[]);
+        let collection_edges = incoming.get(&collection_ref).map_or(&[][..], Vec::as_slice);
+        let body_edges = outgoing.get(&body_ref).map_or(&[][..], Vec::as_slice);
+        let yield_edges = incoming.get(&yield_ref).map_or(&[][..], Vec::as_slice);
+        let done_edges = outgoing.get(&done_ref).map_or(&[][..], Vec::as_slice);
         if collection_edges.len() != 1
             || body_edges.len() != 1
             || yield_edges.len() != 1
@@ -1032,11 +1048,7 @@ fn build_plan(
     compiler_version: &str,
     control_regions: Vec<ControlRegion>,
 ) -> Result<ExecutionPlan, CompilerError> {
-    let mut hash_material = definition.clone();
-    for node in &mut hash_material.flow_mut().nodes {
-        node.span = None;
-    }
-    let definition_hash = definition_hash(&hash_material)
+    let definition_hash = definition_hash(definition)
         .map_err(|error| CompilerError::Serialization(error.to_string()))?;
 
     let mut effects = Vec::new();
@@ -1098,17 +1110,20 @@ fn build_plan(
     ExecutionPlan::new(
         compiler_version,
         definition_hash,
-        nodes,
-        edges,
-        intent_entries,
-        effects,
-        capability_requirements,
-        control_regions,
+        ExecutionPlanParts {
+            nodes,
+            edges,
+            intent_entries,
+            effects,
+            capability_requirements,
+            control_regions,
+        },
     )
     .map_err(|error| CompilerError::Serialization(error.to_string()))
 }
 
 fn ports_for_node(node: &FlowNode) -> NodePorts {
+    let is_merge = matches!(node.config, FlowNodeConfig::Merge(_));
     let (mut inputs, mut outputs) = match &node.config {
         FlowNodeConfig::Http(_) => (
             vec![PlanPort::new(LINEAR_INPUT_HANDLE, controlled_value_type())],
@@ -1150,22 +1165,25 @@ fn ports_for_node(node: &FlowNode) -> NodePorts {
                 PortValueType::kind(PortValueKind::Delta),
             )],
         ),
-        FlowNodeConfig::Merge(config) => (
-            config
-                .inputs
-                .iter()
-                .map(|input| {
-                    PlanPort::new(
-                        input.handle.clone(),
-                        PortValueType::kind(PortValueKind::Json),
-                    )
-                })
-                .collect(),
-            vec![PlanPort::new(
-                MERGE_OUTPUT_HANDLE,
-                PortValueType::kind(PortValueKind::Json),
-            )],
-        ),
+        FlowNodeConfig::Merge(config) => {
+            let mut ordered = config.inputs.iter().collect::<Vec<_>>();
+            ordered.sort_by_key(|input| input.order);
+            (
+                ordered
+                    .into_iter()
+                    .map(|input| {
+                        PlanPort::new(
+                            input.handle.clone(),
+                            PortValueType::kind(PortValueKind::Json),
+                        )
+                    })
+                    .collect(),
+                vec![PlanPort::new(
+                    MERGE_OUTPUT_HANDLE,
+                    PortValueType::kind(PortValueKind::Json),
+                )],
+            )
+        }
         FlowNodeConfig::Condition(config) => (
             vec![PlanPort::new(
                 CONDITION_INPUT_HANDLE,
@@ -1196,7 +1214,10 @@ fn ports_for_node(node: &FlowNode) -> NodePorts {
             ],
         ),
     };
-    inputs.sort_by(|left, right| left.handle.as_bytes().cmp(right.handle.as_bytes()));
+    // Merge input 顺序由显式 order 决定；其他节点 handle 排序只保证稳定展示，不承载语义。
+    if !is_merge {
+        inputs.sort_by(|left, right| left.handle.as_bytes().cmp(right.handle.as_bytes()));
+    }
     outputs.sort_by(|left, right| left.handle.as_bytes().cmp(right.handle.as_bytes()));
     NodePorts { inputs, outputs }
 }
@@ -1234,9 +1255,8 @@ fn find_port<'a>(ports: &'a [PlanPort], handle: &str) -> Option<&'a PlanPort> {
 fn effect_kind(config: &FlowNodeConfig) -> Option<EffectKind> {
     match config {
         FlowNodeConfig::Http(_) => Some(EffectKind::Http),
-        FlowNodeConfig::Js(_) => Some(EffectKind::QuickJs),
-        FlowNodeConfig::Extract(_) => Some(EffectKind::Extract),
-        FlowNodeConfig::Condition(ConditionConfig {
+        FlowNodeConfig::Js(_)
+        | FlowNodeConfig::Condition(ConditionConfig {
             expression: ControlExpression::Js { .. },
             ..
         })
@@ -1244,6 +1264,7 @@ fn effect_kind(config: &FlowNodeConfig) -> Option<EffectKind> {
             collection: CollectionSelector::Js { .. },
             ..
         }) => Some(EffectKind::QuickJs),
+        FlowNodeConfig::Extract(_) => Some(EffectKind::Extract),
         FlowNodeConfig::Mapper(_)
         | FlowNodeConfig::Merge(_)
         | FlowNodeConfig::Condition(_)
@@ -1256,7 +1277,11 @@ fn plan_node_config(config: &FlowNodeConfig) -> PlanNodeConfig {
         FlowNodeConfig::Js(config) => PlanNodeConfig::Js(config.clone()),
         FlowNodeConfig::Extract(config) => PlanNodeConfig::Extract(config.clone()),
         FlowNodeConfig::Mapper(config) => PlanNodeConfig::Mapper(config.clone()),
-        FlowNodeConfig::Merge(config) => PlanNodeConfig::Merge(config.clone()),
+        FlowNodeConfig::Merge(config) => {
+            let mut ordered = config.clone();
+            ordered.inputs.sort_by_key(|input| input.order);
+            PlanNodeConfig::Merge(ordered)
+        }
         FlowNodeConfig::Condition(config) => PlanNodeConfig::Condition(config.clone()),
         FlowNodeConfig::Loop(config) => {
             let max_iterations = LoopIterationLimit::new(u32::from(config.max_iterations))

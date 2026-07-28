@@ -183,7 +183,7 @@ fn normalize_endpoint(raw: &str) -> Result<String, Error> {
 mod tests {
     use super::*;
     use lj_capability::StandardIntent;
-    use lj_rule_model::{ContractSchemaVersion, ExtractRule, FlowNodeConfig, FlowNodeKind};
+    use lj_rule_model::{ExtractRule, FlowNodeConfig, FlowNodeKind};
 
     fn definition(format: MaccmsFormat, url: &str) -> RuleDefinition {
         MaccmsImporter
@@ -197,7 +197,6 @@ mod tests {
     #[test]
     fn maccms_json_definition_exports_four_standard_intents_without_graph() {
         let definition = definition(MaccmsFormat::Json, "https://hnyun.com/api.php/provide/vod/");
-        assert_eq!(definition.schema_version(), ContractSchemaVersion::V2);
         assert_eq!(definition.flow().nodes.len(), 8);
         assert_eq!(definition.flow().edges.len(), 6);
         assert!(definition.capability_manifest().required.network);

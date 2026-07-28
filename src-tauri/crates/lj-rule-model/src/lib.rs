@@ -45,14 +45,11 @@ pub use literal::{
 };
 pub use plan::{
     CONDITION_INPUT_HANDLE, ControlRegion, EffectDeclaration, EffectKind, ExecutionPlan,
-    IntentEntry, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE,
+    ExecutionPlanParts, IntentEntry, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE,
     LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopControlRegion,
     MERGE_OUTPUT_HANDLE, PlanEdge, PlanForEachConfig, PlanNode, PlanNodeConfig, PlanNodeKind,
     PlanPort, PortValueKind, PortValueType, execution_plan_hash, read_execution_plan,
 };
 pub use policy::{Capability, CapabilityError, PolicyCapabilities, SystemCapabilities};
-pub use schema::{
-    ContractSchemaVersion, EXECUTION_PLAN_SCHEMA_VERSION, RULE_DEFINITION_SCHEMA_VERSION,
-    RULE_PACKAGE_SCHEMA_VERSION, SchemaContract, SchemaReadError,
-};
+pub use schema::{RULE_CONTRACT_SCHEMA_VERSION, SchemaContract, SchemaReadError};
 pub use sensitive::{RequestHeaderDisposition, SensitiveNamePolicy};

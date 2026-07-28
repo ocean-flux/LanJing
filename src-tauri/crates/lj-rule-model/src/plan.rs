@@ -1,19 +1,19 @@
 //! Execution Plan — compiler 产出的不可变 runtime 投影。
 //!
-//! Plan v2 只包含 typed config、closed port value union、handle edge 与 structured control
-//! region。v1 installed Plan 由 reader 投影到同一内存 API，同时保留精确 legacy hash material。
+//! 唯一 current Plan 只包含 typed config、closed port value union、handle edge 与
+//! structured control region。历史线性 Plan 在 preflight 阶段稳定拒绝，不投影、不保留
+//! legacy hash material。
 
 use std::collections::BTreeMap;
 
 use blake3::Hasher;
 use lj_capability::StandardIntent;
 use serde::de::Error as _;
-use serde::ser::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
 use crate::definition::{
-    CollectionSelector, ConditionConfig, ControlledMapper, FlowPortRef, JsConfig, JsOutputKind,
+    CollectionSelector, ConditionConfig, ControlledMapper, FlowPortRef, JsConfig,
     LoopIterationLimit, MergeConfig,
 };
 use crate::endpoint::HttpSpec;
@@ -21,8 +21,8 @@ use crate::error::Error;
 use crate::extract_rule::ExtractSpec;
 use crate::hash::canonical_json;
 use crate::schema::{
-    ContractSchemaVersion, EXECUTION_PLAN_SCHEMA_VERSION, LEGACY_CONTRACT_SCHEMA_VERSION,
-    SchemaContract, SchemaReadError, invalid_data, parse_contract_json, validate_contract_value,
+    RULE_CONTRACT_SCHEMA_VERSION, SchemaContract, SchemaReadError, invalid_data,
+    parse_contract_json, validate_contract_value,
 };
 
 /// 普通线性节点的固定 input handle。
@@ -48,7 +48,7 @@ pub const LOOP_DONE_HANDLE: &str = "done";
 pub enum PlanNodeKind {
     /// HTTP effect 节点。
     Http,
-    /// QuickJS effect 节点。
+    /// `QuickJS` effect 节点。
     Js,
     /// 提取节点。
     Extract,
@@ -138,7 +138,7 @@ impl PlanPort {
 pub enum EffectKind {
     /// HTTP 外部效应。
     Http,
-    /// QuickJS 外部效应。
+    /// `QuickJS` 外部效应。
     QuickJs,
     /// 纯提取（无外部效应）。
     Extract,
@@ -217,7 +217,7 @@ impl PlanForEachConfig {
 pub enum PlanNodeConfig {
     /// HTTP 请求。
     Http(HttpSpec),
-    /// QuickJS 计算。
+    /// `QuickJS` 计算。
     Js(JsConfig),
     /// typed 提取。
     Extract(ExtractSpec),
@@ -320,9 +320,20 @@ pub enum ControlRegion {
     Loop(LoopControlRegion),
 }
 
+/// 构建不可变执行计划所需的结构化内容。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExecutionPlanParts {
+    pub nodes: Vec<PlanNode>,
+    pub edges: Vec<PlanEdge>,
+    pub intent_entries: BTreeMap<StandardIntent, IntentEntry>,
+    pub effects: Vec<EffectDeclaration>,
+    pub capability_requirements: Vec<String>,
+    pub control_regions: Vec<ControlRegion>,
+}
+
 /// 不可变执行计划。
 ///
-/// 公开构造器只创建并 seal v2；v1 仅由 reader 产生，且 serde writer 会拒绝只读 v1 对象。
+/// 公开构造器创建并 seal 唯一 current Plan。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExecutionPlan {
     compiler_version: String,
@@ -334,11 +345,10 @@ pub struct ExecutionPlan {
     effects: Vec<EffectDeclaration>,
     capability_requirements: Vec<String>,
     control_regions: Vec<ControlRegion>,
-    legacy_v1: Option<Box<LegacyExecutionPlanV1>>,
 }
 
 impl ExecutionPlan {
-    /// 创建、hash 并 seal 一个 v2 immutable Plan。
+    /// 创建、hash 并 seal 一个 current immutable Plan。
     ///
     /// # Errors
     ///
@@ -346,37 +356,21 @@ impl ExecutionPlan {
     pub fn new(
         compiler_version: impl Into<String>,
         definition_hash: impl Into<String>,
-        nodes: Vec<PlanNode>,
-        edges: Vec<PlanEdge>,
-        intent_entries: BTreeMap<StandardIntent, IntentEntry>,
-        effects: Vec<EffectDeclaration>,
-        capability_requirements: Vec<String>,
-        control_regions: Vec<ControlRegion>,
+        parts: ExecutionPlanParts,
     ) -> Result<Self, Error> {
         let mut plan = Self {
             compiler_version: compiler_version.into(),
             definition_hash: definition_hash.into(),
             plan_hash: String::new(),
-            nodes,
-            edges,
-            intent_entries,
-            effects,
-            capability_requirements,
-            control_regions,
-            legacy_v1: None,
+            nodes: parts.nodes,
+            edges: parts.edges,
+            intent_entries: parts.intent_entries,
+            effects: parts.effects,
+            capability_requirements: parts.capability_requirements,
+            control_regions: parts.control_regions,
         };
         plan.plan_hash = execution_plan_hash(&plan)?;
         Ok(plan)
-    }
-
-    /// 返回内存对象来源的已知 schema 版本。
-    #[must_use]
-    pub const fn schema_version(&self) -> ContractSchemaVersion {
-        if self.legacy_v1.is_some() {
-            ContractSchemaVersion::V1
-        } else {
-            ContractSchemaVersion::V2
-        }
     }
 
     /// 返回 compiler 身份。
@@ -391,7 +385,7 @@ impl ExecutionPlan {
         &self.definition_hash
     }
 
-    /// 返回版本正确的 sealed Plan hash。
+    /// 返回 sealed Plan hash。
     #[must_use]
     pub fn plan_hash(&self) -> &str {
         &self.plan_hash
@@ -448,85 +442,15 @@ impl ExecutionPlan {
     }
 }
 
-/// 计算 Plan 的版本正确 canonical BLAKE3 hash（hex）。
+/// 计算 Plan 的 current canonical BLAKE3 hash（hex）。
 ///
-/// v1 reader object 使用保留的精确旧 wire material；v2 使用全部 typed config、ports、edges
-/// 与 control regions。两种版本都在计算前把 `plan_hash` 清空。
+/// 覆盖全部 typed config、ports、edges 与 control regions；计算前把 `plan_hash` 清空。
+/// 物理数组排列不进入 hash，显式 Merge `order` 与全部控制语义进入 hash。
 ///
 /// # Errors
 ///
 /// hash material 无法 canonical JSON 序列化时返回 [`Error::Json`]。
 pub fn execution_plan_hash(plan: &ExecutionPlan) -> Result<String, Error> {
-    if let Some(legacy) = &plan.legacy_v1 {
-        let mut material = legacy.as_ref().clone();
-        material.plan_hash.clear();
-        let mut value = serde_json::to_value(&material)?;
-        if let Some(object) = value.as_object_mut() {
-            object.insert(
-                "contract".to_string(),
-                serde_json::Value::String("execution_plan".to_string()),
-            );
-        }
-        return hash_canonical(&value);
-    }
-    execution_plan_v2_hash(plan)
-}
-
-/// 从 JSON bytes 读取 v1/v2 ExecutionPlan，并为未知版本返回 typed incompatible。
-///
-/// # Errors
-///
-/// JSON 无效、contract tag 不匹配、版本未知、字段未知，或旧 Plan 不是可转换的线性
-/// Http/JS/Extract/Mapper 图时返回 [`SchemaReadError`]。
-pub fn read_execution_plan(bytes: &[u8]) -> Result<ExecutionPlan, SchemaReadError> {
-    let (value, version) = parse_contract_json(bytes, SchemaContract::ExecutionPlan)?;
-    execution_plan_from_value(value, version)
-}
-
-impl Serialize for ExecutionPlan {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        if self.legacy_v1.is_some() {
-            return Err(S::Error::custom(
-                "v1 ExecutionPlan 只读；请由 compiler 构造并 seal 新的 v2 Plan",
-            ));
-        }
-        self.v2_ref(&self.plan_hash).serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for ExecutionPlan {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = serde_json::Value::deserialize(deserializer)?;
-        let version = validate_contract_value(&value, SchemaContract::ExecutionPlan)
-            .map_err(D::Error::custom)?;
-        execution_plan_from_value(value, version).map_err(D::Error::custom)
-    }
-}
-
-impl ExecutionPlan {
-    fn v2_ref<'a>(&'a self, plan_hash: &'a str) -> ExecutionPlanV2Ref<'a> {
-        ExecutionPlanV2Ref {
-            schema_version: EXECUTION_PLAN_SCHEMA_VERSION,
-            compiler_version: &self.compiler_version,
-            definition_hash: &self.definition_hash,
-            plan_hash,
-            nodes: &self.nodes,
-            edges: &self.edges,
-            intent_entries: &self.intent_entries,
-            effects: &self.effects,
-            capability_requirements: &self.capability_requirements,
-            control_regions: &self.control_regions,
-        }
-    }
-}
-
-fn execution_plan_v2_hash(plan: &ExecutionPlan) -> Result<String, Error> {
     let mut nodes = plan.nodes.clone();
     for node in &mut nodes {
         canonicalize_plan_node(node);
@@ -556,8 +480,8 @@ fn execution_plan_v2_hash(plan: &ExecutionPlan) -> Result<String, Error> {
         ControlRegion::Loop(region) => region.loop_node,
     });
 
-    hash_canonical(&ExecutionPlanV2Ref {
-        schema_version: EXECUTION_PLAN_SCHEMA_VERSION,
+    hash_canonical(&ExecutionPlanWireRef {
+        schema_version: RULE_CONTRACT_SCHEMA_VERSION,
         compiler_version: &plan.compiler_version,
         definition_hash: &plan.definition_hash,
         plan_hash: "",
@@ -568,6 +492,54 @@ fn execution_plan_v2_hash(plan: &ExecutionPlan) -> Result<String, Error> {
         capability_requirements: &capability_requirements,
         control_regions: &control_regions,
     })
+}
+
+/// 从 JSON bytes 读取唯一 current `ExecutionPlan`。
+///
+/// # Errors
+///
+/// JSON 无效、contract tag 不匹配、未知 schema、历史结构签名、字段未知或 current shape
+/// 损坏时返回 [`SchemaReadError`]。
+pub fn read_execution_plan(bytes: &[u8]) -> Result<ExecutionPlan, SchemaReadError> {
+    let value = parse_contract_json(bytes, SchemaContract::ExecutionPlan)?;
+    execution_plan_from_value(value)
+}
+
+impl Serialize for ExecutionPlan {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.wire_ref(&self.plan_hash).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ExecutionPlan {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        validate_contract_value(&value, SchemaContract::ExecutionPlan).map_err(D::Error::custom)?;
+        execution_plan_from_value(value).map_err(D::Error::custom)
+    }
+}
+
+impl ExecutionPlan {
+    fn wire_ref<'a>(&'a self, plan_hash: &'a str) -> ExecutionPlanWireRef<'a> {
+        ExecutionPlanWireRef {
+            schema_version: RULE_CONTRACT_SCHEMA_VERSION,
+            compiler_version: &self.compiler_version,
+            definition_hash: &self.definition_hash,
+            plan_hash,
+            nodes: &self.nodes,
+            edges: &self.edges,
+            intent_entries: &self.intent_entries,
+            effects: &self.effects,
+            capability_requirements: &self.capability_requirements,
+            control_regions: &self.control_regions,
+        }
+    }
 }
 
 fn canonicalize_plan_node(node: &mut PlanNode) {
@@ -583,9 +555,7 @@ fn canonicalize_plan_node(node: &mut PlanNode) {
     match &mut node.config {
         PlanNodeConfig::Mapper(config) => config.identity_fields.sort(),
         PlanNodeConfig::Merge(config) => {
-            config
-                .inputs
-                .sort_by(|left, right| left.handle.as_bytes().cmp(right.handle.as_bytes()));
+            config.inputs.sort_by_key(|input| input.order);
         }
         PlanNodeConfig::Condition(config) => {
             config
@@ -608,7 +578,7 @@ fn hash_canonical(value: &impl Serialize) -> Result<String, Error> {
 
 #[derive(Serialize)]
 #[serde(tag = "contract", rename = "execution_plan", deny_unknown_fields)]
-struct ExecutionPlanV2Ref<'a> {
+struct ExecutionPlanWireRef<'a> {
     schema_version: u32,
     compiler_version: &'a str,
     definition_hash: &'a str,
@@ -623,7 +593,7 @@ struct ExecutionPlanV2Ref<'a> {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ExecutionPlanV2Owned {
+struct ExecutionPlanWireOwned {
     schema_version: u32,
     compiler_version: String,
     definition_hash: String,
@@ -637,254 +607,30 @@ struct ExecutionPlanV2Owned {
 }
 
 fn strip_contract_tag(mut value: serde_json::Value) -> serde_json::Value {
-    strip_contract_tag_in_place(&mut value);
+    if let Some(object) = value.as_object_mut() {
+        object.remove("contract");
+    }
     value
 }
 
-fn strip_contract_tag_in_place(value: &mut serde_json::Value) {
-    match value {
-        serde_json::Value::Object(object) => {
-            object.remove("contract");
-            for child in object.values_mut() {
-                strip_contract_tag_in_place(child);
-            }
-        }
-        serde_json::Value::Array(items) => {
-            for item in items {
-                strip_contract_tag_in_place(item);
-            }
-        }
-        _ => {}
+fn execution_plan_from_value(value: serde_json::Value) -> Result<ExecutionPlan, SchemaReadError> {
+    let wire = serde_json::from_value::<ExecutionPlanWireOwned>(strip_contract_tag(value))
+        .map_err(|error| invalid_data(SchemaContract::ExecutionPlan, error.to_string()))?;
+    if wire.schema_version != RULE_CONTRACT_SCHEMA_VERSION {
+        return Err(SchemaReadError::SchemaUnsupported {
+            contract: SchemaContract::ExecutionPlan,
+            version: wire.schema_version,
+        });
     }
-}
-
-fn execution_plan_from_value(
-    value: serde_json::Value,
-    version: ContractSchemaVersion,
-) -> Result<ExecutionPlan, SchemaReadError> {
-    match version {
-        ContractSchemaVersion::V1 => {
-            let legacy = serde_json::from_value::<LegacyExecutionPlanV1>(strip_contract_tag(value))
-                .map_err(|error| invalid_data(SchemaContract::ExecutionPlan, error.to_string()))?;
-            ExecutionPlan::try_from_legacy(legacy)
-        }
-        ContractSchemaVersion::V2 => {
-            let wire = serde_json::from_value::<ExecutionPlanV2Owned>(strip_contract_tag(value))
-                .map_err(|error| invalid_data(SchemaContract::ExecutionPlan, error.to_string()))?;
-            if wire.schema_version != EXECUTION_PLAN_SCHEMA_VERSION {
-                return Err(SchemaReadError::IncompatibleVersion {
-                    contract: SchemaContract::ExecutionPlan,
-                    version: wire.schema_version,
-                });
-            }
-            Ok(ExecutionPlan {
-                compiler_version: wire.compiler_version,
-                definition_hash: wire.definition_hash,
-                plan_hash: wire.plan_hash,
-                nodes: wire.nodes,
-                edges: wire.edges,
-                intent_entries: wire.intent_entries,
-                effects: wire.effects,
-                capability_requirements: wire.capability_requirements,
-                control_regions: wire.control_regions,
-                legacy_v1: None,
-            })
-        }
-    }
-}
-
-impl ExecutionPlan {
-    fn try_from_legacy(legacy: LegacyExecutionPlanV1) -> Result<Self, SchemaReadError> {
-        if legacy.schema_version != LEGACY_CONTRACT_SCHEMA_VERSION {
-            return Err(SchemaReadError::IncompatibleVersion {
-                contract: SchemaContract::ExecutionPlan,
-                version: legacy.schema_version,
-            });
-        }
-        let nodes = legacy
-            .nodes
-            .iter()
-            .map(LegacyPlanNodeV1::to_v2)
-            .collect::<Result<Vec<_>, _>>()?;
-        let handles = legacy
-            .nodes
-            .iter()
-            .map(|node| {
-                (
-                    node.id,
-                    (
-                        node.outputs.first().map(|port| port.name.clone()),
-                        node.inputs.first().map(|port| port.name.clone()),
-                    ),
-                )
-            })
-            .collect::<BTreeMap<_, _>>();
-        let edges = legacy
-            .edges
-            .iter()
-            .map(|(from, to)| {
-                let from_handle = handles
-                    .get(from)
-                    .and_then(|(output, _)| output.clone())
-                    .ok_or_else(|| {
-                        invalid_data(
-                            SchemaContract::ExecutionPlan,
-                            "v1 edge source 缺少 output port",
-                        )
-                    })?;
-                let to_handle = handles
-                    .get(to)
-                    .and_then(|(_, input)| input.clone())
-                    .ok_or_else(|| {
-                        invalid_data(
-                            SchemaContract::ExecutionPlan,
-                            "v1 edge target 缺少 input port",
-                        )
-                    })?;
-                Ok(PlanEdge::new(
-                    FlowPortRef::new(*from, from_handle),
-                    FlowPortRef::new(*to, to_handle),
-                ))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let material = legacy.clone();
-        Ok(Self {
-            compiler_version: legacy.compiler_version,
-            definition_hash: legacy.definition_hash,
-            plan_hash: legacy.plan_hash,
-            nodes,
-            edges,
-            intent_entries: legacy.intent_entries,
-            effects: legacy.effects,
-            capability_requirements: legacy.capability_requirements,
-            control_regions: Vec::new(),
-            legacy_v1: Some(Box::new(material)),
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyPlanPortV1 {
-    name: String,
-    type_tag: String,
-}
-
-impl LegacyPlanPortV1 {
-    fn to_v2(&self) -> Result<PlanPort, SchemaReadError> {
-        let value_type = match self.type_tag.as_str() {
-            "value" => PortValueType::union([
-                PortValueKind::IntentInput,
-                PortValueKind::Raw,
-                PortValueKind::Json,
-            ]),
-            "raw" => PortValueType::kind(PortValueKind::Raw),
-            "http_response" => PortValueType::kind(PortValueKind::HttpResponse),
-            "json" => PortValueType::kind(PortValueKind::Json),
-            "delta" => PortValueType::kind(PortValueKind::Delta),
-            _ => {
-                return Err(invalid_data(
-                    SchemaContract::ExecutionPlan,
-                    "v1 PlanPort 包含未知 type_tag",
-                ));
-            }
-        };
-        Ok(PlanPort::new(self.name.clone(), value_type))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum LegacyPlanNodeKindV1 {
-    Http,
-    Js,
-    Extract,
-    Mapper,
-    Merge,
-    Condition,
-    Loop,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyPlanNodeV1 {
-    id: Uuid,
-    kind: LegacyPlanNodeKindV1,
-    inputs: Vec<LegacyPlanPortV1>,
-    outputs: Vec<LegacyPlanPortV1>,
-    config: serde_json::Value,
-}
-
-impl LegacyPlanNodeV1 {
-    fn to_v2(&self) -> Result<PlanNode, SchemaReadError> {
-        let inputs = self
-            .inputs
-            .iter()
-            .map(LegacyPlanPortV1::to_v2)
-            .collect::<Result<Vec<_>, _>>()?;
-        let outputs = self
-            .outputs
-            .iter()
-            .map(LegacyPlanPortV1::to_v2)
-            .collect::<Result<Vec<_>, _>>()?;
-        let parse_config =
-            |message: &'static str| invalid_data(SchemaContract::ExecutionPlan, message);
-        let config = match self.kind {
-            LegacyPlanNodeKindV1::Http => PlanNodeConfig::Http(
-                serde_json::from_value::<HttpSpec>(self.config.clone())
-                    .map_err(|_| parse_config("v1 HTTP Plan config 无效"))?,
-            ),
-            LegacyPlanNodeKindV1::Js => {
-                let legacy = serde_json::from_value::<LegacyJsPlanConfigV1>(self.config.clone())
-                    .map_err(|_| parse_config("v1 JS Plan config 无效"))?;
-                let output = if self.outputs.iter().any(|port| port.type_tag == "raw") {
-                    JsOutputKind::Raw
-                } else {
-                    JsOutputKind::Json
-                };
-                PlanNodeConfig::Js(JsConfig {
-                    code: legacy.code,
-                    output,
-                })
-            }
-            LegacyPlanNodeKindV1::Extract => PlanNodeConfig::Extract(
-                serde_json::from_value::<ExtractSpec>(self.config.clone())
-                    .map_err(|_| parse_config("v1 Extract Plan config 无效"))?,
-            ),
-            LegacyPlanNodeKindV1::Mapper => PlanNodeConfig::Mapper(
-                serde_json::from_value::<ControlledMapper>(self.config.clone())
-                    .map_err(|_| parse_config("v1 Mapper Plan config 无效"))?,
-            ),
-            LegacyPlanNodeKindV1::Merge
-            | LegacyPlanNodeKindV1::Condition
-            | LegacyPlanNodeKindV1::Loop => {
-                return Err(parse_config("v1 reader 仅接受旧线性 Plan 节点"));
-            }
-        };
-        Ok(PlanNode {
-            id: self.id,
-            inputs,
-            outputs,
-            config,
-        })
-    }
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyJsPlanConfigV1 {
-    code: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyExecutionPlanV1 {
-    schema_version: u32,
-    compiler_version: String,
-    definition_hash: String,
-    plan_hash: String,
-    nodes: Vec<LegacyPlanNodeV1>,
-    edges: Vec<(Uuid, Uuid)>,
-    intent_entries: BTreeMap<StandardIntent, IntentEntry>,
-    effects: Vec<EffectDeclaration>,
-    capability_requirements: Vec<String>,
+    Ok(ExecutionPlan {
+        compiler_version: wire.compiler_version,
+        definition_hash: wire.definition_hash,
+        plan_hash: wire.plan_hash,
+        nodes: wire.nodes,
+        edges: wire.edges,
+        intent_entries: wire.intent_entries,
+        effects: wire.effects,
+        capability_requirements: wire.capability_requirements,
+        control_regions: wire.control_regions,
+    })
 }

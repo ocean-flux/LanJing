@@ -8,7 +8,7 @@ use lj_importer::legado::{
     CONTINUE_ACTION_SCHEMA_VERSION, CONTINUE_ACTION_TTL_MS, ContinueActionError, LegadoImporter,
     LegadoSourceJson,
 };
-use lj_rule_model::{ContractSchemaVersion, FlowNodeKind, canonical_json};
+use lj_rule_model::{FlowNodeKind, canonical_json};
 use serde_json::json;
 
 fn fixture_source() -> LegadoSourceJson {
@@ -28,10 +28,6 @@ fn adapter_exports_six_standard_intents_as_stable_definition() {
         .expect("same source should adapt repeatedly");
 
     assert_eq!(adapted.definition, repeated.definition);
-    assert_eq!(
-        adapted.definition.schema_version(),
-        ContractSchemaVersion::V2
-    );
     assert!(!adapted.has_credentials());
     assert!(LegadoImporter::owns_source(
         &adapted.definition.source_identity().id

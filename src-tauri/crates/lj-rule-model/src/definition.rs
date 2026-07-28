@@ -1,7 +1,7 @@
-//! 规则 Definition / Package — 可编辑、可移植、可 canonicalize 的作者合同。
+//! 规则 Definition / Package — 可编辑、可移植、可 canonicalize 的唯一 current 作者合同。
 //!
-//! v2 writer 只序列化闭集 typed 节点与 handle edge；v1 仅在 reader 内保留精确 legacy
-//! hash material，不能由公开构造器生成。
+//! 只序列化闭集 typed 节点与 handle edge；历史线性 shape 在 preflight 阶段以
+//! `LEGACY_RULE_CONTRACT_UNSUPPORTED` 稳定拒绝，不反序列化、不投影、不写兼容 reader。
 
 use std::collections::BTreeMap;
 
@@ -15,11 +15,9 @@ use crate::extract_rule::ExtractSpec;
 use crate::literal::TypedLiteral;
 use crate::policy::PolicyCapabilities;
 use crate::schema::{
-    ContractSchemaVersion, LEGACY_CONTRACT_SCHEMA_VERSION, RULE_DEFINITION_SCHEMA_VERSION,
-    RULE_PACKAGE_SCHEMA_VERSION, SchemaContract, SchemaReadError, invalid_data,
+    RULE_CONTRACT_SCHEMA_VERSION, SchemaContract, SchemaReadError, invalid_data,
     parse_contract_json, validate_contract_value,
 };
-use serde::ser::Error as _;
 
 /// 单个 Loop 配置允许的全局 hard ceiling。
 pub const MAX_LOOP_ITERATIONS: u32 = 256;
@@ -90,7 +88,7 @@ pub enum JsOutputKind {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct JsConfig {
-    /// 由受限 QuickJS adapter 执行的源码。
+    /// 由受限 `QuickJS` adapter 执行的源码。
     pub code: String,
     /// compiler 用于确定输出 port kind 的显式声明。
     pub output: JsOutputKind,
@@ -107,11 +105,18 @@ pub enum MergeInputActivation {
 }
 
 /// Merge 的一个命名 input 声明。
+///
+/// 语义身份由 `input_id` 与 `handle` 表达；显式 `order` 唯一连续覆盖 `0..n-1`，
+/// 物理数组声明顺序不承载语义。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MergeInput {
-    /// 动态 handle；compiler 负责非空、唯一与 UTF-8 字节排序。
+    /// 稳定 input 身份；compiler 负责非空与唯一。
+    pub input_id: String,
+    /// 动态 handle；compiler 负责非空与唯一。
     pub handle: String,
+    /// 显式聚合顺序；必须唯一且连续覆盖 `0..n-1`。
+    pub order: u32,
     /// required/optional 激活合同。
     pub activation: MergeInputActivation,
 }
@@ -122,11 +127,11 @@ pub struct MergeInput {
 pub enum MergeStrategy {
     /// 恰好一个激活 input，原样透传。
     SingleActive,
-    /// 按 canonical handle 顺序收集为 array。
+    /// 按显式 `order` 收集为 array。
     CollectArray,
-    /// 按 canonical handle 顺序单层拼接 array。
+    /// 按显式 `order` 单层拼接 array。
     ConcatArrays,
-    /// 按 canonical handle 顺序浅合并 object；后一个 handle 覆盖前一个。
+    /// 按显式 `order` 浅合并 object；后一个 order 覆盖前一个。
     OverlayObjects,
 }
 
@@ -134,7 +139,7 @@ pub enum MergeStrategy {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MergeConfig {
-    /// 命名 inputs；声明顺序不承载语义，compiler 按 handle UTF-8 字节排序。
+    /// 命名 inputs；声明顺序不承载语义，canonicalize/hash 按显式 `order` 排序。
     pub inputs: Vec<MergeInput>,
     /// 聚合策略。
     pub strategy: MergeStrategy,
@@ -293,7 +298,7 @@ pub enum ControlExpression {
         /// predicate 为 false 时激活的 branch handle。
         false_branch: String,
     },
-    /// 受限 QuickJS 返回一个已声明 branch handle。
+    /// 受限 `QuickJS` 返回一个已声明 branch handle。
     Js {
         /// 控制脚本源码；compiler/runtime 不把源码写入 diagnostic。
         code: String,
@@ -319,7 +324,7 @@ pub enum CollectionSelector {
         /// RFC 6901 JSON Pointer。
         pointer: String,
     },
-    /// 受限 QuickJS 必须返回 array。
+    /// 受限 `QuickJS` 必须返回 array。
     Js {
         /// collection selector 源码。
         code: String,
@@ -427,7 +432,7 @@ pub enum FlowNodeKind {
 pub enum FlowNodeConfig {
     /// HTTP 请求。
     Http(HttpSpec),
-    /// QuickJS 计算。
+    /// `QuickJS` 计算。
     Js(JsConfig),
     /// typed 提取。
     Extract(ExtractSpec),
@@ -552,7 +557,7 @@ pub struct FlowGraph {
 
 /// 规则定义（作者合同）。
 ///
-/// 公开构造器只创建 v2；反序列化 v1 时会保留只读 legacy hash material。
+/// 公开构造器与 serde writer 只产唯一 current shape。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleDefinition {
     source_identity: SourceIdentity,
@@ -561,11 +566,10 @@ pub struct RuleDefinition {
     flow: FlowGraph,
     capability_manifest: CapabilityManifest,
     source_id_rules: Vec<String>,
-    legacy_v1: Option<Box<LegacyRuleDefinitionV1>>,
 }
 
 impl RuleDefinition {
-    /// 创建只会写出 v2 的作者 Definition。
+    /// 创建唯一 current 作者 Definition。
     #[must_use]
     pub fn new(
         source_identity: SourceIdentity,
@@ -582,17 +586,6 @@ impl RuleDefinition {
             flow,
             capability_manifest,
             source_id_rules,
-            legacy_v1: None,
-        }
-    }
-
-    /// 返回内存对象来源的已知 schema 版本。
-    #[must_use]
-    pub const fn schema_version(&self) -> ContractSchemaVersion {
-        if self.legacy_v1.is_some() {
-            ContractSchemaVersion::V1
-        } else {
-            ContractSchemaVersion::V2
         }
     }
 
@@ -632,60 +625,49 @@ impl RuleDefinition {
         &self.source_id_rules
     }
 
-    /// 可变访问来源身份，并把旧 v1 read object 切换为 v2 authoring 语义。
+    /// 可变访问来源身份。
     pub fn source_identity_mut(&mut self) -> &mut SourceIdentity {
-        self.legacy_v1 = None;
         &mut self.source_identity
     }
 
-    /// 可变访问基础 URL，并把旧 v1 read object 切换为 v2 authoring 语义。
+    /// 可变访问基础 URL。
     pub fn base_url_mut(&mut self) -> &mut String {
-        self.legacy_v1 = None;
         &mut self.base_url
     }
 
-    /// 可变访问意图导出表，并把旧 v1 read object 切换为 v2 authoring 语义。
+    /// 可变访问意图导出表。
     pub fn intent_exports_mut(&mut self) -> &mut BTreeMap<StandardIntent, IntentExport> {
-        self.legacy_v1 = None;
         &mut self.intent_exports
     }
 
-    /// 可变访问 Flow，并把旧 v1 read object 切换为 v2 authoring 语义。
+    /// 可变访问 Flow。
     pub fn flow_mut(&mut self) -> &mut FlowGraph {
-        self.legacy_v1 = None;
         &mut self.flow
     }
 
-    /// 可变访问能力清单，并把旧 v1 read object 切换为 v2 authoring 语义。
+    /// 可变访问能力清单。
     pub fn capability_manifest_mut(&mut self) -> &mut CapabilityManifest {
-        self.legacy_v1 = None;
         &mut self.capability_manifest
     }
 
-    /// 可变访问稳定 ID 规则，并把旧 v1 read object 切换为 v2 authoring 语义。
+    /// 可变访问稳定 ID 规则。
     pub fn source_id_rules_mut(&mut self) -> &mut Vec<String> {
-        self.legacy_v1 = None;
         &mut self.source_id_rules
-    }
-
-    pub(crate) fn legacy_hash_material(&self) -> Option<&LegacyRuleDefinitionV1> {
-        self.legacy_v1.as_deref()
     }
 }
 
 /// 规则包：Definition + 安装元数据。
 ///
-/// 公开构造器与 serde writer 只产 v2；reader 仍接受已安装 v1 package。
+/// 公开构造器与 serde writer 只产唯一 current shape。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RulePackage {
     source_identity: SourceIdentity,
     version: String,
     definition: RuleDefinition,
-    schema_version: ContractSchemaVersion,
 }
 
 impl RulePackage {
-    /// 创建 v2 RulePackage。
+    /// 创建 current `RulePackage`。
     #[must_use]
     pub fn new(
         source_identity: SourceIdentity,
@@ -696,14 +678,7 @@ impl RulePackage {
             source_identity,
             version: version.into(),
             definition,
-            schema_version: ContractSchemaVersion::V2,
         }
-    }
-
-    /// 返回读取来源的已知 schema 版本。
-    #[must_use]
-    pub const fn schema_version(&self) -> ContractSchemaVersion {
-        self.schema_version
     }
 
     /// 返回 package 来源身份。
@@ -725,26 +700,26 @@ impl RulePackage {
     }
 }
 
-/// 从 JSON bytes 读取 v1/v2 RuleDefinition，并为未知版本返回 typed incompatible。
+/// 从 JSON bytes 读取唯一 current `RuleDefinition`。
 ///
 /// # Errors
 ///
-/// JSON 无效、contract tag 不匹配、版本未知、字段未知或 v1 节点存在 kind/config mismatch
-/// 时返回 [`SchemaReadError`]。
+/// JSON 无效、contract tag 不匹配、未知 schema、历史结构签名、字段未知或 current shape
+/// 损坏时返回 [`SchemaReadError`]。
 pub fn read_rule_definition(bytes: &[u8]) -> Result<RuleDefinition, SchemaReadError> {
-    let (value, version) = parse_contract_json(bytes, SchemaContract::RuleDefinition)?;
-    definition_from_value(value, version)
+    let value = parse_contract_json(bytes, SchemaContract::RuleDefinition)?;
+    definition_from_value(value)
 }
 
-/// 从 JSON bytes 读取 v1/v2 RulePackage，并为未知版本返回 typed incompatible。
+/// 从 JSON bytes 读取唯一 current `RulePackage`。
 ///
 /// # Errors
 ///
-/// JSON 无效、contract tag 不匹配、版本未知、字段未知，或 package 与嵌套 Definition
-/// 版本组合非法时返回 [`SchemaReadError`]。
+/// JSON 无效、contract tag 不匹配、未知 schema、历史结构签名、字段未知或 package 与
+/// 嵌套 Definition 非法时返回 [`SchemaReadError`]。
 pub fn read_rule_package(bytes: &[u8]) -> Result<RulePackage, SchemaReadError> {
-    let (value, version) = parse_contract_json(bytes, SchemaContract::RulePackage)?;
-    package_from_value(value, version)
+    let value = parse_contract_json(bytes, SchemaContract::RulePackage)?;
+    package_from_value(value)
 }
 
 impl Serialize for RuleDefinition {
@@ -752,13 +727,8 @@ impl Serialize for RuleDefinition {
     where
         S: Serializer,
     {
-        if self.legacy_v1.is_some() {
-            return Err(S::Error::custom(
-                "v1 RuleDefinition 只读；请由 compiler 构造新的 v2 Definition",
-            ));
-        }
-        RuleDefinitionV2Ref {
-            schema_version: RULE_DEFINITION_SCHEMA_VERSION,
+        RuleDefinitionWireRef {
+            schema_version: RULE_CONTRACT_SCHEMA_VERSION,
             source_identity: &self.source_identity,
             base_url: &self.base_url,
             intent_exports: &self.intent_exports,
@@ -776,9 +746,9 @@ impl<'de> Deserialize<'de> for RuleDefinition {
         D: Deserializer<'de>,
     {
         let value = serde_json::Value::deserialize(deserializer)?;
-        let version = validate_contract_value(&value, SchemaContract::RuleDefinition)
+        validate_contract_value(&value, SchemaContract::RuleDefinition)
             .map_err(D::Error::custom)?;
-        definition_from_value(value, version).map_err(D::Error::custom)
+        definition_from_value(value).map_err(D::Error::custom)
     }
 }
 
@@ -787,13 +757,8 @@ impl Serialize for RulePackage {
     where
         S: Serializer,
     {
-        if self.schema_version == ContractSchemaVersion::V1 {
-            return Err(S::Error::custom(
-                "v1 RulePackage 只读；请由 importer 构造新的 v2 Package",
-            ));
-        }
-        RulePackageV2Ref {
-            schema_version: RULE_PACKAGE_SCHEMA_VERSION,
+        RulePackageWireRef {
+            schema_version: RULE_CONTRACT_SCHEMA_VERSION,
             source_identity: &self.source_identity,
             version: &self.version,
             definition: &self.definition,
@@ -808,15 +773,14 @@ impl<'de> Deserialize<'de> for RulePackage {
         D: Deserializer<'de>,
     {
         let value = serde_json::Value::deserialize(deserializer)?;
-        let version = validate_contract_value(&value, SchemaContract::RulePackage)
-            .map_err(D::Error::custom)?;
-        package_from_value(value, version).map_err(D::Error::custom)
+        validate_contract_value(&value, SchemaContract::RulePackage).map_err(D::Error::custom)?;
+        package_from_value(value).map_err(D::Error::custom)
     }
 }
 
 #[derive(Serialize)]
 #[serde(tag = "contract", rename = "rule_definition", deny_unknown_fields)]
-struct RuleDefinitionV2Ref<'a> {
+struct RuleDefinitionWireRef<'a> {
     schema_version: u32,
     source_identity: &'a SourceIdentity,
     base_url: &'a str,
@@ -828,7 +792,7 @@ struct RuleDefinitionV2Ref<'a> {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct RuleDefinitionV2Owned {
+struct RuleDefinitionWireOwned {
     schema_version: u32,
     source_identity: SourceIdentity,
     base_url: String,
@@ -840,7 +804,7 @@ struct RuleDefinitionV2Owned {
 
 #[derive(Serialize)]
 #[serde(tag = "contract", rename = "rule_package", deny_unknown_fields)]
-struct RulePackageV2Ref<'a> {
+struct RulePackageWireRef<'a> {
     schema_version: u32,
     source_identity: &'a SourceIdentity,
     version: &'a str,
@@ -849,285 +813,53 @@ struct RulePackageV2Ref<'a> {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct RulePackageV2Owned {
+struct RulePackageWireOwned {
     schema_version: u32,
     source_identity: SourceIdentity,
     version: String,
-    definition: RuleDefinition,
+    definition: serde_json::Value,
 }
 
 fn strip_contract_tag(mut value: serde_json::Value) -> serde_json::Value {
-    strip_contract_tag_in_place(&mut value);
+    if let Some(object) = value.as_object_mut() {
+        object.remove("contract");
+    }
     value
 }
 
-fn strip_contract_tag_in_place(value: &mut serde_json::Value) {
-    match value {
-        serde_json::Value::Object(object) => {
-            object.remove("contract");
-            for child in object.values_mut() {
-                strip_contract_tag_in_place(child);
-            }
-        }
-        serde_json::Value::Array(items) => {
-            for item in items {
-                strip_contract_tag_in_place(item);
-            }
-        }
-        _ => {}
+fn definition_from_value(value: serde_json::Value) -> Result<RuleDefinition, SchemaReadError> {
+    let wire = serde_json::from_value::<RuleDefinitionWireOwned>(strip_contract_tag(value))
+        .map_err(|error| invalid_data(SchemaContract::RuleDefinition, error.to_string()))?;
+    if wire.schema_version != RULE_CONTRACT_SCHEMA_VERSION {
+        return Err(SchemaReadError::SchemaUnsupported {
+            contract: SchemaContract::RuleDefinition,
+            version: wire.schema_version,
+        });
     }
+    Ok(RuleDefinition {
+        source_identity: wire.source_identity,
+        base_url: wire.base_url,
+        intent_exports: wire.intent_exports,
+        flow: wire.flow,
+        capability_manifest: wire.capability_manifest,
+        source_id_rules: wire.source_id_rules,
+    })
 }
 
-fn definition_from_value(
-    value: serde_json::Value,
-    version: ContractSchemaVersion,
-) -> Result<RuleDefinition, SchemaReadError> {
-    match version {
-        ContractSchemaVersion::V1 => {
-            let legacy =
-                serde_json::from_value::<LegacyRuleDefinitionV1>(strip_contract_tag(value))
-                    .map_err(|error| {
-                        invalid_data(SchemaContract::RuleDefinition, error.to_string())
-                    })?;
-            RuleDefinition::try_from_legacy(legacy)
-        }
-        ContractSchemaVersion::V2 => {
-            let wire = serde_json::from_value::<RuleDefinitionV2Owned>(strip_contract_tag(value))
-                .map_err(|error| {
-                invalid_data(SchemaContract::RuleDefinition, error.to_string())
-            })?;
-            if wire.schema_version != RULE_DEFINITION_SCHEMA_VERSION {
-                return Err(SchemaReadError::IncompatibleVersion {
-                    contract: SchemaContract::RuleDefinition,
-                    version: wire.schema_version,
-                });
-            }
-            Ok(RuleDefinition {
-                source_identity: wire.source_identity,
-                base_url: wire.base_url,
-                intent_exports: wire.intent_exports,
-                flow: wire.flow,
-                capability_manifest: wire.capability_manifest,
-                source_id_rules: wire.source_id_rules,
-                legacy_v1: None,
-            })
-        }
+fn package_from_value(value: serde_json::Value) -> Result<RulePackage, SchemaReadError> {
+    let wire = serde_json::from_value::<RulePackageWireOwned>(strip_contract_tag(value))
+        .map_err(|error| invalid_data(SchemaContract::RulePackage, error.to_string()))?;
+    if wire.schema_version != RULE_CONTRACT_SCHEMA_VERSION {
+        return Err(SchemaReadError::SchemaUnsupported {
+            contract: SchemaContract::RulePackage,
+            version: wire.schema_version,
+        });
     }
-}
-
-fn package_from_value(
-    value: serde_json::Value,
-    version: ContractSchemaVersion,
-) -> Result<RulePackage, SchemaReadError> {
-    match version {
-        ContractSchemaVersion::V1 => {
-            let legacy = serde_json::from_value::<LegacyRulePackageV1>(strip_contract_tag(value))
-                .map_err(|error| {
-                invalid_data(SchemaContract::RulePackage, error.to_string())
-            })?;
-            if legacy.schema_version != LEGACY_CONTRACT_SCHEMA_VERSION
-                || legacy.definition.schema_version != LEGACY_CONTRACT_SCHEMA_VERSION
-            {
-                return Err(invalid_data(
-                    SchemaContract::RulePackage,
-                    "v1 package 必须包含 v1 definition",
-                ));
-            }
-            let definition = RuleDefinition::try_from_legacy(legacy.definition)?;
-            Ok(RulePackage {
-                source_identity: legacy.source_identity,
-                version: legacy.version,
-                definition,
-                schema_version: ContractSchemaVersion::V1,
-            })
-        }
-        ContractSchemaVersion::V2 => {
-            let wire = serde_json::from_value::<RulePackageV2Owned>(strip_contract_tag(value))
-                .map_err(|error| invalid_data(SchemaContract::RulePackage, error.to_string()))?;
-            if wire.schema_version != RULE_PACKAGE_SCHEMA_VERSION
-                || wire.definition.schema_version() != ContractSchemaVersion::V2
-            {
-                return Err(invalid_data(
-                    SchemaContract::RulePackage,
-                    "v2 package 必须包含 v2 definition",
-                ));
-            }
-            Ok(RulePackage {
-                source_identity: wire.source_identity,
-                version: wire.version,
-                definition: wire.definition,
-                schema_version: ContractSchemaVersion::V2,
-            })
-        }
-    }
-}
-
-impl RuleDefinition {
-    fn try_from_legacy(legacy: LegacyRuleDefinitionV1) -> Result<Self, SchemaReadError> {
-        if legacy.schema_version != LEGACY_CONTRACT_SCHEMA_VERSION {
-            return Err(SchemaReadError::IncompatibleVersion {
-                contract: SchemaContract::RuleDefinition,
-                version: legacy.schema_version,
-            });
-        }
-        let nodes = legacy
-            .flow
-            .nodes
-            .iter()
-            .map(LegacyFlowNodeV1::to_v2)
-            .collect::<Result<Vec<_>, _>>()?;
-        let edges = legacy
-            .flow
-            .edges
-            .iter()
-            .map(|edge| {
-                if edge.condition_branch.is_some() {
-                    return Err(invalid_data(
-                        SchemaContract::RuleDefinition,
-                        "v1 linear edge 不能携带 condition branch",
-                    ));
-                }
-                Ok(FlowEdge::new(
-                    FlowPortRef::new(edge.from, "output"),
-                    FlowPortRef::new(edge.to, "input"),
-                ))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let material = legacy.clone();
-        Ok(Self {
-            source_identity: legacy.source_identity,
-            base_url: legacy.base_url,
-            intent_exports: legacy.intent_exports,
-            flow: FlowGraph { nodes, edges },
-            capability_manifest: legacy.capability_manifest,
-            source_id_rules: legacy.source_id_rules,
-            legacy_v1: Some(Box::new(material)),
-        })
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum LegacyFlowNodeKindV1 {
-    Http,
-    Js,
-    Extract,
-    Mapper,
-    Merge,
-    Condition,
-    Loop,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyFlowNodeV1 {
-    id: Uuid,
-    kind: LegacyFlowNodeKindV1,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    http: Option<HttpSpec>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    js_code: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    extract: Option<ExtractSpec>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    mapper: Option<ControlledMapper>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    span: Option<SourceSpan>,
-}
-
-impl LegacyFlowNodeV1 {
-    fn to_v2(&self) -> Result<FlowNode, SchemaReadError> {
-        let config_count = usize::from(self.http.is_some())
-            + usize::from(self.js_code.is_some())
-            + usize::from(self.extract.is_some())
-            + usize::from(self.mapper.is_some());
-        if config_count != 1 {
-            return Err(invalid_data(
-                SchemaContract::RuleDefinition,
-                "v1 FlowNode 必须恰有一个 active config",
-            ));
-        }
-        let config = match self.kind {
-            LegacyFlowNodeKindV1::Http => {
-                self.http.clone().map(FlowNodeConfig::Http).ok_or_else(|| {
-                    invalid_data(SchemaContract::RuleDefinition, "v1 HTTP config mismatch")
-                })?
-            }
-            LegacyFlowNodeKindV1::Js => self
-                .js_code
-                .clone()
-                .map(|code| {
-                    FlowNodeConfig::Js(JsConfig {
-                        code,
-                        output: JsOutputKind::Json,
-                    })
-                })
-                .ok_or_else(|| {
-                    invalid_data(SchemaContract::RuleDefinition, "v1 JS config mismatch")
-                })?,
-            LegacyFlowNodeKindV1::Extract => self
-                .extract
-                .clone()
-                .map(FlowNodeConfig::Extract)
-                .ok_or_else(|| {
-                    invalid_data(SchemaContract::RuleDefinition, "v1 Extract config mismatch")
-                })?,
-            LegacyFlowNodeKindV1::Mapper => self
-                .mapper
-                .clone()
-                .map(FlowNodeConfig::Mapper)
-                .ok_or_else(|| {
-                    invalid_data(SchemaContract::RuleDefinition, "v1 Mapper config mismatch")
-                })?,
-            LegacyFlowNodeKindV1::Merge
-            | LegacyFlowNodeKindV1::Condition
-            | LegacyFlowNodeKindV1::Loop => {
-                return Err(invalid_data(
-                    SchemaContract::RuleDefinition,
-                    "v1 reader 仅接受旧线性节点",
-                ));
-            }
-        };
-        Ok(FlowNode {
-            id: self.id,
-            config,
-            span: self.span.clone(),
-        })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyFlowEdgeV1 {
-    from: Uuid,
-    to: Uuid,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    condition_branch: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyFlowGraphV1 {
-    nodes: Vec<LegacyFlowNodeV1>,
-    edges: Vec<LegacyFlowEdgeV1>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct LegacyRuleDefinitionV1 {
-    schema_version: u32,
-    source_identity: SourceIdentity,
-    base_url: String,
-    intent_exports: BTreeMap<StandardIntent, IntentExport>,
-    flow: LegacyFlowGraphV1,
-    capability_manifest: CapabilityManifest,
-    source_id_rules: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct LegacyRulePackageV1 {
-    schema_version: u32,
-    source_identity: SourceIdentity,
-    version: String,
-    definition: LegacyRuleDefinitionV1,
+    validate_contract_value(&wire.definition, SchemaContract::RuleDefinition)?;
+    let definition = definition_from_value(wire.definition)?;
+    Ok(RulePackage {
+        source_identity: wire.source_identity,
+        version: wire.version,
+        definition,
+    })
 }

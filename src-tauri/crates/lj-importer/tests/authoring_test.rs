@@ -710,7 +710,7 @@ fn current_only_legado_header_rebase_is_path_limited_and_byte_preserving() {
     assert_eq!(cleared_split.masked_text, local);
     assert!(cleared_split.manifest.slots.is_empty());
 
-    let illegal = match CredentialSlotCodec::rebase_resolved_credentials(
+    let Err(illegal) = CredentialSlotCodec::rebase_resolved_credentials(
         &local,
         SourceDocumentFormat::Legado,
         &[CredentialRebaseResolution::replace(
@@ -718,15 +718,14 @@ fn current_only_legado_header_rebase_is_path_limited_and_byte_preserving() {
             "must-not-be-written",
         )],
         next.clone(),
-    ) {
-        Ok(_) => panic!("an arbitrary missing JSON pointer must not become a credential path"),
-        Err(error) => error,
+    ) else {
+        panic!("an arbitrary missing JSON pointer must not become a credential path");
     };
     assert_eq!(illegal.diagnostic.code, "credential_path_mismatch");
     assert_eq!(illegal.diagnostic.path, "/cookie");
 
     let duplicate_sensitive = r#"{"Authorization":"one","authorization":"two"}"#;
-    let duplicate = match CredentialSlotCodec::rebase_resolved_credentials(
+    let Err(duplicate) = CredentialSlotCodec::rebase_resolved_credentials(
         &local,
         SourceDocumentFormat::Legado,
         &[CredentialRebaseResolution::replace(
@@ -734,9 +733,8 @@ fn current_only_legado_header_rebase_is_path_limited_and_byte_preserving() {
             duplicate_sensitive,
         )],
         next.clone(),
-    ) {
-        Ok(_) => panic!("current-only insertion must re-run sensitive-name policy"),
-        Err(error) => error,
+    ) else {
+        panic!("current-only insertion must re-run sensitive-name policy");
     };
     assert_eq!(
         duplicate.diagnostic.code,
@@ -750,7 +748,7 @@ fn current_only_legado_header_rebase_is_path_limited_and_byte_preserving() {
         &format!("{{\"keep\":\"原样\",\"marker\":{sentinel_token}}}"),
         1,
     );
-    let replay = match CredentialSlotCodec::rebase_resolved_credentials(
+    let Err(replay) = CredentialSlotCodec::rebase_resolved_credentials(
         &tainted,
         SourceDocumentFormat::Legado,
         &[CredentialRebaseResolution::replace(
@@ -758,9 +756,8 @@ fn current_only_legado_header_rebase_is_path_limited_and_byte_preserving() {
             current_header,
         )],
         next,
-    ) {
-        Ok(_) => panic!("a local sentinel must not be erased by current-only insertion"),
-        Err(error) => error,
+    ) else {
+        panic!("a local sentinel must not be erased by current-only insertion");
     };
     assert_eq!(replay.diagnostic.code, "credential_sentinel_invalid");
 }

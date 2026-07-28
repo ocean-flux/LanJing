@@ -19,43 +19,29 @@ pub fn canonical_json<T: serde::Serialize>(value: &T) -> Result<String, Error> {
     Ok(serde_json::to_string(&value)?)
 }
 
-/// 计算 Definition 的版本正确 canonical BLAKE3 hash（hex）。
+/// 计算 Definition 的 current canonical BLAKE3 hash（hex）。
 ///
-/// v1 reader object 使用保留的精确旧 wire material；普通 authoring object 使用 writer-only
-/// v2 semantic projection。v2 projection 忽略节点、边、声明顺序与源码 span。
+/// 使用唯一 current semantic projection：忽略节点、边、声明顺序与源码 span；Merge input
+/// 按显式 `order` 规范化。物理数组换序不改变 hash，显式 order 与全部控制语义改变 hash。
 ///
 /// # Errors
 ///
 /// 序列化失败时返回 [`Error::Json`]。
 pub fn definition_hash(definition: &RuleDefinition) -> Result<String, Error> {
-    let canonical = if let Some(legacy) = definition.legacy_hash_material() {
-        let mut value = serde_json::to_value(legacy)?;
-        if let Some(object) = value.as_object_mut() {
-            object.insert(
-                "contract".to_string(),
-                serde_json::Value::String("rule_definition".to_string()),
-            );
-        }
-        canonicalize_json_value(&mut value);
-        serde_json::to_string(&value)?
-    } else {
-        canonical_json(&canonical_v2_definition(definition))?
-    };
+    let canonical = canonical_json(&canonical_definition(definition))?;
     let mut hasher = Hasher::new();
     hasher.update(canonical.as_bytes());
     Ok(hasher.finalize().to_hex().to_string())
 }
 
-fn canonical_v2_definition(definition: &RuleDefinition) -> RuleDefinition {
+fn canonical_definition(definition: &RuleDefinition) -> RuleDefinition {
     let mut flow = definition.flow().clone();
     for node in &mut flow.nodes {
         node.span = None;
         match &mut node.config {
             FlowNodeConfig::Mapper(config) => config.identity_fields.sort(),
             FlowNodeConfig::Merge(config) => {
-                config
-                    .inputs
-                    .sort_by(|left, right| left.handle.as_bytes().cmp(right.handle.as_bytes()));
+                config.inputs.sort_by_key(|input| input.order);
             }
             FlowNodeConfig::Condition(config) => {
                 config

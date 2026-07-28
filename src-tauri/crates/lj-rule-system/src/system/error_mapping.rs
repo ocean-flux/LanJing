@@ -167,52 +167,91 @@ pub(super) fn runtime_error(error: &PlanRuntimeError, trace_id: &str) -> RuleErr
 }
 
 /// 将 C2 错误映射为不泄露存储路径、artifact ref 或 secret 的 façade 错误。
+// 安全 façade 的穷举映射集中在一个 match，避免新增 StorageError 时遗漏脱敏分支。
 pub(super) fn storage_error(
     error: &StorageError,
     default_stage: RuleErrorStage,
     trace_id: &str,
 ) -> RuleError {
-    let (stage, code, message, retryable) = match error {
-        StorageError::CandidateMissing => (
-            RuleErrorStage::Candidate,
-            "candidate_missing",
-            "candidate 不存在",
-            false,
-        ),
-        StorageError::CandidateExpired => (
-            RuleErrorStage::Candidate,
-            "candidate_expired",
-            "candidate 已过期",
-            false,
-        ),
-        StorageError::CandidateUnavailable => (
-            RuleErrorStage::Candidate,
-            "candidate_unavailable",
-            "candidate 已被消费或不可安装",
-            false,
-        ),
+    let contract = match error {
+        StorageError::CandidateMissing
+        | StorageError::CandidateExpired
+        | StorageError::CandidateUnavailable
+        | StorageError::CandidateTampered
+        | StorageError::CandidateStale
+        | StorageError::CandidateSchemaMismatch => candidate_storage_contract(error),
+        StorageError::ContractSchemaUnsupported { .. }
+        | StorageError::LegacyRuleContractUnsupported { .. }
+        | StorageError::GrantInsufficient
+        | StorageError::SourceCredentialUnavailable
+        | StorageError::DocumentMissing
+        | StorageError::DocumentDeleteUnsafe
+        | StorageError::CredentialOwnershipMismatch
+        | StorageError::SourceMissing
+        | StorageError::ExecutionMissing => contract_storage_contract(error, default_stage),
+        StorageError::VersionConflict { .. }
+        | StorageError::ArtifactUnavailable(_)
+        | StorageError::MasterKeyUnavailable
+        | StorageError::SecretUnavailable
+        | StorageError::ReplayUnavailable(_)
+        | StorageError::KeyringUnavailable
+        | StorageError::KeyringLocked
+        | StorageError::KeyLost
+        | StorageError::ArtifactCorrupt
+        | StorageError::VaultMigrationFailed
+        | StorageError::IdempotencyMismatch
+        | StorageError::WriterClosed
+        | StorageError::WriterUnavailable
+        | StorageError::Database(_)
+        | StorageError::FileSystem(_)
+        | StorageError::Keyring
+        | StorageError::Serialization
+        | StorageError::InvalidInput(_) => durability_storage_contract(error, default_stage),
+    };
+    storage_rule_error(contract, trace_id)
+}
+
+fn candidate_storage_contract(
+    error: &StorageError,
+) -> (RuleErrorStage, &'static str, &'static str, bool) {
+    let (code, message) = match error {
+        StorageError::CandidateMissing => ("candidate_missing", "candidate 不存在"),
+        StorageError::CandidateExpired => ("candidate_expired", "candidate 已过期"),
+        StorageError::CandidateUnavailable => {
+            ("candidate_unavailable", "candidate 已被消费或不可安装")
+        }
         StorageError::CandidateTampered => (
-            RuleErrorStage::Candidate,
             "candidate_tampered",
             "candidate durable metadata 与安装内容不一致",
-            false,
         ),
         StorageError::CandidateStale => (
-            RuleErrorStage::Candidate,
             "candidate_stale",
             "candidate 的 document/source 基线已经变化",
-            false,
         ),
         StorageError::CandidateSchemaMismatch => (
-            RuleErrorStage::Candidate,
             "candidate_schema_mismatch",
             "candidate schema 已不受当前版本支持",
+        ),
+        _ => unreachable!("candidate storage error category is exhaustive"),
+    };
+    (RuleErrorStage::Candidate, code, message, false)
+}
+
+fn contract_storage_contract(
+    error: &StorageError,
+    default_stage: RuleErrorStage,
+) -> (RuleErrorStage, &'static str, &'static str, bool) {
+    match error {
+        StorageError::ContractSchemaUnsupported { .. } => (
+            default_stage,
+            "RULE_CONTRACT_SCHEMA_UNSUPPORTED",
+            "已安装规则合同 schema 不受当前版本支持",
             false,
         ),
-        StorageError::ContractSchemaIncompatible { .. } => (
+        StorageError::LegacyRuleContractUnsupported { .. } => (
             default_stage,
-            "contract_schema_incompatible",
-            "已安装规则合同版本不受当前版本支持",
+            "LEGACY_RULE_CONTRACT_UNSUPPORTED",
+            "历史规则合同不受当前版本支持",
             false,
         ),
         StorageError::GrantInsufficient => (
@@ -254,6 +293,15 @@ pub(super) fn storage_error(
             "execution 不存在",
             false,
         ),
+        _ => unreachable!("contract storage error category is exhaustive"),
+    }
+}
+
+fn durability_storage_contract(
+    error: &StorageError,
+    default_stage: RuleErrorStage,
+) -> (RuleErrorStage, &'static str, &'static str, bool) {
+    match error {
         StorageError::VersionConflict { .. } => (
             default_stage,
             "stream_version_conflict",
@@ -321,8 +369,8 @@ pub(super) fn storage_error(
             "本地持久化操作失败",
             false,
         ),
-    };
-    storage_rule_error((stage, code, message, retryable), trace_id)
+        _ => unreachable!("durability storage error category is exhaustive"),
+    }
 }
 
 fn storage_rule_error(
@@ -338,4 +386,50 @@ fn storage_rule_error(
         retryable,
         Vec::new(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lj_rule_model::SchemaContract;
+
+    #[test]
+    fn storage_schema_errors_map_to_stable_contract_codes() {
+        let schema = storage_error(
+            &StorageError::ContractSchemaUnsupported {
+                contract: SchemaContract::ExecutionPlan,
+                version: 99,
+            },
+            RuleErrorStage::Execution,
+            "trace-schema",
+        );
+        assert_eq!(schema.stage, RuleErrorStage::Execution);
+        assert_eq!(schema.code, "RULE_CONTRACT_SCHEMA_UNSUPPORTED");
+        assert!(schema.diagnostics.is_empty());
+        assert!(!schema.message.contains("script"));
+        assert!(!schema.message.contains("secret"));
+
+        let legacy = storage_error(
+            &StorageError::LegacyRuleContractUnsupported {
+                contract: SchemaContract::RulePackage,
+            },
+            RuleErrorStage::Install,
+            "trace-legacy",
+        );
+        assert_eq!(legacy.stage, RuleErrorStage::Install);
+        assert_eq!(legacy.code, "LEGACY_RULE_CONTRACT_UNSUPPORTED");
+        assert!(legacy.diagnostics.is_empty());
+        assert!(!legacy.message.contains("Authorization"));
+        assert!(!legacy.message.contains("cookie"));
+    }
+
+    #[test]
+    fn runtime_control_unavailable_stays_execution_safe() {
+        let error = runtime_error(&PlanRuntimeError::UnsupportedControlFlow, "trace-control");
+        assert_eq!(error.stage, RuleErrorStage::Execution);
+        assert_eq!(error.code, "plan_control_flow_unsupported");
+        assert!(error.diagnostics.is_empty());
+        assert!(!error.message.contains("script"));
+        assert!(!error.message.contains("result"));
+    }
 }
