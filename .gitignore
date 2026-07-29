@@ -42,6 +42,7 @@ Thumbs.db
 .ruff_cache/
 
 # Shared build / cache outputs
+.pnpm-store/
 .svelte-kit/
 build/
 coverage/
