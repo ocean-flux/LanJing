@@ -10,51 +10,18 @@ pub(crate) mod vocab;
 pub use types::{MaccmsFormat, MaccmsSourceUrl};
 
 use std::collections::{BTreeMap, HashMap};
-use std::fmt;
 
-use lj_rule_model::{Error, RequestHeaderDisposition, RuleDefinition, SensitiveNamePolicy};
+use lj_rule_model::{
+    DiagnosticSeverity, Error, RequestHeaderDisposition, RuleDefinition, SensitiveNamePolicy,
+};
 use url::Url;
 
 use vocab::API_PATH;
 
+use crate::{ImportError, ImportFormat, ImportedNativeRule};
+
 /// Maccms10 视频源 importer。
 pub struct MaccmsImporter;
-
-/// 已保存 Maccms10 JSON endpoint 文档进入既有 Definition adapter 的结果。
-///
-/// credential headers 只通过 [`Self::credential_snapshot_bytes`] 显式移交给加密 candidate；
-/// 此类型不实现可泄漏 plaintext 的派生 `Debug`/`Clone`/serde。
-pub struct MaccmsDocumentImport {
-    /// 仅含 non-sensitive request headers 的 Definition。
-    pub definition: RuleDefinition,
-    credential_headers: BTreeMap<String, String>,
-}
-
-impl MaccmsDocumentImport {
-    /// 将 runtime credential headers 序列化为 opaque secret bytes。
-    ///
-    /// # Errors
-    ///
-    /// credential map 无法序列化时返回不含 plaintext 的 [`Error::Import`]。
-    pub fn credential_snapshot_bytes(&self) -> Result<Option<Vec<u8>>, Error> {
-        if self.credential_headers.is_empty() {
-            return Ok(None);
-        }
-        serde_json::to_vec(&self.credential_headers)
-            .map(Some)
-            .map_err(|_| Error::Import("Maccms credential snapshot 无法序列化".to_string()))
-    }
-}
-
-impl fmt::Debug for MaccmsDocumentImport {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter
-            .debug_struct("MaccmsDocumentImport")
-            .field("source_identity", &self.definition.source_identity().id)
-            .field("has_credentials", &!self.credential_headers.is_empty())
-            .finish()
-    }
-}
 
 impl MaccmsImporter {
     /// 将 Maccms 采集端点转换为可交给 compiler 的 Definition。
@@ -67,45 +34,77 @@ impl MaccmsImporter {
         Ok(translator::definition(endpoint, input.at))
     }
 
-    /// 将已通过 authoring codec 的 Maccms10 endpoint JSON 转为 Definition 与 credential snapshot。
+    /// 通过统一的 import-only 结果边界导入 current Maccms JSON endpoint URL。
     ///
-    /// 当前 vault 路径只接受 `{ base_url, format: "json", headers? }`；XML/query builder 与完整
-    /// endpoint workspace 仍由后续 Maccms 任务拥有。未知字段保留在 vault 原文，不进入 Definition。
+    /// # Errors
+    ///
+    /// endpoint URL 无效或不安全时返回不含原文的 [`ImportError`]。
+    pub fn import_url(&self, url: &str) -> Result<ImportedNativeRule, ImportError> {
+        let definition = self
+            .definition(&MaccmsSourceUrl {
+                url: url.to_string(),
+                at: MaccmsFormat::Json,
+            })
+            .map_err(|_| ImportError::blocked("maccms_url_invalid", url.len().min(1)))?;
+        Ok(ImportedNativeRule::new(
+            definition,
+            None,
+            None,
+            Vec::new(),
+            ImportFormat::Maccms10,
+            url,
+            None,
+        ))
+    }
+
+    /// 将 Maccms10 endpoint JSON 转为原生 Definition 与短生命周期 credential snapshot。
+    ///
+    /// 当前 import-only JSON 只接受 `{ base_url, format: "json", headers? }`。未知字段会被
+    /// 忽略，不保留原文，也不进入 Definition。
     ///
     /// # Errors
     ///
     /// JSON/root/base URL/format/header 类型无效，URL 含 userinfo/query/fragment，header 被共享
     /// sensitive policy 阻断，或 endpoint 不是 Maccms `Provide::vod` 路径时返回 [`Error::Import`]。
-    pub fn import_document(&self, text: &str) -> Result<MaccmsDocumentImport, Error> {
+    pub fn import_document(&self, text: &str) -> Result<ImportedNativeRule, ImportError> {
+        let diagnostics = crate::strict_json::validate_json_document(text);
+        if diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
+        {
+            return Err(ImportError::new(diagnostics));
+        }
         let value = serde_json::from_str::<serde_json::Value>(text)
-            .map_err(|_| Error::Import("Maccms endpoint 文档 JSON 无效".to_string()))?;
+            .map_err(|_| ImportError::blocked("maccms_document_invalid", text.len().min(1)))?;
         let object = value
             .as_object()
-            .ok_or_else(|| Error::Import("Maccms endpoint 文档根必须是 object".to_string()))?;
+            .ok_or_else(|| ImportError::blocked("root_not_object", text.len().min(1)))?;
         let base_url = object
             .get("base_url")
             .and_then(serde_json::Value::as_str)
             .map(str::trim)
             .filter(|value| !value.is_empty())
-            .ok_or_else(|| Error::Import("Maccms endpoint base_url 无效".to_string()))?;
+            .ok_or_else(|| ImportError::blocked("maccms_base_url_invalid", text.len().min(1)))?;
         match object.get("format").and_then(serde_json::Value::as_str) {
             Some("json") => {}
             _ => {
-                return Err(Error::Import(
-                    "当前 Maccms endpoint 文档仅支持 JSON format".to_string(),
+                return Err(ImportError::blocked(
+                    "maccms_format_unsupported",
+                    text.len().min(1),
                 ));
             }
         }
         let parsed_url = Url::parse(base_url)
-            .map_err(|_| Error::Import("Maccms endpoint base_url 无效".to_string()))?;
+            .map_err(|_| ImportError::blocked("maccms_base_url_invalid", text.len().min(1)))?;
         if !matches!(parsed_url.scheme(), "http" | "https")
             || !parsed_url.username().is_empty()
             || parsed_url.password().is_some()
             || parsed_url.query().is_some()
             || parsed_url.fragment().is_some()
         {
-            return Err(Error::Import(
-                "Maccms endpoint base_url 不能包含 userinfo/query/fragment".to_string(),
+            return Err(ImportError::blocked(
+                "maccms_base_url_unsafe",
+                text.len().min(1),
             ));
         }
 
@@ -115,10 +114,10 @@ impl MaccmsImporter {
         if let Some(headers) = object.get("headers") {
             let headers = headers
                 .as_object()
-                .ok_or_else(|| Error::Import("Maccms endpoint headers 无效".to_string()))?;
+                .ok_or_else(|| ImportError::blocked("maccms_headers_invalid", text.len().min(1)))?;
             for (name, value) in headers {
                 let value = value.as_str().ok_or_else(|| {
-                    Error::Import("Maccms endpoint header value 无效".to_string())
+                    ImportError::blocked("maccms_header_value_invalid", text.len().min(1))
                 })?;
                 match SensitiveNamePolicy::request_header_disposition(name) {
                     RequestHeaderDisposition::Public => {
@@ -129,30 +128,43 @@ impl MaccmsImporter {
                             .iter()
                             .any(|existing| SensitiveNamePolicy::equivalent(existing, name))
                         {
-                            return Err(Error::Import(
-                                "Maccms endpoint credential header 重复".to_string(),
+                            return Err(ImportError::blocked(
+                                "maccms_credential_header_duplicate",
+                                text.len().min(1),
                             ));
                         }
                         credential_names.push(name.clone());
                         credential_headers.insert(name.clone(), value.to_string());
                     }
                     RequestHeaderDisposition::Blocked => {
-                        return Err(Error::Import(
-                            "Maccms endpoint request header 被安全策略阻断".to_string(),
+                        return Err(ImportError::blocked(
+                            "maccms_header_blocked",
+                            text.len().min(1),
                         ));
                     }
                 }
             }
         }
-        let endpoint = normalize_endpoint(base_url)?;
-        Ok(MaccmsDocumentImport {
-            definition: translator::definition_with_headers(
-                endpoint,
-                MaccmsFormat::Json,
-                public_headers,
-            ),
-            credential_headers,
-        })
+        let endpoint = normalize_endpoint(base_url)
+            .map_err(|_| ImportError::blocked("maccms_base_url_invalid", text.len().min(1)))?;
+        let definition =
+            translator::definition_with_headers(endpoint, MaccmsFormat::Json, public_headers);
+        let credential_bytes = if credential_headers.is_empty() {
+            None
+        } else {
+            Some(serde_json::to_vec(&credential_headers).map_err(|_| {
+                ImportError::blocked("maccms_credentials_invalid", text.len().min(1))
+            })?)
+        };
+        Ok(ImportedNativeRule::new(
+            definition,
+            None,
+            None,
+            diagnostics,
+            ImportFormat::Maccms10,
+            text,
+            credential_bytes,
+        ))
     }
 }
 
@@ -290,7 +302,7 @@ mod tests {
             "preserved": { "future": true }
         })
         .to_string();
-        let imported = MaccmsImporter
+        let mut imported = MaccmsImporter
             .import_document(&text)
             .expect("saved Maccms JSON document must import");
         let definition = lj_rule_model::canonical_json(&imported.definition)
@@ -313,15 +325,16 @@ mod tests {
             assert!(!http.headers.contains_key("Authorization"));
         }
         let snapshot = imported
-            .credential_snapshot_bytes()
-            .expect("credential snapshot serialization")
-            .expect("sensitive header must create a runtime credential snapshot");
+            .take_credentials()
+            .expect("sensitive header must create a runtime credential snapshot")
+            .into_bytes();
         assert!(
             String::from_utf8(snapshot)
                 .expect("snapshot JSON")
                 .contains(secret)
         );
-        assert!(!format!("{imported:?}").contains(secret));
+        assert!(!format!("{:?}", imported.provenance).contains(secret));
+        assert!(!format!("{:?}", imported.diagnostics).contains(secret));
 
         for invalid in [
             r#"{"base_url":"https://user@example.com/api.php/provide/vod/","format":"json"}"#,

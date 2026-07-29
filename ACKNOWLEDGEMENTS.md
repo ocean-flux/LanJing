@@ -21,7 +21,6 @@
 
 - [Paraglide JS](https://paraglidejs.com/) - 前端编译式国际化基础
 - [TanStack Query](https://tanstack.com/query/latest) - 查询状态与异步数据流参考
-- [Monaco Editor](https://github.com/microsoft/monaco-editor) - 规则编辑器代码编辑体验
 - [Pretext](https://github.com/chenglou/pretext) - 阅读排版测量与正文分页相关实验基础
 - [xmloxide](https://github.com/jonwiggins/xmloxide) - 纯 Rust HTML / XML / XPath 解析能力基础
 - [Project Fluent](https://projectfluent.org/) - Rust 规则平台诊断和报告本地化语义基础

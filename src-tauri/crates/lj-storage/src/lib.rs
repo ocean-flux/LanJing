@@ -8,7 +8,6 @@
 mod artifact;
 mod candidate_install;
 mod connection;
-mod document_vault;
 mod event_store;
 mod execution;
 mod execution_archive;
@@ -23,25 +22,15 @@ mod writer;
 
 pub use storage::EventProjectionStorage;
 pub use types::{
-    AppendRequest, ArtifactInput, ArtifactKind, CandidateDocumentInput, CandidateDraft,
-    CandidateSummary, CheckpointReceipt, CommitReceipt, CreateSourceDocumentInput,
-    CredentialSlotMaterial, CredentialSlotSummary, DEFAULT_ARCHIVE_TTL_MS,
-    DEFAULT_CANDIDATE_TTL_MS, DeleteSourceDocumentInput, DeltaCommit, DocumentMutationOutcome,
-    DocumentRef, DocumentValidationIssue, EditSourceDocumentCredentialInput, ExecutionFinish,
-    ExecutionPin, ExecutionRecord, ExecutionReplayPin, ExecutionSourceCredentials, ExecutionStart,
-    ExecutionStartReceipt, ExecutionStatus, GcReport, GcState, INSTALL_CANDIDATE_SCHEMA_VERSION,
-    InstallCandidateRequest, InstalledSource, InstalledSourceRecord, InstalledSourceSnapshot,
-    LibraryEntry, LibraryProgress, LibraryProjection, LibraryProjectionEntry,
-    LibraryProjectionSnapshot, LibraryUpdate, LoadSourceDocumentRebaseMaterialInput,
-    MAX_SOURCE_DOCUMENT_BYTES, MaskedSourceDocument, OrphanRecovery,
-    PinSourceDocumentRevisionInput, ProjectionDelta, ProjectionTombstones,
-    RebaseSourceDocumentInput, RelationTombstone, RenameSourceDocumentInput, ReplayExecutionStart,
-    ReplayUnavailableReason, RetentionPolicy, RevealedSourceDocumentCredential,
-    RuntimeCredentialMaterial, SOURCE_DOCUMENT_SCHEMA_VERSION, SaveSourceDocumentInput,
-    SecretArtifactId, SourceDocumentCredentialTarget, SourceDocumentId, SourceDocumentMaterial,
-    SourceDocumentRebaseCommitMode, SourceDocumentRebaseInvalidReason,
-    SourceDocumentRebaseMaterialOutcome, SourceDocumentRebaseMaterials,
-    SourceDocumentRevisionInput, SourceDocumentRevisionPin, SourceDocumentState,
-    SourceDocumentSummary, SourceProjectionSnapshot, SourceProjectionView, StorageConfig,
-    StorageError, StoredEvent, TransientSourceDocumentInput, WRITER_CAPACITY,
+    AppendRequest, ArtifactInput, ArtifactKind, CandidateDraft, CandidateSummary,
+    CheckpointReceipt, CommitReceipt, DEFAULT_ARCHIVE_TTL_MS, DEFAULT_CANDIDATE_TTL_MS,
+    DeltaCommit, ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionReplayPin,
+    ExecutionSourceCredentials, ExecutionStart, ExecutionStartReceipt, ExecutionStatus, GcReport,
+    GcState, INSTALL_CANDIDATE_SCHEMA_VERSION, InstallCandidateRequest, InstalledSource,
+    InstalledSourceRecord, InstalledSourceSnapshot, LibraryEntry, LibraryProgress,
+    LibraryProjection, LibraryProjectionEntry, LibraryProjectionSnapshot, LibraryUpdate,
+    OrphanRecovery, ProjectionDelta, ProjectionTombstones, RelationTombstone, ReplayExecutionStart,
+    ReplayUnavailableReason, RetentionPolicy, RuntimeCredentialMaterial, SecretArtifactId,
+    SourceProjectionSnapshot, SourceProjectionView, StorageConfig, StorageError, StoredEvent,
+    WRITER_CAPACITY,
 };

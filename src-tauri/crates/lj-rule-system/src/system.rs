@@ -1,16 +1,15 @@
 //! concrete `RuleSystem` 的私有组合根。
 //!
-//! `RuleSystem` 是规则生命周期与来源文档保险库的唯一 concrete façade：调用方只能保存/读取
-//! masked document、准备并安装 candidate、启动已安装来源 session，或读取安全投影。
+//! `RuleSystem` 是规则导入与执行的唯一 concrete façade：调用方只能准备并安装 candidate、
+//! 启动已安装来源 session，或读取安全投影。
 //! Definition、immutable Plan、node effect adapter、C2 storage transaction 与 secret material
 //! 始终保持私有。
 //!
-//! `document_vault` 组合 authoring codec 与 storage；`lifecycle` 处理 candidate/install/execute；
-//! `session_delivery` 保证持久化事件顺序和取消语义；`query_adapter` 映射安全查询；`capture` 提供
+//! `lifecycle` 处理 import/candidate/install/execute；`session_delivery` 保证持久化事件顺序和取消语义；
+//! `query_adapter` 映射安全查询；`capture` 提供
 //! test-only witness seam；`error_mapping` 收敛脱敏错误。
 
 mod capture;
-mod document_vault;
 mod error_mapping;
 mod lifecycle;
 mod query_adapter;

@@ -318,8 +318,8 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
 }
 
 #[tokio::test]
-async fn replay_pin_backfills_current_snapshot_and_rejects_missing_or_tampered_snapshot() {
-    let temp = TempStore::new("replay-snapshot-backfill");
+async fn replay_pin_survives_restart_and_rejects_tampered_snapshot() {
+    let temp = TempStore::new("replay-snapshot-restart");
     let storage = temp.open().await;
     let now = 1_750_001_000_000;
     install_source(&storage, now).await;
@@ -372,11 +372,6 @@ async fn replay_pin_backfills_current_snapshot_and_rejects_missing_or_tampered_s
             .replace('\\', "/")
     );
     assert!(metadata.ref_count >= 1, "source package has a durable ref");
-    sql_query(
-        "UPDATE source_versions SET profile_json = NULL, grant_json = NULL, base_url = NULL WHERE source_identity = 'source:test' AND version = 'v1'",
-    )
-    .execute(&mut conn)
-    .expect("simulate legacy source version without replay snapshot");
     drop(conn);
 
     let storage = temp.open().await;
@@ -387,7 +382,7 @@ async fn replay_pin_backfills_current_snapshot_and_rejects_missing_or_tampered_s
     let pin = storage
         .load_execution_replay_pin(execution_id)
         .await
-        .expect("startup backfill restores current source snapshot");
+        .expect("restart preserves current source snapshot");
     assert_eq!(pin.profile.title, "测试来源");
     assert_eq!(pin.grant, PolicyCapabilities::default());
     assert_eq!(pin.base_url, "https://example.test");
@@ -402,15 +397,5 @@ async fn replay_pin_backfills_current_snapshot_and_rejects_missing_or_tampered_s
     let tampered = storage.load_execution_replay_pin(execution_id).await;
     assert!(matches!(&tampered, Err(StorageError::ReplayUnavailable(_))));
 
-    let mut conn =
-        SqliteConnection::establish(&database_url).expect("open SQLite for missing test");
-    sql_query(
-        "UPDATE source_versions SET base_url = 'https://example.test', profile_json = NULL WHERE source_identity = 'source:test' AND version = 'v1'",
-    )
-    .execute(&mut conn)
-    .expect("remove source profile snapshot");
-    drop(conn);
-    let missing = storage.load_execution_replay_pin(execution_id).await;
-    assert!(matches!(&missing, Err(StorageError::ReplayUnavailable(_))));
     storage.shutdown().await.expect("writer shutdown");
 }

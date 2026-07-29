@@ -10,15 +10,9 @@ use std::time::Duration;
 use futures::stream::BoxStream;
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::{MediaAsset, MediaGraphDelta, MediaUnit, SourceProfile};
-pub use lj_rule_model::SourceDocumentFormat;
 use lj_rule_model::{ArtifactRef, Diagnostic, PolicyCapabilities};
 use lj_runtime::CancellationHandle;
 use lj_storage::EventProjectionStorage;
-pub use lj_storage::{
-    CredentialSlotSummary, DocumentMutationOutcome, DocumentRef, DocumentValidationIssue,
-    MaskedSourceDocument, SourceDocumentCredentialTarget, SourceDocumentId,
-    SourceDocumentRevisionPin, SourceDocumentState, SourceDocumentSummary,
-};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -53,209 +47,6 @@ impl fmt::Debug for RuleInput {
                 .finish(),
         }
     }
-}
-
-/// 列出来源文档的空 façade 请求；保留真实 `{ request: {} }` command wrapper。
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ListSourceDocumentsRequest {}
-
-/// 读取一个默认 masked 文档的 façade 请求。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct GetSourceDocumentRequest {
-    /// 随机、不透明文档身份。
-    pub document_id: SourceDocumentId,
-}
-
-/// 创建并保存来源文档 revision `1` 的 façade 请求。
-///
-/// `text` 可能包含 credential plaintext，因此此类型不实现 `Debug`、`Clone` 或 `Serialize`。
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct CreateSourceDocumentRequest {
-    /// 作者格式。
-    pub format: SourceDocumentFormat,
-    /// 非空用户可见标题。
-    pub title: String,
-    /// 完整原始 JSON；进入 storage 前必须先由 authoring codec 校验并 split。
-    pub text: String,
-}
-
-/// 保存 masked 编辑文本为下一 revision 的 façade 请求。
-///
-/// 正文即使已遮罩也不应进入默认日志，因此此类型不实现 `Debug`、`Clone` 或 `Serialize`。
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SaveSourceDocumentRequest {
-    /// 要保存的文档。
-    pub document_id: SourceDocumentId,
-    /// optimistic concurrency 基线。
-    pub expected_revision: u64,
-    /// 当前编辑器持有的 masked JSON；旧 sentinel 必须仍严格绑定该 revision/path。
-    pub masked_text: String,
-}
-
-/// 固定一个已保存来源文档 revision 的 façade 请求。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PinSourceDocumentRevisionRequest {
-    /// 要固定的来源文档。
-    pub document_id: SourceDocumentId,
-    /// 必须仍为 current 的已保存 revision。
-    pub document_revision: u64,
-}
-
-/// 幂等释放 revision pin 的 façade 请求。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ReleaseSourceDocumentRevisionPinRequest {
-    /// 要释放的随机、不透明 pin ID。
-    pub pin_id: Uuid,
-}
-
-/// revision pin 释放命令的固定 tagged outcome。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum SourceDocumentRevisionPinReleaseOutcome {
-    /// pin owners 已释放，或此前已经释放/不存在。
-    Released {
-        /// 调用方提交的 pin ID。
-        pin_id: Uuid,
-    },
-}
-
-/// slot-aware rebase 的持久化模式。
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-pub enum SourceDocumentRebaseMode {
-    /// 把 resolved local 内容保存为 current 的下一 revision。
-    Merge {},
-    /// 创建新的 revision-1 draft，原文档保持不变。
-    Fork {
-        /// 新 draft 的用户可见标题。
-        title: String,
-    },
-}
-
-/// 单个可信 credential path 的用户 resolution。
-///
-/// `Replace.value` 是 plaintext，因此此类型故意只实现 `Deserialize`，不实现 `Debug`、`Clone`
-/// 或 `Serialize`。
-#[derive(Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-pub enum SourceDocumentCredentialAction {
-    /// 使用 current revision 在同一路径的 credential。
-    KeepCurrent,
-    /// 使用 pin base/local 在同一路径的 credential。
-    KeepLocal,
-    /// 使用本次请求携带的新 plaintext。
-    Replace {
-        /// 只在本次 rebase 调用栈中存在的 replacement。
-        value: String,
-    },
-    /// 按来源格式清除该 credential path。
-    Clear,
-}
-
-/// path-only credential resolution；slot owner 始终由后端 manifest 派生并验证。
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SourceDocumentCredentialResolution {
-    /// 必须属于 trusted base/current manifest path union。
-    pub path: String,
-    /// 对该 trusted path 的显式动作。
-    pub action: SourceDocumentCredentialAction,
-}
-
-/// slot-aware merge/fork 的 façade 请求。
-///
-/// local masked text 与 replacement 可能携带敏感编辑上下文，因此此类型故意只实现
-/// `Deserialize`，不实现 `Debug`、`Clone` 或 `Serialize`。
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RebaseSourceDocumentRequest {
-    /// 固定 base material 的随机 pin。
-    pub pin_id: Uuid,
-    /// pin、base 与 current 共同所属的文档。
-    pub document_id: SourceDocumentId,
-    /// pin 固定的 base revision。
-    pub base_revision: u64,
-    /// 用户开始处理冲突时观察到的 current revision。
-    pub current_revision: u64,
-    /// 仅允许包含 base owner sentinel 的 local masked 文本。
-    pub local_masked_text: String,
-    /// merge 或 fork。
-    pub mode: SourceDocumentRebaseMode,
-    /// trusted base/current credential path union 的完整且唯一 resolution。
-    pub credential_resolutions: Vec<SourceDocumentCredentialResolution>,
-}
-
-/// optimistic rename 的安全 façade 请求。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RenameSourceDocumentRequest {
-    /// 要重命名的文档。
-    pub document_id: SourceDocumentId,
-    /// optimistic concurrency 基线。
-    pub expected_revision: u64,
-    /// 非空新标题。
-    pub title: String,
-}
-
-/// 只删除未关联 draft 的安全 façade 请求。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct DeleteSourceDocumentRequest {
-    /// 要删除的文档。
-    pub document_id: SourceDocumentId,
-    /// optimistic concurrency 基线。
-    pub expected_revision: u64,
-}
-
-/// 显式 reveal 单个 owner-bound credential slot 的 façade 请求。
-///
-/// 为避免 reveal 路径被整体日志化，此类型不实现 `Debug`、`Clone` 或 `Serialize`。
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RevealSourceDocumentCredentialRequest {
-    /// 必须严格匹配当前 document/revision/slot owner。
-    pub target: SourceDocumentCredentialTarget,
-}
-
-/// 清除单个 owner-bound credential slot 的 façade 请求。
-///
-/// 此请求会触发完整 secret material 的短生命周期重组，因此不实现 `Debug`、`Clone` 或
-/// `Serialize`。
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ClearSourceDocumentCredentialRequest {
-    /// 必须严格匹配当前 document/revision/slot owner。
-    pub target: SourceDocumentCredentialTarget,
-}
-
-/// 显式替换单个 credential slot 的 façade 请求。
-///
-/// `value` 是短生命周期 plaintext，因此此类型不实现 `Debug`、`Clone` 或 `Serialize`。
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ReplaceSourceDocumentCredentialRequest {
-    /// 必须严格匹配当前 document/revision/slot owner。
-    pub target: SourceDocumentCredentialTarget,
-    /// Legado `/header` slot 的完整 header JSON string，或 Maccms10 单 header value。
-    pub value: String,
-}
-
-/// 显式单 slot reveal 的短生命周期 wire response。
-///
-/// 此类型只实现 response 所需的 `Serialize`；不实现 `Debug`、`Clone` 或 `Deserialize`，也绝不
-/// 出现在默认 document query。
-#[derive(Serialize)]
-pub struct SourceDocumentCredentialReveal {
-    /// storage 已验证的 owner target。
-    pub target: SourceDocumentCredentialTarget,
-    /// 单次 plaintext value。
-    pub value: String,
 }
 
 /// 只可作为 install token 传递的 opaque candidate ID。
@@ -344,10 +135,6 @@ impl CapabilityGrant {
 pub struct InstallCandidate {
     /// 只可原样交给 [`crate::RuleSystem::install`] 的 opaque token。
     pub id: CandidateId,
-    /// 已保存来源文档基线；quick-install transient candidate 为 `None`。
-    pub document_ref: Option<DocumentRef>,
-    /// 是否来自不创建 draft 的临时加密 staging。
-    pub transient: bool,
     /// prepare 时固定的 installed source revision；首次安装为 `0`。
     pub expected_installed_revision: u64,
     /// 稳定来源资料。
@@ -375,8 +162,6 @@ pub struct InstalledSource {
     pub profile: SourceProfile,
     /// source stream 的当前 revision。
     pub revision: u64,
-    /// 后端持久化的 editable working-copy 关联；revision 是已安装 baseline。
-    pub document_ref: Option<DocumentRef>,
 }
 
 /// 面向根层的资料库消费进度；不包含来源凭证或内部投影句柄。

@@ -13,22 +13,19 @@ use std::sync::Arc;
 
 use futures::{StreamExt, stream};
 use lj_compiler::{canonicalize, validate};
-use lj_importer::authoring::{CredentialCodecError, CredentialSlotCodec};
-use lj_importer::legado::{LegadoImporter, LegadoSourceJson};
+use lj_importer::legado::LegadoImporter;
 use lj_importer::maccms::MaccmsImporter;
+use lj_importer::{ImportDiagnostic, ImportedNativeRule};
 use lj_media::{MediaResourceId, SourceProfile};
-use lj_rule_model::{
-    AuthoringDiagnostic, CredentialTargetIdentity, Diagnostic, PolicyCapabilities, RulePackage,
-    SourceSpan,
-};
+use lj_node_http::ImportFetchError;
+use lj_rule_model::{Diagnostic, PolicyCapabilities, RulePackage, SourceSpan};
 use lj_runtime::{
     ExecutionMode as RuntimeExecutionMode, HttpExecutionCredentials, PlanExecutionRequest,
 };
 use lj_storage::{
-    CandidateDocumentInput, CandidateDraft, CandidateSummary, ExecutionFinish, ExecutionRecord,
-    ExecutionStart, ExecutionStatus, InstallCandidateRequest,
-    InstalledSource as StorageInstalledSource, InstalledSourceSnapshot, ProjectionDelta,
-    ReplayExecutionStart, RuntimeCredentialMaterial, TransientSourceDocumentInput,
+    CandidateDraft, CandidateSummary, ExecutionFinish, ExecutionRecord, ExecutionStart,
+    ExecutionStatus, InstallCandidateRequest, InstalledSource as StorageInstalledSource,
+    InstalledSourceSnapshot, ProjectionDelta, ReplayExecutionStart, RuntimeCredentialMaterial,
 };
 use serde_json::Value;
 use tokio::sync::mpsc;
@@ -40,9 +37,8 @@ use super::session_delivery::{
 };
 use super::{RuleSystem, lock, now_millis};
 use crate::{
-    CandidateId, CapabilityGrant, DocumentRef, ExecuteRequest, ExecutionId, ExecutionMode,
-    ExecutionSession, InstallCandidate, InstalledSource, RuleError, RuleErrorStage, RuleInput,
-    SourceDocumentFormat, SourceDocumentId, SourceId,
+    CandidateId, CapabilityGrant, ExecuteRequest, ExecutionId, ExecutionMode, ExecutionSession,
+    InstallCandidate, InstalledSource, RuleError, RuleErrorStage, RuleInput, SourceId,
 };
 
 struct ExecutionSnapshot {
@@ -55,11 +51,11 @@ struct ExecutionSnapshot {
     replay_continue_actions: Option<BTreeMap<String, Value>>,
 }
 
-fn authoring_diagnostic(diagnostic: &AuthoringDiagnostic) -> Diagnostic {
+fn import_diagnostic(diagnostic: &ImportDiagnostic) -> Diagnostic {
     Diagnostic {
         code: diagnostic.code.clone(),
         severity: diagnostic.severity,
-        message: "来源作者文档字段需要审阅".to_string(),
+        message: "第三方来源字段需要审阅".to_string(),
         span: Some(SourceSpan {
             start: diagnostic.byte_offset,
             end: diagnostic
@@ -70,6 +66,38 @@ fn authoring_diagnostic(diagnostic: &AuthoringDiagnostic) -> Diagnostic {
     }
 }
 
+fn import_fetch_error(error: ImportFetchError, trace_id: &str) -> RuleError {
+    let (code, message) = match error {
+        ImportFetchError::InvalidUrl => (
+            "import_src_url_invalid",
+            "仅支持不含用户凭据的 HTTP(S) 导入地址",
+        ),
+        ImportFetchError::TargetBlocked => {
+            ("import_src_target_blocked", "导入地址未通过网络安全校验")
+        }
+        ImportFetchError::Timeout => ("import_src_timeout", "获取导入内容超时"),
+        ImportFetchError::RequestFailed => ("import_src_request_failed", "无法安全获取导入内容"),
+        ImportFetchError::RedirectInvalid => (
+            "import_src_redirect_invalid",
+            "导入地址重定向无效或超过上限",
+        ),
+        ImportFetchError::HttpStatus(_) => ("import_src_http_status", "远程地址返回非成功状态"),
+        ImportFetchError::BodyTooLarge => ("import_src_body_too_large", "导入内容超过大小上限"),
+        ImportFetchError::InvalidUtf8 => ("import_src_invalid_utf8", "导入内容不是有效 UTF-8"),
+    };
+    RuleError::new(
+        RuleErrorStage::Import,
+        code,
+        message,
+        trace_id,
+        matches!(
+            error,
+            ImportFetchError::Timeout | ImportFetchError::RequestFailed
+        ),
+        Vec::new(),
+    )
+}
+
 struct PreparedRuleInput {
     definition: lj_rule_model::RuleDefinition,
     runtime_credentials: Option<Vec<u8>>,
@@ -78,193 +106,74 @@ struct PreparedRuleInput {
     diagnostics: Vec<Diagnostic>,
 }
 
-fn prepare_rule_document(
-    format: SourceDocumentFormat,
-    raw_text: &str,
-    trace_id: &str,
-) -> Result<PreparedRuleInput, RuleError> {
-    match format {
-        SourceDocumentFormat::Legado => prepare_legado_input(raw_text, trace_id),
-        SourceDocumentFormat::Maccms10Endpoint => prepare_maccms_input(raw_text, trace_id),
-    }
-}
-
 fn prepare_legado_input(source_json: &str, trace_id: &str) -> Result<PreparedRuleInput, RuleError> {
-    let imported = LegadoImporter
-        .import_document(source_json)
-        .map_err(|error| {
-            let code = error
-                .diagnostics()
-                .first()
-                .map_or("legado_source_invalid", |diagnostic| {
-                    diagnostic.code.as_str()
-                })
-                .to_string();
-            let diagnostics = error
-                .diagnostics()
-                .iter()
-                .map(authoring_diagnostic)
-                .collect();
-            RuleError::new(
-                RuleErrorStage::Import,
-                code,
-                "Legado 作者文档未通过安全校验",
-                trace_id,
-                false,
-                diagnostics,
-            )
-        })?;
-    let source = serde_json::from_str::<LegadoSourceJson>(source_json).map_err(|_| {
+    let imported = LegadoImporter.import(source_json).map_err(|error| {
+        let code = error.to_string();
+        let diagnostics = error.diagnostics().iter().map(import_diagnostic).collect();
         RuleError::new(
             RuleErrorStage::Import,
-            "legado_source_invalid",
-            "Legado 书源 JSON 无效",
+            code,
+            "Legado 输入未通过安全校验",
             trace_id,
             false,
-            Vec::new(),
+            diagnostics,
         )
     })?;
-    let display_title = {
-        let name = source.book_source_name.trim();
-        (!name.is_empty()).then(|| name.to_string())
-    };
-    let display_group = source
-        .book_source_group
-        .as_ref()
-        .map(|value| value.trim())
-        .filter(|value| !value.is_empty())
-        .map(str::to_string);
-    let diagnostics = imported
-        .diagnostics
-        .iter()
-        .map(authoring_diagnostic)
-        .collect();
-    let runtime_credentials = imported.adapted.credential_snapshot_bytes().map_err(|_| {
-        RuleError::new(
-            RuleErrorStage::Import,
-            "legado_credentials_invalid",
-            "Legado 静态凭证无法安全快照",
-            trace_id,
-            false,
-            Vec::new(),
-        )
-    })?;
-    Ok(PreparedRuleInput {
-        definition: imported.adapted.definition,
-        runtime_credentials,
-        display_title,
-        display_group,
-        diagnostics,
-    })
-}
-
-fn prepare_maccms_input(raw_text: &str, trace_id: &str) -> Result<PreparedRuleInput, RuleError> {
-    let imported = MaccmsImporter.import_document(raw_text).map_err(|_| {
-        RuleError::new(
-            RuleErrorStage::Import,
-            "maccms_document_invalid",
-            "Maccms JSON endpoint 文档无效",
-            trace_id,
-            false,
-            Vec::new(),
-        )
-    })?;
-    let runtime_credentials = imported.credential_snapshot_bytes().map_err(|_| {
-        RuleError::new(
-            RuleErrorStage::Import,
-            "maccms_credentials_invalid",
-            "Maccms 静态凭证无法安全快照",
-            trace_id,
-            false,
-            Vec::new(),
-        )
-    })?;
-    Ok(PreparedRuleInput {
-        definition: imported.definition,
-        runtime_credentials,
-        display_title: None,
-        display_group: None,
-        diagnostics: Vec::new(),
-    })
+    Ok(prepared_import(imported))
 }
 
 fn prepare_transient_rule_input(
     input: RuleInput,
     trace_id: &str,
-) -> Result<(PreparedRuleInput, CandidateDocumentInput), RuleError> {
+) -> Result<PreparedRuleInput, RuleError> {
     match input {
-        RuleInput::Legado { source_json } => {
-            let format = SourceDocumentFormat::Legado;
-            let target = CredentialTargetIdentity {
-                format,
-                document_id: SourceDocumentId::new().to_string(),
-                revision: 1,
-            };
-            let split = CredentialSlotCodec::split(&source_json, target)
-                .map_err(|error| credential_codec_error(&error, trace_id))?;
-            let prepared = prepare_legado_input(&source_json, trace_id)?;
-            Ok((
-                prepared,
-                CandidateDocumentInput::Transient(TransientSourceDocumentInput {
-                    format,
-                    masked_text: split.masked_text,
-                    raw_text: source_json,
-                    manifest: split.manifest,
-                }),
-            ))
-        }
+        RuleInput::Legado { source_json } => prepare_legado_input(&source_json, trace_id),
         RuleInput::MaccmsJson { url } => {
-            let format = SourceDocumentFormat::Maccms10Endpoint;
-            let raw_text = serde_json::to_string(&serde_json::json!({
-                "base_url": url.as_str(),
-                "format": "json",
-                "headers": {},
-            }))
-            .map_err(|_| {
+            let imported = MaccmsImporter.import_url(&url).map_err(|error| {
                 RuleError::new(
                     RuleErrorStage::Import,
-                    "maccms_document_invalid",
-                    "Maccms JSON endpoint 文档无法构造",
+                    error.to_string(),
+                    "Maccms JSON endpoint URL 无效",
                     trace_id,
                     false,
-                    Vec::new(),
+                    error.diagnostics().iter().map(import_diagnostic).collect(),
                 )
             })?;
-            let target = CredentialTargetIdentity {
-                format,
-                document_id: SourceDocumentId::new().to_string(),
-                revision: 1,
-            };
-            let split = CredentialSlotCodec::split(&raw_text, target)
-                .map_err(|error| credential_codec_error(&error, trace_id))?;
-            let prepared = prepare_maccms_input(&raw_text, trace_id)?;
-            Ok((
-                prepared,
-                CandidateDocumentInput::Transient(TransientSourceDocumentInput {
-                    format,
-                    masked_text: split.masked_text,
-                    raw_text,
-                    manifest: split.manifest,
-                }),
-            ))
+            Ok(prepared_import(imported))
         }
     }
 }
 
-fn credential_codec_error(error: &CredentialCodecError, trace_id: &str) -> RuleError {
-    let code = error.diagnostic.code.clone();
-    let diagnostic = authoring_diagnostic(&error.diagnostic);
-    RuleError::new(
-        RuleErrorStage::Import,
-        code,
-        "来源作者文档未通过 credential 安全校验",
-        trace_id,
-        false,
-        vec![diagnostic],
-    )
+fn prepared_import(mut imported: ImportedNativeRule) -> PreparedRuleInput {
+    let runtime_credentials = imported
+        .take_credentials()
+        .map(lj_importer::ImportCredentialMaterial::into_bytes);
+    PreparedRuleInput {
+        definition: imported.definition,
+        runtime_credentials,
+        display_title: imported.display_title,
+        display_group: imported.display_group,
+        diagnostics: imported.diagnostics.iter().map(import_diagnostic).collect(),
+    }
 }
 
 impl RuleSystem {
+    /// 通过受限 HTTP transport 拉取一次性导入文本。
+    ///
+    /// 此入口复用 production SSRF、逐跳 redirect/DNS 校验、30 秒超时与 2 MiB body 上限；
+    /// Tauri root 不直接依赖 node adapter。返回值只在调用栈中短暂存在，不进入文档生命周期。
+    ///
+    /// # Errors
+    ///
+    /// URL、目标地址、redirect、HTTP 状态、响应大小或 UTF-8 校验失败时返回安全
+    /// [`RuleError`]。
+    pub async fn fetch_import_source(url: &str) -> Result<String, RuleError> {
+        let trace_id = super::trace_id();
+        lj_node_http::fetch_import_source(url)
+            .await
+            .map_err(|error| import_fetch_error(error, &trace_id))
+    }
+
     /// 来源输入生成 durable candidate，但不安装来源或执行网络 effect。
     ///
     /// `prepare_install` 只执行 importer、canonicalization、validation 与 compiler；不会访问来源
@@ -276,7 +185,7 @@ impl RuleSystem {
     /// [`RuleError`]。
     pub async fn prepare_install(&self, input: RuleInput) -> Result<InstallCandidate, RuleError> {
         let trace_id = super::trace_id();
-        let (prepared, document) = prepare_transient_rule_input(input, &trace_id)?;
+        let prepared = prepare_transient_rule_input(input, &trace_id)?;
         let expected_installed_revision = self
             .state
             .storage
@@ -284,119 +193,13 @@ impl RuleSystem {
             .await
             .map_err(|error| storage_error(&error, RuleErrorStage::Candidate, &trace_id))?
             .map_or(0, |source| source.source_revision);
-        self.stage_prepared_candidate(prepared, document, expected_installed_revision, &trace_id)
+        self.stage_prepared_candidate(prepared, expected_installed_revision, &trace_id)
             .await
-    }
-
-    /// 只从保险库中已显式保存的精确 [`DocumentRef`] 准备 composite candidate-v2。
-    ///
-    /// 该路径只在当前 saved revision 上运行 importer/compiler；dirty text、旧 ordinary-save
-    /// revision 或缺失 secret material 都不能进入 staging。
-    ///
-    /// # Errors
-    ///
-    /// 文档 revision 不存在/已过期、secret 无法解密、authoring/import/compiler 失败，或 C2 单 writer
-    /// composite publish 失败时返回 [`RuleError`]。
-    pub async fn prepare_install_from_document(
-        &self,
-        document_ref: DocumentRef,
-    ) -> Result<InstallCandidate, RuleError> {
-        let trace_id = super::trace_id();
-        if document_ref.document_revision == 0 {
-            return Err(RuleError::new(
-                RuleErrorStage::Candidate,
-                "document_revision_invalid",
-                "来源文档 revision 无效",
-                trace_id,
-                false,
-                Vec::new(),
-            ));
-        }
-        let current = self
-            .state
-            .storage
-            .get_source_document(document_ref.document_id)
-            .await
-            .map_err(|error| storage_error(&error, RuleErrorStage::Candidate, &trace_id))?
-            .ok_or_else(|| {
-                RuleError::new(
-                    RuleErrorStage::Candidate,
-                    "document_not_found",
-                    "来源文档不存在",
-                    trace_id.clone(),
-                    false,
-                    Vec::new(),
-                )
-            })?;
-        if current.summary.revision != document_ref.document_revision {
-            return Err(RuleError::new(
-                RuleErrorStage::Candidate,
-                "document_revision_stale",
-                "来源文档 revision 已不是当前保存版本",
-                trace_id,
-                false,
-                Vec::new(),
-            ));
-        }
-        let material = self
-            .state
-            .storage
-            .load_source_document_material(document_ref)
-            .await
-            .map_err(|error| storage_error(&error, RuleErrorStage::Candidate, &trace_id))?
-            .ok_or_else(|| {
-                RuleError::new(
-                    RuleErrorStage::Candidate,
-                    "document_revision_unavailable",
-                    "来源文档 revision 已不可用于安装",
-                    trace_id.clone(),
-                    false,
-                    Vec::new(),
-                )
-            })?;
-        let mut prepared =
-            prepare_rule_document(material.format(), material.expose_raw_text(), &trace_id)?;
-        let source_identity = prepared.definition.source_identity().id.clone();
-        if current
-            .summary
-            .source_identity
-            .as_deref()
-            .is_some_and(|linked| linked != source_identity.as_str())
-        {
-            return Err(RuleError::new(
-                RuleErrorStage::Candidate,
-                "document_source_link_mismatch",
-                "来源文档已关联另一来源，不能改写来源身份",
-                trace_id,
-                false,
-                Vec::new(),
-            ));
-        }
-        let installed = self
-            .state
-            .storage
-            .get_installed_source(&source_identity)
-            .await
-            .map_err(|error| storage_error(&error, RuleErrorStage::Candidate, &trace_id))?;
-        let expected_installed_revision = installed
-            .as_ref()
-            .map_or(0, |source| source.source_revision);
-        if prepared.display_title.is_none() {
-            prepared.display_title = Some(current.summary.title);
-        }
-        self.stage_prepared_candidate(
-            prepared,
-            CandidateDocumentInput::Saved(document_ref),
-            expected_installed_revision,
-            &trace_id,
-        )
-        .await
     }
 
     async fn stage_prepared_candidate(
         &self,
         prepared: PreparedRuleInput,
-        document: CandidateDocumentInput,
         expected_installed_revision: u64,
         trace_id: &str,
     ) -> Result<InstallCandidate, RuleError> {
@@ -405,11 +208,11 @@ impl RuleSystem {
             runtime_credentials,
             display_title,
             display_group,
-            diagnostics: authoring_diagnostics,
+            diagnostics: import_diagnostics,
         } = prepared;
         let definition = canonicalize(&definition);
         let mut diagnostics = validate(&definition);
-        diagnostics.extend(authoring_diagnostics);
+        diagnostics.extend(import_diagnostics);
         let plan = self
             .state
             .compiler
@@ -464,7 +267,6 @@ impl RuleSystem {
                 profile,
                 required_grant,
                 diagnostics,
-                document,
                 runtime_credentials: runtime_credentials.map(RuntimeCredentialMaterial::new),
                 expected_installed_revision,
                 expires_at_ms: Some(expires_at_ms),
@@ -477,11 +279,11 @@ impl RuleSystem {
         Ok(candidate_from_summary(summary))
     }
 
-    /// 原子消费 composite candidate-v2；install 时不重新读取 current source 或 credential ref。
+    /// 原子消费 composite candidate；install 时不重新读取 current source 或 credential ref。
     ///
     /// # Errors
     ///
-    /// candidate 缺失、过期、篡改、已消费、schema/document/source 基线变化、grant 不足或 C2
+    /// candidate 缺失、过期、篡改、已消费、schema/source 基线变化、grant 不足或 C2
     /// install transaction 失败时返回 [`RuleError`]。
     pub async fn install(
         &self,
@@ -943,8 +745,6 @@ fn validate_live_receipt(
 fn candidate_from_summary(summary: CandidateSummary) -> InstallCandidate {
     InstallCandidate {
         id: CandidateId::from_uuid(summary.candidate_id),
-        document_ref: summary.document_ref,
-        transient: summary.transient,
         expected_installed_revision: summary.expected_installed_revision,
         profile: summary.profile,
         required_grant: CapabilityGrant::from_policy(summary.required_grant),
@@ -961,12 +761,6 @@ fn installed_source_from_storage(source: StorageInstalledSource) -> InstalledSou
         version: source.version,
         profile: source.profile,
         revision: source.source_revision,
-        document_ref: source.document_id.zip(source.document_revision).map(
-            |(document_id, document_revision)| DocumentRef {
-                document_id,
-                document_revision,
-            },
-        ),
     }
 }
 
@@ -1000,11 +794,10 @@ mod tests {
     use lj_capability::{IntentExport, IntentInput, StandardIntent};
     use lj_rule_model::definition::MapperOutputKind;
     use lj_rule_model::{
-        CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, ConditionConfig, ControlExpression,
-        ControlledMapper, CredentialSlotManifest, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
-        FlowPortRef, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
-        MERGE_OUTPUT_HANDLE, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy,
-        RuleDefinition, SourceIdentity, SystemCapabilities,
+        CapabilityManifest, ConditionConfig, ControlExpression, ControlledMapper, FlowEdge,
+        FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, JsConfig, JsOutputKind,
+        LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MERGE_OUTPUT_HANDLE, MergeConfig, MergeInput,
+        MergeInputActivation, MergeStrategy, RuleDefinition, SourceIdentity, SystemCapabilities,
     };
 
     use super::*;
@@ -1144,7 +937,6 @@ mod tests {
         )
         .await
         .expect("open RuleSystem control fixture");
-        let format = SourceDocumentFormat::Maccms10Endpoint;
         let candidate = system
             .stage_prepared_candidate(
                 PreparedRuleInput {
@@ -1154,20 +946,6 @@ mod tests {
                     display_group: None,
                     diagnostics: Vec::new(),
                 },
-                CandidateDocumentInput::Transient(TransientSourceDocumentInput {
-                    format,
-                    masked_text: "{}".to_string(),
-                    raw_text: "{}".to_string(),
-                    manifest: CredentialSlotManifest {
-                        schema_version: CREDENTIAL_SCHEMA_VERSION,
-                        target: CredentialTargetIdentity {
-                            format,
-                            document_id: "transient-control-fixture".to_string(),
-                            revision: 1,
-                        },
-                        slots: Vec::new(),
-                    },
-                }),
                 0,
                 "trace-control-candidate",
             )

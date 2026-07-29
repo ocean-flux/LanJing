@@ -43,7 +43,7 @@ pub enum StorageError {
     /// source credential staging 缺失、已过期或与安装来源不匹配。
     #[error("source credential snapshot 不可用")]
     SourceCredentialUnavailable,
-    /// candidate 的 document/source baseline 已变化。
+    /// candidate 的已安装 source baseline 已变化。
     #[error("candidate 基线已过期")]
     CandidateStale,
     /// candidate schema 与当前 writer/consumer 不一致。
@@ -66,15 +66,9 @@ pub enum StorageError {
     /// effect archive 缺少 current invocation path/ordinal。
     #[error("历史 effect invocation archive 不受支持")]
     LegacyInvocationArchiveUnsupported,
-    /// 来源文档不存在。
-    #[error("来源文档不存在")]
-    DocumentMissing,
-    /// 已关联来源或仍被 pin 的文档不能删除。
-    #[error("来源文档仍被关联或固定")]
-    DocumentDeleteUnsafe,
-    /// credential slot 不属于请求的 document revision。
-    #[error("credential slot ownership 不匹配")]
-    CredentialOwnershipMismatch,
+    /// 随机 secret artifact 与请求的 owner 不匹配。
+    #[error("secret artifact ownership 不匹配")]
+    SecretOwnershipMismatch,
     /// 来源尚未安装。
     #[error("来源尚未安装")]
     SourceMissing,
@@ -111,9 +105,9 @@ pub enum StorageError {
     /// secret envelope、ciphertext hash 或 AEAD 认证失败。
     #[error("secret artifact 密文损坏")]
     ArtifactCorrupt,
-    /// vault schema/data migration 未能完成；旧数据未被删除。
-    #[error("来源文档保险库迁移失败")]
-    VaultMigrationFailed,
+    /// secret artifact ref-count 与 owner 行不一致。
+    #[error("secret artifact ownership 数据损坏")]
+    SecretOwnershipCorrupt,
     /// keyring 操作失败。
     #[error("keyring 操作失败")]
     Keyring,

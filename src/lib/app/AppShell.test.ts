@@ -1,13 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getMaterialTransparency, setMaterialTransparency } from '$lib/stores/theme.svelte';
 import AppShell from './AppShell.svelte';
 import { COLD_LAUNCH_SESSION_KEY, COLD_LAUNCH_THRESHOLD_MS } from './cold-launch';
-import {
-  registerLeaveGuard,
-  requestSurfaceClose,
-  resetLeaveCoordinatorForTests,
-} from './leave-coordinator.svelte';
 import type { ModeShellContract, PlatformCapabilities } from './shell-types';
 
 function desktopPlatform(overrides: Partial<PlatformCapabilities> = {}): PlatformCapabilities {
@@ -72,7 +67,6 @@ afterEach(() => {
   vi.restoreAllMocks();
   sessionStorage.removeItem(COLD_LAUNCH_SESSION_KEY);
   setMaterialTransparency('standard');
-  resetLeaveCoordinatorForTests();
 });
 
 describe('AppShell', () => {
@@ -302,34 +296,5 @@ describe('AppShell', () => {
 
     render(AppShell, { props: { shell: makeShell() } });
     expect(screen.queryByRole('region', { name: 'LanJing 启动动画' })).toBeNull();
-  });
-  it('renders one portal leave dialog with exactly three coordinator actions', async () => {
-    const resolveLeave = vi.fn(() => Promise.resolve('resolved' as const));
-    registerLeaveGuard({
-      canLeave: () => false,
-      resolveLeave,
-      focusEditor: vi.fn(),
-    });
-    const replay = vi.fn();
-    render(AppShell, { props: { shell: makeShell() } });
-
-    expect(requestSurfaceClose(replay)).toBe('pending');
-    const dialog = await screen.findByRole('dialog');
-    const shell = screen.getByTestId('mode-shell');
-    const actions = within(dialog).getAllByRole('button');
-
-    expect(document.body.contains(dialog)).toBe(true);
-    expect(shell.contains(dialog)).toBe(false);
-    expect(actions).toHaveLength(3);
-    expect(actions.map((action) => action.getAttribute('data-leave-action'))).toEqual([
-      'continue',
-      'discard',
-      'save',
-    ]);
-
-    await fireEvent.click(within(dialog).getByRole('button', { name: /继续|Keep editing/ }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(resolveLeave).toHaveBeenCalledWith('continue');
-    expect(replay).not.toHaveBeenCalled();
   });
 });

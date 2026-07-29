@@ -2,6 +2,12 @@
 //!
 //! 负责将外部来源转换为可验证的 `RuleDefinition`：Legado 书源 JSON 与 Maccms。
 
-pub mod authoring;
+mod imported_rule;
 pub mod legado;
 pub mod maccms;
+mod strict_json;
+
+pub use imported_rule::{
+    ImportCredentialMaterial, ImportDiagnostic, ImportError, ImportFormat, ImportProvenance,
+    ImportSupport, ImportedNativeRule,
+};

@@ -2,6 +2,7 @@
   import { Button } from '$lib/components/ui/button';
   import Notice from '$lib/components/Notice.svelte';
   import { Input } from '$lib/components/ui/input';
+  import { Textarea } from '$lib/components/ui/textarea';
   import { m } from '$lib/i18n';
   import {
     installCandidate,
@@ -11,7 +12,6 @@
     type InstallCandidate,
   } from '$lib/stores/rules.svelte';
   import CandidatePreview from './CandidatePreview.svelte';
-  import JsonHighlightEditor from './JsonHighlightEditor.svelte';
 
   type InstallFormat = 'legado' | 'maccms';
 
@@ -54,7 +54,7 @@
     resetSharedState();
   }
 
-  /** Client guard: multi-source arrays use deeplink pick, not single prepare_install. */
+  /** 客户端守卫：多来源数组必须走深链选择，不能进入单来源准备流程。 */
   function isLegadoJsonArray(text: string): boolean {
     try {
       return Array.isArray(JSON.parse(text));
@@ -190,13 +190,14 @@
           <label for={fieldId} class="text-sm font-medium text-ink">
             {m.sources_install_json_label()}
           </label>
-          <JsonHighlightEditor
+          <Textarea
             id={fieldId}
             bind:value={sourceJson}
             placeholder={m.sources_install_json_placeholder()}
             rows={7}
             disabled={loading}
-            class="glass-control focus-within:border-lantern-strong/50"
+            class="min-h-40 font-mono"
+            data-testid="install-json-input"
           />
           {#if fileName}
             <p class="text-xs text-ink-muted" data-testid="install-file-name">

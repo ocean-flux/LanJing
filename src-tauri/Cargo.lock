@@ -2837,7 +2837,6 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "keyring-core",
- "lj-node-http",
  "lj-rule-system",
  "serde",
  "serde_json",

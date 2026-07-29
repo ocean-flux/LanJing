@@ -1,12 +1,8 @@
 <script lang="ts">
-  import { beforeNavigate, goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
+  import { beforeNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
   import { getAppearancePack, getMode } from '$lib/stores/theme.svelte';
-  import type { BeforeNavigate } from '@sveltejs/kit';
-  import type { Pathname } from '$app/types';
-  import { interceptRouteLeave, startTauriCloseRequested } from './leave-coordinator.svelte';
   import { resolveRuntimePlatform, type RuntimePlatform } from './platform-runtime';
   import { setPlatformContext } from './platform-context.svelte';
   import AppShell from './AppShell.svelte';
@@ -58,32 +54,14 @@
     },
   });
 
-  function replayRouteNavigation(navigation: BeforeNavigate): Promise<void> | void {
-    if (!navigation.to) return;
-    const target =
-      `${navigation.to.url.pathname}${navigation.to.url.search}${navigation.to.url.hash}` as Pathname;
-    if (navigation.type === 'popstate') {
-      return goto(resolve(target), { replaceState: true });
-    }
-    return goto(resolve(target));
-  }
-
   beforeNavigate((navigation) => {
-    const focusTarget =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const outcome = interceptRouteLeave(
-      navigation,
-      () => replayRouteNavigation(navigation),
-      focusTarget,
-    );
-    if (outcome === 'allow' && navigation.from?.url.pathname !== navigation.to?.url.pathname) {
+    if (navigation.from?.url.pathname !== navigation.to?.url.pathname) {
       notifyPathnameChanged();
     }
   });
 
   onMount(() => {
     let cancelled = false;
-    let stopTauriClose: (() => void) | undefined;
     const motionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const transparencyMq = window.matchMedia('(prefers-reduced-transparency: reduce)');
 
@@ -99,13 +77,6 @@
     motionMq.addEventListener('change', syncMotion);
     transparencyMq.addEventListener('change', syncTransparency);
 
-    if ('__TAURI_INTERNALS__' in window) {
-      void startTauriCloseRequested().then((stop) => {
-        if (cancelled) stop();
-        else stopTauriClose = stop;
-      });
-    }
-
     if (!shell) {
       void resolveRuntimePlatform().then(
         (resolvedPlatform) => {
@@ -120,7 +91,6 @@
 
     return () => {
       cancelled = true;
-      stopTauriClose?.();
       motionMq.removeEventListener('change', syncMotion);
       transparencyMq.removeEventListener('change', syncTransparency);
     };
@@ -137,7 +107,7 @@
     }),
   );
 
-  // beforeNavigate 由 SvelteKit 随组件释放；runtime、media 与 Tauri close listener 在 onMount teardown 清理。
+  // beforeNavigate 由 SvelteKit 随组件释放；runtime 与 media listener 在 onMount teardown 清理。
 
   const orchestratedShell = $derived.by<ModeShellContract>(() => {
     const pathname = page.url.pathname;

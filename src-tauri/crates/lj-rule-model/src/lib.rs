@@ -3,7 +3,6 @@
 //! 只承载可序列化合同：`Definition`、`Plan`、`EventEnvelope`、`Diagnostic`、
 //! `Policy` DTO，以及节点配置 IR。不引入 Diesel、Tokio、Tauri、HTTP/QuickJS 实现。
 
-pub mod credential;
 pub mod definition;
 pub mod diagnostic;
 pub mod endpoint;
@@ -19,11 +18,6 @@ pub mod policy;
 pub mod schema;
 pub mod sensitive;
 
-pub use credential::{
-    CREDENTIAL_SCHEMA_VERSION, CREDENTIAL_SENTINEL_PREFIX, CredentialSentinelError, CredentialSlot,
-    CredentialSlotId, CredentialSlotManifest, CredentialTargetIdentity, SourceDocumentFormat,
-    credential_sentinel, parse_credential_sentinel,
-};
 pub use definition::{
     CapabilityManifest, CollectionSelector, ConditionConfig, ConditionOperator, ConditionPredicate,
     ControlExpression, ControlledMapper, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
@@ -32,7 +26,7 @@ pub use definition::{
     MergeInputActivation, MergeStrategy, RuleDefinition, RulePackage, SourceIdentity, SourceSpan,
     read_rule_definition, read_rule_package,
 };
-pub use diagnostic::{AuthoringDiagnostic, Diagnostic, DiagnosticSeverity, SupportClass};
+pub use diagnostic::{Diagnostic, DiagnosticSeverity};
 pub use endpoint::{HttpMethod, HttpSpec};
 pub use error::Error;
 pub use event::{ArtifactRef, EventEnvelope, EventType, SecretRef};

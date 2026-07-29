@@ -1,4 +1,4 @@
-//! 严格 JSON authoring validation 与 RFC 6901 pointer index。
+//! Third-party import 的严格 JSON validation 与 RFC 6901 pointer index。
 //!
 //! parser 直接在原始 UTF-8 bytes 上计数并保留 token span；不会先经 `serde_json::Value` 丢失
 //! duplicate key 或把 UTF-8 byte offset 误当 UTF-16 code unit。根深度为 1，node 只计 JSON
@@ -7,15 +7,158 @@
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
-use lj_rule_model::{
-    AuthoringDiagnostic, CREDENTIAL_SENTINEL_PREFIX, DiagnosticSeverity, SensitiveNamePolicy,
-    SupportClass, parse_credential_sentinel,
-};
+use lj_rule_model::{DiagnosticSeverity, SensitiveNamePolicy};
 use serde::{Deserialize, Serialize};
 
-use super::catalog::{
-    AUTHORING_LIMITS, CatalogFieldType, FIELD_SPECS, FieldSpec, field_for_pointer,
+use crate::{ImportDiagnostic, ImportSupport};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ImportLimits {
+    utf8_bytes: usize,
+    depth: usize,
+    nodes: usize,
+    properties: usize,
+    property_name_utf8_bytes: usize,
+    string_utf8_bytes: usize,
+}
+
+const IMPORT_LIMITS: ImportLimits = ImportLimits {
+    utf8_bytes: 2_097_152,
+    depth: 64,
+    nodes: 100_000,
+    properties: 32_768,
+    property_name_utf8_bytes: 1_024,
+    string_utf8_bytes: 262_144,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FieldType {
+    String,
+    Integer,
+    IntegerOrString,
+    Boolean,
+    ObjectOrString,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct FieldSpec {
+    pointer: &'static str,
+    field_type: FieldType,
+    required: bool,
+    rule_result_type: Option<&'static str>,
+    support: ImportSupport,
+}
+
+macro_rules! field {
+    ($pointer:literal, $type:ident, $required:literal, $support:ident) => {
+        FieldSpec {
+            pointer: $pointer,
+            field_type: FieldType::$type,
+            required: $required,
+            rule_result_type: None,
+            support: ImportSupport::$support,
+        }
+    };
+    ($pointer:literal, $type:ident, $required:literal, $support:ident, rule) => {
+        FieldSpec {
+            pointer: $pointer,
+            field_type: FieldType::$type,
+            required: $required,
+            rule_result_type: Some("rule"),
+            support: ImportSupport::$support,
+        }
+    };
+}
+
+// 这是导入支持矩阵，不是可编辑第三方 schema；只记录 current adapter 必须映射、明确忽略或拒绝的字段。
+static FIELD_SPECS: &[FieldSpec] = &[
+    field!("/bookSourceType", Integer, true, Executable),
+    field!("/bookSourceUrl", String, true, Executable),
+    field!("/bookSourceName", String, true, Executable),
+    field!("/bookSourceGroup", String, false, Executable),
+    field!("/bookSourceComment", String, false, Ignored),
+    field!("/loginUrl", String, false, Blocked),
+    field!("/loginUi", String, false, Blocked),
+    field!("/loginCheckJs", String, false, Blocked),
+    field!("/coverDecodeJs", String, false, Blocked),
+    field!("/bookUrlPattern", String, false, Blocked),
+    field!("/header", String, false, Executable),
+    field!("/variableComment", String, false, Ignored),
+    field!("/concurrentRate", String, false, Blocked),
+    field!("/jsLib", String, false, Blocked),
+    field!("/customOrder", Integer, false, Ignored),
+    field!("/enabled", Boolean, false, Ignored),
+    field!("/enabledExplore", Boolean, false, Ignored),
+    field!("/enabledCookieJar", Boolean, false, Blocked),
+    field!("/lastUpdateTime", IntegerOrString, false, Ignored),
+    field!("/respondTime", Integer, false, Ignored),
+    field!("/weight", Integer, false, Ignored),
+    field!("/searchUrl", String, false, Executable),
+    field!("/ruleSearch", ObjectOrString, false, Executable),
+    field!("/ruleSearch/checkKeyWord", String, false, Blocked, rule),
+    field!("/ruleSearch/bookList", String, false, Executable, rule),
+    field!("/ruleSearch/name", String, false, Executable, rule),
+    field!("/ruleSearch/author", String, false, Executable, rule),
+    field!("/ruleSearch/kind", String, false, Executable, rule),
+    field!("/ruleSearch/wordCount", String, false, Blocked, rule),
+    field!("/ruleSearch/lastChapter", String, false, Blocked, rule),
+    field!("/ruleSearch/updateTime", String, false, Blocked, rule),
+    field!("/ruleSearch/intro", String, false, Blocked, rule),
+    field!("/ruleSearch/coverUrl", String, false, Executable, rule),
+    field!("/ruleSearch/bookUrl", String, false, Executable, rule),
+    field!("/exploreUrl", String, false, Executable),
+    field!("/exploreScreen", String, false, Blocked),
+    field!("/ruleExplore", ObjectOrString, false, Executable),
+    field!("/ruleExplore/bookList", String, false, Executable, rule),
+    field!("/ruleExplore/name", String, false, Executable, rule),
+    field!("/ruleExplore/author", String, false, Executable, rule),
+    field!("/ruleExplore/intro", String, false, Blocked, rule),
+    field!("/ruleExplore/kind", String, false, Blocked, rule),
+    field!("/ruleExplore/lastChapter", String, false, Blocked, rule),
+    field!("/ruleExplore/updateTime", String, false, Blocked, rule),
+    field!("/ruleExplore/bookUrl", String, false, Executable, rule),
+    field!("/ruleExplore/coverUrl", String, false, Executable, rule),
+    field!("/ruleExplore/wordCount", String, false, Blocked, rule),
+    field!("/ruleBookInfo", ObjectOrString, false, Executable),
+    field!("/ruleBookInfo/init", String, false, Blocked, rule),
+    field!("/ruleBookInfo/name", String, false, Executable, rule),
+    field!("/ruleBookInfo/author", String, false, Blocked, rule),
+    field!("/ruleBookInfo/kind", String, false, Blocked, rule),
+    field!("/ruleBookInfo/wordCount", String, false, Blocked, rule),
+    field!("/ruleBookInfo/lastChapter", String, false, Blocked, rule),
+    field!("/ruleBookInfo/updateTime", String, false, Blocked, rule),
+    field!("/ruleBookInfo/intro", String, false, Blocked, rule),
+    field!("/ruleBookInfo/coverUrl", String, false, Blocked, rule),
+    field!("/ruleBookInfo/tocUrl", String, false, Blocked, rule),
+    field!("/ruleBookInfo/canReName", String, false, Blocked, rule),
+    field!("/ruleBookInfo/downloadUrls", String, false, Blocked, rule),
+    field!("/ruleToc", ObjectOrString, false, Executable),
+    field!("/ruleToc/preUpdateJs", String, false, Blocked, rule),
+    field!("/ruleToc/chapterList", String, false, Executable, rule),
+    field!("/ruleToc/chapterName", String, false, Executable, rule),
+    field!("/ruleToc/chapterUrl", String, false, Executable, rule),
+    field!("/ruleToc/formatJs", String, false, Blocked, rule),
+    field!("/ruleToc/isVolume", String, false, Blocked, rule),
+    field!("/ruleToc/updateTime", String, false, Blocked, rule),
+    field!("/ruleToc/isVip", String, false, Blocked, rule),
+    field!("/ruleToc/isPay", String, false, Blocked, rule),
+    field!("/ruleToc/nextTocUrl", String, false, Blocked, rule),
+    field!("/ruleContent", ObjectOrString, false, Executable),
+    field!("/ruleContent/content", String, false, Executable, rule),
+    field!("/ruleContent/title", String, false, Blocked, rule),
+    field!("/ruleContent/nextContentUrl", String, false, Blocked, rule),
+    field!("/ruleContent/webJs", String, false, Blocked, rule),
+    field!("/ruleContent/sourceRegex", String, false, Blocked, rule),
+    field!("/ruleContent/replaceRegex", String, false, Blocked, rule),
+    field!("/ruleContent/imageStyle", String, false, Ignored),
+    field!("/ruleContent/imageDecode", String, false, Blocked, rule),
+    field!("/ruleContent/payAction", String, false, Blocked, rule),
+    field!("/ruleReview", ObjectOrString, false, Blocked),
+];
+
+fn field_for_pointer(pointer: &str) -> Option<&'static FieldSpec> {
+    FIELD_SPECS.iter().find(|field| field.pointer == pointer)
+}
 
 /// 原始 UTF-8 文档中的半开区间。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -51,7 +194,7 @@ pub(crate) struct JsonNode {
 #[derive(Debug)]
 pub(crate) enum JsonKind {
     Object(Vec<ObjectProperty>),
-    Array(Vec<usize>),
+    Array,
     String(String),
     Number(String),
     Boolean(bool),
@@ -67,13 +210,12 @@ pub(crate) struct ObjectProperty {
 
 pub(crate) struct ParseOutcome {
     pub(crate) document: Option<ParsedDocument>,
-    pub(crate) diagnostics: Vec<AuthoringDiagnostic>,
+    pub(crate) diagnostics: Vec<ImportDiagnostic>,
 }
 
-/// 严格验证 Legado authoring 文档，并返回稳定、无 secret 文案的 diagnostics。
 #[must_use]
-pub fn validate_legado_document(text: &str) -> Vec<AuthoringDiagnostic> {
-    analyze_legado_document(text).diagnostics
+pub(crate) fn validate_json_document(text: &str) -> Vec<ImportDiagnostic> {
+    parse_strict_document(text).diagnostics
 }
 
 pub(crate) fn analyze_legado_document(text: &str) -> ParseOutcome {
@@ -96,119 +238,22 @@ pub(crate) fn analyze_legado_document(text: &str) -> ParseOutcome {
     outcome
 }
 
-/// 在严格单对象 JSON 中唯一定位 RFC 6901 pointer 的 value token span。
-///
-/// duplicate target 返回 `pointer_ambiguous`；缺失 target 返回 `pointer_missing`。文档其他位置
-/// 的 duplicate 或 limits/syntax/root 失败同样阻止定位。
-///
-/// # Errors
-///
-/// JSON 非法、非对象、超限、包含 duplicate key，或 pointer 非法/缺失/歧义时返回稳定
-/// [`AuthoringDiagnostic`]。
-pub fn locate_json_pointer(text: &str, pointer: &str) -> Result<Utf8ByteSpan, AuthoringDiagnostic> {
-    let ParseOutcome {
-        document,
-        diagnostics,
-    } = parse_strict_document(text);
-    let Some(document) = document else {
-        return Err(diagnostics
-            .into_iter()
-            .next()
-            .unwrap_or_else(|| blocked_diagnostic("invalid_json", "", 0, text.len().min(1))));
-    };
-    let node = resolve_pointer(&document, pointer)?;
-    if let Some(diagnostic) = diagnostics
-        .into_iter()
-        .find(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
-    {
-        return Err(diagnostic);
-    }
-    Ok(document.nodes[node].span)
-}
-
 pub(crate) fn parse_strict_document(text: &str) -> ParseOutcome {
-    if text.len() > AUTHORING_LIMITS.max_utf8_bytes {
+    if text.len() > IMPORT_LIMITS.utf8_bytes {
         return ParseOutcome {
             document: None,
             diagnostics: vec![blocked_diagnostic(
                 "document_bytes_exceeded",
                 "",
-                AUTHORING_LIMITS.max_utf8_bytes,
-                text.len() - AUTHORING_LIMITS.max_utf8_bytes,
+                IMPORT_LIMITS.utf8_bytes,
+                text.len() - IMPORT_LIMITS.utf8_bytes,
             )],
         };
     }
     Parser::new(text).parse()
 }
 
-pub(crate) fn resolve_pointer(
-    document: &ParsedDocument,
-    pointer: &str,
-) -> Result<usize, AuthoringDiagnostic> {
-    let segments = decode_pointer(pointer).map_err(|()| {
-        blocked_diagnostic(
-            "pointer_missing",
-            pointer,
-            document.nodes[document.root].span.byte_offset,
-            1,
-        )
-    })?;
-    let mut node_index = document.root;
-    for segment in segments {
-        let node = &document.nodes[node_index];
-        match &node.kind {
-            JsonKind::Object(properties) => {
-                let matching = properties
-                    .iter()
-                    .filter(|property| property.key == segment)
-                    .collect::<Vec<_>>();
-                match matching.as_slice() {
-                    [] => {
-                        return Err(blocked_diagnostic(
-                            "pointer_missing",
-                            pointer,
-                            node.span.byte_offset,
-                            1,
-                        ));
-                    }
-                    [property] => node_index = property.value,
-                    [_, second, ..] => {
-                        return Err(blocked_diagnostic(
-                            "pointer_ambiguous",
-                            pointer,
-                            second.key_span.byte_offset,
-                            second.key_span.byte_length,
-                        ));
-                    }
-                }
-            }
-            JsonKind::Array(children) => {
-                let Some(index) = canonical_array_index(&segment) else {
-                    return Err(blocked_diagnostic(
-                        "pointer_missing",
-                        pointer,
-                        node.span.byte_offset,
-                        1,
-                    ));
-                };
-                node_index = *children.get(index).ok_or_else(|| {
-                    blocked_diagnostic("pointer_missing", pointer, node.span.byte_offset, 1)
-                })?;
-            }
-            _ => {
-                return Err(blocked_diagnostic(
-                    "pointer_missing",
-                    pointer,
-                    node.span.byte_offset,
-                    node.span.byte_length,
-                ));
-            }
-        }
-    }
-    Ok(node_index)
-}
-
-fn classify_legado(document: &ParsedDocument, diagnostics: &mut Vec<AuthoringDiagnostic>) {
+fn classify_legado(document: &ParsedDocument, diagnostics: &mut Vec<ImportDiagnostic>) {
     let root = &document.nodes[document.root];
     let JsonKind::Object(properties) = &root.kind else {
         return;
@@ -232,35 +277,20 @@ fn classify_object(
     document: &ParsedDocument,
     properties: &[ObjectProperty],
     path: &mut Vec<String>,
-    diagnostics: &mut Vec<AuthoringDiagnostic>,
+    diagnostics: &mut Vec<ImportDiagnostic>,
 ) {
     for property in properties {
         path.push(property.key.clone());
         let pointer = encode_pointer(path);
         let value = &document.nodes[property.value];
-        if let JsonKind::String(string) = &value.kind
-            && string.starts_with(CREDENTIAL_SENTINEL_PREFIX)
-            && parse_credential_sentinel(string).is_err()
-        {
-            diagnostics.push(AuthoringDiagnostic::new(
-                DiagnosticSeverity::Error,
-                "credential_sentinel_invalid",
-                &pointer,
-                value.span.byte_offset,
-                value.span.byte_length,
-                SupportClass::Blocked,
-            ));
-            path.pop();
-            continue;
-        }
         let Some(field) = field_for_pointer(&pointer) else {
-            diagnostics.push(AuthoringDiagnostic::new(
+            diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Warning,
                 "unknown_field",
                 &pointer,
                 property.key_span.byte_offset,
                 property.key_span.byte_length,
-                SupportClass::Unknown,
+                ImportSupport::Unknown,
             ));
             path.pop();
             continue;
@@ -270,56 +300,56 @@ fn classify_object(
             continue;
         }
         if !value_matches(field, value) {
-            diagnostics.push(AuthoringDiagnostic::new(
+            diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Error,
                 "invalid_field_type",
                 &pointer,
                 value.span.byte_offset,
                 value.span.byte_length,
-                SupportClass::Blocked,
+                ImportSupport::Blocked,
             ));
             path.pop();
             continue;
         }
-        if field.support == SupportClass::Blocked {
+        if field.support == ImportSupport::Blocked {
             if pointer == "/enabledCookieJar" && matches!(&value.kind, JsonKind::Boolean(false)) {
                 path.pop();
                 continue;
             }
-            diagnostics.push(AuthoringDiagnostic::new(
+            diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Error,
                 "known_field_blocked",
                 &pointer,
                 property.key_span.byte_offset,
                 property.key_span.byte_length,
-                SupportClass::Blocked,
+                ImportSupport::Blocked,
             ));
             path.pop();
             continue;
         }
-        if field.support == SupportClass::Preserved {
-            diagnostics.push(AuthoringDiagnostic::new(
+        if field.support == ImportSupport::Ignored {
+            diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Info,
-                "known_field_preserved",
+                "known_field_ignored",
                 &pointer,
                 property.key_span.byte_offset,
                 property.key_span.byte_length,
-                SupportClass::Preserved,
+                ImportSupport::Ignored,
             ));
         }
         if let JsonKind::String(expression) = &value.kind
             && ((pointer == "/exploreUrl" && !expression.trim_start().starts_with("@js:"))
                 || (field.rule_result_type.is_some()
-                    && field.support == SupportClass::Executable
+                    && field.support == ImportSupport::Executable
                     && !rule_expression_is_supported(expression)))
         {
-            diagnostics.push(AuthoringDiagnostic::new(
+            diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Error,
                 "known_field_blocked",
                 &pointer,
                 value.span.byte_offset,
                 value.span.byte_length,
-                SupportClass::Blocked,
+                ImportSupport::Blocked,
             ));
             path.pop();
             continue;
@@ -327,41 +357,41 @@ fn classify_object(
         if pointer == "/bookSourceType"
             && !matches!(&value.kind, JsonKind::Number(number) if number.parse::<i64>() == Ok(0))
         {
-            diagnostics.push(AuthoringDiagnostic::new(
+            diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Error,
                 "known_field_blocked",
                 &pointer,
                 value.span.byte_offset,
                 value.span.byte_length,
-                SupportClass::Blocked,
+                ImportSupport::Blocked,
             ));
         }
         if is_executable_url_pointer(&pointer)
             && let JsonKind::String(url) = &value.kind
             && SensitiveNamePolicy::url_contains_sensitive_query_name(url)
         {
-            diagnostics.push(AuthoringDiagnostic::new(
+            diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Error,
                 "credential_query_blocked",
                 &pointer,
                 value.span.byte_offset,
                 value.span.byte_length,
-                SupportClass::Blocked,
+                ImportSupport::Blocked,
             ));
         }
-        if matches!(field.field_type, CatalogFieldType::ObjectOrString) {
+        if matches!(field.field_type, FieldType::ObjectOrString) {
             match &value.kind {
                 JsonKind::Object(children) => {
                     classify_object(document, children, path, diagnostics);
                 }
                 JsonKind::String(_) => {
-                    diagnostics.push(AuthoringDiagnostic::new(
+                    diagnostics.push(ImportDiagnostic::new(
                         DiagnosticSeverity::Error,
                         "known_field_blocked",
                         &pointer,
                         value.span.byte_offset,
                         value.span.byte_length,
-                        SupportClass::Blocked,
+                        ImportSupport::Blocked,
                     ));
                 }
                 _ => {}
@@ -373,19 +403,19 @@ fn classify_object(
 
 fn value_matches(field: &FieldSpec, value: &JsonNode) -> bool {
     match field.field_type {
-        CatalogFieldType::String => matches!(&value.kind, JsonKind::String(_)),
-        CatalogFieldType::Integer => {
+        FieldType::String => matches!(&value.kind, JsonKind::String(_)),
+        FieldType::Integer => {
             matches!(&value.kind, JsonKind::Number(number) if !number.bytes().any(|byte| matches!(byte, b'.' | b'e' | b'E')))
         }
-        CatalogFieldType::IntegerOrString => {
+        FieldType::IntegerOrString => {
             matches!(
                 &value.kind,
                 JsonKind::Number(number)
                     if !number.bytes().any(|byte| matches!(byte, b'.' | b'e' | b'E'))
             ) || matches!(&value.kind, JsonKind::String(string) if is_integer_string(string))
         }
-        CatalogFieldType::Boolean => matches!(&value.kind, JsonKind::Boolean(_)),
-        CatalogFieldType::ObjectOrString => {
+        FieldType::Boolean => matches!(&value.kind, JsonKind::Boolean(_)),
+        FieldType::ObjectOrString => {
             matches!(&value.kind, JsonKind::Object(_) | JsonKind::String(_))
         }
     }
@@ -428,7 +458,7 @@ struct Parser<'a> {
     node_count: usize,
     property_count: usize,
     nodes: Vec<JsonNode>,
-    diagnostics: Vec<AuthoringDiagnostic>,
+    diagnostics: Vec<ImportDiagnostic>,
 }
 
 impl<'a> Parser<'a> {
@@ -487,9 +517,9 @@ impl<'a> Parser<'a> {
         &mut self,
         depth: usize,
         path: &mut Vec<String>,
-    ) -> Result<usize, AuthoringDiagnostic> {
+    ) -> Result<usize, ImportDiagnostic> {
         self.skip_whitespace();
-        if depth > AUTHORING_LIMITS.max_depth {
+        if depth > IMPORT_LIMITS.depth {
             return Err(blocked_diagnostic(
                 "depth_exceeded",
                 &encode_pointer(path),
@@ -498,7 +528,7 @@ impl<'a> Parser<'a> {
             ));
         }
         self.node_count += 1;
-        if self.node_count > AUTHORING_LIMITS.max_nodes {
+        if self.node_count > IMPORT_LIMITS.nodes {
             return Err(blocked_diagnostic(
                 "node_count_exceeded",
                 &encode_pointer(path),
@@ -525,7 +555,7 @@ impl<'a> Parser<'a> {
         &mut self,
         depth: usize,
         path: &mut Vec<String>,
-    ) -> Result<usize, AuthoringDiagnostic> {
+    ) -> Result<usize, ImportDiagnostic> {
         let start = self.cursor;
         self.cursor += 1;
         self.skip_whitespace();
@@ -545,7 +575,7 @@ impl<'a> Parser<'a> {
             self.property_count += 1;
             path.push(key.clone());
             let pointer = encode_pointer(path);
-            if self.property_count > AUTHORING_LIMITS.max_properties {
+            if self.property_count > IMPORT_LIMITS.properties {
                 return Err(blocked_diagnostic(
                     "property_count_exceeded",
                     &pointer,
@@ -553,7 +583,7 @@ impl<'a> Parser<'a> {
                     key_span.byte_length,
                 ));
             }
-            if key.len() > AUTHORING_LIMITS.max_property_name_utf8_bytes {
+            if key.len() > IMPORT_LIMITS.property_name_utf8_bytes {
                 self.diagnostics.push(blocked_diagnostic(
                     "property_name_utf8_bytes_exceeded",
                     &pointer,
@@ -606,7 +636,7 @@ impl<'a> Parser<'a> {
         &mut self,
         depth: usize,
         path: &mut Vec<String>,
-    ) -> Result<usize, AuthoringDiagnostic> {
+    ) -> Result<usize, ImportDiagnostic> {
         let start = self.cursor;
         self.cursor += 1;
         self.skip_whitespace();
@@ -614,7 +644,7 @@ impl<'a> Parser<'a> {
         if self.consume(b']') {
             return Ok(self.push_node(
                 Utf8ByteSpan::new(start, self.cursor - start),
-                JsonKind::Array(children),
+                JsonKind::Array,
             ));
         }
         loop {
@@ -636,16 +666,16 @@ impl<'a> Parser<'a> {
         }
         Ok(self.push_node(
             Utf8ByteSpan::new(start, self.cursor - start),
-            JsonKind::Array(children),
+            JsonKind::Array,
         ))
     }
 
     fn parse_string(
         &mut self,
         path: &[String],
-    ) -> Result<(String, Utf8ByteSpan), AuthoringDiagnostic> {
+    ) -> Result<(String, Utf8ByteSpan), ImportDiagnostic> {
         let (value, span) = self.parse_string_token(path)?;
-        if value.len() > AUTHORING_LIMITS.max_string_utf8_bytes {
+        if value.len() > IMPORT_LIMITS.string_utf8_bytes {
             self.diagnostics.push(blocked_diagnostic(
                 "string_utf8_bytes_exceeded",
                 &encode_pointer(path),
@@ -659,7 +689,7 @@ impl<'a> Parser<'a> {
     fn parse_string_token(
         &mut self,
         path: &[String],
-    ) -> Result<(String, Utf8ByteSpan), AuthoringDiagnostic> {
+    ) -> Result<(String, Utf8ByteSpan), ImportDiagnostic> {
         let start = self.cursor;
         if !self.consume(b'"') {
             return Err(self.syntax_error(path));
@@ -708,7 +738,7 @@ impl<'a> Parser<'a> {
         Err(self.syntax_error(path))
     }
 
-    fn parse_unicode_escape(&mut self, path: &[String]) -> Result<char, AuthoringDiagnostic> {
+    fn parse_unicode_escape(&mut self, path: &[String]) -> Result<char, ImportDiagnostic> {
         let first = self.parse_hex_quad(path)?;
         let scalar = if (0xd800..=0xdbff).contains(&first) {
             if self.bytes.get(self.cursor..self.cursor + 2) != Some(b"\\u") {
@@ -728,7 +758,7 @@ impl<'a> Parser<'a> {
         char::from_u32(scalar).ok_or_else(|| self.syntax_error(path))
     }
 
-    fn parse_hex_quad(&mut self, path: &[String]) -> Result<u16, AuthoringDiagnostic> {
+    fn parse_hex_quad(&mut self, path: &[String]) -> Result<u16, ImportDiagnostic> {
         if self.cursor + 4 > self.bytes.len() {
             return Err(self.syntax_error(path));
         }
@@ -742,7 +772,7 @@ impl<'a> Parser<'a> {
         Ok(value)
     }
 
-    fn parse_number(&mut self, path: &[String]) -> Result<usize, AuthoringDiagnostic> {
+    fn parse_number(&mut self, path: &[String]) -> Result<usize, ImportDiagnostic> {
         let start = self.cursor;
         self.consume(b'-');
         match self.bytes.get(self.cursor).copied() {
@@ -792,7 +822,7 @@ impl<'a> Parser<'a> {
         literal: &[u8],
         kind: JsonKind,
         path: &[String],
-    ) -> Result<usize, AuthoringDiagnostic> {
+    ) -> Result<usize, ImportDiagnostic> {
         let start = self.cursor;
         if self.bytes.get(start..start + literal.len()) != Some(literal) {
             return Err(self.syntax_error(path));
@@ -825,7 +855,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn syntax_error(&self, path: &[String]) -> AuthoringDiagnostic {
+    fn syntax_error(&self, path: &[String]) -> ImportDiagnostic {
         blocked_diagnostic(
             "invalid_json",
             &encode_pointer(path),
@@ -850,14 +880,14 @@ fn blocked_diagnostic(
     path: &str,
     byte_offset: usize,
     byte_length: usize,
-) -> AuthoringDiagnostic {
-    AuthoringDiagnostic::new(
+) -> ImportDiagnostic {
+    ImportDiagnostic::new(
         DiagnosticSeverity::Error,
         code,
         path,
         byte_offset,
         byte_length,
-        SupportClass::Blocked,
+        ImportSupport::Blocked,
     )
 }
 
@@ -877,43 +907,6 @@ fn encode_pointer(path: &[String]) -> String {
         }
     }
     pointer
-}
-
-fn decode_pointer(pointer: &str) -> Result<Vec<String>, ()> {
-    if pointer.is_empty() {
-        return Ok(Vec::new());
-    }
-    let Some(rest) = pointer.strip_prefix('/') else {
-        return Err(());
-    };
-    rest.split('/').map(decode_pointer_segment).collect()
-}
-
-fn decode_pointer_segment(segment: &str) -> Result<String, ()> {
-    let mut decoded = String::with_capacity(segment.len());
-    let mut characters = segment.chars();
-    while let Some(character) = characters.next() {
-        if character != '~' {
-            decoded.push(character);
-            continue;
-        }
-        match characters.next() {
-            Some('0') => decoded.push('~'),
-            Some('1') => decoded.push('/'),
-            _ => return Err(()),
-        }
-    }
-    Ok(decoded)
-}
-
-fn canonical_array_index(segment: &str) -> Option<usize> {
-    if segment.is_empty() || (segment.len() > 1 && segment.starts_with('0')) {
-        return None;
-    }
-    if !segment.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    segment.parse().ok()
 }
 
 fn key_hash(key: &str) -> u64 {

@@ -15,19 +15,6 @@ macro_rules! lanjing_commands {
     ($consumer:ident) => {
         $consumer! {
             fetch_import_src => commands::fetch_import_src,
-            list_source_documents => commands::list_source_documents,
-            create_source_document => commands::create_source_document,
-            get_source_document => commands::get_source_document,
-            save_source_document => commands::save_source_document,
-            pin_source_document_revision => commands::pin_source_document_revision,
-            release_source_document_revision_pin => commands::release_source_document_revision_pin,
-            rebase_source_document => commands::rebase_source_document,
-            rename_source_document => commands::rename_source_document,
-            delete_source_document => commands::delete_source_document,
-            reveal_source_document_credential => commands::reveal_source_document_credential,
-            replace_source_document_credential => commands::replace_source_document_credential,
-            clear_source_document_credential => commands::clear_source_document_credential,
-            prepare_install_from_document => commands::prepare_install_from_document,
             prepare_install => commands::prepare_install,
             install => commands::install,
             execute => commands::execute,
@@ -44,19 +31,20 @@ macro_rules! lanjing_commands {
     };
 }
 
-macro_rules! declare_registered_command_names {
-    ($($name:ident => $handler:path),+ $(,)?) => {
-        #[cfg(test)]
-        const REGISTERED_COMMAND_NAMES: &[&str] = &[$(stringify!($name)),+];
-    };
-}
-
 macro_rules! generate_lanjing_handler {
     ($($name:ident => $handler:path),+ $(,)?) => {
         tauri::generate_handler![$($handler),+]
     };
 }
 
+#[cfg(test)]
+macro_rules! declare_registered_command_names {
+    ($($name:ident => $handler:path),+ $(,)?) => {
+        const REGISTERED_COMMAND_NAMES: &[&str] = &[$(stringify!($name)),+];
+    };
+}
+
+#[cfg(test)]
 lanjing_commands!(declare_registered_command_names);
 
 /// 构建并运行 Tauri 应用。
@@ -112,4 +100,40 @@ pub fn run() {
         .invoke_handler(lanjing_commands!(generate_lanjing_handler))
         .run(tauri::generate_context!())
         .unwrap_or_else(|error| eprintln!("lanjing application terminated: {error}"));
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::REGISTERED_COMMAND_NAMES;
+
+    #[test]
+    fn root_command_registry_contains_only_current_facade_commands() {
+        const EXPECTED: &[&str] = &[
+            "fetch_import_src",
+            "prepare_install",
+            "install",
+            "execute",
+            "cancel_execution",
+            "catch_up_execution",
+            "list_installed_sources",
+            "get_library_projection",
+            "update_library_entry",
+            "get_media_item",
+            "get_media_items",
+            "list_media_units",
+            "list_media_assets",
+        ];
+        assert_eq!(REGISTERED_COMMAND_NAMES, EXPECTED);
+        assert_eq!(
+            REGISTERED_COMMAND_NAMES
+                .iter()
+                .copied()
+                .collect::<HashSet<_>>()
+                .len(),
+            EXPECTED.len(),
+            "Tauri command 注册不得重复"
+        );
+    }
 }

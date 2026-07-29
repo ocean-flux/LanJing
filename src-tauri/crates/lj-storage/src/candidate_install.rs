@@ -1,9 +1,9 @@
-//! Candidate-v2 composite publish、source install/update 与 revision-keyed snapshot。
+//! Candidate composite publish、source install/update 与 revision-keyed snapshot。
 //!
 //! 一个 writer command 先 durable 写完 package/Plan 与全部随机 secret 文件，再由同一个 Event
-//! transaction 发布 candidate row/owners。install 重新验证 schema、expiry、contract hash、document
-//! 与 installed-source baseline，在一个 source Event transaction 中消费 candidate、追加 source
-//! revision、固定 document snapshot/runtime credential ownership；失败不推进任一 projection。
+//! transaction 发布 candidate row/owners。install 重新验证 schema、expiry、contract hash 与
+//! installed-source baseline，在一个 source Event transaction 中消费 candidate、追加 source
+//! revision、固定 runtime credential ownership；失败不推进任一 projection。
 
 use std::str::FromStr;
 
@@ -13,14 +13,12 @@ use diesel::sql_types::{BigInt, Integer, Nullable, Text};
 use diesel::sqlite::SqliteConnection;
 use lj_media::SourceProfile;
 use lj_rule_model::{
-    ArtifactRef, CREDENTIAL_SCHEMA_VERSION, EventType, ExecutionPlan, PolicyCapabilities,
-    RulePackage, SchemaReadError, SecretRef, SourceDocumentFormat, definition_hash,
-    execution_plan_hash, read_execution_plan, read_rule_package,
+    ArtifactRef, EventType, ExecutionPlan, PolicyCapabilities, RulePackage, SchemaReadError,
+    SecretRef, definition_hash, execution_plan_hash, read_execution_plan, read_rule_package,
 };
 use uuid::Uuid;
 
-use crate::artifact::{ArtifactStore, PendingSecretArtifact};
-use crate::document_vault::{format_as_db, format_from_db, revision_owner_id};
+use crate::artifact::ArtifactStore;
 use crate::event_store::{
     ArtifactLink, EventDraft, append_event_transaction, database_error, deserialize, from_i64,
     idempotent_event, read_body_by_hash, remove_candidate_event_refs, serialize, to_i64,
@@ -31,75 +29,12 @@ use crate::secret_artifact::{
     write_secret,
 };
 use crate::types::{
-    ArtifactKind, CandidateDocumentInput, CandidateDraft, CandidateSummary,
-    DEFAULT_CANDIDATE_TTL_MS, DocumentRef, INSTALL_CANDIDATE_SCHEMA_VERSION,
-    InstallCandidateRequest, InstalledSource, InstalledSourceRecord, MAX_SOURCE_DOCUMENT_BYTES,
-    SOURCE_DOCUMENT_SCHEMA_VERSION, SecretArtifactId, SourceDocumentId, StorageError,
-    TransientSourceDocumentInput,
+    ArtifactKind, CandidateDraft, CandidateSummary, DEFAULT_CANDIDATE_TTL_MS,
+    INSTALL_CANDIDATE_SCHEMA_VERSION, InstallCandidateRequest, InstalledSource,
+    InstalledSourceRecord, SecretArtifactId, StorageError,
 };
 
-struct SavedCandidateDocument {
-    document_ref: DocumentRef,
-    format: SourceDocumentFormat,
-    masked_hash: String,
-    raw_secret_id: SecretArtifactId,
-    manifest_secret_id: SecretArtifactId,
-}
-
-struct TransientCandidateDocument {
-    format: SourceDocumentFormat,
-    masked_hash: String,
-    raw_secret: PendingSecretArtifact,
-    manifest_secret: PendingSecretArtifact,
-}
-
-enum PreparedCandidateDocument {
-    Saved(SavedCandidateDocument),
-    Transient(TransientCandidateDocument),
-}
-
-impl PreparedCandidateDocument {
-    fn format(&self) -> SourceDocumentFormat {
-        match self {
-            Self::Saved(value) => value.format,
-            Self::Transient(value) => value.format,
-        }
-    }
-
-    fn document_ref(&self) -> Option<DocumentRef> {
-        match self {
-            Self::Saved(value) => Some(value.document_ref),
-            Self::Transient(_) => None,
-        }
-    }
-
-    fn is_transient(&self) -> bool {
-        matches!(self, Self::Transient(_))
-    }
-
-    fn masked_hash(&self) -> &str {
-        match self {
-            Self::Saved(value) => &value.masked_hash,
-            Self::Transient(value) => &value.masked_hash,
-        }
-    }
-
-    fn raw_secret_id(&self) -> SecretArtifactId {
-        match self {
-            Self::Saved(value) => value.raw_secret_id,
-            Self::Transient(value) => value.raw_secret.secret_id,
-        }
-    }
-
-    fn manifest_secret_id(&self) -> SecretArtifactId {
-        match self {
-            Self::Saved(value) => value.manifest_secret_id,
-            Self::Transient(value) => value.manifest_secret.secret_id,
-        }
-    }
-}
-
-/// 单 writer composite publish candidate-v2。
+/// 单 writer composite publish candidate。
 pub(crate) fn process_stage_candidate(
     conn: &mut SqliteConnection,
     artifacts: &ArtifactStore,
@@ -116,8 +51,6 @@ pub(crate) fn process_stage_candidate(
         serde_json::to_vec(&draft.package).map_err(|_| StorageError::Serialization)?;
     let plan_bytes = serde_json::to_vec(&draft.plan).map_err(|_| StorageError::Serialization)?;
 
-    let prepared_document =
-        prepare_candidate_document(conn, artifacts, draft.document, draft.created_at_ms)?;
     let runtime_secret = draft
         .runtime_credentials
         .as_ref()
@@ -133,16 +66,9 @@ pub(crate) fn process_stage_candidate(
     let package_artifact = artifacts.write(ArtifactKind::Body, &package_bytes)?;
     let plan_artifact = artifacts.write(ArtifactKind::Body, &plan_bytes)?;
     let source_identity = draft.package.source_identity().id.clone();
-    let document_ref = prepared_document.document_ref();
     let contract_hash = candidate_contract_hash(&CandidateContractHashInput {
         candidate_id: draft.candidate_id,
         source_identity: &source_identity,
-        document_ref,
-        transient: prepared_document.is_transient(),
-        format: prepared_document.format(),
-        masked_hash: prepared_document.masked_hash(),
-        raw_secret_id: prepared_document.raw_secret_id(),
-        manifest_secret_id: prepared_document.manifest_secret_id(),
         runtime_secret_id: runtime_secret.as_ref().map(|value| value.secret_id),
         expected_installed_revision: draft.expected_installed_revision,
         package_artifact_hash: &package_artifact.hash,
@@ -169,7 +95,6 @@ pub(crate) fn process_stage_candidate(
             "candidate_id": draft.candidate_id,
             "target_source_identity": source_identity,
             "candidate_schema_version": INSTALL_CANDIDATE_SCHEMA_VERSION,
-            "document_schema_version": SOURCE_DOCUMENT_SCHEMA_VERSION,
             "contract_hash": contract_hash,
             "expires_at_ms": expires_at_ms,
         }),
@@ -180,13 +105,6 @@ pub(crate) fn process_stage_candidate(
         ArtifactLink::New(plan_artifact),
     ];
     append_event_transaction(conn, &event, &links, |conn, _, stream_revision| {
-        retain_candidate_document(
-            conn,
-            artifacts,
-            draft.candidate_id,
-            &prepared_document,
-            draft.created_at_ms,
-        )?;
         if let Some(runtime_secret) = &runtime_secret {
             retain_pending_secret(
                 conn,
@@ -197,18 +115,10 @@ pub(crate) fn process_stage_candidate(
             )?;
         }
         sql_query(
-            "INSERT INTO candidate_projection (candidate_id, candidate_schema_version, document_schema_version, source_format, document_id, document_revision, transient, document_masked_hash, raw_secret_id, manifest_secret_id, runtime_credential_secret_id, target_source_identity, expected_installed_revision, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, profile_json, required_grant_json, diagnostics_json, expires_at_ms, status, stream_version, created_at_ms, consumed_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'staged', ?, ?, NULL)",
+            "INSERT INTO candidate_projection (candidate_id, candidate_schema_version, runtime_credential_secret_id, target_source_identity, expected_installed_revision, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, profile_json, required_grant_json, diagnostics_json, expires_at_ms, status, stream_version, created_at_ms, consumed_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'staged', ?, ?, NULL)",
         )
         .bind::<Text, _>(draft.candidate_id.to_string())
         .bind::<Integer, _>(i32::try_from(INSTALL_CANDIDATE_SCHEMA_VERSION).map_err(|_| StorageError::CandidateSchemaMismatch)?)
-        .bind::<Integer, _>(i32::try_from(SOURCE_DOCUMENT_SCHEMA_VERSION).map_err(|_| StorageError::CandidateSchemaMismatch)?)
-        .bind::<Text, _>(format_as_db(prepared_document.format()))
-        .bind::<Nullable<Text>, _>(document_ref.map(|value| value.document_id.to_string()).as_deref())
-        .bind::<Nullable<BigInt>, _>(document_ref.map(|value| to_i64(value.document_revision)).transpose()?)
-        .bind::<Integer, _>(i32::from(prepared_document.is_transient()))
-        .bind::<Text, _>(prepared_document.masked_hash())
-        .bind::<Text, _>(prepared_document.raw_secret_id().to_string())
-        .bind::<Text, _>(prepared_document.manifest_secret_id().to_string())
         .bind::<Nullable<Text>, _>(runtime_secret.as_ref().map(|value| value.secret_id.to_string()).as_deref())
         .bind::<Text, _>(&source_identity)
         .bind::<BigInt, _>(to_i64(draft.expected_installed_revision)?)
@@ -229,8 +139,6 @@ pub(crate) fn process_stage_candidate(
     Ok(CandidateSummary {
         candidate_id: draft.candidate_id,
         source_identity,
-        document_ref,
-        transient: prepared_document.is_transient(),
         expected_installed_revision: draft.expected_installed_revision,
         profile: draft.profile,
         required_grant: draft.required_grant,
@@ -279,152 +187,6 @@ fn validate_candidate_identity(draft: &CandidateDraft) -> Result<(), StorageErro
     Ok(())
 }
 
-fn prepare_candidate_document(
-    conn: &mut SqliteConnection,
-    artifacts: &ArtifactStore,
-    input: CandidateDocumentInput,
-    created_at_ms: i64,
-) -> Result<PreparedCandidateDocument, StorageError> {
-    match input {
-        CandidateDocumentInput::Saved(document_ref) => {
-            if document_ref.document_revision == 0 {
-                return Err(StorageError::InvalidInput(
-                    "document revision 必须大于 0".to_string(),
-                ));
-            }
-            let row = source_document_candidate_row(conn, document_ref.document_id)?
-                .ok_or(StorageError::DocumentMissing)?;
-            let current_revision = from_i64(row.current_document_revision, "document revision")?;
-            if current_revision != document_ref.document_revision
-                || row.schema_version != i64::from(SOURCE_DOCUMENT_SCHEMA_VERSION)
-            {
-                return Err(StorageError::CandidateStale);
-            }
-            let raw_secret_id = SecretArtifactId::from_str(&row.raw_secret_id)?;
-            let masked_secret_id = SecretArtifactId::from_str(&row.masked_secret_id)?;
-            read_owned_secret(
-                conn,
-                artifacts,
-                masked_secret_id,
-                "document_masked",
-                &revision_owner_id(
-                    document_ref.document_id,
-                    document_ref.document_revision,
-                    "masked",
-                ),
-            )?;
-            let manifest_secret_id = SecretArtifactId::from_str(&row.manifest_secret_id)?;
-            read_owned_secret(
-                conn,
-                artifacts,
-                raw_secret_id,
-                "document_raw",
-                &revision_owner_id(
-                    document_ref.document_id,
-                    document_ref.document_revision,
-                    "raw",
-                ),
-            )?;
-            read_owned_secret(
-                conn,
-                artifacts,
-                manifest_secret_id,
-                "document_manifest",
-                &revision_owner_id(
-                    document_ref.document_id,
-                    document_ref.document_revision,
-                    "manifest",
-                ),
-            )?;
-            Ok(PreparedCandidateDocument::Saved(SavedCandidateDocument {
-                document_ref,
-                format: format_from_db(&row.format)?,
-                masked_hash: row.masked_hash,
-                raw_secret_id,
-                manifest_secret_id,
-            }))
-        }
-        CandidateDocumentInput::Transient(input) => {
-            validate_transient_document(&input)?;
-            let manifest_bytes =
-                serde_json::to_vec(&input.manifest).map_err(|_| StorageError::Serialization)?;
-            let raw_secret =
-                write_secret(conn, artifacts, input.raw_text.as_bytes(), created_at_ms)?;
-            let manifest_secret = write_secret(conn, artifacts, &manifest_bytes, created_at_ms)?;
-            Ok(PreparedCandidateDocument::Transient(
-                TransientCandidateDocument {
-                    format: input.format,
-                    masked_hash: blake3::hash(input.masked_text.as_bytes())
-                        .to_hex()
-                        .to_string(),
-                    raw_secret,
-                    manifest_secret,
-                },
-            ))
-        }
-    }
-}
-
-fn validate_transient_document(input: &TransientSourceDocumentInput) -> Result<(), StorageError> {
-    if input.masked_text.len() > MAX_SOURCE_DOCUMENT_BYTES
-        || input.raw_text.len() > MAX_SOURCE_DOCUMENT_BYTES
-        || input.manifest.schema_version != CREDENTIAL_SCHEMA_VERSION
-        || input.manifest.target.format != input.format
-        || input.manifest.target.revision == 0
-    {
-        return Err(StorageError::InvalidInput(
-            "transient 来源文档无效或超过 2 MiB".to_string(),
-        ));
-    }
-    Ok(())
-}
-
-fn retain_candidate_document(
-    conn: &mut SqliteConnection,
-    artifacts: &ArtifactStore,
-    candidate_id: Uuid,
-    document: &PreparedCandidateDocument,
-    created_at_ms: i64,
-) -> Result<(), StorageError> {
-    let owner_id = candidate_id.to_string();
-    match document {
-        PreparedCandidateDocument::Saved(value) => {
-            retain_existing_secret(
-                conn,
-                artifacts,
-                value.raw_secret_id,
-                "candidate_raw",
-                &owner_id,
-                created_at_ms,
-            )?;
-            retain_existing_secret(
-                conn,
-                artifacts,
-                value.manifest_secret_id,
-                "candidate_manifest",
-                &owner_id,
-                created_at_ms,
-            )
-        }
-        PreparedCandidateDocument::Transient(value) => {
-            retain_pending_secret(
-                conn,
-                &value.raw_secret,
-                "candidate_raw",
-                &owner_id,
-                created_at_ms,
-            )?;
-            retain_pending_secret(
-                conn,
-                &value.manifest_secret,
-                "candidate_manifest",
-                &owner_id,
-                created_at_ms,
-            )
-        }
-    }
-}
-
 /// 原子消费 candidate-v2 并追加权威 source revision。
 pub(crate) fn process_install_candidate(
     conn: &mut SqliteConnection,
@@ -452,27 +214,6 @@ pub(crate) fn process_install_candidate(
     if actual_installed_revision != expected_installed_revision {
         return Err(StorageError::CandidateStale);
     }
-    let document_ref = candidate_document_ref(&candidate)?;
-    let document_row = if let Some(document_ref) = document_ref {
-        let row = source_document_candidate_row(conn, document_ref.document_id)?
-            .ok_or(StorageError::CandidateStale)?;
-        if from_i64(row.current_document_revision, "document revision")?
-            != document_ref.document_revision
-            || row.schema_version != i64::from(SOURCE_DOCUMENT_SCHEMA_VERSION)
-            || row.masked_hash != candidate.document_masked_hash
-            || row.raw_secret_id != candidate.raw_secret_id
-            || row.manifest_secret_id != candidate.manifest_secret_id
-            || row
-                .source_identity
-                .as_deref()
-                .is_some_and(|identity| identity != candidate.target_source_identity)
-        {
-            return Err(StorageError::CandidateStale);
-        }
-        Some(row)
-    } else {
-        None
-    };
     ensure_candidate_secrets(conn, artifacts, request.candidate_id, &candidate)?;
     let (package, plan, profile, required_grant) =
         load_and_validate_candidate_artifacts(conn, artifacts, &candidate)?;
@@ -499,9 +240,6 @@ pub(crate) fn process_install_candidate(
             "definition_hash": plan.definition_hash(),
             "plan_hash": plan.plan_hash(),
             "expected_installed_revision": expected_installed_revision,
-            "document_id": document_ref.map(|value| value.document_id),
-            "document_revision": document_ref.map(|value| value.document_revision),
-            "document_masked_hash": &candidate.document_masked_hash,
             "schema_version": INSTALL_CANDIDATE_SCHEMA_VERSION,
         }),
         source_identity: Some(source_identity.clone()),
@@ -552,9 +290,6 @@ pub(crate) fn process_install_candidate(
         plan_hash: &plan_hash,
         cookie_namespace: &cookie_namespace,
         runtime_secret_id,
-        document_ref,
-        document_row: document_row.as_ref(),
-        document_masked_hash: &candidate.document_masked_hash,
         candidate_id: request.candidate_id,
         occurred_at_ms: event.occurred_at_ms,
     };
@@ -570,8 +305,6 @@ pub(crate) fn process_install_candidate(
         profile,
         grant: request.grant,
         source_revision: receipt.stream_version,
-        document_id: document_ref.map(|value| value.document_id),
-        document_revision: document_ref.map(|value| value.document_revision),
     })
 }
 
@@ -589,9 +322,6 @@ struct CandidateInstallCommit<'a> {
     plan_hash: &'a str,
     cookie_namespace: &'a str,
     runtime_secret_id: Option<SecretArtifactId>,
-    document_ref: Option<DocumentRef>,
-    document_row: Option<&'a SourceDocumentCandidateRow>,
-    document_masked_hash: &'a str,
     candidate_id: Uuid,
     occurred_at_ms: i64,
 }
@@ -602,21 +332,9 @@ fn commit_candidate_install(
     source_revision: u64,
     commit: &CandidateInstallCommit<'_>,
 ) -> Result<(), StorageError> {
-    // 已关联来源只能继续由同一 editable document 更新；transient 或另一 draft 都不能
-    // 偷换唯一 working-copy 关系。必须在 source Event transaction 内重新读取 projection，
-    // 不能信任 prepare 时的 UI/candidate 状态。
-    if let Some(linked_document_id) =
-        get_source_row(conn, commit.source_identity)?.and_then(|source| source.document_id)
-    {
-        let linked_document_id = SourceDocumentId::from_str(&linked_document_id)?;
-        if commit.document_ref.map(|value| value.document_id) != Some(linked_document_id) {
-            return Err(StorageError::CandidateStale);
-        }
-    }
-
     upsert_projection_source(conn, commit.profile, global_seq)?;
     sql_query(
-        "INSERT INTO source_projection (source_identity, version, profile_json, grant_json, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, document_id, document_revision, revision, updated_global_seq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(source_identity) DO UPDATE SET version = excluded.version, profile_json = excluded.profile_json, grant_json = excluded.grant_json, package_artifact_hash = excluded.package_artifact_hash, plan_artifact_hash = excluded.plan_artifact_hash, definition_hash = excluded.definition_hash, plan_hash = excluded.plan_hash, cookie_namespace = excluded.cookie_namespace, runtime_credential_secret_id = excluded.runtime_credential_secret_id, document_id = excluded.document_id, document_revision = excluded.document_revision, revision = excluded.revision, updated_global_seq = excluded.updated_global_seq",
+        "INSERT INTO source_projection (source_identity, version, profile_json, grant_json, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, revision, updated_global_seq) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(source_identity) DO UPDATE SET version = excluded.version, profile_json = excluded.profile_json, grant_json = excluded.grant_json, package_artifact_hash = excluded.package_artifact_hash, plan_artifact_hash = excluded.plan_artifact_hash, definition_hash = excluded.definition_hash, plan_hash = excluded.plan_hash, cookie_namespace = excluded.cookie_namespace, runtime_credential_secret_id = excluded.runtime_credential_secret_id, revision = excluded.revision, updated_global_seq = excluded.updated_global_seq",
     )
     .bind::<Text, _>(commit.source_identity)
     .bind::<Text, _>(commit.version)
@@ -633,24 +351,12 @@ fn commit_candidate_install(
             .map(|value| value.to_string())
             .as_deref(),
     )
-    .bind::<Nullable<Text>, _>(
-        commit
-            .document_ref
-            .map(|value| value.document_id.to_string())
-            .as_deref(),
-    )
-    .bind::<Nullable<BigInt>, _>(
-        commit
-            .document_ref
-            .map(|value| to_i64(value.document_revision))
-            .transpose()?,
-    )
     .bind::<BigInt, _>(to_i64(source_revision)?)
     .bind::<BigInt, _>(to_i64(global_seq)?)
     .execute(conn)
     .map_err(database_error)?;
     sql_query(
-        "INSERT INTO source_versions (source_identity, source_revision, version, profile_json, grant_json, base_url, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, document_id, document_revision, document_masked_hash, schema_version, installed_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO source_versions (source_identity, source_revision, version, profile_json, grant_json, base_url, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, schema_version, installed_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind::<Text, _>(commit.source_identity)
     .bind::<BigInt, _>(to_i64(source_revision)?)
@@ -669,23 +375,9 @@ fn commit_candidate_install(
             .map(|value| value.to_string())
             .as_deref(),
     )
-    .bind::<Nullable<Text>, _>(
-        commit
-            .document_ref
-            .map(|value| value.document_id.to_string())
-            .as_deref(),
-    )
-    .bind::<Nullable<BigInt>, _>(
-        commit
-            .document_ref
-            .map(|value| to_i64(value.document_revision))
-            .transpose()?,
-    )
-    .bind::<Nullable<Text>, _>(commit.document_ref.map(|_| commit.document_masked_hash))
-    .bind::<Integer, _>(
-        i32::try_from(SOURCE_DOCUMENT_SCHEMA_VERSION)
-            .map_err(|_| StorageError::InvalidInput("source schema version 无效".to_string()))?,
-    )
+    .bind::<Integer, _>(i32::try_from(INSTALL_CANDIDATE_SCHEMA_VERSION).map_err(|_| {
+        StorageError::InvalidInput("source schema version 无效".to_string())
+    })?)
     .bind::<BigInt, _>(commit.occurred_at_ms)
     .execute(conn)
     .map_err(database_error)?;
@@ -708,88 +400,12 @@ fn commit_candidate_install(
             commit.occurred_at_ms,
         )?;
     }
-    if let (Some(document_ref), Some(document_row)) = (commit.document_ref, commit.document_row) {
-        pin_document_snapshot(
-            conn,
-            commit.artifacts,
-            document_ref,
-            document_row,
-            commit.source_identity,
-            source_revision,
-            commit.occurred_at_ms,
-        )?;
-    }
     release_candidate_secret_owners(conn, commit.candidate_id)?;
     remove_candidate_event_refs(conn, commit.candidate_id)?;
     sql_query("DELETE FROM candidate_projection WHERE candidate_id = ?")
         .bind::<Text, _>(commit.candidate_id.to_string())
         .execute(conn)
         .map_err(database_error)?;
-    Ok(())
-}
-
-fn pin_document_snapshot(
-    conn: &mut SqliteConnection,
-    artifacts: &ArtifactStore,
-    document_ref: DocumentRef,
-    document: &SourceDocumentCandidateRow,
-    source_identity: &str,
-    source_revision: u64,
-    created_at_ms: i64,
-) -> Result<(), StorageError> {
-    let masked_secret_id = SecretArtifactId::from_str(&document.masked_secret_id)?;
-    let raw_secret_id = SecretArtifactId::from_str(&document.raw_secret_id)?;
-    let manifest_secret_id = SecretArtifactId::from_str(&document.manifest_secret_id)?;
-    let owner_id = source_version_owner_id(source_identity, source_revision);
-    retain_existing_secret(
-        conn,
-        artifacts,
-        masked_secret_id,
-        "document_snapshot_masked",
-        &owner_id,
-        created_at_ms,
-    )?;
-    retain_existing_secret(
-        conn,
-        artifacts,
-        raw_secret_id,
-        "document_snapshot_raw",
-        &owner_id,
-        created_at_ms,
-    )?;
-    retain_existing_secret(
-        conn,
-        artifacts,
-        manifest_secret_id,
-        "document_snapshot_manifest",
-        &owner_id,
-        created_at_ms,
-    )?;
-    sql_query(
-        "INSERT INTO source_document_snapshots (document_id, document_revision, source_identity, source_revision, masked_secret_id, raw_secret_id, manifest_secret_id, masked_hash, schema_version, created_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-    .bind::<Text, _>(document_ref.document_id.to_string())
-    .bind::<BigInt, _>(to_i64(document_ref.document_revision)?)
-    .bind::<Text, _>(source_identity)
-    .bind::<BigInt, _>(to_i64(source_revision)?)
-    .bind::<Text, _>(masked_secret_id.to_string())
-    .bind::<Text, _>(raw_secret_id.to_string())
-    .bind::<Text, _>(manifest_secret_id.to_string())
-    .bind::<Text, _>(&document.masked_hash)
-    .bind::<Integer, _>(i32::try_from(SOURCE_DOCUMENT_SCHEMA_VERSION).map_err(|_| StorageError::InvalidInput("document schema version 无效".to_string()))?)
-    .bind::<BigInt, _>(created_at_ms)
-    .execute(conn)
-    .map_err(database_error)?;
-    sql_query(
-        "UPDATE source_document_projection SET state = 'linked', source_identity = ?, installed_revision = ?, updated_at_ms = ? WHERE document_id = ? AND current_document_revision = ?",
-    )
-    .bind::<Text, _>(source_identity)
-    .bind::<BigInt, _>(to_i64(source_revision)?)
-    .bind::<BigInt, _>(created_at_ms)
-    .bind::<Text, _>(document_ref.document_id.to_string())
-    .bind::<BigInt, _>(to_i64(document_ref.document_revision)?)
-    .execute(conn)
-    .map_err(database_error)?;
     Ok(())
 }
 
@@ -800,12 +416,6 @@ fn ensure_candidate_secrets(
     candidate: &CandidateRow,
 ) -> Result<(), StorageError> {
     let owner_id = candidate_id.to_string();
-    let raw = SecretArtifactId::from_str(&candidate.raw_secret_id)?;
-    let manifest = SecretArtifactId::from_str(&candidate.manifest_secret_id)?;
-    read_owned_secret(conn, artifacts, raw, "candidate_raw", &owner_id)
-        .map_err(map_candidate_secret_error)?;
-    read_owned_secret(conn, artifacts, manifest, "candidate_manifest", &owner_id)
-        .map_err(map_candidate_secret_error)?;
     if let Some(runtime) = candidate.runtime_credential_secret_id.as_deref() {
         read_owned_secret(
             conn,
@@ -880,9 +490,6 @@ fn validate_candidate_status_and_schema(
     if candidate.candidate_schema_version
         != i32::try_from(INSTALL_CANDIDATE_SCHEMA_VERSION)
             .map_err(|_| StorageError::CandidateSchemaMismatch)?
-        || candidate.document_schema_version
-            != i32::try_from(SOURCE_DOCUMENT_SCHEMA_VERSION)
-                .map_err(|_| StorageError::CandidateSchemaMismatch)?
     {
         return Err(StorageError::CandidateSchemaMismatch);
     }
@@ -926,16 +533,9 @@ fn validate_staged_candidate_event(
         candidate.plan_artifact_hash.as_str(),
     ];
     expected_artifacts.sort_unstable();
-    let document_ref = candidate_document_ref(candidate)?;
     let contract_hash = candidate_contract_hash(&CandidateContractHashInput {
         candidate_id,
         source_identity: &candidate.target_source_identity,
-        document_ref,
-        transient: candidate.transient != 0,
-        format: format_from_db(&candidate.source_format)?,
-        masked_hash: &candidate.document_masked_hash,
-        raw_secret_id: SecretArtifactId::from_str(&candidate.raw_secret_id)?,
-        manifest_secret_id: SecretArtifactId::from_str(&candidate.manifest_secret_id)?,
         runtime_secret_id: candidate
             .runtime_credential_secret_id
             .as_deref()
@@ -988,12 +588,6 @@ fn validate_staged_candidate_event(
 struct CandidateContractHashInput<'a> {
     candidate_id: Uuid,
     source_identity: &'a str,
-    document_ref: Option<DocumentRef>,
-    transient: bool,
-    format: SourceDocumentFormat,
-    masked_hash: &'a str,
-    raw_secret_id: SecretArtifactId,
-    manifest_secret_id: SecretArtifactId,
     runtime_secret_id: Option<SecretArtifactId>,
     expected_installed_revision: u64,
     package_artifact_hash: &'a str,
@@ -1010,13 +604,6 @@ fn candidate_contract_hash(input: &CandidateContractHashInput<'_>) -> Result<Str
     let value = serde_json::json!({
         "candidate_id": input.candidate_id,
         "source_identity": input.source_identity,
-        "document_id": input.document_ref.map(|value| value.document_id),
-        "document_revision": input.document_ref.map(|value| value.document_revision),
-        "transient": input.transient,
-        "format": input.format,
-        "masked_hash": input.masked_hash,
-        "raw_secret_id": input.raw_secret_id,
-        "manifest_secret_id": input.manifest_secret_id,
         "runtime_secret_id": input.runtime_secret_id,
         "expected_installed_revision": input.expected_installed_revision,
         "package_artifact_hash": input.package_artifact_hash,
@@ -1028,7 +615,6 @@ fn candidate_contract_hash(input: &CandidateContractHashInput<'_>) -> Result<Str
         "diagnostics_hash": blake3::hash(input.diagnostics_json.as_bytes()).to_hex().to_string(),
         "expires_at_ms": input.expires_at_ms,
         "candidate_schema_version": INSTALL_CANDIDATE_SCHEMA_VERSION,
-        "document_schema_version": SOURCE_DOCUMENT_SCHEMA_VERSION,
     });
     let bytes = serde_json::to_vec(&value).map_err(|_| StorageError::Serialization)?;
     Ok(blake3::hash(&bytes).to_hex().to_string())
@@ -1041,12 +627,9 @@ pub(crate) fn get_candidate_summary(
 ) -> Result<Option<CandidateSummary>, StorageError> {
     get_candidate_sync(conn, candidate_id)?
         .map(|candidate| {
-            let document_ref = candidate_document_ref(&candidate)?;
             Ok(CandidateSummary {
                 candidate_id,
                 source_identity: candidate.target_source_identity,
-                document_ref,
-                transient: candidate.transient != 0,
                 expected_installed_revision: from_i64(
                     candidate.expected_installed_revision,
                     "candidate expected revision",
@@ -1067,27 +650,12 @@ fn get_candidate_sync(
     candidate_id: Uuid,
 ) -> Result<Option<CandidateRow>, StorageError> {
     sql_query(
-        "SELECT candidate_schema_version, document_schema_version, source_format, document_id, document_revision, transient, document_masked_hash, raw_secret_id, manifest_secret_id, runtime_credential_secret_id, target_source_identity, expected_installed_revision, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, profile_json, required_grant_json, diagnostics_json, expires_at_ms, status FROM candidate_projection WHERE candidate_id = ?",
+        "SELECT candidate_schema_version, runtime_credential_secret_id, target_source_identity, expected_installed_revision, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, profile_json, required_grant_json, diagnostics_json, expires_at_ms, status FROM candidate_projection WHERE candidate_id = ?",
     )
     .bind::<Text, _>(candidate_id.to_string())
     .get_result::<CandidateRow>(conn)
     .optional()
     .map_err(database_error)
-}
-
-fn candidate_document_ref(candidate: &CandidateRow) -> Result<Option<DocumentRef>, StorageError> {
-    match (
-        candidate.transient != 0,
-        candidate.document_id.as_deref(),
-        candidate.document_revision,
-    ) {
-        (true, None, None) => Ok(None),
-        (false, Some(document_id), Some(document_revision)) => Ok(Some(DocumentRef {
-            document_id: SourceDocumentId::from_str(document_id)?,
-            document_revision: from_i64(document_revision, "document revision")?,
-        })),
-        _ => Err(StorageError::CandidateTampered),
-    }
 }
 
 /// 读取 source current row，供 install/execution/checkpoint 使用。
@@ -1096,7 +664,7 @@ pub(crate) fn get_source_row(
     source_identity: &str,
 ) -> Result<Option<SourceRow>, StorageError> {
     sql_query(
-        "SELECT source_identity, version, profile_json, grant_json, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, document_id, document_revision, revision FROM source_projection WHERE source_identity = ?",
+        "SELECT source_identity, version, profile_json, grant_json, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, revision FROM source_projection WHERE source_identity = ?",
     )
     .bind::<Text, _>(source_identity)
     .get_result::<SourceRow>(conn)
@@ -1123,15 +691,6 @@ pub(crate) fn get_installed_source_sync(
         artifacts,
         &row.plan_artifact_hash,
     )?)?;
-    let document_id = row
-        .document_id
-        .as_deref()
-        .map(SourceDocumentId::from_str)
-        .transpose()?;
-    let document_revision = row
-        .document_revision
-        .map(|value| from_i64(value, "document revision"))
-        .transpose()?;
     Ok(Some(InstalledSource {
         source_identity: row.source_identity,
         version: row.version,
@@ -1140,8 +699,6 @@ pub(crate) fn get_installed_source_sync(
         profile: deserialize(row.profile_json.as_bytes())?,
         grant: deserialize(row.grant_json.as_bytes())?,
         source_revision: from_i64(row.revision, "source revision")?,
-        document_id,
-        document_revision,
     }))
 }
 
@@ -1150,7 +707,7 @@ pub(crate) fn list_installed_sources_sync(
     conn: &mut SqliteConnection,
 ) -> Result<Vec<InstalledSourceRecord>, StorageError> {
     sql_query(
-        "SELECT source_identity, version, profile_json, grant_json, document_id, document_revision, revision FROM source_projection ORDER BY source_identity ASC",
+        "SELECT source_identity, version, profile_json, grant_json, revision FROM source_projection ORDER BY source_identity ASC",
     )
     .load::<InstalledSourceRecordRow>(conn)
     .map_err(database_error)?
@@ -1168,29 +725,12 @@ fn installed_source_record_from_row(
             "source projection profile identity 与行键不一致".to_string(),
         ));
     }
-    let document_id = row
-        .document_id
-        .as_deref()
-        .map(SourceDocumentId::from_str)
-        .transpose()?;
-    let document_revision = row
-        .document_revision
-        .map(|value| from_i64(value, "document revision"))
-        .transpose()?;
-    if document_id.is_some() != document_revision.is_some() {
-        return Err(StorageError::InvalidInput(
-            "source document 关联不完整".to_string(),
-        ));
-    }
     Ok(InstalledSourceRecord {
         source_identity: row.source_identity,
         version: row.version,
         profile,
         grant: deserialize::<PolicyCapabilities>(row.grant_json.as_bytes())?,
         source_revision: from_i64(row.revision, "source revision")?,
-        has_editable_source: document_id.is_some(),
-        document_id,
-        document_revision,
     })
 }
 
@@ -1201,7 +741,7 @@ fn installed_source_from_revision(
     source_revision: u64,
 ) -> Result<InstalledSource, StorageError> {
     let row = sql_query(
-        "SELECT source_identity, source_revision, version, profile_json, grant_json, package_artifact_hash, plan_artifact_hash, document_id, document_revision FROM source_versions WHERE source_identity = ? AND source_revision = ?",
+        "SELECT source_identity, source_revision, version, profile_json, grant_json, package_artifact_hash, plan_artifact_hash FROM source_versions WHERE source_identity = ? AND source_revision = ?",
     )
     .bind::<Text, _>(source_identity)
     .bind::<BigInt, _>(to_i64(source_revision)?)
@@ -1227,15 +767,6 @@ fn installed_source_from_revision(
         profile: deserialize(row.profile_json.as_bytes())?,
         grant: deserialize(row.grant_json.as_bytes())?,
         source_revision: from_i64(row.source_revision, "source revision")?,
-        document_id: row
-            .document_id
-            .as_deref()
-            .map(SourceDocumentId::from_str)
-            .transpose()?,
-        document_revision: row
-            .document_revision
-            .map(|value| from_i64(value, "document revision"))
-            .transpose()?,
     })
 }
 
@@ -1247,25 +778,7 @@ pub(crate) fn recover_candidates_sync(
     let rows = sql_query("SELECT candidate_id FROM candidate_projection ORDER BY created_at_ms")
         .load::<CandidateIdRow>(conn)
         .map_err(database_error)?;
-    let legacy_rows = sql_query(
-        "SELECT candidate_id FROM candidates WHERE status = 'schema_invalid' ORDER BY created_at_ms",
-    )
-    .load::<CandidateIdRow>(conn)
-    .map_err(database_error)?;
     let mut removed = 0_usize;
-    conn.immediate_transaction::<_, StorageError, _>(|conn| {
-        for row in &legacy_rows {
-            let candidate_id =
-                Uuid::parse_str(&row.candidate_id).map_err(|_| StorageError::CandidateTampered)?;
-            remove_candidate_event_refs(conn, candidate_id)?;
-            sql_query("DELETE FROM candidates WHERE candidate_id = ?")
-                .bind::<Text, _>(candidate_id.to_string())
-                .execute(conn)
-                .map_err(database_error)?;
-        }
-        Ok(())
-    })?;
-    removed = removed.saturating_add(legacy_rows.len());
     for row in rows {
         let candidate_id =
             Uuid::parse_str(&row.candidate_id).map_err(|_| StorageError::CandidateTampered)?;
@@ -1273,10 +786,7 @@ pub(crate) fn recover_candidates_sync(
             get_candidate_sync(conn, candidate_id)?.ok_or(StorageError::CandidateMissing)?;
         let schema_invalid = candidate.candidate_schema_version
             != i32::try_from(INSTALL_CANDIDATE_SCHEMA_VERSION)
-                .map_err(|_| StorageError::CandidateSchemaMismatch)?
-            || candidate.document_schema_version
-                != i32::try_from(SOURCE_DOCUMENT_SCHEMA_VERSION)
-                    .map_err(|_| StorageError::CandidateSchemaMismatch)?;
+                .map_err(|_| StorageError::CandidateSchemaMismatch)?;
         if schema_invalid || candidate.status != "staged" || candidate.expires_at_ms <= now_ms {
             expire_candidate(conn, candidate_id)?;
             removed = removed.saturating_add(1);
@@ -1309,8 +819,6 @@ fn release_candidate_secret_owners(
     candidate_id: Uuid,
 ) -> Result<(), StorageError> {
     let owner_id = candidate_id.to_string();
-    release_secret_owner(conn, "candidate_raw", &owner_id)?;
-    release_secret_owner(conn, "candidate_manifest", &owner_id)?;
     release_secret_owner(conn, "candidate_runtime", &owner_id)
 }
 
@@ -1407,19 +915,6 @@ pub(crate) fn source_version_owner_id(source_identity: &str, source_revision: u6
     format!("{source_identity}:{source_revision}")
 }
 
-fn source_document_candidate_row(
-    conn: &mut SqliteConnection,
-    document_id: SourceDocumentId,
-) -> Result<Option<SourceDocumentCandidateRow>, StorageError> {
-    sql_query(
-        "SELECT format, source_identity, current_document_revision, masked_secret_id, raw_secret_id, manifest_secret_id, masked_hash, schema_version FROM source_document_projection WHERE document_id = ?",
-    )
-    .bind::<Text, _>(document_id.to_string())
-    .get_result::<SourceDocumentCandidateRow>(conn)
-    .optional()
-    .map_err(database_error)
-}
-
 #[derive(QueryableByName)]
 struct CandidateIdRow {
     #[diesel(sql_type = Text)]
@@ -1451,21 +946,6 @@ struct CandidateRow {
     #[diesel(sql_type = Integer)]
     candidate_schema_version: i32,
     #[diesel(sql_type = Integer)]
-    document_schema_version: i32,
-    #[diesel(sql_type = Text)]
-    source_format: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    document_id: Option<String>,
-    #[diesel(sql_type = Nullable<BigInt>)]
-    document_revision: Option<i64>,
-    #[diesel(sql_type = Integer)]
-    transient: i32,
-    #[diesel(sql_type = Text)]
-    document_masked_hash: String,
-    #[diesel(sql_type = Text)]
-    raw_secret_id: String,
-    #[diesel(sql_type = Text)]
-    manifest_secret_id: String,
     #[diesel(sql_type = Nullable<Text>)]
     runtime_credential_secret_id: Option<String>,
     #[diesel(sql_type = Text)]
@@ -1493,26 +973,6 @@ struct CandidateRow {
 }
 
 #[derive(QueryableByName)]
-struct SourceDocumentCandidateRow {
-    #[diesel(sql_type = Text)]
-    format: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    source_identity: Option<String>,
-    #[diesel(sql_type = BigInt)]
-    current_document_revision: i64,
-    #[diesel(sql_type = Text)]
-    masked_secret_id: String,
-    #[diesel(sql_type = Text)]
-    raw_secret_id: String,
-    #[diesel(sql_type = Text)]
-    manifest_secret_id: String,
-    #[diesel(sql_type = Text)]
-    masked_hash: String,
-    #[diesel(sql_type = BigInt)]
-    schema_version: i64,
-}
-
-#[derive(QueryableByName)]
 pub(crate) struct SourceRow {
     #[diesel(sql_type = Text)]
     pub(crate) source_identity: String,
@@ -1526,10 +986,6 @@ pub(crate) struct SourceRow {
     pub(crate) package_artifact_hash: String,
     #[diesel(sql_type = Text)]
     pub(crate) plan_artifact_hash: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    pub(crate) document_id: Option<String>,
-    #[diesel(sql_type = Nullable<BigInt>)]
-    pub(crate) document_revision: Option<i64>,
     #[diesel(sql_type = BigInt)]
     pub(crate) revision: i64,
 }
@@ -1544,10 +1000,6 @@ struct InstalledSourceRecordRow {
     profile_json: String,
     #[diesel(sql_type = Text)]
     grant_json: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    document_id: Option<String>,
-    #[diesel(sql_type = Nullable<BigInt>)]
-    document_revision: Option<i64>,
     #[diesel(sql_type = BigInt)]
     revision: i64,
 }
@@ -1568,10 +1020,6 @@ struct InstalledSourceVersionRow {
     package_artifact_hash: String,
     #[diesel(sql_type = Text)]
     plan_artifact_hash: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    document_id: Option<String>,
-    #[diesel(sql_type = Nullable<BigInt>)]
-    document_revision: Option<i64>,
 }
 
 #[cfg(test)]

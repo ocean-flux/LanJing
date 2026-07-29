@@ -17,10 +17,9 @@ use lj_media::{
     MediaResourceId, MediaUnit, ResourceCompleteness, SourceProfile,
 };
 use lj_rule_model::{
-    CREDENTIAL_SCHEMA_VERSION, CapabilityManifest, ControlTrace, CredentialSlotManifest,
-    CredentialTargetIdentity, Diagnostic, DiagnosticSeverity, EffectKind, EventType, ExecutionPlan,
-    ExecutionPlanParts, FlowGraph, HttpMethod, InvocationPath, LoopInvocationSegment,
-    PolicyCapabilities, RuleDefinition, RulePackage, SourceDocumentFormat, SourceIdentity,
+    CapabilityManifest, ControlTrace, Diagnostic, DiagnosticSeverity, EffectKind, EventType,
+    ExecutionPlan, ExecutionPlanParts, FlowGraph, HttpMethod, InvocationPath,
+    LoopInvocationSegment, PolicyCapabilities, RuleDefinition, RulePackage, SourceIdentity,
     SystemCapabilities, definition_hash, read_execution_plan,
 };
 use lj_runtime::{
@@ -31,12 +30,11 @@ use lj_runtime::{
     HttpResponse, ReplayCompletionLookup, effect_bytes_hash, effect_output_hash,
 };
 use lj_storage::{
-    AppendRequest, ArtifactInput, ArtifactKind, CandidateDocumentInput, CandidateDraft,
-    DEFAULT_CANDIDATE_TTL_MS, DeltaCommit, EventProjectionStorage, ExecutionFinish, ExecutionPin,
-    ExecutionStart, ExecutionStatus, GcState, InstallCandidateRequest, LibraryEntry,
-    LibraryProgress, LibraryUpdate, ProjectionDelta, ProjectionTombstones, ReplayExecutionStart,
-    RetentionPolicy, RuntimeCredentialMaterial, SourceDocumentId, StorageConfig, StorageError,
-    TransientSourceDocumentInput, WRITER_CAPACITY,
+    AppendRequest, ArtifactInput, ArtifactKind, CandidateDraft, DEFAULT_CANDIDATE_TTL_MS,
+    DeltaCommit, EventProjectionStorage, ExecutionFinish, ExecutionPin, ExecutionStart,
+    ExecutionStatus, GcState, InstallCandidateRequest, LibraryEntry, LibraryProgress,
+    LibraryUpdate, ProjectionDelta, ProjectionTombstones, ReplayExecutionStart, RetentionPolicy,
+    RuntimeCredentialMaterial, StorageConfig, StorageError, WRITER_CAPACITY,
 };
 use uuid::Uuid;
 
@@ -148,24 +146,6 @@ fn current_time_ms() -> i64 {
     .expect("test wall clock fits i64")
 }
 
-fn transient_document() -> CandidateDocumentInput {
-    let document_id = SourceDocumentId::new();
-    CandidateDocumentInput::Transient(TransientSourceDocumentInput {
-        format: SourceDocumentFormat::Legado,
-        masked_text: "{}".to_string(),
-        raw_text: "{}".to_string(),
-        manifest: CredentialSlotManifest {
-            schema_version: CREDENTIAL_SCHEMA_VERSION,
-            target: CredentialTargetIdentity {
-                format: SourceDocumentFormat::Legado,
-                document_id: document_id.to_string(),
-                revision: 1,
-            },
-            slots: Vec::new(),
-        },
-    })
-}
-
 fn package_plan(
     source_identity: &str,
     version: &str,
@@ -225,7 +205,6 @@ fn candidate(now_ms: i64) -> CandidateDraft {
         },
         required_grant: PolicyCapabilities::default(),
         diagnostics: Vec::new(),
-        document: transient_document(),
         runtime_credentials: None,
         expected_installed_revision: 0,
         expires_at_ms: None,

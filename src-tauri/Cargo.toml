@@ -106,7 +106,6 @@ tauri-plugin-os = { workspace = true }
 tauri-plugin-svelte = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
 tauri-plugin-mcp-bridge = { workspace = true }
-lj-node-http = { path = "crates/lj-node-http" }
 lj-rule-system = { path = "crates/lj-rule-system" }
 futures = { workspace = true }
 tracing = { workspace = true }

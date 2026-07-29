@@ -6,29 +6,33 @@ use std::fs;
 use lj_capability::{IntentInput, StandardIntent};
 use lj_importer::legado::{
     CONTINUE_ACTION_SCHEMA_VERSION, CONTINUE_ACTION_TTL_MS, ContinueActionError, LegadoImporter,
-    LegadoSourceJson,
 };
 use lj_rule_model::{FlowNodeKind, canonical_json};
 use serde_json::json;
 
-fn fixture_source() -> LegadoSourceJson {
-    let json = fs::read_to_string("fixtures/legado_synthetic_source.json")
-        .expect("fixture file should exist");
-    serde_json::from_str(&json).expect("fixture JSON should deserialize")
+fn fixture_source() -> String {
+    fs::read_to_string("fixtures/legado_synthetic_source.json").expect("fixture file should exist")
+}
+
+fn import_error(input: &str) -> lj_importer::ImportError {
+    match LegadoImporter.import(input) {
+        Ok(_) => panic!("input must be rejected"),
+        Err(error) => error,
+    }
 }
 
 #[test]
 fn adapter_exports_six_standard_intents_as_stable_definition() {
     let importer = LegadoImporter;
     let adapted = importer
-        .adapt(&fixture_source())
+        .import(&fixture_source())
         .expect("synthetic source should adapt");
     let repeated = importer
-        .adapt(&fixture_source())
+        .import(&fixture_source())
         .expect("same source should adapt repeatedly");
 
     assert_eq!(adapted.definition, repeated.definition);
-    assert!(!adapted.has_credentials());
+    assert_eq!(adapted.provenance, repeated.provenance);
     assert!(LegadoImporter::owns_source(
         &adapted.definition.source_identity().id
     ));
@@ -73,26 +77,25 @@ fn adapter_exports_six_standard_intents_as_stable_definition() {
 
 #[test]
 fn sensitive_headers_are_removed_from_definition_before_staging() {
-    let source: LegadoSourceJson = serde_json::from_value(json!({
+    let source = json!({
         "bookSourceName": "credential fixture",
+        "bookSourceType": 0,
         "bookSourceUrl": "https://example.test",
         "searchUrl": "/search?q={{key}}",
         "ruleSearch": { "bookList": "li", "name": "a@text", "bookUrl": "a@href" },
         "header": "{\"Authorization\":\"Bearer credential-do-not-store\",\"Cookie\":\"sid=credential-do-not-store\",\"User-Agent\":\"fixture\"}"
-    }))
-    .expect("source should deserialize");
-    assert!(!format!("{source:?}").contains("credential-do-not-store"));
-    let adapted = LegadoImporter
-        .adapt(&source)
+    })
+    .to_string();
+    let mut adapted = LegadoImporter
+        .import(&source)
         .expect("adapter should separate credential headers");
 
-    let credential_headers = serde_json::from_slice::<BTreeMap<String, String>>(
-        &adapted
-            .credential_snapshot_bytes()
-            .expect("credential snapshot should serialize")
-            .expect("sensitive headers should require encrypted staging"),
-    )
-    .expect("credential snapshot should be a header map");
+    let credential_bytes = adapted
+        .take_credentials()
+        .expect("sensitive headers should require encrypted staging")
+        .into_bytes();
+    let credential_headers = serde_json::from_slice::<BTreeMap<String, String>>(&credential_bytes)
+        .expect("credential snapshot should be a header map");
     assert_eq!(
         credential_headers.get("Authorization"),
         Some(&"Bearer credential-do-not-store".to_string())
@@ -117,17 +120,72 @@ fn adapter_rejects_credentials_in_base_and_search_urls_without_echoing_them() {
             Some(format!("/search?access_token={secret}")),
         ),
     ] {
-        let source: LegadoSourceJson = serde_json::from_value(json!({
+        let source = json!({
             "bookSourceName": "credential URL fixture",
+            "bookSourceType": 0,
             "bookSourceUrl": base_url,
             "searchUrl": search_url,
-        }))
-        .expect("fixture should deserialize");
-        let Err(error) = LegadoImporter.adapt(&source) else {
+        })
+        .to_string();
+        let Err(error) = LegadoImporter.import(&source) else {
             panic!("credential-bearing URL must be rejected");
         };
         assert!(!format!("{error:?}").contains(secret));
     }
+}
+
+#[test]
+fn import_rejects_duplicate_keys_limits_and_known_unsupported_behavior() {
+    let duplicate = r#"{
+        "bookSourceType": 0,
+        "bookSourceUrl": "https://example.test",
+        "bookSourceName": "first",
+        "bookSourceName": "second"
+    }"#;
+    let duplicate_error = import_error(duplicate);
+    assert!(
+        duplicate_error
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.code == "duplicate_key")
+    );
+
+    let oversized = format!(
+        r#"{{"bookSourceType":0,"bookSourceUrl":"https://example.test","bookSourceName":"fixture","bookSourceComment":"{}"}}"#,
+        "x".repeat(2_097_152)
+    );
+    let size_error = import_error(&oversized);
+    assert_eq!(size_error.diagnostics()[0].code, "document_bytes_exceeded");
+
+    let blocked = json!({
+        "bookSourceType": 0,
+        "bookSourceUrl": "https://example.test",
+        "bookSourceName": "fixture",
+        "loginUrl": "https://example.test/login"
+    })
+    .to_string();
+    let blocked_error = import_error(&blocked);
+    assert!(
+        blocked_error
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.code == "known_field_blocked")
+    );
+}
+
+#[test]
+fn import_diagnostics_and_provenance_do_not_echo_credentials() {
+    let secret = "diagnostic-secret-must-not-leak";
+    let input = json!({
+        "bookSourceType": 0,
+        "bookSourceUrl": "https://example.test",
+        "bookSourceName": "fixture",
+        "header": format!(r#"{{"Authorization":"Bearer {secret}","authorization":"Bearer {secret}"}}"#)
+    })
+    .to_string();
+    let error = import_error(&input);
+    assert!(!format!("{error:?}").contains(secret));
+    assert!(!error.to_string().contains(secret));
 }
 
 #[test]

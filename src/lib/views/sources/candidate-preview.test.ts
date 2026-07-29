@@ -3,15 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLocale } from '$lib/i18n';
 import type { InstallCandidate } from '$lib/stores/rules.svelte';
 import CandidatePreview from './CandidatePreview.svelte';
-import { localizeSourceDiagnostic } from './source-diagnostics';
+import { localizeImportDiagnostic } from './import-diagnostics';
 import { classifyExpiresAt, truncateHash } from './candidate-preview';
 
 const mountedViews: Array<{ unmount(): void }> = [];
 
 const safetyCandidate: InstallCandidate = {
   id: 'candidate:safety',
-  document_ref: null,
-  transient: true,
   expected_installed_revision: 0,
   profile: {
     id: 'profile:safety',
@@ -78,8 +76,8 @@ describe('classifyExpiresAt', () => {
 describe('candidate diagnostics', () => {
   it('provides Chinese code copy and a localized fallback', async () => {
     await setLocale('zh-CN', { reload: false });
-    expect(localizeSourceDiagnostic('unknown_field')).toBe('此未知字段会保留，但不可执行。');
-    expect(localizeSourceDiagnostic('future_backend_code')).toBe('收到无法识别的诊断。');
+    expect(localizeImportDiagnostic('unknown_field')).toBe('此未知字段在导入时会被忽略。');
+    expect(localizeImportDiagnostic('future_backend_code')).toBe('收到无法识别的诊断。');
   });
 
   it('uses English stable-code copy and never renders Chinese backend messages', async () => {
@@ -88,8 +86,6 @@ describe('candidate diagnostics', () => {
     const backendUnknownMessage = '后端中文：未来诊断';
     const candidate: InstallCandidate = {
       id: 'candidate:diagnostics',
-      document_ref: null,
-      transient: true,
       expected_installed_revision: 0,
       profile: {
         id: 'profile:diagnostics',
@@ -127,9 +123,7 @@ describe('candidate diagnostics', () => {
     });
     mountedViews.push(view);
 
-    expect(
-      screen.getByText('This unrecognized field is preserved but is not executable.'),
-    ).toBeTruthy();
+    expect(screen.getByText('This unrecognized field is ignored during import.')).toBeTruthy();
     expect(screen.getByText('An unrecognized diagnostic was reported.')).toBeTruthy();
     expect(screen.getByText('unknown_field')).toBeTruthy();
     expect(screen.getByText('future_backend_code')).toBeTruthy();
@@ -142,7 +136,7 @@ describe('candidate diagnostics', () => {
     expect(screen.getByText('Span 4–12')).toBeTruthy();
     expect(screen.queryByText(backendKnownMessage)).toBeNull();
     expect(screen.queryByText(backendUnknownMessage)).toBeNull();
-    expect(localizeSourceDiagnostic('__proto__')).toBe('An unrecognized diagnostic was reported.');
+    expect(localizeImportDiagnostic('__proto__')).toBe('An unrecognized diagnostic was reported.');
   });
 });
 

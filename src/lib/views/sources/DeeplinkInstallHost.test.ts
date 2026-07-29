@@ -37,8 +37,6 @@ function createCandidate(
 ): InstallCandidate {
   return {
     id,
-    document_ref: null,
-    transient: true,
     expected_installed_revision: 0,
     profile: {
       id: `profile:${id}`,
@@ -60,7 +58,6 @@ function createCandidate(
 function createInstalledSource(candidate: InstallCandidate): InstalledSource {
   return {
     source_id: `source:${candidate.id}`,
-    document_ref: null,
     version: candidate.profile.version ?? '1.0.0',
     profile: candidate.profile,
     revision: 1,

@@ -17,11 +17,11 @@ use crate::types::{StorageConfig, StorageError};
 pub(crate) fn open_connection(
     path: &Path,
     migrate: bool,
-) -> Result<(SqliteConnection, bool), StorageError> {
+) -> Result<SqliteConnection, StorageError> {
     let url = path.to_string_lossy();
     let mut conn = SqliteConnection::establish(&url).map_err(database_error)?;
-    let vault_migration_applied = if migrate {
-        let applied = run_migrations(&mut conn)?;
+    if migrate {
+        run_migrations(&mut conn)?;
         conn.batch_execute("PRAGMA busy_timeout = 2000;")
             .map_err(database_error)?;
         conn.batch_execute("PRAGMA journal_mode = WAL;")
@@ -30,15 +30,13 @@ pub(crate) fn open_connection(
             .map_err(database_error)?;
         conn.batch_execute("PRAGMA wal_autocheckpoint = 1000;")
             .map_err(database_error)?;
-        applied
     } else {
         conn.batch_execute("PRAGMA busy_timeout = 2000;")
             .map_err(database_error)?;
-        false
-    };
+    }
     conn.batch_execute("PRAGMA foreign_keys = ON;")
         .map_err(database_error)?;
-    Ok((conn, vault_migration_applied))
+    Ok(conn)
 }
 
 pub(crate) fn validate_config(config: &StorageConfig) -> Result<(), StorageError> {

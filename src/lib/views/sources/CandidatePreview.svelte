@@ -8,7 +8,7 @@
     StandardIntent,
   } from '$lib/stores/rules.svelte';
   import { classifyExpiresAt, truncateHash } from './candidate-preview';
-  import { localizeSourceDiagnostic } from './source-diagnostics';
+  import { localizeImportDiagnostic } from './import-diagnostics';
   type CandidatePreviewDensity = 'compact' | 'full';
 
   type Props = {
@@ -202,7 +202,7 @@
             <div class="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
               <code class="min-w-0 font-mono font-medium break-all text-ink">{diagnostic.code}</code
               >
-              <p class="min-w-0 text-ink-muted">{localizeSourceDiagnostic(diagnostic.code)}</p>
+              <p class="min-w-0 text-ink-muted">{localizeImportDiagnostic(diagnostic.code)}</p>
             </div>
             {#if diagnostic.span}
               <p

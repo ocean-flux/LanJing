@@ -10,15 +10,12 @@ use std::collections::HashSet;
 
 use diesel::prelude::*;
 use diesel::sql_query;
-use diesel::sql_types::{BigInt, Nullable, Text};
+use diesel::sql_types::{BigInt, Text};
 use diesel::sqlite::SqliteConnection;
 use uuid::Uuid;
 
 use crate::artifact::{ArtifactStore, PendingArtifact};
-use crate::candidate_install::{
-    expire_candidate, get_source_row, read_rule_package_artifact, source_stream_id,
-};
-use crate::document_vault::release_expired_source_document_revision_pins;
+use crate::candidate_install::{expire_candidate, get_source_row, source_stream_id};
 use crate::event_store::{
     ArtifactPathRow, ArtifactReferenceRow, BODY_KIND, I64Value, TextValue, current_global_seq,
     database_error, decrement_artifact_ref, deserialize, from_i64, now_millis, read_body_by_hash,
@@ -271,7 +268,6 @@ pub(crate) fn process_gc(
         expire_candidate(conn, candidate_id)?;
         report.expired_candidates += 1;
     }
-    release_expired_source_document_revision_pins(conn, now_ms)?;
     purge_unpinned_source_versions(conn)?;
     purge_zero_ref_artifacts(conn, artifacts)?;
     purge_zero_ref_secrets(conn, artifacts)?;
@@ -394,19 +390,13 @@ fn purge_unpinned_source_versions(conn: &mut SqliteConnection) -> Result<(), Sto
             let source_revision = from_i64(row.source_revision, "source revision")?;
             let owner_id = format!("{}:{source_revision}", row.source_identity);
             release_secret_owner(conn, "source_version_runtime", &owner_id)?;
-            release_secret_owner(conn, "document_snapshot_masked", &owner_id)?;
-            release_secret_owner(conn, "document_snapshot_raw", &owner_id)?;
-            release_secret_owner(conn, "document_snapshot_manifest", &owner_id)?;
-            sql_query("DELETE FROM source_document_snapshots WHERE source_identity = ? AND source_revision = ?")
-                .bind::<Text, _>(&row.source_identity)
-                .bind::<BigInt, _>(row.source_revision)
-                .execute(conn)
-                .map_err(database_error)?;
-            sql_query("DELETE FROM source_versions WHERE source_identity = ? AND source_revision = ?")
-                .bind::<Text, _>(&row.source_identity)
-                .bind::<BigInt, _>(row.source_revision)
-                .execute(conn)
-                .map_err(database_error)?;
+            sql_query(
+                "DELETE FROM source_versions WHERE source_identity = ? AND source_revision = ?",
+            )
+            .bind::<Text, _>(&row.source_identity)
+            .bind::<BigInt, _>(row.source_revision)
+            .execute(conn)
+            .map_err(database_error)?;
         }
         Ok(())
     })
@@ -562,77 +552,6 @@ pub(crate) fn recover_orphans_sync(
     artifacts.recover_orphans(&paths)
 }
 
-/// 为早期安装记录补回 source-version replay snapshot；无法验证的旧 artifact 保持显式不可 replay。
-pub(crate) fn backfill_source_version_snapshots(
-    conn: &mut SqliteConnection,
-    artifacts: &ArtifactStore,
-) -> Result<(), StorageError> {
-    let rows = sql_query(
-        "SELECT source_identity, source_revision, version, package_artifact_hash, profile_json, grant_json, base_url FROM source_versions WHERE profile_json IS NULL OR profile_json = '' OR grant_json IS NULL OR grant_json = '' OR base_url IS NULL OR base_url = ''",
-    )
-    .load::<SourceVersionBackfillRow>(conn)
-    .map_err(database_error)?;
-    for row in rows {
-        if row.profile_json.as_deref().is_none_or(str::is_empty)
-            || row.grant_json.as_deref().is_none_or(str::is_empty)
-        {
-            let current = sql_query(
-                "SELECT profile_json, grant_json FROM source_projection WHERE source_identity = ? AND revision = ?",
-            )
-            .bind::<Text, _>(&row.source_identity)
-            .bind::<BigInt, _>(row.source_revision)
-            .get_result::<SourceVersionCurrentSnapshotRow>(conn)
-            .optional()
-            .map_err(database_error)?;
-            if let Some(current) = current {
-                sql_query(
-                    "UPDATE source_versions SET profile_json = CASE WHEN profile_json IS NULL OR profile_json = '' THEN ? ELSE profile_json END, grant_json = CASE WHEN grant_json IS NULL OR grant_json = '' THEN ? ELSE grant_json END WHERE source_identity = ? AND source_revision = ?",
-                )
-                .bind::<Text, _>(&current.profile_json)
-                .bind::<Text, _>(&current.grant_json)
-                .bind::<Text, _>(&row.source_identity)
-                .bind::<BigInt, _>(row.source_revision)
-                .execute(conn)
-                .map_err(database_error)?;
-            }
-        }
-        if row
-            .base_url
-            .as_deref()
-            .is_some_and(|value| !value.is_empty())
-        {
-            continue;
-        }
-        let Ok(package_bytes) = read_body_by_hash(conn, artifacts, &row.package_artifact_hash)
-        else {
-            continue;
-        };
-        let package = match read_rule_package_artifact(&package_bytes) {
-            Ok(package) => package,
-            Err(
-                error @ (StorageError::ContractSchemaUnsupported { .. }
-                | StorageError::LegacyRuleContractUnsupported { .. }),
-            ) => return Err(error),
-            Err(_) => continue,
-        };
-        if package.source_identity().id != row.source_identity
-            || package.version() != row.version
-            || package.definition().base_url().is_empty()
-        {
-            continue;
-        }
-        sql_query(
-            "UPDATE source_versions SET base_url = ? WHERE source_identity = ? AND source_revision = ? AND (base_url IS NULL OR base_url = '')",
-        )
-        .bind::<Text, _>(package.definition().base_url())
-        .bind::<Text, _>(&row.source_identity)
-        .bind::<BigInt, _>(row.source_revision)
-        .execute(conn)
-        .map_err(database_error)?;
-    }
-    Ok(())
-}
-
 /// 进程启动时把没有终态的 execution 标为 incomplete；不会自动触发 live/replay。
 pub(crate) fn mark_interrupted_executions(conn: &mut SqliteConnection) -> Result<(), StorageError> {
     sql_query("UPDATE execution_projection SET status = 'incomplete', finished_at_ms = COALESCE(finished_at_ms, ?) WHERE status = 'running'")
@@ -648,30 +567,4 @@ struct SourceVersionKeyRow {
     source_identity: String,
     #[diesel(sql_type = BigInt)]
     source_revision: i64,
-}
-
-#[derive(QueryableByName)]
-struct SourceVersionBackfillRow {
-    #[diesel(sql_type = Text)]
-    source_identity: String,
-    #[diesel(sql_type = BigInt)]
-    source_revision: i64,
-    #[diesel(sql_type = Text)]
-    version: String,
-    #[diesel(sql_type = Text)]
-    package_artifact_hash: String,
-    #[diesel(sql_type = Nullable<Text>)]
-    profile_json: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    grant_json: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    base_url: Option<String>,
-}
-
-#[derive(QueryableByName)]
-struct SourceVersionCurrentSnapshotRow {
-    #[diesel(sql_type = Text)]
-    profile_json: String,
-    #[diesel(sql_type = Text)]
-    grant_json: String,
 }

@@ -1,11 +1,10 @@
 //! 已安装来源 store — 只镜像 RuleSystem 的安全 candidate/source DTO。
 
 import { invoke } from '@tauri-apps/api/core';
-import { installSourceCandidate } from '$lib/views/sources/rule-editor-api';
 
 export type CapabilityGrantPreset = 'none' | 'network_only';
 
-export type TransientDocumentInput =
+export type RuleInput =
   { kind: 'legado'; source_json: string } | { kind: 'maccms_json'; url: string };
 
 export type StandardIntent =
@@ -37,11 +36,6 @@ export interface InstallDiagnostic {
 /** prepare_install 返回的安全候选；不包含 Definition、Plan、body 或 secret。 */
 export interface InstallCandidate {
   id: string;
-  document_ref: {
-    document_id: string;
-    document_revision: number;
-  } | null;
-  transient: boolean;
   expected_installed_revision: number;
   profile: SourceProfile;
   required_grant: {
@@ -64,11 +58,6 @@ export interface InstalledSource {
   version: string;
   profile: SourceProfile;
   revision: number;
-  /** 后端持久化的唯一 installed→working-copy 关系；旧来源无快照时为 null。 */
-  document_ref: {
-    document_id: string;
-    document_revision: number;
-  } | null;
 }
 
 let installedSources = $state<InstalledSource[]>([]);
@@ -98,18 +87,18 @@ export async function loadInstalledSources(): Promise<void> {
   }
 }
 
-function prepareTransientInstall(request: TransientDocumentInput): Promise<InstallCandidate> {
+function prepareRuleInstall(request: RuleInput): Promise<InstallCandidate> {
   return invoke<InstallCandidate>('prepare_install', { request });
 }
 
-/** 将 Legado 原文送入临时加密 candidate staging；不会创建 draft 文档。 */
+/** 将 Legado 原文交给一次性 import-only candidate staging。 */
 export function prepareInstall(sourceJson: string): Promise<InstallCandidate> {
-  return prepareTransientInstall({ kind: 'legado', source_json: sourceJson });
+  return prepareRuleInstall({ kind: 'legado', source_json: sourceJson });
 }
 
-/** 将 Maccms URL 送入临时加密 candidate staging；不会创建 draft 文档。 */
+/** 将 Maccms URL 交给一次性 import-only candidate staging。 */
 export function prepareMaccmsInstall(url: string): Promise<InstallCandidate> {
-  return prepareTransientInstall({ kind: 'maccms_json', url });
+  return prepareRuleInstall({ kind: 'maccms_json', url });
 }
 
 /** 原子安装已暂存 candidate，并刷新来源列表。 */
@@ -117,7 +106,9 @@ export async function installCandidate(
   candidateId: string,
   grant: CapabilityGrantPreset,
 ): Promise<InstalledSource> {
-  const source = await installSourceCandidate({ candidate_id: candidateId, grant });
+  const source = await invoke<InstalledSource>('install', {
+    request: { candidate_id: candidateId, grant },
+  });
   await loadInstalledSources();
   return source;
 }

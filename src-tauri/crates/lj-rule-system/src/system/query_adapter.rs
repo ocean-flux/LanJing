@@ -19,7 +19,7 @@ use super::error_mapping::storage_error;
 use super::session_delivery::catch_up_execution;
 use super::{RuleSystem, now_millis};
 use crate::{
-    DocumentRef, ExecutionEvent, ExecutionId, InstalledSource, LibraryEntryUpdate, LibraryProgress,
+    ExecutionEvent, ExecutionId, InstalledSource, LibraryEntryUpdate, LibraryProgress,
     LibraryProjection, LibraryProjectionEntry, LibraryUpdateReceipt, MediaAssetPage, MediaUnitPage,
     RuleError, RuleErrorStage,
 };
@@ -347,12 +347,6 @@ fn installed_source_from_record(source: StorageInstalledSourceRecord) -> Install
         version: source.version,
         profile: source.profile,
         revision: source.source_revision,
-        document_ref: source.document_id.zip(source.document_revision).map(
-            |(document_id, document_revision)| DocumentRef {
-                document_id,
-                document_revision,
-            },
-        ),
     }
 }
 

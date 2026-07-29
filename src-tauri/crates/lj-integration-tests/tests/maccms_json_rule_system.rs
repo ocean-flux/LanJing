@@ -16,11 +16,8 @@ use keyring_core::{mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::{MediaAssetKind, MediaAssetLocator, MediaGraphDelta, MediaKind};
 use lj_rule_system::{
-    CapabilityGrant, CreateSourceDocumentRequest, DocumentMutationOutcome, DocumentRef,
-    ExecuteRequest, ExecutionEventKind, ExecutionMode, GetSourceDocumentRequest, InstallCandidate,
-    LibraryEntryUpdate, LibraryProgress, ListSourceDocumentsRequest, MaskedSourceDocument,
-    RuleErrorStage, RuleInput, RuleSystem, RuleSystemConfig, SaveSourceDocumentRequest,
-    SourceDocumentFormat,
+    CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, InstallCandidate,
+    LibraryEntryUpdate, LibraryProgress, RuleErrorStage, RuleInput, RuleSystem, RuleSystemConfig,
 };
 use serde_json::json;
 use uuid::Uuid;
@@ -172,28 +169,6 @@ fn tamper_candidate_row(path: &Path, candidate: &InstallCandidate, tamper: Candi
 fn maccms_json_input(base_url: &str) -> RuleInput {
     RuleInput::MaccmsJson {
         url: format!("{base_url}/api.php/provide/vod/"),
-    }
-}
-
-fn maccms_document_text(base_url: &str, secret: &str) -> String {
-    json!({
-        "base_url": format!("{base_url}/api.php/provide/vod/"),
-        "format": "json",
-        "headers": {
-            "User-Agent": "lanjing-maccms-vault",
-            "Authorization": format!("Bearer {secret}"),
-        },
-        "preserved": { "future": true },
-    })
-    .to_string()
-}
-
-fn expect_saved_maccms_document(outcome: DocumentMutationOutcome) -> MaskedSourceDocument {
-    match outcome {
-        DocumentMutationOutcome::Saved {
-            document: Some(document),
-        } => document,
-        _ => panic!("Maccms document mutation must save a masked document"),
     }
 }
 
@@ -551,134 +526,6 @@ async fn catch_up_until_terminal(
 }
 
 #[tokio::test]
-async fn maccms_saved_document_reopens_updates_and_invalidates_stale_candidates() {
-    init_mock_keyring();
-    let server = MockServer::start().await;
-    let temp = TempRuleSystem::new("maccms-document-vault");
-    let system = temp.open(Duration::from_mins(1)).await;
-    let created = expect_saved_maccms_document(
-        system
-            .create_source_document(CreateSourceDocumentRequest {
-                format: SourceDocumentFormat::Maccms10Endpoint,
-                title: "Maccms JSON 本地端点".to_string(),
-                text: maccms_document_text(&server.uri(), "maccms-vault-secret"),
-            })
-            .await
-            .expect("create Maccms endpoint document"),
-    );
-    assert_eq!(created.summary.revision, 1);
-    assert_eq!(created.credential_slots.len(), 1);
-    assert!(!created.masked_text.contains("maccms-vault-secret"));
-    let document_id = created.summary.document_id;
-    let revision_one = DocumentRef {
-        document_id,
-        document_revision: 1,
-    };
-    let first_candidate = system
-        .prepare_install_from_document(revision_one)
-        .await
-        .expect("prepare saved Maccms revision one");
-    assert_eq!(first_candidate.document_ref, Some(revision_one));
-    assert!(!first_candidate.transient);
-    let first = system
-        .install(first_candidate.id, CapabilityGrant::network_only())
-        .await
-        .expect("install saved Maccms revision one");
-
-    let repasted = expect_saved_maccms_document(
-        system
-            .create_source_document(CreateSourceDocumentRequest {
-                format: SourceDocumentFormat::Maccms10Endpoint,
-                title: "Maccms JSON 重新粘贴".to_string(),
-                text: maccms_document_text(&server.uri(), "maccms-repaste-secret"),
-            })
-            .await
-            .expect("create a second saved document for the installed identity"),
-    );
-    let repasted_ref = DocumentRef {
-        document_id: repasted.summary.document_id,
-        document_revision: repasted.summary.revision,
-    };
-    let repasted_candidate = system
-        .prepare_install_from_document(repasted_ref)
-        .await
-        .expect("saved re-paste must prepare as an update of the installed identity");
-    assert_eq!(
-        repasted_candidate.expected_installed_revision,
-        first.revision
-    );
-
-    let stale = system
-        .prepare_install_from_document(revision_one)
-        .await
-        .expect("stage candidate before Maccms save");
-    let mut edited = serde_json::from_str::<serde_json::Value>(&created.masked_text)
-        .expect("masked Maccms document JSON");
-    edited["preserved"]["revision"] = serde_json::Value::from(2);
-    let revision_two = expect_saved_maccms_document(
-        system
-            .save_source_document(SaveSourceDocumentRequest {
-                document_id,
-                expected_revision: 1,
-                masked_text: serde_json::to_string(&edited)
-                    .expect("serialize edited masked Maccms document"),
-            })
-            .await
-            .expect("save Maccms revision two"),
-    );
-    assert_eq!(revision_two.summary.revision, 2);
-    let stale_error = system
-        .install(stale.id, CapabilityGrant::network_only())
-        .await
-        .expect_err("saved-document candidate must be stale after save");
-    assert_eq!(stale_error.stage, RuleErrorStage::Candidate);
-
-    let quick = system
-        .prepare_install(maccms_json_input(&server.uri()))
-        .await
-        .expect("quick Maccms prepare uses transient encrypted staging");
-    assert!(quick.transient);
-    assert_eq!(quick.document_ref, None);
-    assert_eq!(
-        system
-            .list_source_documents(ListSourceDocumentsRequest {})
-            .await
-            .expect("quick prepare must not create a draft")
-            .len(),
-        2
-    );
-
-    system
-        .shutdown_for_test()
-        .await
-        .expect("shutdown Maccms vault before restart");
-    drop(system);
-    let reopened = temp.reopen_after_drop(Duration::from_mins(1)).await;
-    let persisted = reopened
-        .get_source_document(GetSourceDocumentRequest { document_id })
-        .await
-        .expect("reopen Maccms masked document")
-        .expect("persisted Maccms document");
-    assert_eq!(persisted, revision_two);
-    let revision_two_ref = DocumentRef {
-        document_id,
-        document_revision: 2,
-    };
-    let update = reopened
-        .prepare_install_from_document(revision_two_ref)
-        .await
-        .expect("prepare persisted Maccms revision two");
-    assert_eq!(update.expected_installed_revision, first.revision);
-    let second = reopened
-        .install(update.id, CapabilityGrant::network_only())
-        .await
-        .expect("update from persisted Maccms revision two");
-    assert_eq!(second.source_id, first.source_id);
-    assert_eq!(second.version, first.version);
-    assert!(second.revision > first.revision);
-}
-
-#[tokio::test]
 async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insufficient_grant() {
     init_mock_keyring();
     let temp = TempRuleSystem::new("candidate-boundary");
@@ -688,8 +535,6 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
         .await
         .expect("Maccms JSON 应生成 durable candidate");
     let wire = serde_json::to_value(&candidate).expect("candidate 可作为外部安全 DTO 序列化");
-    assert!(candidate.transient);
-    assert_eq!(candidate.document_ref, None);
     assert_eq!(candidate.expected_installed_revision, 0);
     for forbidden in ["definition", "package", "plan", "graph"] {
         assert!(

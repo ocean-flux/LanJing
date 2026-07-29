@@ -7,15 +7,14 @@ pub(crate) mod parser;
 pub mod translator;
 pub mod types;
 
-use std::collections::BTreeMap;
 use std::fmt;
 
 use lj_capability::IntentInput;
-use lj_rule_model::{Error, RuleDefinition, SensitiveNamePolicy, canonical_json};
+use lj_rule_model::{DiagnosticSeverity, SensitiveNamePolicy, canonical_json};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-pub use types::LegadoSourceJson;
+use crate::{ImportError, ImportFormat, ImportedNativeRule};
 
 /// `ContinueAction` 不透明载荷当前的 schema 版本。
 pub const CONTINUE_ACTION_SCHEMA_VERSION: u32 = 1;
@@ -23,39 +22,6 @@ pub const CONTINUE_ACTION_SCHEMA_VERSION: u32 = 1;
 pub const CONTINUE_ACTION_TTL_MS: i64 = 15 * 60 * 1_000;
 const LEGADO_SOURCE_PREFIX: &str = "source:legado:";
 const CONTINUE_ACTION_KIND: &str = "legado.explore";
-
-/// Legado 来源适配后交给 `RuleSystem` 的 Definition 与安装期凭证快照。
-///
-/// `credential_headers` 只能在 prepare/install 的短暂内存边界中传给 C2 的加密 snapshot API；
-/// 不得写入 Definition、Plan、candidate DTO、Event 或 body artifact。
-pub struct LegadoDefinition {
-    /// 只含非敏感 HTTP header 的作者 Definition。
-    pub definition: RuleDefinition,
-    /// 有敏感语义的原始请求头，只能通过加密 snapshot 方法消费。
-    credential_headers: BTreeMap<String, String>,
-}
-
-impl LegadoDefinition {
-    /// 返回是否存在必须由 C2 加密持久化的静态凭证头。
-    #[must_use]
-    pub fn has_credentials(&self) -> bool {
-        !self.credential_headers.is_empty()
-    }
-
-    /// 将来源专属静态凭证序列化为 C2 Secret Artifact 的短暂输入。
-    ///
-    /// # Errors
-    ///
-    /// 凭证快照无法序列化时返回不含凭证内容的 [`Error::Import`]。
-    pub fn credential_snapshot_bytes(&self) -> Result<Option<Vec<u8>>, Error> {
-        if self.credential_headers.is_empty() {
-            return Ok(None);
-        }
-        serde_json::to_vec(&self.credential_headers)
-            .map(Some)
-            .map_err(|_| Error::Import("Legado 凭证快照无法序列化".to_string()))
-    }
-}
 
 /// Legado `ContinueAction` 的安全验证失败。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -118,18 +84,45 @@ impl std::error::Error for ContinueActionError {}
 pub struct LegadoImporter;
 
 impl LegadoImporter {
-    /// 将 Legado JSON 转换为只含标准 intent 的来源 Definition 与待加密凭证快照。
+    /// 严格解析 Legado JSON，并单向转换为原生规则。
     ///
     /// # Errors
     ///
-    /// header JSON、书源基础 URL 或来源规则字段无效时返回 [`Error::Import`]。
-    pub fn adapt(&self, source: &LegadoSourceJson) -> Result<LegadoDefinition, Error> {
-        let headers = translator::parse_headers(source.header.as_deref())?;
-        let definition = translator::definition(source, headers.safe)?;
-        Ok(LegadoDefinition {
+    /// 输入超限、JSON/字段重复、已知行为不可执行、credential header 或映射无效时返回
+    /// [`ImportError`]。错误和诊断永不包含输入片段或 credential value。
+    pub fn import(&self, text: &str) -> Result<ImportedNativeRule, ImportError> {
+        let outcome = crate::strict_json::analyze_legado_document(text);
+        if outcome
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
+        {
+            return Err(ImportError::new(outcome.diagnostics));
+        }
+        let source = serde_json::from_str::<types::LegadoSourceJson>(text)
+            .map_err(|_| ImportError::blocked("legado_field_invalid", text.len().min(1)))?;
+        let headers = translator::parse_headers(source.header.as_deref())
+            .map_err(|_| ImportError::blocked("legado_header_invalid", text.len().min(1)))?;
+        let definition = translator::definition(&source, headers.safe)
+            .map_err(|_| ImportError::blocked("legado_definition_invalid", text.len().min(1)))?;
+        let credential_bytes = if headers.credentials.is_empty() {
+            None
+        } else {
+            Some(serde_json::to_vec(&headers.credentials).map_err(|_| {
+                ImportError::blocked("legado_credentials_invalid", text.len().min(1))
+            })?)
+        };
+        let display_title = non_empty(&source.book_source_name);
+        let display_group = source.book_source_group.as_deref().and_then(non_empty);
+        Ok(ImportedNativeRule::new(
             definition,
-            credential_headers: headers.credentials,
-        })
+            display_title,
+            display_group,
+            outcome.diagnostics,
+            ImportFormat::Legado,
+            text,
+            credential_bytes,
+        ))
     }
 
     /// 判断稳定来源身份是否由此 adapter 持有。
@@ -209,6 +202,11 @@ impl LegadoImporter {
             json!({ "url": envelope.claims.state.url }),
         ))
     }
+}
+
+fn non_empty(value: &str) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty()).then(|| value.to_string())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

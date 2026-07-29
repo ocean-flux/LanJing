@@ -20,11 +20,9 @@ describe('rules RuleSystem wire', () => {
     invoke.mockReset();
   });
 
-  it('uses transient prepare_install staging for the Legado source input', async () => {
+  it('uses import-only prepare_install staging for the Legado source input', async () => {
     const candidate = {
       id: 'candidate:one',
-      document_ref: null,
-      transient: true,
       expected_installed_revision: 0,
       profile: {},
       diagnostics: [],
@@ -33,11 +31,7 @@ describe('rules RuleSystem wire', () => {
 
     const result = await prepareInstall('{"bookSourceUrl":"https://example.test"}');
     expect(result).toBe(candidate);
-    expect(result).toMatchObject({
-      document_ref: null,
-      transient: true,
-      expected_installed_revision: 0,
-    });
+    expect(result).toMatchObject({ expected_installed_revision: 0 });
     expect(invoke).toHaveBeenCalledWith('prepare_install', {
       request: {
         kind: 'legado',
@@ -47,11 +41,9 @@ describe('rules RuleSystem wire', () => {
     expect(invoke).toHaveBeenCalledTimes(1);
   });
 
-  it('uses transient prepare_install staging for the Maccms JSON URL input', async () => {
+  it('uses import-only prepare_install staging for the Maccms JSON URL input', async () => {
     const candidate = {
       id: 'candidate:maccms',
-      document_ref: null,
-      transient: true,
       expected_installed_revision: 0,
       profile: {},
       diagnostics: [],
@@ -60,11 +52,7 @@ describe('rules RuleSystem wire', () => {
 
     const result = await prepareMaccmsInstall('https://api.example.test/provide/vod');
     expect(result).toBe(candidate);
-    expect(result).toMatchObject({
-      document_ref: null,
-      transient: true,
-      expected_installed_revision: 0,
-    });
+    expect(result).toMatchObject({ expected_installed_revision: 0 });
     expect(invoke).toHaveBeenCalledWith('prepare_install', {
       request: {
         kind: 'maccms_json',

@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
   import Icon from '$lib/components/Icon.svelte';
-  import { Button } from '$lib/components/ui/button';
   import { m } from '$lib/i18n';
   import type { InstalledSource, StandardIntent } from '$lib/stores/rules.svelte';
 
@@ -25,19 +23,6 @@
     source.profile.group && source.profile.group.trim().length > 0
       ? source.profile.group.trim()
       : m.sources_group_ungrouped(),
-  );
-  const linkageLabel = $derived(
-    source.document_ref
-      ? m.sources_rules_documents_linked()
-      : m.sources_rules_original_unavailable(),
-  );
-
-  const workspaceBase = resolve('/sources/rules');
-
-  const workspaceHref = $derived(
-    source.document_ref
-      ? `${workspaceBase}?document_id=${encodeURIComponent(source.document_ref.document_id)}`
-      : `${workspaceBase}?legacy_source_id=${encodeURIComponent(source.source_id)}`,
   );
 </script>
 
@@ -97,29 +82,10 @@
     {/if}
   </div>
 
-  <div class="flex min-w-0 flex-wrap items-center gap-2 md:max-w-56 md:flex-col md:items-end">
+  <div class="flex min-w-0 flex-wrap items-center gap-2 md:flex-col md:items-end">
     <div class="flex items-center gap-1.5 text-xs font-medium text-positive">
       <Icon name="check-circle" class="size-4" />
       <span>{m.sources_status_installed()}</span>
     </div>
-    <p
-      class={[
-        'max-w-full text-xs leading-5 md:text-right',
-        source.document_ref ? 'text-ink-muted' : 'text-warning',
-      ]}
-    >
-      {linkageLabel}
-    </p>
-    <Button
-      href={workspaceHref}
-      variant="outline"
-      size="sm"
-      class="h-auto min-h-(--density-control-sm) max-w-full whitespace-normal"
-    >
-      <Icon name={source.document_ref ? 'pencil-simple' : 'file-text'} class="size-4" />
-      <span>
-        {source.document_ref ? m.sources_rules_edit_source() : m.sources_rules_repaste_action()}
-      </span>
-    </Button>
   </div>
 </article>

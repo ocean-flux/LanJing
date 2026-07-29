@@ -1,40 +1,14 @@
-//! Candidate-v2 composite staging、来源安装与 runtime credential carrier。
+//! Candidate composite staging、来源安装与 runtime credential carrier。
 //!
-//! candidate 由单个 writer command 同时发布 package/Plan、document baseline 与所有 secret refs。
-//! transient quick-install 只进入加密 staging，不创建 draft。所有 plaintext carrier 都不实现
-//! `Debug`、`Clone` 或 serde。
+//! candidate 由单个 writer command 同时发布 package/Plan 与 runtime credential secret ref。
+//! 所有 plaintext carrier 都不实现 `Debug`、`Clone` 或 serde。
 
 use lj_media::SourceProfile;
-use lj_rule_model::{
-    CredentialSlotManifest, Diagnostic, ExecutionPlan, PolicyCapabilities, RulePackage,
-    SourceDocumentFormat,
-};
+use lj_rule_model::{Diagnostic, ExecutionPlan, PolicyCapabilities, RulePackage};
 use uuid::Uuid;
-
-use super::{DocumentRef, SourceDocumentId};
 
 /// 当前 durable candidate schema 版本。
 pub const INSTALL_CANDIDATE_SCHEMA_VERSION: u32 = 2;
-
-/// quick-install 使用的临时来源文档；不会创建 `source_document_projection`。
-pub struct TransientSourceDocumentInput {
-    /// 作者格式。
-    pub format: SourceDocumentFormat,
-    /// credential sentinel-masked 文本。
-    pub masked_text: String,
-    /// codec 已验证的完整原文，只会进入随机 secret artifact。
-    pub raw_text: String,
-    /// 不含 plaintext、但仍加密保存的 manifest。
-    pub manifest: CredentialSlotManifest,
-}
-
-/// candidate 的来源文档基线。
-pub enum CandidateDocumentInput {
-    /// 精确指向已经显式保存的 current/pinned revision。
-    Saved(DocumentRef),
-    /// quick-install 临时加密 staging，不创建 draft。
-    Transient(TransientSourceDocumentInput),
-}
 
 /// runtime adapter 使用的 opaque credential bytes。
 ///
@@ -65,7 +39,7 @@ impl RuntimeCredentialMaterial {
 
 /// candidate-v2 单 writer composite publish 输入。
 ///
-/// 此类型因可能承载 transient raw/runtime credential 而故意不实现 `Debug`、`Clone` 或 serde。
+/// 此类型因可能承载 runtime credential 而故意不实现 `Debug`、`Clone` 或 serde。
 pub struct CandidateDraft {
     /// opaque candidate ID。
     pub candidate_id: Uuid,
@@ -79,8 +53,6 @@ pub struct CandidateDraft {
     pub required_grant: PolicyCapabilities,
     /// 导入、校验、编译诊断。
     pub diagnostics: Vec<Diagnostic>,
-    /// 已保存 document ref 或 transient source material。
-    pub document: CandidateDocumentInput,
     /// runtime 使用的 opaque credential snapshot。
     pub runtime_credentials: Option<RuntimeCredentialMaterial>,
     /// prepare 时固定的已安装 source revision；首次安装必须为 `0`。
@@ -102,10 +74,6 @@ pub struct CandidateSummary {
     pub candidate_id: Uuid,
     /// 稳定来源身份。
     pub source_identity: String,
-    /// 已保存来源文档；transient quick-install 为 `None`。
-    pub document_ref: Option<DocumentRef>,
-    /// transient quick-install 为 `true`。
-    pub transient: bool,
     /// prepare 时固定的 target installed revision。
     pub expected_installed_revision: u64,
     /// 仅用于预览的来源资料；不含作者包或执行计划。
@@ -156,10 +124,6 @@ pub struct InstalledSource {
     pub grant: PolicyCapabilities,
     /// 安装事务生成的权威 source revision。
     pub source_revision: u64,
-    /// 关联来源文档；transient quick-install 为 `None`。
-    pub document_id: Option<SourceDocumentId>,
-    /// 对应已保存 document revision；transient 为 `None`。
-    pub document_revision: Option<u64>,
 }
 
 /// 用于来源列表的稳定安全投影记录。
@@ -175,10 +139,4 @@ pub struct InstalledSourceRecord {
     pub grant: PolicyCapabilities,
     /// 当前权威 source revision。
     pub source_revision: u64,
-    /// 是否存在可编辑、已保存的来源文档关联。
-    pub has_editable_source: bool,
-    /// 已关联文档 ID；legacy/transient source 为 `None`。
-    pub document_id: Option<SourceDocumentId>,
-    /// 已关联的 document revision。
-    pub document_revision: Option<u64>,
 }

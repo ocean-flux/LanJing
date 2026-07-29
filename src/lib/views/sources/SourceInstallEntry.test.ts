@@ -17,8 +17,6 @@ vi.mock('$lib/stores/rules.svelte', () => ({
 
 const legadoCandidate: InstallCandidate = {
   id: 'candidate:legado',
-  document_ref: null,
-  transient: true,
   expected_installed_revision: 0,
   profile: {
     id: 'profile:legado',
@@ -50,7 +48,7 @@ const maccmsCandidate: InstallCandidate = {
 };
 
 async function typeLegadoJson(value: string): Promise<HTMLElement> {
-  const textarea = screen.getByTestId('json-highlight-input');
+  const textarea = screen.getByTestId('install-json-input');
   await fireEvent.input(textarea, { target: { value } });
   return textarea;
 }

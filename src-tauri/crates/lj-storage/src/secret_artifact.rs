@@ -1,11 +1,10 @@
-//! 随机 secret artifact identity、ownership/ref-count 与 0007 legacy secret 迁移。
+//! 随机 secret artifact identity 与 ownership/ref-count。
 //!
 //! plaintext 只在 writer/read blocking lane 的局部值中存在。SQLite 只保存随机
 //! `SecretArtifactId`、随机 blob locator、key ID 与随机 nonce 密文 hash；owner row 是 ref-count
-//! 的唯一证明。历史 plaintext-BLAKE3 secret ref 只在启动迁移事务完成前短暂读取，成功后从
-//! Event、projection、metadata 与文件名全部移除。
+//! 的唯一证明。
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use diesel::prelude::*;
@@ -48,22 +47,6 @@ struct VaultKeyRow {
 struct OwnerRow {
     #[diesel(sql_type = Text)]
     secret_id: String,
-}
-
-#[derive(QueryableByName)]
-struct LegacyMigrationRow {
-    #[diesel(sql_type = Text)]
-    owner_kind: String,
-    #[diesel(sql_type = Text)]
-    owner_id: String,
-    #[diesel(sql_type = Text)]
-    legacy_hash: String,
-}
-
-#[derive(QueryableByName)]
-struct LegacyArtifactRow {
-    #[diesel(sql_type = Text)]
-    relative_path: String,
 }
 
 #[derive(QueryableByName)]
@@ -113,18 +96,6 @@ pub(crate) fn ensure_vault_key(
         return Err(error);
     }
     Ok(VaultKey { key_id, key })
-}
-
-/// 在 schema down 前捕获本次尚未正式开放的 vault key ID；调用方必须先成功回滚 `SQLite`，
-/// 再删除 secure-store key，避免 down 失败时令仍存活的新 schema 丢钥。
-pub(crate) fn uncommitted_vault_key_id(
-    conn: &mut SqliteConnection,
-) -> Result<Option<String>, StorageError> {
-    sql_query("SELECT key_id, verifier FROM vault_key_metadata WHERE id = 1")
-        .get_result::<VaultKeyRow>(conn)
-        .optional()
-        .map(|row| row.map(|row| row.key_id))
-        .map_err(database_error)
 }
 
 /// 在任何 `SQLite` ref mutation 前写好随机 secret 文件。
@@ -200,7 +171,7 @@ pub(crate) fn retain_existing_secret(
         return if existing == secret_id {
             Ok(())
         } else {
-            Err(StorageError::CredentialOwnershipMismatch)
+            Err(StorageError::SecretOwnershipMismatch)
         };
     }
     sql_query(
@@ -283,7 +254,7 @@ pub(crate) fn read_owned_secret(
 ) -> Result<Vec<u8>, StorageError> {
     validate_owner(owner_kind, owner_id)?;
     if owner_secret(conn, owner_kind, owner_id)? != Some(secret_id) {
-        return Err(StorageError::CredentialOwnershipMismatch);
+        return Err(StorageError::SecretOwnershipMismatch);
     }
     read_secret(conn, artifacts, secret_id)
 }
@@ -362,180 +333,8 @@ pub(crate) fn validate_secret_ref_counts(conn: &mut SqliteConnection) -> Result<
     if inconsistent.value == 0 {
         Ok(())
     } else {
-        Err(StorageError::VaultMigrationFailed)
+        Err(StorageError::SecretOwnershipCorrupt)
     }
-}
-
-/// 将 0007 队列中的历史 plaintext-hash secret 全量复制到随机 identity/locator。
-///
-/// create/copy/decrypt/owner/ref-count 验证全部成功后才清除旧 Event ref 与 metadata；任一步失败
-/// 都保留 legacy metadata/file，且新文件要么有完整 transaction metadata，要么由 orphan recovery
-/// 删除。
-fn mark_vault_migration_finalized(conn: &mut SqliteConnection) -> Result<(), StorageError> {
-    let changed =
-        sql_query("UPDATE source_document_vault_migration_baseline SET finalized = 1 WHERE id = 1")
-            .execute(conn)
-            .map_err(database_error)?;
-    if changed != 1 {
-        return Err(StorageError::VaultMigrationFailed);
-    }
-    Ok(())
-}
-
-pub(crate) fn migrate_legacy_secret_artifacts(
-    conn: &mut SqliteConnection,
-    artifacts: &ArtifactStore,
-    now_ms: i64,
-) -> Result<(), StorageError> {
-    let rows = sql_query(
-        "SELECT owner_kind, owner_id, legacy_hash FROM legacy_secret_artifact_migration WHERE status = 'pending' ORDER BY legacy_hash, owner_kind, owner_id",
-    )
-    .load::<LegacyMigrationRow>(conn)
-    .map_err(database_error)?;
-    if rows.is_empty() {
-        conn.immediate_transaction::<_, StorageError, _>(|conn| {
-            validate_secret_ref_counts(conn)?;
-            sql_query("DROP TABLE IF EXISTS source_credential_staging_legacy_0007")
-                .execute(conn)
-                .map_err(database_error)?;
-            mark_vault_migration_finalized(conn)
-        })?;
-        return Ok(());
-    }
-
-    let mut by_hash: BTreeMap<String, Vec<LegacyMigrationRow>> = BTreeMap::new();
-    for row in rows {
-        by_hash
-            .entry(row.legacy_hash.clone())
-            .or_default()
-            .push(row);
-    }
-    let mut prepared = Vec::with_capacity(by_hash.len());
-    for (legacy_hash, owners) in by_hash {
-        let legacy = sql_query(
-            "SELECT relative_path FROM artifact_metadata WHERE hash = ? AND artifact_kind = 'secret'",
-        )
-        .bind::<Text, _>(&legacy_hash)
-        .get_result::<LegacyArtifactRow>(conn)
-        .optional()
-        .map_err(database_error)?
-        .ok_or(StorageError::VaultMigrationFailed)?;
-        let plaintext = artifacts.read_legacy_secret(&legacy_hash, &legacy.relative_path)?;
-        let pending = write_secret(conn, artifacts, &plaintext, now_ms)?;
-        let copied = artifacts.read_secret_artifact(
-            pending.secret_id,
-            &pending.blob_locator,
-            &pending.key_id,
-            &pending.ciphertext_hash,
-        )?;
-        if copied != plaintext {
-            return Err(StorageError::VaultMigrationFailed);
-        }
-        prepared.push((pending, owners));
-    }
-
-    conn.immediate_transaction::<_, StorageError, _>(|conn| {
-        for (pending, owners) in &prepared {
-            insert_pending_secret(conn, pending, 0, now_ms)?;
-            for owner in owners {
-                migrate_one_owner(conn, pending, owner, now_ms)?;
-            }
-        }
-        validate_secret_ref_counts(conn)?;
-        let remaining = sql_query(
-            "SELECT COUNT(*) AS value FROM legacy_secret_artifact_migration WHERE status != 'migrated'",
-        )
-        .get_result::<CountRow>(conn)
-        .map_err(database_error)?;
-        if remaining.value != 0 {
-            return Err(StorageError::VaultMigrationFailed);
-        }
-        sql_query("UPDATE events SET secret_refs_json = '[]' WHERE secret_refs_json != '[]'")
-            .execute(conn)
-            .map_err(database_error)?;
-        sql_query("DELETE FROM event_artifact_refs WHERE artifact_kind = 'secret'")
-            .execute(conn)
-            .map_err(database_error)?;
-        sql_query("DELETE FROM artifact_metadata WHERE artifact_kind = 'secret'")
-            .execute(conn)
-            .map_err(database_error)?;
-        sql_query("DELETE FROM legacy_secret_artifact_migration")
-            .execute(conn)
-            .map_err(database_error)?;
-        sql_query("DROP TABLE IF EXISTS source_credential_staging_legacy_0007")
-            .execute(conn)
-            .map_err(database_error)?;
-        mark_vault_migration_finalized(conn)?;
-        Ok(())
-    })?;
-    Ok(())
-}
-
-fn migrate_one_owner(
-    conn: &mut SqliteConnection,
-    pending: &PendingSecretArtifact,
-    owner: &LegacyMigrationRow,
-    created_at_ms: i64,
-) -> Result<(), StorageError> {
-    let changed = match owner.owner_kind.as_str() {
-        "source_projection_runtime" => sql_query(
-            "UPDATE source_projection SET runtime_credential_secret_id = ? WHERE source_identity = ? AND runtime_credential_secret_id IS NULL",
-        )
-        .bind::<Text, _>(pending.secret_id.to_string())
-        .bind::<Text, _>(&owner.owner_id)
-        .execute(conn)
-        .map_err(database_error)?,
-        "source_version_runtime" => sql_query(
-            "UPDATE source_versions SET runtime_credential_secret_id = ? WHERE source_identity || ':' || CAST(source_revision AS TEXT) = ? AND runtime_credential_secret_id IS NULL",
-        )
-        .bind::<Text, _>(pending.secret_id.to_string())
-        .bind::<Text, _>(&owner.owner_id)
-        .execute(conn)
-        .map_err(database_error)?,
-        "effect_response_headers" => sql_query(
-            "UPDATE effect_captures SET response_headers_secret_id = ? WHERE execution_id || ':' || effect_id = ? AND response_headers_secret_id IS NULL",
-        )
-        .bind::<Text, _>(pending.secret_id.to_string())
-        .bind::<Text, _>(&owner.owner_id)
-        .execute(conn)
-        .map_err(database_error)?,
-        "effect_request_body" => sql_query(
-            "UPDATE effect_captures SET request_body_secret_id = ? WHERE execution_id || ':' || effect_id = ? AND request_body_secret_id IS NULL",
-        )
-        .bind::<Text, _>(pending.secret_id.to_string())
-        .bind::<Text, _>(&owner.owner_id)
-        .execute(conn)
-        .map_err(database_error)?,
-        _ => return Err(StorageError::VaultMigrationFailed),
-    };
-    if changed != 1 {
-        return Err(StorageError::VaultMigrationFailed);
-    }
-    sql_query(
-        "INSERT INTO secret_artifact_owners (owner_kind, owner_id, secret_id, created_at_ms) VALUES (?, ?, ?, ?)",
-    )
-    .bind::<Text, _>(&owner.owner_kind)
-    .bind::<Text, _>(&owner.owner_id)
-    .bind::<Text, _>(pending.secret_id.to_string())
-    .bind::<BigInt, _>(created_at_ms)
-    .execute(conn)
-    .map_err(database_error)?;
-    sql_query(
-        "UPDATE secret_artifact_projection SET ref_count = ref_count + 1 WHERE secret_id = ?",
-    )
-    .bind::<Text, _>(pending.secret_id.to_string())
-    .execute(conn)
-    .map_err(database_error)?;
-    sql_query(
-        "UPDATE legacy_secret_artifact_migration SET secret_id = ?, status = 'migrated' WHERE owner_kind = ? AND owner_id = ? AND legacy_hash = ?",
-    )
-    .bind::<Text, _>(pending.secret_id.to_string())
-    .bind::<Text, _>(&owner.owner_kind)
-    .bind::<Text, _>(&owner.owner_id)
-    .bind::<Text, _>(&owner.legacy_hash)
-    .execute(conn)
-    .map_err(database_error)?;
-    Ok(())
 }
 
 fn validate_owner(owner_kind: &str, owner_id: &str) -> Result<(), StorageError> {

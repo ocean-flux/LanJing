@@ -136,14 +136,7 @@
 </script>
 
 <PageFrame width="standard" class="gap-(--density-panel-padding-compact)">
-  <PageHeader
-    title={m.sources_title()}
-    action={{
-      label: m.sources_rules_open_workspace(),
-      icon: 'arrow-right',
-      href: '/sources/rules',
-    }}
-  />
+  <PageHeader title={m.sources_title()} />
 
   {#if loading}
     <Notice tone="info" role="status" icon="arrow-clockwise" class="w-full max-w-2xl">

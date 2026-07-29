@@ -16,7 +16,6 @@
     shouldShowColdLaunch,
   } from './cold-launch';
   import { resolvePrimaryChromeFamily, resolveShellMode } from './shell-mode';
-  import LeaveConfirmDialog from './LeaveConfirmDialog.svelte';
   import type { ModeShellContract, ShellRoute } from './shell-types';
 
   type Props = {
@@ -140,8 +139,6 @@
     <AppBottomNav active={activeRoute} settingsActive={shell.settingsActive} />
   {/if}
 </div>
-
-<LeaveConfirmDialog />
 
 <AppLaunch
   visible={showLaunch}

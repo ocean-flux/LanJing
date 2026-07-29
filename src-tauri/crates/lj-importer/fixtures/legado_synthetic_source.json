@@ -7,7 +7,7 @@
   "customButton": false,
   "customOrder": 1,
   "enabled": true,
-  "enabledCookieJar": true,
+  "enabledCookieJar": false,
   "enabledExplore": true,
   "eventListener": false,
   "exploreUrl": "@js:\nvar result=[];\nvar push=function(t,u,s){result.push({title:t,url:u,style:{layout_flexGrow:1,layout_flexBasisPercent:s}})};\n\npush('分类浏览',null,1);\nvar cats=[\n  ['玄幻','/xuanhuan?page={{page}}'],\n  ['都市','/dushi?page={{page}}'],\n  ['科幻','/kehuan?page={{page}}'],\n  ['历史','/lishi?page={{page}}']\n];\ncats.forEach(function(c){push(c[0],c[1],0.25)});\n\npush('排行榜',null,1);\npush('新书榜','/rank/new?page={{page}}',0.5);\npush('热门榜','/rank/hot?page={{page}}',0.5);\n\nJSON.stringify(result);",

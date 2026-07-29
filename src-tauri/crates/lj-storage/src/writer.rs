@@ -12,13 +12,6 @@ use uuid::Uuid;
 
 use crate::artifact::ArtifactStore;
 use crate::candidate_install::{process_install_candidate, process_stage_candidate};
-use crate::document_vault::{
-    process_create_source_document, process_delete_source_document,
-    process_edit_source_document_credential, process_load_source_document_rebase_material,
-    process_pin_source_document_revision, process_rebase_source_document,
-    process_release_source_document_revision_pin, process_rename_source_document,
-    process_save_source_document,
-};
 use crate::event_store::process_append;
 use crate::execution::{
     process_delta, process_finish_execution, process_pin_execution, process_start_execution,
@@ -30,13 +23,9 @@ use crate::retention_recovery::{
     process_gc, recover_orphans_sync,
 };
 use crate::types::{
-    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt,
-    CreateSourceDocumentInput, DeleteSourceDocumentInput, DeltaCommit, DocumentMutationOutcome,
-    EditSourceDocumentCredentialInput, ExecutionFinish, ExecutionPin, ExecutionRecord,
-    ExecutionStartReceipt, GcReport, InstallCandidateRequest, LibraryUpdate,
-    LoadSourceDocumentRebaseMaterialInput, OrphanRecovery, PinSourceDocumentRevisionInput,
-    RebaseSourceDocumentInput, RenameSourceDocumentInput, ReplayExecutionStart, RetentionPolicy,
-    SaveSourceDocumentInput, SourceDocumentRebaseMaterialOutcome, SourceDocumentRevisionPin,
+    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt, DeltaCommit,
+    ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionStartReceipt, GcReport,
+    InstallCandidateRequest, LibraryUpdate, OrphanRecovery, ReplayExecutionStart, RetentionPolicy,
     StorageError,
 };
 
@@ -47,46 +36,6 @@ pub(crate) enum WriterCommand {
     Append {
         request: AppendRequest,
         reply: oneshot::Sender<Result<CommitReceipt, StorageError>>,
-    },
-    CreateSourceDocument {
-        input: Box<CreateSourceDocumentInput>,
-        reply: oneshot::Sender<Result<DocumentMutationOutcome, StorageError>>,
-    },
-    SaveSourceDocument {
-        input: Box<SaveSourceDocumentInput>,
-        reply: oneshot::Sender<Result<DocumentMutationOutcome, StorageError>>,
-    },
-    RenameSourceDocument {
-        input: RenameSourceDocumentInput,
-        reply: oneshot::Sender<Result<DocumentMutationOutcome, StorageError>>,
-    },
-    DeleteSourceDocument {
-        input: DeleteSourceDocumentInput,
-        reply: oneshot::Sender<Result<DocumentMutationOutcome, StorageError>>,
-    },
-    ReplaceSourceDocumentCredential {
-        input: Box<EditSourceDocumentCredentialInput>,
-        reply: oneshot::Sender<Result<DocumentMutationOutcome, StorageError>>,
-    },
-    ClearSourceDocumentCredential {
-        input: Box<EditSourceDocumentCredentialInput>,
-        reply: oneshot::Sender<Result<DocumentMutationOutcome, StorageError>>,
-    },
-    PinSourceDocumentRevision {
-        input: PinSourceDocumentRevisionInput,
-        reply: oneshot::Sender<Result<SourceDocumentRevisionPin, StorageError>>,
-    },
-    ReleaseSourceDocumentRevisionPin {
-        pin_id: Uuid,
-        reply: oneshot::Sender<Result<(), StorageError>>,
-    },
-    LoadSourceDocumentRebaseMaterial {
-        input: LoadSourceDocumentRebaseMaterialInput,
-        reply: oneshot::Sender<Result<SourceDocumentRebaseMaterialOutcome, StorageError>>,
-    },
-    RebaseSourceDocument {
-        input: Box<RebaseSourceDocumentInput>,
-        reply: oneshot::Sender<Result<DocumentMutationOutcome, StorageError>>,
     },
     StageCandidate {
         draft: Box<CandidateDraft>,
@@ -192,38 +141,6 @@ fn handle_writer_command(
     match command {
         WriterCommand::Append { request, reply } => {
             let _ = reply.send(process_append(conn, artifacts, request));
-        }
-        WriterCommand::CreateSourceDocument { input, reply } => {
-            let _ = reply.send(process_create_source_document(conn, artifacts, *input));
-        }
-        WriterCommand::SaveSourceDocument { input, reply } => {
-            let _ = reply.send(process_save_source_document(conn, artifacts, *input));
-        }
-        WriterCommand::RenameSourceDocument { input, reply } => {
-            let _ = reply.send(process_rename_source_document(conn, artifacts, &input));
-        }
-        WriterCommand::DeleteSourceDocument { input, reply } => {
-            let _ = reply.send(process_delete_source_document(conn, artifacts, input));
-        }
-        WriterCommand::ReplaceSourceDocumentCredential { input, reply }
-        | WriterCommand::ClearSourceDocumentCredential { input, reply } => {
-            let _ = reply.send(process_edit_source_document_credential(
-                conn, artifacts, *input,
-            ));
-        }
-        WriterCommand::PinSourceDocumentRevision { input, reply } => {
-            let _ = reply.send(process_pin_source_document_revision(conn, artifacts, input));
-        }
-        WriterCommand::ReleaseSourceDocumentRevisionPin { pin_id, reply } => {
-            let _ = reply.send(process_release_source_document_revision_pin(conn, pin_id));
-        }
-        WriterCommand::LoadSourceDocumentRebaseMaterial { input, reply } => {
-            let _ = reply.send(process_load_source_document_rebase_material(
-                conn, artifacts, input,
-            ));
-        }
-        WriterCommand::RebaseSourceDocument { input, reply } => {
-            let _ = reply.send(process_rebase_source_document(conn, artifacts, *input));
         }
         WriterCommand::StageCandidate { draft, reply } => {
             let _ = reply.send(process_stage_candidate(conn, artifacts, *draft));

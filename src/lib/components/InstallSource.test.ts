@@ -14,8 +14,6 @@ const sourceInput = '{"bookSourceName":"保留输入"}';
 
 const candidate: InstallCandidate = {
   id: 'candidate:one',
-  document_ref: null,
-  transient: true,
   expected_installed_revision: 0,
   profile: {
     id: 'profile:one',
@@ -38,14 +36,13 @@ const candidate: InstallCandidate = {
 
 const installedSource: InstalledSource = {
   source_id: 'source:one',
-  document_ref: null,
   version: '2.3.1',
   profile: candidate.profile,
   revision: 1,
 };
 
 async function prepareCandidate(): Promise<HTMLTextAreaElement> {
-  const input = screen.getByTestId('json-highlight-input') as HTMLTextAreaElement;
+  const input = screen.getByTestId('install-json-input') as HTMLTextAreaElement;
   await fireEvent.input(input, { target: { value: sourceInput } });
   await fireEvent.click(screen.getByTestId('install-legado-prepare'));
   await screen.findByTestId('install-candidate-preview');
@@ -104,7 +101,7 @@ describe('InstallSource', () => {
     storeMocks.prepareInstall.mockRejectedValueOnce(new Error('prepare failed'));
     render(InstallSource);
 
-    const input = screen.getByTestId('json-highlight-input');
+    const input = screen.getByTestId('install-json-input');
     await fireEvent.input(input, { target: { value: sourceInput } });
     await fireEvent.click(screen.getByTestId('install-legado-prepare'));
 

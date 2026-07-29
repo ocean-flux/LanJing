@@ -10,43 +10,10 @@ use crate::types::StorageError;
 
 pub(crate) const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-const SOURCE_DOCUMENT_VAULT_MIGRATION_VERSION: &str = "0007";
-const SOURCE_DOCUMENT_PIN_MIGRATION_VERSION: &str = "0008";
-const CONTROL_INVOCATION_ARCHIVE_MIGRATION_VERSION: &str = "0009";
-
-/// 应用全部 pending migration，并报告本次调用是否刚应用 0007 vault migration。
-pub(crate) fn run_migrations(conn: &mut SqliteConnection) -> Result<bool, StorageError> {
-    let applied = conn
-        .run_pending_migrations(MIGRATIONS)
+/// 应用全部 pending migration。
+pub(crate) fn run_migrations(conn: &mut SqliteConnection) -> Result<(), StorageError> {
+    conn.run_pending_migrations(MIGRATIONS)
         .map_err(|error| StorageError::Database(error.to_string()))?;
-    Ok(applied
-        .iter()
-        .any(|version| version.to_string() == SOURCE_DOCUMENT_VAULT_MIGRATION_VERSION))
-}
-
-/// 仅回滚刚应用且尚未开放给业务读写的 0007 vault migration 及其后续依赖 schema。
-pub(crate) fn rollback_source_document_vault(
-    conn: &mut SqliteConnection,
-) -> Result<(), StorageError> {
-    let mut reverted = conn
-        .revert_last_migration(MIGRATIONS)
-        .map_err(|_| StorageError::VaultMigrationFailed)?
-        .to_string();
-    if reverted == CONTROL_INVOCATION_ARCHIVE_MIGRATION_VERSION {
-        reverted = conn
-            .revert_last_migration(MIGRATIONS)
-            .map_err(|_| StorageError::VaultMigrationFailed)?
-            .to_string();
-    }
-    if reverted == SOURCE_DOCUMENT_PIN_MIGRATION_VERSION {
-        reverted = conn
-            .revert_last_migration(MIGRATIONS)
-            .map_err(|_| StorageError::VaultMigrationFailed)?
-            .to_string();
-    }
-    if reverted != SOURCE_DOCUMENT_VAULT_MIGRATION_VERSION {
-        return Err(StorageError::VaultMigrationFailed);
-    }
     Ok(())
 }
 
@@ -58,7 +25,7 @@ mod tests {
     use diesel::sqlite::SqliteConnection;
     use diesel_migrations::MigrationHarness;
 
-    use super::{MIGRATIONS, rollback_source_document_vault, run_migrations};
+    use super::{MIGRATIONS, run_migrations};
 
     #[derive(QueryableByName)]
     struct TextRow {
@@ -93,31 +60,9 @@ mod tests {
     }
 
     #[test]
-    fn source_document_vault_migration_round_trips_legacy_staging() {
-        let mut conn = SqliteConnection::establish(":memory:").expect("open migration fixture");
-        assert!(run_migrations(&mut conn).expect("apply all migrations"));
-        rollback_source_document_vault(&mut conn).expect("return fixture to migration 0006");
-
-        sql_query(
-            "INSERT INTO source_credential_staging (candidate_id, source_identity, cookie_namespace, secret_artifact_hash, expires_at_ms, created_at_ms) VALUES ('candidate', 'source:test', 'cookie', 'legacy-secret-hash', 20, 10)",
-        )
-        .execute(&mut conn)
-        .expect("seed legacy credential staging");
-
-        assert!(run_migrations(&mut conn).expect("apply vault migration"));
-        rollback_source_document_vault(&mut conn).expect("rollback unused vault migration");
-        let restored = sql_query(
-            "SELECT secret_artifact_hash AS value FROM source_credential_staging WHERE candidate_id = 'candidate'",
-        )
-        .get_result::<TextRow>(&mut conn)
-        .expect("read restored legacy credential staging");
-        assert_eq!(restored.value, "legacy-secret-hash");
-    }
-
-    #[test]
     fn control_invocation_archive_migration_round_trips_without_backfill() {
         let mut conn = SqliteConnection::establish(":memory:").expect("open migration fixture");
-        assert!(run_migrations(&mut conn).expect("apply all migrations"));
+        run_migrations(&mut conn).expect("apply all migrations");
         assert!(schema_object_exists(
             &mut conn,
             "execution_invocation_ledger"

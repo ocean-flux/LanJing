@@ -186,9 +186,7 @@ pub(super) fn storage_error(
         | StorageError::LegacyInvocationArchiveUnsupported
         | StorageError::GrantInsufficient
         | StorageError::SourceCredentialUnavailable
-        | StorageError::DocumentMissing
-        | StorageError::DocumentDeleteUnsafe
-        | StorageError::CredentialOwnershipMismatch
+        | StorageError::SecretOwnershipMismatch
         | StorageError::SourceMissing
         | StorageError::ExecutionMissing => contract_storage_contract(error, default_stage),
         StorageError::VersionConflict { .. }
@@ -200,7 +198,7 @@ pub(super) fn storage_error(
         | StorageError::KeyringLocked
         | StorageError::KeyLost
         | StorageError::ArtifactCorrupt
-        | StorageError::VaultMigrationFailed
+        | StorageError::SecretOwnershipCorrupt
         | StorageError::IdempotencyMismatch
         | StorageError::WriterClosed
         | StorageError::WriterUnavailable
@@ -226,10 +224,7 @@ fn candidate_storage_contract(
             "candidate_tampered",
             "candidate durable metadata 与安装内容不一致",
         ),
-        StorageError::CandidateStale => (
-            "candidate_stale",
-            "candidate 的 document/source 基线已经变化",
-        ),
+        StorageError::CandidateStale => ("candidate_stale", "candidate 的已安装来源基线已经变化"),
         StorageError::CandidateSchemaMismatch => (
             "candidate_schema_mismatch",
             "candidate schema 已不受当前版本支持",
@@ -274,19 +269,10 @@ fn contract_storage_contract(
             "来源凭证快照缺失、篡改或不可读取",
             false,
         ),
-        StorageError::DocumentMissing => {
-            (default_stage, "document_not_found", "来源文档不存在", false)
-        }
-        StorageError::DocumentDeleteUnsafe => (
+        StorageError::SecretOwnershipMismatch => (
             default_stage,
-            "document_delete_unsafe",
-            "已关联或仍被固定的来源文档不能删除",
-            false,
-        ),
-        StorageError::CredentialOwnershipMismatch => (
-            default_stage,
-            "credential_owner_mismatch",
-            "credential slot 不属于请求的文档 revision",
+            "secret_owner_mismatch",
+            "secret artifact 不属于请求的持久化 owner",
             false,
         ),
         StorageError::SourceMissing => (
@@ -340,19 +326,19 @@ fn durability_storage_contract(
         StorageError::KeyLost => (
             default_stage,
             "vault_key_lost",
-            "来源文档加密密钥已经丢失",
+            "secret artifact 加密密钥已经丢失",
             false,
         ),
         StorageError::ArtifactCorrupt => (
             default_stage,
             "vault_artifact_corrupt",
-            "来源文档加密内容已损坏",
+            "secret artifact 加密内容已损坏",
             false,
         ),
-        StorageError::VaultMigrationFailed => (
+        StorageError::SecretOwnershipCorrupt => (
             RuleErrorStage::Persistence,
-            "vault_migration_failed",
-            "来源文档保险库迁移未完成",
+            "secret_ownership_corrupt",
+            "secret artifact ownership 数据不一致",
             false,
         ),
         StorageError::IdempotencyMismatch => (
