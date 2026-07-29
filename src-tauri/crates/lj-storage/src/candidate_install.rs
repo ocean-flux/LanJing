@@ -829,13 +829,12 @@ pub(crate) fn grant_covers(grant: &PolicyCapabilities, required: &PolicyCapabili
         && (!required.system.process || grant.system.process)
 }
 
-/// 读取唯一 current `RulePackage` artifact，并保留 schema/legacy 与损坏 JSON 的区别。
+/// 读取唯一 current `RulePackage` artifact，并保留 schema 与损坏 JSON 的区别。
 ///
 /// # Errors
 ///
-/// 未知 schema 返回 [`StorageError::ContractSchemaUnsupported`]；历史结构签名返回
-/// [`StorageError::LegacyRuleContractUnsupported`]；其余 JSON/shape 错误返回
-/// [`StorageError::Serialization`]。不复制 model 的历史签名判断。
+/// 未知 schema 返回 [`StorageError::ContractSchemaUnsupported`]；其余 JSON/current shape
+/// 错误返回 [`StorageError::Serialization`]。storage 不识别历史 `RulePackage` shape。
 pub(crate) fn read_rule_package_artifact(bytes: &[u8]) -> Result<RulePackage, StorageError> {
     read_rule_package(bytes).map_err(|error| schema_read_error(&error))
 }
@@ -844,9 +843,8 @@ pub(crate) fn read_rule_package_artifact(bytes: &[u8]) -> Result<RulePackage, St
 ///
 /// # Errors
 ///
-/// 未知 schema 返回 [`StorageError::ContractSchemaUnsupported`]；历史结构签名返回
-/// [`StorageError::LegacyRuleContractUnsupported`]；其余 JSON/shape 错误返回
-/// [`StorageError::Serialization`]。不复制 model 的历史签名判断，也不迁移旧 Plan。
+/// 未知 schema 返回 [`StorageError::ContractSchemaUnsupported`]；其余 JSON/current shape
+/// 错误返回 [`StorageError::Serialization`]。storage 不识别或迁移历史 Plan shape。
 pub(crate) fn read_execution_plan_artifact(bytes: &[u8]) -> Result<ExecutionPlan, StorageError> {
     read_execution_plan(bytes).map_err(|error| schema_read_error(&error))
 }
@@ -857,11 +855,6 @@ fn schema_read_error(error: &SchemaReadError) -> StorageError {
             StorageError::ContractSchemaUnsupported {
                 contract: *contract,
                 version: *version,
-            }
-        }
-        SchemaReadError::LegacyUnsupported { contract } => {
-            StorageError::LegacyRuleContractUnsupported {
-                contract: *contract,
             }
         }
         SchemaReadError::Malformed(_)
@@ -1028,7 +1021,7 @@ mod tests {
     use lj_rule_model::RULE_CONTRACT_SCHEMA_VERSION;
 
     #[test]
-    fn legacy_plan_artifact_is_typed_legacy_unsupported() {
+    fn non_current_plan_shape_is_serialization_error() {
         // schema=1 历史线性 Plan：顶层 kind + 未 tagged config，边为 [from,to] 二元组。
         let legacy_plan = serde_json::json!({
             "contract": "execution_plan",
@@ -1055,18 +1048,13 @@ mod tests {
         let error = read_execution_plan_artifact(
             &serde_json::to_vec(&legacy_plan).expect("serialize legacy Plan fixture"),
         )
-        .expect_err("legacy Plan must remain unsupported");
+        .expect_err("non-current Plan must fail current typed ingest");
 
-        assert!(matches!(
-            error,
-            StorageError::LegacyRuleContractUnsupported {
-                contract: lj_rule_model::SchemaContract::ExecutionPlan,
-            }
-        ));
+        assert!(matches!(error, StorageError::Serialization));
     }
 
     #[test]
-    fn legacy_package_artifact_is_typed_legacy_unsupported() {
+    fn non_current_package_shape_is_serialization_error() {
         let legacy_package = serde_json::json!({
             "contract": "rule_package",
             "schema_version": RULE_CONTRACT_SCHEMA_VERSION,
@@ -1088,13 +1076,8 @@ mod tests {
         let error = read_rule_package_artifact(
             &serde_json::to_vec(&legacy_package).expect("serialize legacy package fixture"),
         )
-        .expect_err("legacy package must remain unsupported");
-        assert!(matches!(
-            error,
-            StorageError::LegacyRuleContractUnsupported {
-                contract: lj_rule_model::SchemaContract::RulePackage,
-            }
-        ));
+        .expect_err("non-current package must fail current typed ingest");
+        assert!(matches!(error, StorageError::Serialization));
     }
 
     #[test]

@@ -1,7 +1,7 @@
 //! Rule/Package/Plan 共享唯一 current schema 与 typed reader 错误。
 //!
-//! `lj-rule-model` 独占 ingest preflight：未知 numeric schema 与 schema=1 的历史结构签名
-//! 分别映射为稳定错误；不反序列化 legacy DTO，也不向 storage/runtime 暴露第二套分类器。
+//! `lj-rule-model` 独占 ingest preflight：只分类 current contract tag、numeric schema 与
+//! current typed data；不识别历史 shape，也不向 storage/runtime 暴露第二套 reader。
 
 use serde_json::Value;
 
@@ -53,12 +53,6 @@ pub enum SchemaReadError {
         /// 未知 wire 版本。
         version: u32,
     },
-    /// schema=1 但命中已删除的历史线性结构签名。
-    #[error("历史规则合同不受支持: {contract:?}")]
-    LegacyUnsupported {
-        /// 被读取的合同。
-        contract: SchemaContract,
-    },
     /// current shape 字段损坏、未知字段或类型错误。
     #[error("规则合同数据无效: {contract:?}: {reason}")]
     InvalidData {
@@ -77,7 +71,6 @@ impl SchemaReadError {
             Self::Malformed(_) => "RULE_CONTRACT_MALFORMED",
             Self::ContractMismatch { .. } => "RULE_CONTRACT_CONTRACT_MISMATCH",
             Self::SchemaUnsupported { .. } => "RULE_CONTRACT_SCHEMA_UNSUPPORTED",
-            Self::LegacyUnsupported { .. } => "LEGACY_RULE_CONTRACT_UNSUPPORTED",
             Self::InvalidData { .. } => "RULE_CONTRACT_INVALID_DATA",
         }
     }
@@ -87,7 +80,7 @@ impl SchemaReadError {
 ///
 /// # Errors
 ///
-/// 返回 malformed、contract mismatch、未知 schema、历史签名或 current invalid data。
+/// 返回 malformed、contract mismatch、未知 schema 或 current invalid data。
 pub(crate) fn parse_contract_json(
     bytes: &[u8],
     expected: SchemaContract,
@@ -97,11 +90,11 @@ pub(crate) fn parse_contract_json(
     Ok(value)
 }
 
-/// 校验 object/contract/numeric schema，并识别 schema=1 历史结构签名。
+/// 校验 current object、contract tag 与 numeric schema。
 ///
 /// # Errors
 ///
-/// 根非 object、contract 不匹配、schema 缺失/非 u32、未知 schema、历史签名时失败。
+/// 根非 object、contract 不匹配、schema 缺失/非 u32或未知 schema 时失败。
 pub(crate) fn validate_contract_value(
     value: &Value,
     expected: SchemaContract,
@@ -136,9 +129,6 @@ pub(crate) fn validate_contract_value(
             version,
         });
     }
-    if matches_legacy_structure(value, expected) {
-        return Err(SchemaReadError::LegacyUnsupported { contract: expected });
-    }
     Ok(())
 }
 
@@ -147,133 +137,4 @@ pub(crate) fn invalid_data(contract: SchemaContract, reason: impl Into<String>) 
         contract,
         reason: reason.into(),
     }
-}
-
-/// 在不反序列化 legacy DTO 的前提下识别 schema=1 历史线性结构签名。
-fn matches_legacy_structure(value: &Value, contract: SchemaContract) -> bool {
-    match contract {
-        SchemaContract::RuleDefinition => is_legacy_definition_shape(value),
-        SchemaContract::RulePackage => value.get("definition").is_some_and(|definition| {
-            definition.get("contract").and_then(Value::as_str)
-                == Some(SchemaContract::RuleDefinition.wire_name())
-                && definition.get("schema_version").and_then(Value::as_u64)
-                    == Some(u64::from(RULE_CONTRACT_SCHEMA_VERSION))
-                && is_legacy_definition_shape(definition)
-        }),
-        SchemaContract::ExecutionPlan => is_legacy_plan_shape(value),
-    }
-}
-
-fn is_legacy_definition_shape(value: &Value) -> bool {
-    let Some(flow) = value.get("flow").and_then(Value::as_object) else {
-        return false;
-    };
-    if flow
-        .get("nodes")
-        .and_then(Value::as_array)
-        .is_some_and(|nodes| nodes.iter().any(is_legacy_flow_node_shape))
-    {
-        return true;
-    }
-    flow.get("edges")
-        .and_then(Value::as_array)
-        .is_some_and(|edges| edges.iter().any(is_legacy_flow_edge_shape))
-}
-
-fn is_legacy_flow_node_shape(node: &Value) -> bool {
-    let Some(object) = node.as_object() else {
-        return false;
-    };
-    // 历史线性节点：顶层 kind + 分散 config 字段，没有 current tagged `config`。
-    object.contains_key("kind")
-        && !object.contains_key("config")
-        && (object.contains_key("http")
-            || object.contains_key("js_code")
-            || object.contains_key("extract")
-            || object.contains_key("mapper")
-            || object.contains_key("merge")
-            || object.contains_key("condition")
-            || object.contains_key("loop"))
-}
-
-fn is_legacy_flow_edge_shape(edge: &Value) -> bool {
-    let Some(object) = edge.as_object() else {
-        return false;
-    };
-    // 历史边：from/to 为裸 UUID，无 handle port 对象。
-    matches!(object.get("from"), Some(Value::String(_)))
-        && matches!(object.get("to"), Some(Value::String(_)))
-        && !object.contains_key("from_handle")
-        && object.get("from").is_some_and(|from| !from.is_object())
-        && object.get("to").is_some_and(|to| !to.is_object())
-}
-
-fn is_legacy_plan_shape(value: &Value) -> bool {
-    let Some(object) = value.as_object() else {
-        return false;
-    };
-    let legacy_top_level_fields = [
-        "compiler_version",
-        "definition_hash",
-        "plan_hash",
-        "nodes",
-        "edges",
-        "intent_entries",
-        "effects",
-        "capability_requirements",
-    ];
-    if !object.contains_key("control_regions")
-        && legacy_top_level_fields
-            .iter()
-            .all(|field| object.contains_key(*field))
-    {
-        return true;
-    }
-
-    if value
-        .get("edges")
-        .and_then(Value::as_array)
-        .is_some_and(|edges| edges.iter().any(is_legacy_plan_edge_shape))
-    {
-        return true;
-    }
-    value
-        .get("nodes")
-        .and_then(Value::as_array)
-        .is_some_and(|nodes| nodes.iter().any(is_legacy_plan_node_shape))
-}
-
-fn is_legacy_plan_edge_shape(edge: &Value) -> bool {
-    // 历史 Plan edge 为 `[from_uuid, to_uuid]` 二元组。
-    edge.as_array()
-        .is_some_and(|items| items.len() == 2 && items.iter().all(Value::is_string))
-}
-
-fn is_legacy_plan_node_shape(node: &Value) -> bool {
-    let Some(object) = node.as_object() else {
-        return false;
-    };
-    if object.contains_key("kind")
-        && object.contains_key("config")
-        && !object
-            .get("config")
-            .and_then(Value::as_object)
-            .is_some_and(|config| config.contains_key("kind"))
-    {
-        // 历史节点：顶层 kind + 未 tagged 的 config object/value。
-        return true;
-    }
-    let ports_legacy = |key: &str| {
-        object
-            .get(key)
-            .and_then(Value::as_array)
-            .is_some_and(|ports| {
-                ports.iter().any(|port| {
-                    port.as_object().is_some_and(|port| {
-                        port.contains_key("type_tag") || port.contains_key("name")
-                    })
-                })
-            })
-    };
-    ports_legacy("inputs") || ports_legacy("outputs")
 }

@@ -100,7 +100,7 @@ fn current_definition_and_plan_writers_use_shared_schema_constant_and_sealed_has
 }
 
 #[test]
-fn legacy_linear_shapes_are_stable_rejected_without_projection() {
+fn non_current_shapes_are_current_invalid_data_without_shape_classification() {
     let legacy_definition = json!({
         "contract": "rule_definition",
         "schema_version": 1,
@@ -108,13 +108,11 @@ fn legacy_linear_shapes_are_stable_rejected_without_projection() {
         "base_url": "https://legacy.example",
         "intent_exports": {},
         "flow": {
-            "nodes": [
-                {
-                    "id": "11111111-1111-1111-1111-111111111111",
-                    "kind": "Js",
-                    "js_code": "return input"
-                }
-            ],
+            "nodes": [{
+                "id": "11111111-1111-1111-1111-111111111111",
+                "kind": "Js",
+                "js_code": "return input"
+            }],
             "edges": []
         },
         "capability_manifest": {
@@ -126,11 +124,12 @@ fn legacy_linear_shapes_are_stable_rejected_without_projection() {
         "source_id_rules": ["legacy_id"]
     });
     let error = read_rule_definition(&serde_json::to_vec(&legacy_definition).unwrap()).unwrap_err();
-    assert_eq!(error.code(), "LEGACY_RULE_CONTRACT_UNSUPPORTED");
+    assert_eq!(error.code(), "RULE_CONTRACT_INVALID_DATA");
     assert!(matches!(
         error,
-        SchemaReadError::LegacyUnsupported {
-            contract: SchemaContract::RuleDefinition
+        SchemaReadError::InvalidData {
+            contract: SchemaContract::RuleDefinition,
+            ..
         }
     ));
 
@@ -143,8 +142,9 @@ fn legacy_linear_shapes_are_stable_rejected_without_projection() {
     });
     assert!(matches!(
         read_rule_package(&serde_json::to_vec(&legacy_package).unwrap()),
-        Err(SchemaReadError::LegacyUnsupported {
-            contract: SchemaContract::RulePackage
+        Err(SchemaReadError::InvalidData {
+            contract: SchemaContract::RuleDefinition,
+            ..
         })
     ));
 
@@ -154,34 +154,6 @@ fn legacy_linear_shapes_are_stable_rejected_without_projection() {
         "compiler_version": "legacy-compiler@1",
         "definition_hash": "deadbeef",
         "plan_hash": "cafebabe",
-        "nodes": [{
-            "id": "11111111-1111-1111-1111-111111111111",
-            "kind": "Js",
-            "inputs": [{ "name": "entry", "type_tag": "value" }],
-            "outputs": [{ "name": "json", "type_tag": "json" }],
-            "config": { "code": "JSON.stringify(input)" }
-        }],
-        "edges": [[
-            "11111111-1111-1111-1111-111111111111",
-            "22222222-2222-2222-2222-222222222222"
-        ]],
-        "intent_entries": {},
-        "effects": [],
-        "capability_requirements": []
-    });
-    assert!(matches!(
-        read_execution_plan(&serde_json::to_vec(&legacy_plan).unwrap()),
-        Err(SchemaReadError::LegacyUnsupported {
-            contract: SchemaContract::ExecutionPlan
-        })
-    ));
-
-    let legacy_empty_plan = json!({
-        "contract": "execution_plan",
-        "schema_version": 1,
-        "compiler_version": "legacy-empty@1",
-        "definition_hash": "deadbeef",
-        "plan_hash": "cafebabe",
         "nodes": [],
         "edges": [],
         "intent_entries": {},
@@ -189,9 +161,10 @@ fn legacy_linear_shapes_are_stable_rejected_without_projection() {
         "capability_requirements": []
     });
     assert!(matches!(
-        read_execution_plan(&serde_json::to_vec(&legacy_empty_plan).unwrap()),
-        Err(SchemaReadError::LegacyUnsupported {
-            contract: SchemaContract::ExecutionPlan
+        read_execution_plan(&serde_json::to_vec(&legacy_plan).unwrap()),
+        Err(SchemaReadError::InvalidData {
+            contract: SchemaContract::ExecutionPlan,
+            ..
         })
     ));
 }
