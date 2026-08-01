@@ -1,0 +1,139 @@
+//! 来源输入、candidate、grant 与 installed source DTO。
+
+use std::fmt;
+
+use lj_media::SourceProfile;
+use lj_rule_model::{Diagnostic, PolicyCapabilities};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+/// `RuleSystem` 当前接受的来源输入。
+#[derive(PartialEq, Eq, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum RuleInput {
+    /// Maccms JSON 采集 API 端点。
+    MaccmsJson {
+        /// 来源端点。
+        url: String,
+    },
+    /// Legado 书源 JSON，只在 prepare 阶段短暂存在。
+    Legado {
+        /// 原始 Legado 书源 JSON。
+        source_json: String,
+    },
+}
+
+impl fmt::Debug for RuleInput {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MaccmsJson { url } => formatter
+                .debug_struct("MaccmsJson")
+                .field("url_bytes", &url.len())
+                .finish(),
+            Self::Legado { source_json } => formatter
+                .debug_struct("Legado")
+                .field("source_json_bytes", &source_json.len())
+                .finish(),
+        }
+    }
+}
+
+/// 只可作为 install token 传递的 opaque candidate ID。
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct CandidateId(Uuid);
+
+impl CandidateId {
+    pub(crate) const fn from_uuid(value: Uuid) -> Self {
+        Self(value)
+    }
+
+    pub(crate) const fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
+/// 已安装来源的稳定身份。
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct SourceId(String);
+
+impl SourceId {
+    pub(crate) fn from_identity(identity: String) -> Self {
+        Self(identity)
+    }
+
+    pub(crate) fn as_identity(&self) -> &str {
+        &self.0
+    }
+}
+
+/// 用户批准的 capability 集合。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct CapabilityGrant(PolicyCapabilities);
+
+impl CapabilityGrant {
+    /// 创建空 grant。
+    #[must_use]
+    pub fn none() -> Self {
+        Self(PolicyCapabilities::default())
+    }
+
+    /// 创建仅 network grant。
+    #[must_use]
+    pub fn network_only() -> Self {
+        Self(PolicyCapabilities {
+            network: true,
+            system: lj_rule_model::SystemCapabilities::default(),
+        })
+    }
+
+    /// 是否包含 network capability。
+    #[must_use]
+    pub fn requires_network(&self) -> bool {
+        self.0.network
+    }
+
+    pub(crate) fn from_policy(value: PolicyCapabilities) -> Self {
+        Self(value)
+    }
+
+    pub(crate) fn policy(&self) -> &PolicyCapabilities {
+        &self.0
+    }
+}
+
+/// 已 staging、尚未安装的安全 candidate 预览。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InstallCandidate {
+    /// opaque install token。
+    pub id: CandidateId,
+    /// prepare 时固定的 installed revision。
+    pub expected_installed_revision: u64,
+    /// 稳定来源资料。
+    pub profile: SourceProfile,
+    /// 最小 capability grant。
+    pub required_grant: CapabilityGrant,
+    /// importer、validator 与 compiler 诊断。
+    pub diagnostics: Vec<Diagnostic>,
+    /// canonical Definition BLAKE3。
+    pub definition_hash: String,
+    /// immutable Plan BLAKE3。
+    pub plan_hash: String,
+    /// UTC epoch milliseconds 到期时间。
+    pub expires_at_ms: i64,
+}
+
+/// 已安装来源的安全摘要。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InstalledSource {
+    /// 稳定来源 ID。
+    pub source_id: SourceId,
+    /// 固定来源版本。
+    pub version: String,
+    /// 来源资料。
+    pub profile: SourceProfile,
+    /// source stream revision。
+    pub revision: u64,
+}

@@ -103,7 +103,7 @@ pub(super) async fn run_session(
             }
             RuntimeEventKind::DeltaProduced { delta, .. } => {
                 match now_millis(&trace_id).and_then(|now_ms| {
-                    seal_legacy_continue_actions(
+                    seal_legado_continue_actions(
                         delta,
                         &source_identity,
                         replay_continue_actions.as_ref(),
@@ -206,7 +206,7 @@ pub(super) async fn run_session(
     lock(&state.executions).remove(&execution_id);
 }
 
-fn seal_legacy_continue_actions(
+fn seal_legado_continue_actions(
     mut delta: MediaGraphDelta,
     source_identity: &str,
     replay_payloads: Option<&BTreeMap<String, Value>>,

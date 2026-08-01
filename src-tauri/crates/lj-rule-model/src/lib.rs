@@ -1,7 +1,7 @@
 //! 规则模型 crate。
 //!
 //! 只承载可序列化合同：`Definition`、`Plan`、`EventEnvelope`、`Diagnostic`、
-//! `Policy` DTO，以及节点配置 IR。不引入 Diesel、Tokio、Tauri、HTTP/QuickJS 实现。
+//! `Policy` DTO，以及节点配置 IR。不引入 ORM、Tokio、Tauri、HTTP/QuickJS 实现。
 
 pub mod definition;
 pub mod diagnostic;

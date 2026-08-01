@@ -8,9 +8,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Once;
 use std::time::Duration;
 
-use diesel::prelude::*;
-use diesel::sql_query;
-use diesel::sql_types::{BigInt, Text};
 use futures::StreamExt;
 use keyring_core::{mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
@@ -19,6 +16,7 @@ use lj_rule_system::{
     CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, InstallCandidate,
     LibraryEntryUpdate, LibraryProgress, RuleErrorStage, RuleInput, RuleSystem, RuleSystemConfig,
 };
+use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Statement, Value};
 use serde_json::json;
 use uuid::Uuid;
 use wiremock::matchers::{method, path, query_param};
@@ -102,11 +100,41 @@ enum CandidateTamper {
     ArtifactAlgorithm,
 }
 
-fn tamper_candidate_row(path: &Path, candidate: &InstallCandidate, tamper: CandidateTamper) {
-    let mut connection = diesel::sqlite::SqliteConnection::establish(
-        path.to_str().expect("测试 SQLite 路径必须是 UTF-8"),
-    )
-    .expect("打开真实 candidate SQLite 以注入篡改");
+struct TestStatement {
+    sql: &'static str,
+    values: Vec<Value>,
+}
+
+impl TestStatement {
+    fn new(sql: &'static str) -> Self {
+        Self {
+            sql,
+            values: Vec::new(),
+        }
+    }
+
+    fn bind(mut self, value: impl Into<Value>) -> Self {
+        self.values.push(value.into());
+        self
+    }
+
+    async fn execute(self, connection: &DatabaseConnection) -> Result<u64, sea_orm::DbErr> {
+        connection
+            .execute_raw(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                self.sql,
+                self.values,
+            ))
+            .await
+            .map(|result| result.rows_affected())
+    }
+}
+
+async fn tamper_candidate_row(path: &Path, candidate: &InstallCandidate, tamper: CandidateTamper) {
+    let normalized = path.to_string_lossy().replace('\\', "/");
+    let connection = Database::connect(format!("sqlite://{normalized}?mode=rw"))
+        .await
+        .expect("打开真实 candidate SQLite 以注入篡改");
     let candidate_id = serde_json::to_string(&candidate.id)
         .expect("candidate ID 可序列化")
         .trim_matches('"')
@@ -116,18 +144,16 @@ fn tamper_candidate_row(path: &Path, candidate: &InstallCandidate, tamper: Candi
             let mut profile = candidate.profile.clone();
             profile.id = lj_media::MediaResourceId("source:tampered".to_string());
             let profile_json = serde_json::to_string(&profile).expect("profile 可序列化");
-            sql_query("UPDATE candidate_projection SET profile_json = ? WHERE candidate_id = ?")
-                .bind::<Text, _>(&profile_json)
-                .bind::<Text, _>(&candidate_id)
-                .execute(&mut connection)
+            TestStatement::new("UPDATE candidate_projection SET profile_json = ? WHERE candidate_id = ?")
+                .bind(&profile_json)
+                .bind(&candidate_id)
         }
         CandidateTamper::RequiredGrant => {
             let grant_json = serde_json::to_string(&CapabilityGrant::none())
                 .expect("grant 可序列化");
-            sql_query("UPDATE candidate_projection SET required_grant_json = ? WHERE candidate_id = ?")
-                .bind::<Text, _>(&grant_json)
-                .bind::<Text, _>(&candidate_id)
-                .execute(&mut connection)
+            TestStatement::new("UPDATE candidate_projection SET required_grant_json = ? WHERE candidate_id = ?")
+                .bind(&grant_json)
+                .bind(&candidate_id)
         }
         CandidateTamper::Diagnostics => {
             let diagnostics_json = serde_json::to_string(&serde_json::json!([
@@ -138,30 +164,28 @@ fn tamper_candidate_row(path: &Path, candidate: &InstallCandidate, tamper: Candi
                 }
             ]))
             .expect("diagnostics 可序列化");
-            sql_query("UPDATE candidate_projection SET diagnostics_json = ? WHERE candidate_id = ?")
-                .bind::<Text, _>(&diagnostics_json)
-                .bind::<Text, _>(&candidate_id)
-                .execute(&mut connection)
+            TestStatement::new("UPDATE candidate_projection SET diagnostics_json = ? WHERE candidate_id = ?")
+                .bind(&diagnostics_json)
+                .bind(&candidate_id)
         }
-        CandidateTamper::ArtifactAlgorithm => sql_query(
+        CandidateTamper::ArtifactAlgorithm => TestStatement::new(
             "UPDATE events SET artifact_refs_json = json_set(artifact_refs_json, '$[0].codec', ?) WHERE stream_id = ?",
         )
-        .bind::<Text, _>("sha256")
-        .bind::<Text, _>(&format!("candidate/{candidate_id}"))
-        .execute(&mut connection),
-        CandidateTamper::Expiry => sql_query(
+        .bind("sha256")
+        .bind(format!("candidate/{candidate_id}")),
+        CandidateTamper::Expiry => TestStatement::new(
             "UPDATE candidate_projection SET expires_at_ms = ? WHERE candidate_id = ?",
         )
-        .bind::<BigInt, _>(candidate.expires_at_ms.saturating_add(60_000))
-        .bind::<Text, _>(&candidate_id)
-        .execute(&mut connection),
-        CandidateTamper::DefinitionHash => sql_query(
+        .bind(candidate.expires_at_ms.saturating_add(60_000))
+        .bind(&candidate_id),
+        CandidateTamper::DefinitionHash => TestStatement::new(
             "UPDATE candidate_projection SET definition_hash = ? WHERE candidate_id = ?",
         )
-        .bind::<Text, _>(&"0".repeat(64))
-        .bind::<Text, _>(&candidate_id)
-        .execute(&mut connection),
+        .bind("0".repeat(64))
+        .bind(&candidate_id),
     }
+    .execute(&connection)
+    .await
     .expect("注入 candidate SQLite 篡改");
     assert_eq!(changed, 1, "必须只篡改一个 candidate row");
 }
@@ -636,7 +660,7 @@ async fn candidate_install_revalidates_event_metadata_after_restart() {
             .await
             .expect("篡改前应关闭 SQLite writer");
         drop(system);
-        tamper_candidate_row(&temp.database_path(), &candidate, tamper);
+        tamper_candidate_row(&temp.database_path(), &candidate, tamper).await;
 
         let reopened = temp.reopen_after_drop(Duration::from_mins(1)).await;
         let error = reopened

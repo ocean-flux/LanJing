@@ -182,16 +182,14 @@ pub(super) fn storage_error(
         | StorageError::CandidateStale
         | StorageError::CandidateSchemaMismatch => candidate_storage_contract(error),
         StorageError::ContractSchemaUnsupported { .. }
-        | StorageError::LegacyRuleContractUnsupported { .. }
-        | StorageError::LegacyInvocationArchiveUnsupported
         | StorageError::GrantInsufficient
         | StorageError::SourceCredentialUnavailable
         | StorageError::SecretOwnershipMismatch
         | StorageError::SourceMissing
         | StorageError::ExecutionMissing => contract_storage_contract(error, default_stage),
-        StorageError::VersionConflict { .. }
+        StorageError::CurrentSchemaRequired
+        | StorageError::VersionConflict { .. }
         | StorageError::ArtifactUnavailable(_)
-        | StorageError::MasterKeyUnavailable
         | StorageError::SecretUnavailable
         | StorageError::ReplayUnavailable(_)
         | StorageError::KeyringUnavailable
@@ -245,18 +243,6 @@ fn contract_storage_contract(
             "已安装规则合同 schema 不受当前版本支持",
             false,
         ),
-        StorageError::LegacyRuleContractUnsupported { .. } => (
-            default_stage,
-            "LEGACY_RULE_CONTRACT_UNSUPPORTED",
-            "历史规则合同不受当前版本支持",
-            false,
-        ),
-        StorageError::LegacyInvocationArchiveUnsupported => (
-            RuleErrorStage::Replay,
-            "LEGACY_RULE_CONTRACT_UNSUPPORTED",
-            "历史 invocation archive 不受当前版本支持",
-            false,
-        ),
         StorageError::GrantInsufficient => (
             RuleErrorStage::Capability,
             "grant_insufficient",
@@ -296,6 +282,12 @@ fn durability_storage_contract(
     default_stage: RuleErrorStage,
 ) -> (RuleErrorStage, &'static str, &'static str, bool) {
     match error {
+        StorageError::CurrentSchemaRequired => (
+            RuleErrorStage::Persistence,
+            "CURRENT_SCHEMA_REQUIRED",
+            "本地数据库不是当前 schema，需要删除后重建",
+            false,
+        ),
         StorageError::VersionConflict { .. } => (
             default_stage,
             "stream_version_conflict",
@@ -303,7 +295,6 @@ fn durability_storage_contract(
             true,
         ),
         StorageError::ArtifactUnavailable(_)
-        | StorageError::MasterKeyUnavailable
         | StorageError::SecretUnavailable
         | StorageError::ReplayUnavailable(_) => (
             RuleErrorStage::Replay,
@@ -402,27 +393,6 @@ mod tests {
         assert!(schema.diagnostics.is_empty());
         assert!(!schema.message.contains("script"));
         assert!(!schema.message.contains("secret"));
-
-        let legacy = storage_error(
-            &StorageError::LegacyRuleContractUnsupported {
-                contract: SchemaContract::RulePackage,
-            },
-            RuleErrorStage::Install,
-            "trace-legacy",
-        );
-        assert_eq!(legacy.stage, RuleErrorStage::Install);
-        assert_eq!(legacy.code, "LEGACY_RULE_CONTRACT_UNSUPPORTED");
-        assert!(legacy.diagnostics.is_empty());
-        assert!(!legacy.message.contains("Authorization"));
-        assert!(!legacy.message.contains("cookie"));
-
-        let legacy_invocation = storage_error(
-            &StorageError::LegacyInvocationArchiveUnsupported,
-            RuleErrorStage::Replay,
-            "trace-legacy-invocation",
-        );
-        assert_eq!(legacy_invocation.stage, RuleErrorStage::Replay);
-        assert_eq!(legacy_invocation.code, "LEGACY_RULE_CONTRACT_UNSUPPORTED");
     }
 
     #[test]

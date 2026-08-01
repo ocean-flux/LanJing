@@ -14,19 +14,19 @@ use tauri::Manager;
 macro_rules! lanjing_commands {
     ($consumer:ident) => {
         $consumer! {
-            fetch_import_src => commands::fetch_import_src,
-            prepare_install => commands::prepare_install,
-            install => commands::install,
-            execute => commands::execute,
-            cancel_execution => commands::cancel_execution,
-            catch_up_execution => commands::catch_up_execution,
-            list_installed_sources => commands::list_installed_sources,
-            get_library_projection => commands::get_library_projection,
-            update_library_entry => commands::update_library_entry,
-            get_media_item => commands::get_media_item,
-            get_media_items => commands::get_media_items,
-            list_media_units => commands::list_media_units,
-            list_media_assets => commands::list_media_assets,
+            fetch_import_src => commands::import_install::fetch_import_src,
+            prepare_install => commands::import_install::prepare_install,
+            install => commands::import_install::install,
+            execute => commands::execution::execute,
+            cancel_execution => commands::execution::cancel_execution,
+            catch_up_execution => commands::execution::catch_up_execution,
+            list_installed_sources => commands::query::list_installed_sources,
+            get_library_projection => commands::query::get_library_projection,
+            update_library_entry => commands::query::update_library_entry,
+            get_media_item => commands::query::get_media_item,
+            get_media_items => commands::query::get_media_items,
+            list_media_units => commands::query::list_media_units,
+            list_media_assets => commands::query::list_media_assets,
         }
     };
 }
@@ -93,7 +93,7 @@ pub fn run() {
                     data_dir.join("artifacts"),
                 ),
             ))?;
-            app.manage(commands::AppState::new(Arc::new(system)));
+            app.manage(commands::state::AppState::new(Arc::new(system)));
 
             Ok(())
         })

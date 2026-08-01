@@ -7,9 +7,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
 
-use diesel::sql_types::Text;
-use diesel::sqlite::SqliteConnection;
-use diesel::{Connection, QueryableByName, RunQueryDsl};
 use futures::StreamExt;
 use keyring_core::{Entry, mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
@@ -21,6 +18,7 @@ use lj_rule_system::{
     HttpMethodForTest, QuickJsHostCallForTest, RuleErrorStage, RuleInput, RuleSystem,
     RuleSystemConfig, SourceId,
 };
+use sea_orm::{ConnectionTrait, Database, DatabaseBackend, FromQueryResult, Statement};
 use serde_json::{Value, json};
 use uuid::Uuid;
 use wiremock::matchers::{header, method, path, query_param};
@@ -71,47 +69,54 @@ fn init_mock_keyring() {
     });
 }
 
-#[derive(QueryableByName)]
+#[derive(FromQueryResult)]
 struct VaultKeyRow {
-    #[diesel(sql_type = Text)]
     key_id: String,
 }
 
-#[derive(QueryableByName)]
+#[derive(FromQueryResult)]
 struct VaultBlobLocatorRow {
-    #[diesel(sql_type = Text)]
     blob_locator: String,
 }
 
-fn captured_response_secret_files(database_path: &Path, artifact_root: &Path) -> Vec<PathBuf> {
-    let mut connection = SqliteConnection::establish(
-        database_path
-            .to_str()
-            .expect("测试 SQLite 路径必须是 UTF-8"),
-    )
-    .expect("打开 effect capture SQLite");
-    diesel::sql_query(
+async fn captured_response_secret_files(
+    database_path: &Path,
+    artifact_root: &Path,
+) -> Vec<PathBuf> {
+    let connection = open_test_database(database_path).await;
+    connection
+    .query_all_raw(Statement::from_string(DatabaseBackend::Sqlite,
         "SELECT secret.blob_locator FROM effect_captures AS capture JOIN secret_artifact_projection AS secret ON secret.secret_id = capture.response_headers_secret_id WHERE capture.response_headers_secret_id IS NOT NULL ORDER BY capture.effect_id",
-    )
-    .load::<VaultBlobLocatorRow>(&mut connection)
+    ))
+    .await
     .expect("读取 response header secret locators")
     .into_iter()
+    .map(|row| VaultBlobLocatorRow::from_query_result(&row, "").expect("map secret locator"))
     .map(|row| artifact_root.join(row.blob_locator))
     .collect()
 }
-fn wipe_vault_key(database_path: &Path, keyring_service: &str) {
-    let mut connection = SqliteConnection::establish(
-        database_path
-            .to_str()
-            .expect("测试 SQLite 路径必须是 UTF-8"),
-    )
-    .expect("打开 vault SQLite");
-    let row = diesel::sql_query("SELECT key_id FROM vault_key_metadata WHERE id = 1")
-        .get_result::<VaultKeyRow>(&mut connection)
+async fn wipe_vault_key(database_path: &Path, keyring_service: &str) {
+    let connection = open_test_database(database_path).await;
+    let query = Statement::from_string(
+        DatabaseBackend::Sqlite,
+        "SELECT key_id FROM vault_key_metadata WHERE id = 1",
+    );
+    let row = connection
+        .query_one_raw(query)
+        .await
         .expect("读取 vault key ID");
+    let row = VaultKeyRow::from_query_result(&row.expect("vault key metadata"), "")
+        .expect("map vault key metadata");
     let entry = Entry::new(keyring_service, &format!("vault-key-v1/{}", row.key_id))
         .expect("vault key entry");
     entry.delete_credential().expect("删除 mock vault key");
+}
+
+async fn open_test_database(path: &Path) -> sea_orm::DatabaseConnection {
+    let normalized = path.to_string_lossy().replace('\\', "/");
+    Database::connect(format!("sqlite://{normalized}?mode=rw"))
+        .await
+        .expect("打开真实 SQLite")
 }
 
 fn legado_input(base_url: &str) -> RuleInput {
@@ -311,10 +316,13 @@ fn committed_delta(events: &[ExecutionEvent]) -> &MediaGraphDelta {
 
 fn assert_completed(events: &[ExecutionEvent], require_effect_capture: bool) {
     assert_contiguous(events);
-    assert!(matches!(
-        events.last().map(|event| &event.kind),
-        Some(ExecutionEventKind::Completed)
-    ));
+    assert!(
+        matches!(
+            events.last().map(|event| &event.kind),
+            Some(ExecutionEventKind::Completed)
+        ),
+        "execution must end completed: {events:#?}"
+    );
     assert_eq!(
         events
             .iter()
@@ -901,7 +909,7 @@ async fn legado_replay_refuses_lost_master_key_before_effects() {
         .await
         .expect("close C2 writer before key-loss restart");
     drop(system);
-    wipe_vault_key(&temp.root.join("event-store.db"), &temp.keyring_service);
+    wipe_vault_key(&temp.root.join("event-store.db"), &temp.keyring_service).await;
     let restarted = temp.open().await;
 
     let Err(error) = restarted
@@ -1003,7 +1011,8 @@ async fn legado_replay_refuses_missing_effect_secret_without_live_fallback() {
     let secret_files = captured_response_secret_files(
         &temp.root.join("event-store.db"),
         &temp.root.join("artifacts"),
-    );
+    )
+    .await;
     assert_eq!(secret_files.len(), 1, "应只有一个 response header secret");
     fs::remove_file(&secret_files[0]).expect("remove captured response secret artifact");
 

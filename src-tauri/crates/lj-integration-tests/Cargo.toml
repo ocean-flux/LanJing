@@ -33,4 +33,4 @@ tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 wiremock = { workspace = true }
 keyring-core = { workspace = true }
-diesel = { workspace = true }
+sea-orm = { workspace = true }
