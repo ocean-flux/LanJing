@@ -3,92 +3,22 @@
 //! 本测试只构造真实 SQLite/artifact、wiremock 与 concrete façade；不组装内部执行编排、
 //! handler registry 或 storage transaction。
 
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::Once;
+use std::path::Path;
 use std::time::Duration;
 
 use futures::StreamExt;
-use keyring_core::{mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::{MediaAssetKind, MediaAssetLocator, MediaGraphDelta, MediaKind};
+use lj_rule_system::test_support::{TempRuleSystem, init_mock_keyring};
 use lj_rule_system::{
     CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, InstallCandidate,
-    LibraryEntryUpdate, LibraryProgress, RuleErrorStage, RuleInput, RuleSystem, RuleSystemConfig,
+    LibraryEntryUpdate, LibraryProgress, RuleErrorStage, RuleInput, RuleSystem,
 };
 use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Statement, Value};
 use serde_json::json;
 use uuid::Uuid;
 use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
-
-struct TempRuleSystem {
-    root: PathBuf,
-    keyring_service: String,
-}
-
-impl TempRuleSystem {
-    fn new(name: &str) -> Self {
-        let root = std::env::temp_dir().join(format!("lj-rule-system-{name}-{}", Uuid::new_v4()));
-        fs::create_dir_all(&root).expect("创建 RuleSystem 测试根目录");
-        let keyring_service = format!("lanjing.rule-system.test.{}", Uuid::new_v4());
-        Self {
-            root,
-            keyring_service,
-        }
-    }
-
-    fn database_path(&self) -> PathBuf {
-        self.root.join("event-store.db")
-    }
-
-    async fn open(&self, candidate_ttl: Duration) -> RuleSystem {
-        self.open_result(candidate_ttl)
-            .await
-            .expect("打开 concrete RuleSystem")
-    }
-
-    async fn reopen_after_drop(&self, candidate_ttl: Duration) -> RuleSystem {
-        for attempt in 0..20 {
-            match self.open_result(candidate_ttl).await {
-                Ok(system) => return system,
-                Err(error) if error.stage == RuleErrorStage::Persistence && attempt < 19 => {
-                    tokio::time::sleep(Duration::from_millis(10)).await;
-                }
-                Err(error) => panic!("同进程 storage writer 退出后无法重开 RuleSystem: {error:?}"),
-            }
-        }
-        unreachable!("有界重开循环应在成功或最终错误时退出")
-    }
-
-    async fn open_result(
-        &self,
-        candidate_ttl: Duration,
-    ) -> Result<RuleSystem, lj_rule_system::RuleError> {
-        RuleSystem::open(
-            RuleSystemConfig::local_fixture(
-                self.root.join("event-store.db"),
-                self.root.join("artifacts"),
-            )
-            .with_keyring_service(self.keyring_service.clone())
-            .with_candidate_ttl(candidate_ttl),
-        )
-        .await
-    }
-}
-
-impl Drop for TempRuleSystem {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.root);
-    }
-}
-
-fn init_mock_keyring() {
-    static INIT: Once = Once::new();
-    INIT.call_once(|| {
-        set_default_store(mock::Store::new().expect("keyring-core mock store"));
-    });
-}
 
 #[derive(Clone, Copy)]
 enum CandidateTamper {

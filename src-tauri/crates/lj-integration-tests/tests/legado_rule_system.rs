@@ -5,74 +5,27 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Once;
+use std::time::Duration;
 
 use futures::StreamExt;
-use keyring_core::{Entry, mock, set_default_store};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_importer::legado::{CONTINUE_ACTION_TTL_MS, LegadoImporter};
 use lj_media::{MediaAssetLocator, MediaGraphDelta, MediaKind};
+use lj_rule_system::test_support::{
+    TempRuleSystem, init_mock_keyring, open_test_database, wipe_vault_key,
+};
 use lj_rule_system::{
     CapabilityGrant, EffectWitnessCaptureForTest, EffectWitnessForTest, ExecuteRequest,
     ExecutionEvent, ExecutionEventKind, ExecutionId, ExecutionMode, HttpDnsTargetKindForTest,
-    HttpMethodForTest, QuickJsHostCallForTest, RuleErrorStage, RuleInput, RuleSystem,
-    RuleSystemConfig, SourceId,
+    HttpMethodForTest, QuickJsHostCallForTest, RuleErrorStage, RuleInput, RuleSystem, SourceId,
 };
-use sea_orm::{ConnectionTrait, Database, DatabaseBackend, FromQueryResult, Statement};
+use sea_orm::{ConnectionTrait, DatabaseBackend, FromQueryResult, Statement};
 use serde_json::{Value, json};
-use uuid::Uuid;
 use wiremock::matchers::{header, method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 const SOURCE_STATIC_SECRET: &str = "source-static-secret";
 const SEARCH_QUERY_FRAGMENT: &str = "?q=修罗";
-
-struct TempRuleSystem {
-    root: PathBuf,
-    keyring_service: String,
-}
-
-impl TempRuleSystem {
-    fn new(name: &str) -> Self {
-        let root =
-            std::env::temp_dir().join(format!("lj-legado-rule-system-{name}-{}", Uuid::new_v4()));
-        fs::create_dir_all(&root).expect("create RuleSystem test root");
-        Self {
-            root,
-            keyring_service: format!("lanjing.legado.rule-system.test.{}", Uuid::new_v4()),
-        }
-    }
-
-    async fn open(&self) -> RuleSystem {
-        RuleSystem::open(
-            RuleSystemConfig::local_fixture(
-                self.root.join("event-store.db"),
-                self.root.join("artifacts"),
-            )
-            .with_keyring_service(self.keyring_service.clone()),
-        )
-        .await
-        .expect("open concrete RuleSystem")
-    }
-}
-
-impl Drop for TempRuleSystem {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.root);
-    }
-}
-
-fn init_mock_keyring() {
-    static INIT: Once = Once::new();
-    INIT.call_once(|| {
-        set_default_store(mock::Store::new().expect("keyring-core mock store"));
-    });
-}
-
-#[derive(FromQueryResult)]
-struct VaultKeyRow {
-    key_id: String,
-}
 
 #[derive(FromQueryResult)]
 struct VaultBlobLocatorRow {
@@ -94,29 +47,6 @@ async fn captured_response_secret_files(
     .map(|row| VaultBlobLocatorRow::from_query_result(&row, "").expect("map secret locator"))
     .map(|row| artifact_root.join(row.blob_locator))
     .collect()
-}
-async fn wipe_vault_key(database_path: &Path, keyring_service: &str) {
-    let connection = open_test_database(database_path).await;
-    let query = Statement::from_string(
-        DatabaseBackend::Sqlite,
-        "SELECT key_id FROM vault_key_metadata WHERE id = 1",
-    );
-    let row = connection
-        .query_one_raw(query)
-        .await
-        .expect("读取 vault key ID");
-    let row = VaultKeyRow::from_query_result(&row.expect("vault key metadata"), "")
-        .expect("map vault key metadata");
-    let entry = Entry::new(keyring_service, &format!("vault-key-v1/{}", row.key_id))
-        .expect("vault key entry");
-    entry.delete_credential().expect("删除 mock vault key");
-}
-
-async fn open_test_database(path: &Path) -> sea_orm::DatabaseConnection {
-    let normalized = path.to_string_lossy().replace('\\', "/");
-    Database::connect(format!("sqlite://{normalized}?mode=rw"))
-        .await
-        .expect("打开真实 SQLite")
 }
 
 fn legado_input(base_url: &str) -> RuleInput {
@@ -642,7 +572,7 @@ async fn assert_live_http_and_quickjs_witnesses(
 async fn legado_prepare_install_enforces_import_safety_contract() {
     init_mock_keyring();
     let temp = TempRuleSystem::new("import-safety");
-    let system = temp.open().await;
+    let system = temp.open(Duration::from_mins(5)).await;
 
     let RuleInput::Legado {
         source_json: mut duplicate,
@@ -723,7 +653,7 @@ async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() 
     let temp = TempRuleSystem::new("six-intents");
     let server = MockServer::start().await;
     mount_legado_routes(&server).await;
-    let system = temp.open().await;
+    let system = temp.open(Duration::from_mins(5)).await;
     let input = legado_input(&server.uri());
     assert!(!format!("{input:?}").contains(SOURCE_STATIC_SECRET));
     let source = system
@@ -814,9 +744,9 @@ async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() 
     assert!(!safe_events.contains("response-capture-secret"));
     assert!(!safe_events.contains(SOURCE_STATIC_SECRET));
     assert!(!safe_events.contains(SEARCH_QUERY_FRAGMENT));
-    assert_no_plaintext_secret(&temp.root, b"response-capture-secret");
-    assert_no_plaintext_secret(&temp.root, SOURCE_STATIC_SECRET.as_bytes());
-    assert_no_plaintext_secret(&temp.root, SEARCH_QUERY_FRAGMENT.as_bytes());
+    assert_no_plaintext_secret(temp.root(), b"response-capture-secret");
+    assert_no_plaintext_secret(temp.root(), SOURCE_STATIC_SECRET.as_bytes());
+    assert_no_plaintext_secret(temp.root(), SEARCH_QUERY_FRAGMENT.as_bytes());
 
     drop(server);
     for (intent, input, live) in [
@@ -886,7 +816,7 @@ async fn legado_replay_refuses_lost_master_key_before_effects() {
     let temp = TempRuleSystem::new("replay-key-loss");
     let server = MockServer::start().await;
     mount_legado_routes(&server).await;
-    let system = temp.open().await;
+    let system = temp.open(Duration::from_mins(5)).await;
     let candidate = system
         .prepare_install(legado_input(&server.uri()))
         .await
@@ -909,8 +839,8 @@ async fn legado_replay_refuses_lost_master_key_before_effects() {
         .await
         .expect("close C2 writer before key-loss restart");
     drop(system);
-    wipe_vault_key(&temp.root.join("event-store.db"), &temp.keyring_service).await;
-    let restarted = temp.open().await;
+    wipe_vault_key(&temp.database_path(), temp.keyring_service()).await;
+    let restarted = temp.open(Duration::from_mins(5)).await;
 
     let Err(error) = restarted
         .execute(ExecuteRequest {
@@ -935,7 +865,7 @@ async fn legado_replay_refuses_tampered_effect_body_without_live_fallback() {
     let temp = TempRuleSystem::new("tampered-effect-body");
     let server = MockServer::start().await;
     mount_legado_routes(&server).await;
-    let system = temp.open().await;
+    let system = temp.open(Duration::from_mins(5)).await;
     let candidate = system
         .prepare_install(legado_input(&server.uri()))
         .await
@@ -951,7 +881,7 @@ async fn legado_replay_refuses_tampered_effect_body_without_live_fallback() {
         IntentInput::Query("修罗".to_string()),
     )
     .await;
-    let artifact = captured_body_artifact_path(&temp.root, &live.events);
+    let artifact = captured_body_artifact_path(temp.root(), &live.events);
     fs::write(&artifact, b"tampered capture body").expect("corrupt captured body artifact");
 
     drop(server);
@@ -992,7 +922,7 @@ async fn legado_replay_refuses_missing_effect_secret_without_live_fallback() {
     let server = MockServer::start().await;
     mount_legado_routes(&server).await;
     mount_credential_free_search_redirect(&server).await;
-    let system = temp.open().await;
+    let system = temp.open(Duration::from_mins(5)).await;
     let candidate = system
         .prepare_install(legado_input_without_source_credentials(&server.uri()))
         .await
@@ -1008,11 +938,8 @@ async fn legado_replay_refuses_missing_effect_secret_without_live_fallback() {
         IntentInput::Query("修罗".to_string()),
     )
     .await;
-    let secret_files = captured_response_secret_files(
-        &temp.root.join("event-store.db"),
-        &temp.root.join("artifacts"),
-    )
-    .await;
+    let secret_files =
+        captured_response_secret_files(&temp.database_path(), &temp.root().join("artifacts")).await;
     assert_eq!(secret_files.len(), 1, "应只有一个 response header secret");
     fs::remove_file(&secret_files[0]).expect("remove captured response secret artifact");
 
@@ -1053,7 +980,7 @@ async fn legado_continue_action_rejects_cross_source_schema_and_expiry_before_ef
     let server = MockServer::start().await;
     mount_legado_routes(&server).await;
 
-    let system = temp.open().await;
+    let system = temp.open(Duration::from_mins(5)).await;
     let first = system
         .prepare_install(legado_input(&server.uri()))
         .await

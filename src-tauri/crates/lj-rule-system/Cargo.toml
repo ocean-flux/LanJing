@@ -10,7 +10,10 @@ description = "规则生命周期 concrete façade"
 workspace = true
 
 [features]
-test-support = []
+test-support = [
+    "dep:sea-orm",
+    "dep:keyring-core",
+]
 
 [dependencies]
 lj-capability = { path = "../lj-capability" }
@@ -30,6 +33,8 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
+sea-orm = { workspace = true, optional = true }
+keyring-core = { workspace = true, optional = true }
 
 [dev-dependencies]
 keyring-core = { workspace = true }

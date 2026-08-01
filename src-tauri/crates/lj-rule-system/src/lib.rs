@@ -21,6 +21,9 @@ pub use types::{
 pub use lj_media::{MediaAsset, MediaItem, MediaUnit};
 
 #[cfg(feature = "test-support")]
+pub mod test_support;
+
+#[cfg(feature = "test-support")]
 pub use types::{
     EffectWitnessCaptureForTest, EffectWitnessForTest, ExtractEffectWitnessForTest,
     HttpDnsTargetKindForTest, HttpDnsTargetWitnessForTest, HttpEffectErrorKindForTest,
