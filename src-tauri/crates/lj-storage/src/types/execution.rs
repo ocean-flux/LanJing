@@ -135,52 +135,6 @@ impl ExecutionStatus {
     }
 }
 
-/// legacy execution 无法唯一固定 source revision 的原因。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ReplayUnavailableReason {
-    /// 缺少能包围 Started Event 的 Installed/Updated 证据。
-    LegacyEvidenceMissing,
-    /// 多个历史 source snapshot 同时匹配，不能猜测。
-    LegacyEvidenceAmbiguous,
-    /// 已固定 revision 的 immutable snapshot 缺失。
-    SourceSnapshotMissing,
-    /// Event、package、Plan 或 credential 一致性证据不匹配。
-    ArtifactMismatch,
-}
-
-impl ReplayUnavailableReason {
-    /// 返回 `SQLite` 使用的稳定文本。
-    #[must_use]
-    pub const fn as_db(self) -> &'static str {
-        match self {
-            Self::LegacyEvidenceMissing => "legacy_evidence_missing",
-            Self::LegacyEvidenceAmbiguous => "legacy_evidence_ambiguous",
-            Self::SourceSnapshotMissing => "source_snapshot_missing",
-            Self::ArtifactMismatch => "artifact_mismatch",
-        }
-    }
-
-    /// 从 `SQLite` 稳定文本恢复 typed reason。
-    ///
-    /// # Errors
-    ///
-    /// 数据库出现未知 reason 时返回 [`StorageError::InvalidInput`]。
-    pub fn from_db(value: &str) -> Result<Self, StorageError> {
-        match value {
-            "legacy_evidence_missing" | "legacy_source_revision_unavailable" => {
-                Ok(Self::LegacyEvidenceMissing)
-            }
-            "legacy_evidence_ambiguous" => Ok(Self::LegacyEvidenceAmbiguous),
-            "source_snapshot_missing" => Ok(Self::SourceSnapshotMissing),
-            "artifact_mismatch" => Ok(Self::ArtifactMismatch),
-            _ => Err(StorageError::InvalidInput(
-                "未知 replay unavailable reason".to_string(),
-            )),
-        }
-    }
-}
-
 /// execution archive 的两阶段回收状态。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GcState {
@@ -265,8 +219,8 @@ pub struct ExecutionRecord {
     pub execution_id: Uuid,
     /// 关联来源。
     pub source_identity: String,
-    /// transaction 固定的权威 source revision；legacy unavailable 时为 `None`。
-    pub source_revision: Option<u64>,
+    /// transaction 固定的权威 source revision。
+    pub source_revision: u64,
     /// 已 pin 的 Plan hash。
     pub plan_hash: String,
     /// 当前状态。
@@ -275,8 +229,6 @@ pub struct ExecutionRecord {
     pub pinned: bool,
     /// archive 是否还可 replay。
     pub replayable: bool,
-    /// legacy/source snapshot 无法 replay 的 typed reason。
-    pub replay_unavailable_reason: Option<ReplayUnavailableReason>,
     /// 两阶段 archive 回收状态。
     pub gc_state: GcState,
     /// 起始时刻。

@@ -1,27 +1,16 @@
-//! 有界 single writer 的命令协议与 blocking loop。
+//! 有界 single writer 的命令协议与 async actor。
 //!
-//! 只有此模块启动的专用线程持有 Diesel 写连接；async 调用方通过固定容量 `mpsc` 排队，
-//! 因此 16 路执行不会直接争抢 `SQLite` writer lock。batch 仅降低唤醒开销，**每条命令仍在
+//! 只有此模块启动的 Tokio task 持有 `SeaORM` read-write pool；async 调用方通过固定容量
+//! `mpsc` 排队，因此 16 路执行不会直接争抢 `SQLite` writer lock。batch 仅降低唤醒开销，**每条命令仍在
 //! 自己的 transaction 中**提交 Event、expected-version、global sequence 与投影，不能跨命令
 //! 合并事务或改变 receipt 的顺序边界。
 
-use diesel::sqlite::SqliteConnection;
+use crate::database::DatabaseSession;
 use lj_runtime::{ControlTraceCapture, ControlTraceReceipt, DurableCaptureReceipt, EffectCapture};
 use tokio::sync::{mpsc, oneshot};
 use uuid::Uuid;
 
 use crate::artifact::ArtifactStore;
-use crate::candidate_install::{process_install_candidate, process_stage_candidate};
-use crate::event_store::process_append;
-use crate::execution::{
-    process_delta, process_finish_execution, process_pin_execution, process_start_execution,
-    process_start_replay_execution,
-};
-use crate::projection_query::process_library_update;
-use crate::retention_recovery::{
-    process_checkpoint_library, process_checkpoint_source, process_clear_execution_archive,
-    process_gc, recover_orphans_sync,
-};
 use crate::types::{
     AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt, DeltaCommit,
     ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionStartReceipt, GcReport,
@@ -101,14 +90,14 @@ pub(crate) enum WriterCommand {
     Shutdown(oneshot::Sender<Result<(), StorageError>>),
 }
 
-/// 在专用 OS 线程运行 writer，关闭时先释放 `SQLite` 句柄再确认回复。
-pub(crate) fn writer_loop(
+/// 在 Tokio task 运行 async writer，关闭时先释放 `SQLite` 句柄再确认回复。
+pub(crate) async fn writer_loop(
     mut receiver: mpsc::Receiver<WriterCommand>,
-    mut conn: SqliteConnection,
-    artifacts: &ArtifactStore,
+    mut conn: DatabaseSession,
+    artifacts: ArtifactStore,
 ) {
     let shutdown_reply = 'writer: loop {
-        let Some(first) = receiver.blocking_recv() else {
+        let Some(first) = receiver.recv().await else {
             break None;
         };
         let mut batch = vec![first];
@@ -121,7 +110,7 @@ pub(crate) fn writer_loop(
             }
         }
         for command in batch {
-            if let Some(reply) = handle_writer_command(command, &mut conn, artifacts) {
+            if let Some(reply) = handle_writer_command(command, &mut conn, &artifacts).await {
                 break 'writer Some(reply);
             }
         }
@@ -133,73 +122,81 @@ pub(crate) fn writer_loop(
     }
 }
 
-fn handle_writer_command(
+async fn handle_writer_command(
     command: WriterCommand,
-    conn: &mut SqliteConnection,
+    conn: &mut DatabaseSession,
     artifacts: &ArtifactStore,
 ) -> Option<oneshot::Sender<Result<(), StorageError>>> {
     match command {
         WriterCommand::Append { request, reply } => {
-            let _ = reply.send(process_append(conn, artifacts, request));
+            let _ = reply.send(crate::transaction::event::append(conn, artifacts, request).await);
         }
         WriterCommand::StageCandidate { draft, reply } => {
-            let _ = reply.send(process_stage_candidate(conn, artifacts, *draft));
+            let _ = reply.send(crate::transaction::candidate::stage(conn, artifacts, *draft).await);
         }
         WriterCommand::InstallCandidate { request, reply } => {
-            let _ = reply.send(process_install_candidate(conn, artifacts, request));
+            let _ =
+                reply.send(crate::transaction::candidate::install(conn, artifacts, request).await);
         }
         WriterCommand::StartExecution { request, reply } => {
-            let _ = reply.send(process_start_execution(conn, artifacts, request));
+            let _ =
+                reply.send(crate::transaction::execution::start(conn, artifacts, request).await);
         }
         WriterCommand::StartReplayExecution { request, reply } => {
-            let _ = reply.send(process_start_replay_execution(conn, artifacts, &request));
+            let _ = reply
+                .send(crate::transaction::execution::start_replay(conn, artifacts, *request).await);
         }
         WriterCommand::CommitDelta { request, reply } => {
-            let _ = reply.send(process_delta(conn, *request));
+            let _ = reply.send(crate::transaction::execution::commit_delta(conn, *request).await);
         }
         WriterCommand::FinishExecution { request, reply } => {
-            let _ = reply.send(process_finish_execution(conn, request));
+            let _ = reply.send(crate::transaction::execution::finish(conn, request).await);
         }
         WriterCommand::SetExecutionPin { request, reply } => {
-            let _ = reply.send(process_pin_execution(conn, request));
+            let _ = reply.send(crate::transaction::execution::set_pin(conn, request).await);
         }
         WriterCommand::UpdateLibrary { request, reply } => {
-            let _ = reply.send(process_library_update(conn, request));
+            let _ = reply.send(crate::transaction::projection::update_library(conn, request).await);
         }
         WriterCommand::PersistEffect { capture, reply } => {
-            let _ = reply.send(crate::execution_archive::persist_effect_capture(
-                conn, artifacts, capture,
-            ));
+            let _ = reply
+                .send(crate::transaction::archive::persist_effect(conn, artifacts, capture).await);
         }
         WriterCommand::PersistControlTrace { capture, reply } => {
-            let _ = reply.send(crate::execution_archive::persist_control_trace(
-                conn, &capture,
-            ));
+            let _ = reply.send(crate::transaction::archive::persist_control(conn, capture).await);
         }
         WriterCommand::CheckpointSource {
             source_identity,
             created_at_ms,
             reply,
         } => {
-            let _ = reply.send(process_checkpoint_source(
-                conn,
-                artifacts,
-                &source_identity,
-                created_at_ms,
-            ));
+            let _ = reply.send(
+                crate::transaction::maintenance::checkpoint_source(
+                    conn,
+                    artifacts,
+                    &source_identity,
+                    created_at_ms,
+                )
+                .await,
+            );
         }
         WriterCommand::CheckpointLibrary {
             created_at_ms,
             reply,
         } => {
-            let _ = reply.send(process_checkpoint_library(conn, artifacts, created_at_ms));
+            let _ = reply.send(
+                crate::transaction::maintenance::checkpoint_library(conn, artifacts, created_at_ms)
+                    .await,
+            );
         }
         WriterCommand::RunGc {
             policy,
             now_ms,
             reply,
         } => {
-            let _ = reply.send(process_gc(conn, artifacts, policy, now_ms));
+            let _ = reply.send(
+                crate::transaction::maintenance::run_gc(conn, artifacts, policy, now_ms).await,
+            );
         }
         WriterCommand::ClearExecutionArchive {
             execution_id,
@@ -207,16 +204,20 @@ fn handle_writer_command(
             now_ms,
             reply,
         } => {
-            let _ = reply.send(process_clear_execution_archive(
-                conn,
-                artifacts,
-                execution_id,
-                confirm_pinned,
-                now_ms,
-            ));
+            let _ = reply.send(
+                crate::transaction::maintenance::clear_execution_archive(
+                    conn,
+                    artifacts,
+                    execution_id,
+                    confirm_pinned,
+                    now_ms,
+                )
+                .await,
+            );
         }
         WriterCommand::RecoverOrphans(reply) => {
-            let _ = reply.send(recover_orphans_sync(conn, artifacts));
+            let _ =
+                reply.send(crate::transaction::maintenance::recover_orphans(conn, artifacts).await);
         }
         WriterCommand::Shutdown(reply) => return Some(reply),
     }

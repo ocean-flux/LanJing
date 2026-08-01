@@ -1,7 +1,7 @@
 //! `lj-storage` 的公开 DTO 门面。
 //!
 //! 对外类型按配置、错误、candidate、execution 与 projection 职责拆分；本门面维持原有
-//! `lj_storage::types::*` 路径，且不暴露 Diesel 行模型、连接或泛型 Repository。
+//! `lj_storage::types::*` 路径，且不暴露 ORM 行模型、连接或泛型 Repository。
 
 mod artifact;
 mod candidate;
@@ -13,7 +13,8 @@ mod library;
 mod projection;
 mod retention;
 
-pub use artifact::{ArtifactInput, ArtifactKind, SecretArtifactId};
+pub(crate) use artifact::ArtifactKind;
+pub use artifact::{ArtifactInput, SecretArtifactId};
 pub use candidate::{
     CandidateDraft, CandidateSummary, INSTALL_CANDIDATE_SCHEMA_VERSION, InstallCandidateRequest,
     InstalledSource, InstalledSourceRecord, RuntimeCredentialMaterial,
@@ -26,7 +27,7 @@ pub use event::{AppendRequest, CommitReceipt, StoredEvent};
 pub use execution::{
     ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionReplayPin, ExecutionSourceCredentials,
     ExecutionStart, ExecutionStartReceipt, ExecutionStatus, GcState, InstalledSourceSnapshot,
-    ReplayExecutionStart, ReplayUnavailableReason,
+    ReplayExecutionStart,
 };
 pub use library::{
     LibraryEntry, LibraryProgress, LibraryProjection, LibraryProjectionEntry,

@@ -1,36 +1,32 @@
 //! `SQLite` Event Store、规范化投影与 durable artifact archive。
 //!
 //! `EventProjectionStorage` 是 C4 `RuleSystem` 的具体存储模块：所有 event/projection
-//! 写入经过容量固定为 256 的单 writer；同步 Diesel、文件系统与 keyring 工作只在
+//! 写入经过容量固定为 256 的单 writer；文件系统与 keyring 工作只在
 //! blocking lane 执行；读请求使用独立 `SQLite` 连接。旧 Graph Repository 与单 JSON
 //! media graph 已被完全移除。
 
 mod artifact;
 mod candidate_install;
 mod connection;
-mod event_store;
-mod execution;
-mod execution_archive;
+mod database;
 mod keyring_init;
-mod projection_query;
-mod retention_recovery;
-mod schema;
-mod secret_artifact;
+mod mapper;
+mod repository;
 mod storage;
+mod transaction;
 pub mod types;
 mod writer;
 
 pub use storage::EventProjectionStorage;
 pub use types::{
-    AppendRequest, ArtifactInput, ArtifactKind, CandidateDraft, CandidateSummary,
-    CheckpointReceipt, CommitReceipt, DEFAULT_ARCHIVE_TTL_MS, DEFAULT_CANDIDATE_TTL_MS,
-    DeltaCommit, ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionReplayPin,
-    ExecutionSourceCredentials, ExecutionStart, ExecutionStartReceipt, ExecutionStatus, GcReport,
-    GcState, INSTALL_CANDIDATE_SCHEMA_VERSION, InstallCandidateRequest, InstalledSource,
-    InstalledSourceRecord, InstalledSourceSnapshot, LibraryEntry, LibraryProgress,
-    LibraryProjection, LibraryProjectionEntry, LibraryProjectionSnapshot, LibraryUpdate,
-    OrphanRecovery, ProjectionDelta, ProjectionTombstones, RelationTombstone, ReplayExecutionStart,
-    ReplayUnavailableReason, RetentionPolicy, RuntimeCredentialMaterial, SecretArtifactId,
-    SourceProjectionSnapshot, SourceProjectionView, StorageConfig, StorageError, StoredEvent,
-    WRITER_CAPACITY,
+    AppendRequest, ArtifactInput, CandidateDraft, CandidateSummary, CheckpointReceipt,
+    CommitReceipt, DEFAULT_ARCHIVE_TTL_MS, DEFAULT_CANDIDATE_TTL_MS, DeltaCommit, ExecutionFinish,
+    ExecutionPin, ExecutionRecord, ExecutionReplayPin, ExecutionSourceCredentials, ExecutionStart,
+    ExecutionStartReceipt, ExecutionStatus, GcReport, GcState, INSTALL_CANDIDATE_SCHEMA_VERSION,
+    InstallCandidateRequest, InstalledSource, InstalledSourceRecord, InstalledSourceSnapshot,
+    LibraryEntry, LibraryProgress, LibraryProjection, LibraryProjectionEntry,
+    LibraryProjectionSnapshot, LibraryUpdate, OrphanRecovery, ProjectionDelta,
+    ProjectionTombstones, RelationTombstone, ReplayExecutionStart, RetentionPolicy,
+    RuntimeCredentialMaterial, SecretArtifactId, SourceProjectionSnapshot, SourceProjectionView,
+    StorageConfig, StorageError, StoredEvent, WRITER_CAPACITY,
 };

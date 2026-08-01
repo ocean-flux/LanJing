@@ -111,16 +111,17 @@ async fn missing_candidate_runtime_secret_never_downgrades_to_credential_free() 
         .await
         .expect("close writer before ref loss");
 
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
-    sql_query("PRAGMA foreign_keys = OFF")
-        .execute(&mut conn)
+    let conn = open_test_connection(&temp.config.database_path).await;
+    test_statement("PRAGMA foreign_keys = OFF")
+        .execute(&conn)
+        .await
         .expect("disable foreign keys for corruption injection");
-    sql_query(
+    test_statement(
         "DELETE FROM secret_artifact_projection WHERE secret_id = (SELECT runtime_credential_secret_id FROM candidate_projection WHERE candidate_id = ?)",
     )
-    .bind::<diesel::sql_types::Text, _>(candidate_id.to_string())
-    .execute(&mut conn)
+    .bind(candidate_id.to_string())
+    .execute(&conn)
+    .await
     .expect("simulate missing runtime credential projection");
     drop(conn);
 
@@ -206,7 +207,6 @@ async fn failed_event_transaction_leaves_recoverable_artifact_orphan() {
             payload: serde_json::json!({"kind": "expected_conflict"}),
             source_id: None,
             artifacts: vec![ArtifactInput {
-                kind: ArtifactKind::Body,
                 bytes: b"orphan body".to_vec(),
             }],
         })

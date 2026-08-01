@@ -259,8 +259,7 @@ async fn installed_source_listing_rejects_cross_source_profile_ownership() {
         .await
         .expect("close before corrupting source projection");
 
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
+    let conn = open_test_connection(&temp.config.database_path).await;
     let mut foreign_profile = SourceProfile {
         id: MediaResourceId("source:foreign".to_string()),
         title: "foreign source".to_string(),
@@ -272,11 +271,12 @@ async fn installed_source_listing_rejects_cross_source_profile_ownership() {
     };
     foreign_profile.title.push_str(" profile");
     let profile_json = serde_json::to_string(&foreign_profile).expect("serialize foreign profile");
-    sql_query(
+    test_statement(
         "UPDATE source_projection SET profile_json = ? WHERE source_identity = 'source:test'",
     )
-    .bind::<diesel::sql_types::Text, _>(profile_json)
-    .execute(&mut conn)
+    .bind(profile_json)
+    .execute(&conn)
+    .await
     .expect("simulate cross-source profile corruption");
     drop(conn);
 

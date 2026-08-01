@@ -1,9 +1,8 @@
 //! Historical Plan pin、source version、credential 与 snapshot replay 合同。
 
 use super::*;
-#[derive(diesel::QueryableByName)]
+#[derive(FromQueryResult)]
 struct ReplaySecretLocatorRow {
-    #[diesel(sql_type = diesel::sql_types::Text)]
     value: String,
 }
 
@@ -182,12 +181,12 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
         now + 2,
     )
     .await;
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
-    let first_secret_locator = sql_query(
+    let conn = open_test_connection(&temp.config.database_path).await;
+    let first_secret_locator = test_statement(
         "SELECT secret.blob_locator AS value FROM source_versions AS version JOIN secret_artifact_projection AS secret ON secret.secret_id = version.runtime_credential_secret_id WHERE version.source_identity = 'source:test' AND version.source_revision = 1",
     )
-    .get_result::<ReplaySecretLocatorRow>(&mut conn)
+    .get_result::<ReplaySecretLocatorRow>(&conn)
+    .await
     .expect("read v1 random runtime credential locator")
     .value;
     drop(conn);
@@ -274,7 +273,7 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
         .shutdown()
         .await
         .expect("close before key-loss read");
-    wipe_master_key(&temp);
+    wipe_master_key(&temp).await;
     let restarted = temp.open().await;
     assert!(matches!(
         restarted
@@ -329,12 +328,12 @@ async fn replay_pin_survives_restart_and_rejects_tampered_snapshot() {
             execution_id,
             source_identity: "source:test".to_string(),
             event_id: Uuid::new_v4(),
-            trace_id: "trace-backfill-source".to_string(),
+            trace_id: "trace-current-replay-source".to_string(),
             started_at_ms: now + 1,
             correlation_id: None,
         })
         .await
-        .expect("start execution before simulated migration gap");
+        .expect("start execution with current source snapshot");
     let fresh_pin = storage
         .load_execution_replay_pin(execution_id)
         .await
@@ -355,13 +354,14 @@ async fn replay_pin_survives_restart_and_rejects_tampered_snapshot() {
         .await
         .expect("close writer before SQL setup");
 
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
-    let metadata = sql_query(
+    let database_url = temp.config.database_path.clone();
+    let conn = open_test_connection(&database_url).await;
+    let metadata = test_statement(
         "SELECT relative_path, ref_count FROM artifact_metadata WHERE hash = ? AND artifact_kind = 'body'",
     )
-    .bind::<diesel::sql_types::Text, _>(&fresh_pin.package_artifact_hash)
-    .get_result::<ArtifactMetadataTestRow>(&mut conn)
+    .bind(&fresh_pin.package_artifact_hash)
+    .get_result::<ArtifactMetadataTestRow>(&conn)
+    .await
     .expect("source package metadata retained before restart");
     assert_eq!(
         metadata.relative_path,
@@ -387,11 +387,12 @@ async fn replay_pin_survives_restart_and_rejects_tampered_snapshot() {
     assert_eq!(pin.grant, PolicyCapabilities::default());
     assert_eq!(pin.base_url, "https://example.test");
 
-    let mut conn = SqliteConnection::establish(&database_url).expect("open SQLite for tamper test");
-    sql_query(
+    let conn = open_test_connection(&database_url).await;
+    test_statement(
         "UPDATE source_versions SET base_url = 'https://tampered.example.test' WHERE source_identity = 'source:test' AND version = 'v1'",
     )
-    .execute(&mut conn)
+    .execute(&conn)
+    .await
     .expect("tamper source snapshot base URL");
     drop(conn);
     let tampered = storage.load_execution_replay_pin(execution_id).await;

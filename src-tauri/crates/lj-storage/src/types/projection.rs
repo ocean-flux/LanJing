@@ -1,7 +1,7 @@
 //! 规范化媒体投影、checkpoint 与保留策略 DTO。
 //!
 //! projection 的 upsert/tombstone 与事件在同一 `SQLite` transaction 中提交；公开读取 DTO
-//! 只包含领域状态与 BLAKE3 引用，不暴露 Diesel 行或 secret plaintext。
+//! 只包含领域状态与 BLAKE3 引用，不暴露 ORM 行或 secret plaintext。
 
 use lj_media::{MediaGraphDelta, MediaResourceId, SourceProfile};
 use serde::{Deserialize, Serialize};

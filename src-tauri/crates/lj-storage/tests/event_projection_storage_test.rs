@@ -1,7 +1,7 @@
 //! Event Store、规范化投影、writer 与 durable archive 的真实 `SQLite` 合同测试。
 //!
 //! 每个测试都创建真实临时 `SQLite` 文件与 artifact 目录；不使用 `:memory:` 或 mock
-//! Diesel。keyring 仅使用 keyring-core 官方 mock store，以便在 CI 中
+//! ORM mock。keyring 仅使用 keyring-core 官方 mock store，以便在 CI 中
 //! 可重复验证主密钥丢失后的 explicit replay failure。
 
 use std::collections::{BTreeMap, HashMap};
@@ -9,8 +9,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
 
-use diesel::prelude::*;
-use diesel::sql_query;
 use keyring_core::{Entry, mock, set_default_store};
 use lj_media::{
     MediaAsset, MediaAssetKind, MediaAssetLocator, MediaGraphDelta, MediaItem, MediaKind,
@@ -30,13 +28,85 @@ use lj_runtime::{
     HttpResponse, ReplayCompletionLookup, effect_bytes_hash, effect_output_hash,
 };
 use lj_storage::{
-    AppendRequest, ArtifactInput, ArtifactKind, CandidateDraft, DEFAULT_CANDIDATE_TTL_MS,
-    DeltaCommit, EventProjectionStorage, ExecutionFinish, ExecutionPin, ExecutionStart,
-    ExecutionStatus, GcState, InstallCandidateRequest, LibraryEntry, LibraryProgress,
-    LibraryUpdate, ProjectionDelta, ProjectionTombstones, ReplayExecutionStart, RetentionPolicy,
+    AppendRequest, ArtifactInput, CandidateDraft, DEFAULT_CANDIDATE_TTL_MS, DeltaCommit,
+    EventProjectionStorage, ExecutionFinish, ExecutionPin, ExecutionStart, ExecutionStatus,
+    GcState, InstallCandidateRequest, LibraryEntry, LibraryProgress, LibraryUpdate,
+    ProjectionDelta, ProjectionTombstones, ReplayExecutionStart, RetentionPolicy,
     RuntimeCredentialMaterial, StorageConfig, StorageError, WRITER_CAPACITY,
 };
+use sea_orm::{
+    ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, FromQueryResult, Statement,
+    Value,
+};
 use uuid::Uuid;
+
+struct TestStatement {
+    sql: String,
+    values: Vec<Value>,
+}
+
+fn test_statement(sql: impl Into<String>) -> TestStatement {
+    TestStatement {
+        sql: sql.into(),
+        values: Vec::new(),
+    }
+}
+
+impl TestStatement {
+    fn bind(mut self, value: impl Into<Value>) -> Self {
+        self.values.push(value.into());
+        self
+    }
+
+    async fn execute(self, connection: &DatabaseConnection) -> Result<(), sea_orm::DbErr> {
+        connection
+            .execute_raw(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                self.sql,
+                self.values,
+            ))
+            .await
+            .map(|_| ())
+    }
+
+    async fn load<T: FromQueryResult>(
+        self,
+        connection: &DatabaseConnection,
+    ) -> Result<Vec<T>, sea_orm::DbErr> {
+        connection
+            .query_all_raw(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                self.sql,
+                self.values,
+            ))
+            .await?
+            .iter()
+            .map(|row| T::from_query_result(row, ""))
+            .collect()
+    }
+
+    async fn get_result<T: FromQueryResult>(
+        self,
+        connection: &DatabaseConnection,
+    ) -> Result<T, sea_orm::DbErr> {
+        connection
+            .query_one_raw(Statement::from_sql_and_values(
+                DatabaseBackend::Sqlite,
+                self.sql,
+                self.values,
+            ))
+            .await?
+            .ok_or_else(|| sea_orm::DbErr::RecordNotFound("test query 未返回记录".to_string()))
+            .and_then(|row| T::from_query_result(&row, ""))
+    }
+}
+
+async fn open_test_connection(path: &Path) -> DatabaseConnection {
+    let normalized = path.to_string_lossy().replace('\\', "/");
+    Database::connect(format!("sqlite://{normalized}?mode=rw"))
+        .await
+        .expect("open real SQLite database")
+}
 
 fn init_mock_keyring() {
     static INIT: Once = Once::new();
@@ -46,17 +116,16 @@ fn init_mock_keyring() {
 }
 
 /// keyring-core mock 跨 Entry 持久；模拟 OS secure-store key 丢失时需显式删除。
-fn wipe_master_key(temp: &TempStore) {
-    #[derive(diesel::QueryableByName)]
+async fn wipe_master_key(temp: &TempStore) {
+    #[derive(FromQueryResult)]
     struct VaultKeyIdRow {
-        #[diesel(sql_type = diesel::sql_types::Text)]
         value: String,
     }
 
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
-    let keys = sql_query("SELECT key_id AS value FROM vault_key_metadata")
-        .load::<VaultKeyIdRow>(&mut conn)
+    let conn = open_test_connection(&temp.config.database_path).await;
+    let keys = test_statement("SELECT key_id AS value FROM vault_key_metadata")
+        .load::<VaultKeyIdRow>(&conn)
+        .await
         .expect("read vault key metadata");
     assert!(!keys.is_empty(), "vault key metadata must exist");
     for key in keys {
@@ -96,21 +165,16 @@ impl Drop for TempStore {
     }
 }
 
-#[derive(diesel::QueryableByName)]
+#[derive(FromQueryResult)]
 struct ArtifactMetadataTestRow {
-    #[diesel(sql_type = diesel::sql_types::Text)]
     relative_path: String,
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
     ref_count: i64,
 }
 
-#[derive(diesel::QueryableByName)]
+#[derive(FromQueryResult)]
 struct ArtifactSecurityTestRow {
-    #[diesel(sql_type = diesel::sql_types::Text)]
     key_id: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
     blob_locator: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
     ciphertext_hash: String,
 }
 

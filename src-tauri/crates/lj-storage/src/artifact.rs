@@ -17,9 +17,7 @@ use uuid::Uuid;
 
 use crate::types::{ArtifactKind, OrphanRecovery, SecretArtifactId, StorageError};
 
-const MASTER_KEY_ACCOUNT: &str = "master-key-v1";
 const VAULT_KEY_ACCOUNT_PREFIX: &str = "vault-key-v1/";
-const LEGACY_SECRET_FILE_VERSION: u8 = 1;
 const VAULT_SECRET_FILE_VERSION: u8 = 2;
 const AES_GCM_NONCE_LEN: usize = 12;
 
@@ -29,7 +27,6 @@ pub(crate) struct PendingArtifact {
     pub(crate) hash: String,
     pub(crate) kind: ArtifactKind,
     pub(crate) codec: String,
-    pub(crate) encryption: Option<String>,
     pub(crate) relative_path: String,
     pub(crate) stored_bytes: u64,
 }
@@ -50,36 +47,26 @@ pub(crate) struct PendingSecretArtifact {
 pub(crate) struct ArtifactStore {
     root: PathBuf,
     keyring_service: Arc<str>,
-    legacy_master_key_entry: Arc<Entry>,
 }
 
 impl ArtifactStore {
-    /// 创建 artifact 根目录描述，并固定 legacy keyring credential 供一次性迁移读取。
+    /// 创建 artifact 根目录描述，并固定 current vault keyring service。
     pub(crate) fn new(root: PathBuf, keyring_service: &str) -> Result<Self, StorageError> {
         crate::keyring_init::ensure_default_keyring_store()?;
-        let legacy_master_key_entry = Entry::new(keyring_service, MASTER_KEY_ACCOUNT)
-            .map_err(|error| map_keyring_setup_error(&error))?;
         Ok(Self {
             root,
             keyring_service: Arc::from(keyring_service),
-            legacy_master_key_entry: Arc::new(legacy_master_key_entry),
         })
     }
 
     /// 将非 secret 逻辑内容写成 zstd body artifact。
     ///
-    /// legacy `ArtifactInput` 不再允许 secret；所有新敏感路径必须使用随机
-    /// [`SecretArtifactId`] 与 [`Self::write_secret`]。
+    /// 所有敏感路径必须使用随机 [`SecretArtifactId`] 与 [`Self::write_secret`]。
     pub(crate) fn write(
         &self,
         kind: ArtifactKind,
         logical_bytes: &[u8],
     ) -> Result<PendingArtifact, StorageError> {
-        if kind != ArtifactKind::Body {
-            return Err(StorageError::InvalidInput(
-                "legacy artifact API 不接受 secret".to_string(),
-            ));
-        }
         let hash = blake3::hash(logical_bytes).to_hex().to_string();
         let stored = zstd::stream::encode_all(Cursor::new(logical_bytes), 3).map_err(file_error)?;
         let relative = Self::relative_path(&hash, "zst")?;
@@ -89,7 +76,6 @@ impl ArtifactStore {
             hash,
             kind,
             codec: "zstd".to_string(),
-            encryption: None,
             relative_path: relative.to_string_lossy().replace('\\', "/"),
             stored_bytes,
         })
@@ -225,27 +211,6 @@ impl ArtifactStore {
         Ok(())
     }
 
-    /// 读取历史 deterministic Secret Artifact，仅供 0007 启动迁移。
-    pub(crate) fn read_legacy_secret(
-        &self,
-        hash: &str,
-        relative_path: &str,
-    ) -> Result<Vec<u8>, StorageError> {
-        let encrypted = self.read_file(relative_path, hash)?;
-        if encrypted.len() <= 1 + AES_GCM_NONCE_LEN || encrypted[0] != LEGACY_SECRET_FILE_VERSION {
-            return Err(StorageError::ArtifactCorrupt);
-        }
-        let key = self.legacy_master_key(false)?;
-        let cipher = Aes256Gcm::new_from_slice(&key).map_err(|_| StorageError::KeyLost)?;
-        let nonce = Nonce::try_from(&encrypted[1..=AES_GCM_NONCE_LEN])
-            .map_err(|_| StorageError::ArtifactCorrupt)?;
-        let logical_bytes = cipher
-            .decrypt(&nonce, &encrypted[1 + AES_GCM_NONCE_LEN..])
-            .map_err(|_| StorageError::ArtifactCorrupt)?;
-        verify_logical_hash(&logical_bytes, hash).map_err(|_| StorageError::ArtifactCorrupt)?;
-        Ok(logical_bytes)
-    }
-
     /// 从根目录删除 temp 或没有 `SQLite` metadata 的 orphan 文件。
     pub(crate) fn recover_orphans(
         &self,
@@ -290,22 +255,6 @@ impl ArtifactStore {
             &format!("{VAULT_KEY_ACCOUNT_PREFIX}{key_id}"),
         )
         .map_err(|error| map_keyring_setup_error(&error))
-    }
-
-    fn legacy_master_key(&self, create: bool) -> Result<Vec<u8>, StorageError> {
-        match self.legacy_master_key_entry.get_password() {
-            Ok(encoded) => decode_key(&encoded),
-            Err(KeyringError::NoEntry) if create => {
-                let key = Key::<Aes256Gcm>::generate();
-                let encoded = encode_hex(&key);
-                self.legacy_master_key_entry
-                    .set_password(&encoded)
-                    .map_err(|_| StorageError::Keyring)?;
-                decode_key(&encoded)
-            }
-            Err(KeyringError::NoEntry) => Err(StorageError::MasterKeyUnavailable),
-            Err(_) => Err(StorageError::Keyring),
-        }
     }
 
     fn relative_path(hash: &str, extension: &str) -> Result<PathBuf, StorageError> {
@@ -426,12 +375,12 @@ fn encode_hex(bytes: &[u8]) -> String {
 
 fn decode_key(encoded: &str) -> Result<Vec<u8>, StorageError> {
     if encoded.len() != 64 || !encoded.as_bytes().iter().all(u8::is_ascii_hexdigit) {
-        return Err(StorageError::MasterKeyUnavailable);
+        return Err(StorageError::KeyLost);
     }
     let mut key = Vec::with_capacity(32);
     for chunk in encoded.as_bytes().chunks_exact(2) {
-        let text = std::str::from_utf8(chunk).map_err(|_| StorageError::MasterKeyUnavailable)?;
-        let byte = u8::from_str_radix(text, 16).map_err(|_| StorageError::MasterKeyUnavailable)?;
+        let text = std::str::from_utf8(chunk).map_err(|_| StorageError::KeyLost)?;
+        let byte = u8::from_str_radix(text, 16).map_err(|_| StorageError::KeyLost)?;
         key.push(byte);
     }
     Ok(key)

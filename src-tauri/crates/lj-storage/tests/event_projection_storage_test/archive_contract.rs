@@ -47,14 +47,14 @@ fn http_capture(
     .expect("valid invocation capture fixture")
 }
 
-fn tamper_control_trace(temp: &TempStore, execution_id: Uuid) {
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open trace SQLite fixture");
-    sql_query(
+async fn tamper_control_trace(temp: &TempStore, execution_id: Uuid) {
+    let conn = open_test_connection(&temp.config.database_path).await;
+    test_statement(
         "UPDATE control_traces SET trace_json = '{\"kind\":\"loop\",\"iteration_count\":1}' WHERE execution_id = ? AND invocation_ordinal = 1",
     )
-    .bind::<diesel::sql_types::Text, _>(execution_id.to_string())
-    .execute(&mut conn)
+    .bind(execution_id.to_string())
+    .execute(&conn)
+    .await
     .expect("tamper control trace without matching hash");
 }
 
@@ -285,7 +285,7 @@ async fn effect_archive_is_durable_redacted_and_explicit_when_master_key_is_lost
     }));
 
     storage.shutdown().await.expect("writer shutdown");
-    wipe_master_key(&temp);
+    wipe_master_key(&temp).await;
     let restarted = temp.open().await;
     assert!(
         EffectArchive::load_replay(
@@ -464,7 +464,7 @@ async fn invocation_ledger_replays_same_node_iterations_and_control_trace_exactl
         Err(error) if error.code == EffectArchiveErrorCode::Integrity
     ));
     storage.shutdown().await.expect("close before trace tamper");
-    tamper_control_trace(&temp, execution_id);
+    tamper_control_trace(&temp, execution_id).await;
     let storage = temp.open().await;
     let tampered_trace = EffectArchive::load_control_trace(
         &storage,
@@ -485,7 +485,7 @@ async fn invocation_ledger_replays_same_node_iterations_and_control_trace_exactl
 }
 
 #[tokio::test]
-async fn invocation_ledger_tamper_and_legacy_rows_are_typed_rejections() {
+async fn invocation_ledger_tamper_is_a_typed_rejection() {
     init_mock_keyring();
     let temp = TempStore::new("invocation-ledger-tamper");
     let storage = temp.open().await;
@@ -511,13 +511,13 @@ async fn invocation_ledger_tamper_and_legacy_rows_are_typed_rejections() {
         .expect("persist current capture");
     storage.shutdown().await.expect("close before tamper");
 
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open SQLite for tamper");
-    sql_query(
+    let conn = open_test_connection(&temp.config.database_path).await;
+    test_statement(
         "UPDATE execution_invocation_ledger SET payload_id = 'tampered-effect-id' WHERE execution_id = ?",
     )
-    .bind::<diesel::sql_types::Text, _>(execution_id.to_string())
-    .execute(&mut conn)
+    .bind(execution_id.to_string())
+    .execute(&conn)
+    .await
     .expect("tamper invocation ledger payload ownership");
     drop(conn);
     let storage = temp.open().await;
@@ -535,71 +535,6 @@ async fn invocation_ledger_tamper_and_legacy_rows_are_typed_rejections() {
         Err(error) if error.code == EffectArchiveErrorCode::Integrity
     ));
     storage.shutdown().await.expect("close tampered storage");
-
-    let legacy_temp = TempStore::new("legacy-invocation-row");
-    let legacy_storage = legacy_temp.open().await;
-    install_source(&legacy_storage, now + 10).await;
-    let legacy_execution_id = Uuid::new_v4();
-    legacy_storage
-        .start_execution(ExecutionStart {
-            execution_id: legacy_execution_id,
-            source_identity: "source:test".to_string(),
-            event_id: Uuid::new_v4(),
-            trace_id: "trace-legacy-invocation".to_string(),
-            started_at_ms: now + 11,
-            correlation_id: None,
-        })
-        .await
-        .expect("legacy execution start");
-    let legacy_node_id = Uuid::new_v4();
-    let legacy_path = invocation(legacy_node_id, 1);
-    EffectArchive::persist_durable(
-        &legacy_storage,
-        http_capture(
-            legacy_execution_id,
-            Uuid::new_v4(),
-            legacy_path.clone(),
-            "legacy-row",
-        ),
-    )
-    .await
-    .expect("persist row before simulating legacy schema");
-    legacy_storage
-        .shutdown()
-        .await
-        .expect("close before legacy mutation");
-    let legacy_database_url = legacy_temp
-        .config
-        .database_path
-        .to_string_lossy()
-        .into_owned();
-    let mut conn =
-        SqliteConnection::establish(&legacy_database_url).expect("open legacy SQLite fixture");
-    sql_query(
-        "UPDATE effect_captures SET invocation_path_json = NULL, invocation_ordinal = NULL WHERE execution_id = ?",
-    )
-    .bind::<diesel::sql_types::Text, _>(legacy_execution_id.to_string())
-    .execute(&mut conn)
-    .expect("simulate pre-invocation archive row");
-    drop(conn);
-    let legacy_storage = legacy_temp.open().await;
-    let legacy = EffectArchive::load_replay(
-        &legacy_storage,
-        EffectReplayLookup {
-            archived_execution_id: legacy_execution_id,
-            invocation_path: legacy_path,
-            kind: EffectKind::Http,
-        },
-    )
-    .await;
-    assert!(matches!(
-        legacy,
-        Err(error) if error.code == EffectArchiveErrorCode::LegacyRuleContractUnsupported
-    ));
-    legacy_storage
-        .shutdown()
-        .await
-        .expect("close legacy storage");
 }
 
 #[tokio::test]
@@ -717,14 +652,14 @@ async fn live_http_request_body_is_encrypted_and_events_only_carry_its_ref() {
         .shutdown()
         .await
         .expect("close request body storage");
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
-    let artifact = sql_query(
+    let conn = open_test_connection(&temp.config.database_path).await;
+    let artifact = test_statement(
         "SELECT secret.key_id, secret.blob_locator, secret.ciphertext_hash FROM effect_captures AS effect JOIN secret_artifact_projection AS secret ON secret.secret_id = effect.request_body_secret_id WHERE effect.execution_id = ? AND effect.effect_id = ?",
     )
-    .bind::<diesel::sql_types::Text, _>(execution_id.to_string())
-    .bind::<diesel::sql_types::Text, _>(effect_id.to_string())
-    .get_result::<ArtifactSecurityTestRow>(&mut conn)
+    .bind(execution_id.to_string())
+    .bind(effect_id.to_string())
+    .get_result::<ArtifactSecurityTestRow>(&conn)
+    .await
     .expect("request body random secret artifact metadata");
     assert!(Uuid::parse_str(&artifact.key_id).is_ok());
     assert!(artifact.blob_locator.starts_with("vault/"));
@@ -918,14 +853,14 @@ async fn effect_witness_artifact_tampering_and_loss_block_replay() {
         .await
         .expect("close writer before file tamper");
 
-    let database_url = temp.config.database_path.to_string_lossy().into_owned();
-    let mut conn = SqliteConnection::establish(&database_url).expect("open real SQLite database");
-    let witness_artifact = sql_query(
+    let conn = open_test_connection(&temp.config.database_path).await;
+    let witness_artifact = test_statement(
         "SELECT artifact_metadata.relative_path, artifact_metadata.ref_count FROM effect_captures INNER JOIN artifact_metadata ON artifact_metadata.hash = effect_captures.witness_artifact_hash AND artifact_metadata.artifact_kind = 'body' WHERE effect_captures.execution_id = ? AND effect_captures.effect_id = ?",
     )
-    .bind::<diesel::sql_types::Text, _>(execution_id.to_string())
-    .bind::<diesel::sql_types::Text, _>(effect_id.to_string())
-    .get_result::<ArtifactMetadataTestRow>(&mut conn)
+    .bind(execution_id.to_string())
+    .bind(effect_id.to_string())
+    .get_result::<ArtifactMetadataTestRow>(&conn)
+    .await
     .expect("find witness artifact metadata");
     drop(conn);
     let witness_path = temp
@@ -1141,7 +1076,6 @@ async fn append_event_retries_require_matching_artifact_refs_and_integrity() {
         payload: serde_json::json!({"kind": "artifact-idempotency"}),
         source_id: None,
         artifacts: vec![ArtifactInput {
-            kind: ArtifactKind::Body,
             bytes: bytes.to_vec(),
         }],
     };

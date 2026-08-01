@@ -6,6 +6,9 @@
 /// 存储层返回的安全失败类别。
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
+    /// 数据库不是唯一受支持的 current schema；开发环境必须删除后重建。
+    #[error("数据库 schema 非 current；请删除数据库后重建")]
+    CurrentSchemaRequired,
     /// 调用方使用了过期的 stream revision。
     #[error("事件流版本冲突：{stream_id} 期望 {expected}，实际为 {actual}")]
     VersionConflict {
@@ -57,15 +60,6 @@ pub enum StorageError {
         /// artifact 声明的未知 wire 版本。
         version: u32,
     },
-    /// 已安装规则、package 或 Plan 仍是 current schema 下的历史结构签名。
-    #[error("历史规则合同不受支持: {contract:?}")]
-    LegacyRuleContractUnsupported {
-        /// 仍保留但不可解释的合同种类。
-        contract: lj_rule_model::SchemaContract,
-    },
-    /// effect archive 缺少 current invocation path/ordinal。
-    #[error("历史 effect invocation archive 不受支持")]
-    LegacyInvocationArchiveUnsupported,
     /// 随机 secret artifact 与请求的 owner 不匹配。
     #[error("secret artifact ownership 不匹配")]
     SecretOwnershipMismatch,
@@ -78,9 +72,6 @@ pub enum StorageError {
     /// artifact 的元数据或文件不存在。
     #[error("artifact 不可用：{0}")]
     ArtifactUnavailable(String),
-    /// secret 所需的安装级主密钥不可用。
-    #[error("secret artifact 主密钥不可用，归档不能 replay")]
-    MasterKeyUnavailable,
     /// secret artifact 未通过认证或无法解密。
     #[error("secret artifact 无法认证或解密，归档不能 replay")]
     SecretUnavailable,
