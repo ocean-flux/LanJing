@@ -39,6 +39,7 @@ Thumbs.db
 *.sw?
 .VSCodeCounter
 .vscode/
+.zed/
 .ruff_cache/
 
 # Shared build / cache outputs
