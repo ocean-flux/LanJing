@@ -41,7 +41,7 @@
 </script>
 
 <header
-  class="glass-chrome relative z-[var(--layer-chrome)] flex h-[var(--density-control-lg)] shrink-0 items-stretch border-b border-hairline text-ink"
+  class="glass-chrome relative z-(--layer-chrome) flex h-(--density-control-lg) shrink-0 items-stretch border-b border-hairline text-ink"
   style:padding-left={trafficLightInset}
   aria-label={m.titlebar_label({ context: contextLabel })}
   data-native-window-controls={nativeControlMode}
@@ -50,7 +50,7 @@
   data-macos-traffic-light-safe={trafficLightInset !== '0px' ? 'true' : undefined}
 >
   {#if compact}
-    <div class="flex min-w-0 flex-1 items-center px-[var(--page-gutter)]">
+    <div class="flex min-w-0 flex-1 items-center px-(--page-gutter)">
       <span class="truncate text-sm font-semibold">{contextLabel}</span>
     </div>
   {:else}

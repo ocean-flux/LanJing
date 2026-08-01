@@ -81,7 +81,7 @@
 <div
   {@attach syncReducedTransparency}
   class={[
-    'app-canvas grid h-[100dvh] min-w-0 overflow-hidden text-ink',
+    'app-canvas grid h-dvh min-w-0 overflow-hidden text-ink',
     readerMode ? 'grid-rows-[minmax(0,1fr)]' : 'grid-rows-[auto_minmax(0,1fr)_auto]',
   ]}
   data-testid="mode-shell"
@@ -103,7 +103,7 @@
 >
   <a
     href="#main-content"
-    class="fixed top-[calc(var(--safe-area-top)+0.5rem)] left-[calc(var(--safe-area-left)+0.5rem)] z-[var(--layer-overlay)] -m-px h-px w-px overflow-hidden rounded-md border-0 border-hairline-strong bg-surface-1 p-0 whitespace-nowrap text-ink outline-none [clip-path:inset(50%)] focus-visible:m-0 focus-visible:inline-flex focus-visible:h-[var(--density-control-md)] focus-visible:w-auto focus-visible:items-center focus-visible:overflow-visible focus-visible:border focus-visible:px-3 focus-visible:text-sm focus-visible:font-semibold focus-visible:shadow-[var(--focus-ring)] focus-visible:[clip-path:none]"
+    class="fixed top-[calc(var(--safe-area-top)+0.5rem)] left-[calc(var(--safe-area-left)+0.5rem)] z-(--layer-overlay) -m-px h-px w-px overflow-hidden rounded-md border-0 border-hairline-strong bg-surface-1 p-0 whitespace-nowrap text-ink outline-none [clip-path:inset(50%)] focus-visible:m-0 focus-visible:inline-flex focus-visible:h-(--density-control-md) focus-visible:w-auto focus-visible:items-center focus-visible:overflow-visible focus-visible:border focus-visible:px-3 focus-visible:text-sm focus-visible:font-semibold focus-visible:shadow-(--focus-ring) focus-visible:[clip-path:none]"
     onclick={focusMainContent}
     data-skip-link
   >
@@ -124,9 +124,7 @@
     tabindex="-1"
     class={[
       'app-scroll-region min-h-0 min-w-0 overflow-x-hidden overflow-y-auto scroll-smooth motion-reduce:scroll-auto',
-      readerMode
-        ? 'bg-transparent p-0'
-        : 'bg-transparent px-[var(--page-gutter)] py-[var(--section-gap)]',
+      readerMode ? 'bg-transparent p-0' : 'bg-transparent px-(--page-gutter) py-(--section-gap)',
     ]}
     data-app-scroll-region
   >
