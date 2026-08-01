@@ -17,6 +17,7 @@ const sampleMedia = (id: string, title: string): MediaItem => ({
   creators: [],
   description: null,
   cover_asset_id: null,
+  metadata: {},
   completeness: 'complete',
   updated_at: null,
 });

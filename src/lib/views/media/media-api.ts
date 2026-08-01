@@ -22,7 +22,7 @@ export interface MediaItem {
   creators: string[];
   description: string | null;
   cover_asset_id: string | null;
-  metadata?: Record<string, unknown>;
+  metadata: Record<string, unknown>;
   completeness: string;
   updated_at: string | null;
 }
@@ -33,7 +33,7 @@ export interface MediaUnit {
   item_id: string;
   title: string;
   position: number | null;
-  metadata?: Record<string, unknown>;
+  metadata: Record<string, unknown>;
   completeness: string;
 }
 
@@ -43,7 +43,7 @@ export interface MediaAsset {
   unit_id: string | null;
   asset_kind: string;
   locator: MediaAssetLocator;
-  metadata?: Record<string, unknown>;
+  metadata: Record<string, unknown>;
   completeness: string;
 }
 

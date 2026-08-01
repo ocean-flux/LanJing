@@ -5,6 +5,7 @@ const invoke = vi.hoisted(() => vi.fn());
 vi.mock('@tauri-apps/api/core', () => ({ invoke }));
 
 import { getMediaItem, getMediaItems, listMediaAssets, listMediaUnits } from './media-api';
+import type { MediaAsset, MediaItem } from './media-api';
 
 describe('media projection RuleSystem wire', () => {
   beforeEach(() => {
@@ -21,9 +22,10 @@ describe('media projection RuleSystem wire', () => {
       creators: [],
       description: null,
       cover_asset_id: null,
+      metadata: {},
       completeness: 'complete',
       updated_at: null,
-    };
+    } satisfies MediaItem;
     invoke.mockResolvedValue(item);
 
     await expect(getMediaItem('item:one')).resolves.toBe(item);
@@ -58,17 +60,17 @@ describe('media projection RuleSystem wire', () => {
   });
 
   it('lists assets and omits limit when caller uses default', async () => {
+    const asset = {
+      id: 'asset:1',
+      source_id: 'source:test',
+      unit_id: 'unit:1',
+      asset_kind: 'text',
+      locator: { type: 'text', value: '正文' },
+      metadata: {},
+      completeness: 'complete',
+    } satisfies MediaAsset;
     const page = {
-      items: [
-        {
-          id: 'asset:1',
-          source_id: 'source:test',
-          unit_id: 'unit:1',
-          asset_kind: 'text',
-          locator: { type: 'text', value: '正文' },
-          completeness: 'complete',
-        },
-      ],
+      items: [asset],
       offset: 0,
       limit: 50,
       has_more: false,
