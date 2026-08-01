@@ -11,13 +11,13 @@
     setDarkThemeId,
     setLightThemeId,
     setMode,
-    type ThemeId,
+    type AppearancePackId,
     type ThemeMode,
   } from '$lib/stores/theme.svelte';
 
   let mode = $state<ThemeMode>(getMode());
-  let lightThemeId = $state<ThemeId>(getLightThemeId());
-  let darkThemeId = $state<ThemeId>(getDarkThemeId());
+  let lightThemeId = $state<AppearancePackId>(getLightThemeId());
+  let darkThemeId = $state<AppearancePackId>(getDarkThemeId());
   let locale = $state<Locale>(
     (locales as readonly string[]).includes(getLocale()) ? (getLocale() as Locale) : 'zh-CN',
   );
@@ -27,12 +27,12 @@
     setMode(next);
   }
 
-  function chooseLightTheme(next: ThemeId): void {
+  function chooseLightTheme(next: AppearancePackId): void {
     lightThemeId = next;
     setLightThemeId(next);
   }
 
-  function chooseDarkTheme(next: ThemeId): void {
+  function chooseDarkTheme(next: AppearancePackId): void {
     darkThemeId = next;
     setDarkThemeId(next);
   }
@@ -81,7 +81,7 @@
 
   const lightThemeOptions = $derived(
     listThemesForFace('light').map((def) => ({
-      id: def.id as ThemeId,
+      id: def.id as AppearancePackId,
       label: () =>
         def.id === 'porcelain-day'
           ? m.settings_theme_porcelain_day()
@@ -91,7 +91,7 @@
   );
   const darkThemeOptions = $derived(
     listThemesForFace('dark').map((def) => ({
-      id: def.id as ThemeId,
+      id: def.id as AppearancePackId,
       label: () =>
         def.id === 'obsidian-void'
           ? m.settings_theme_obsidian_void()

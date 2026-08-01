@@ -2,7 +2,13 @@
   import { beforeNavigate } from '$app/navigation';
   import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { getAppearancePack, getMode } from '$lib/stores/theme.svelte';
+  import {
+    getCurrentTheme,
+    getDarkThemeId,
+    getLightThemeId,
+    getMode,
+    resolveThemeIdForFace,
+  } from '$lib/stores/theme.svelte';
   import { resolveRuntimePlatform, type RuntimePlatform } from './platform-runtime';
   import { setPlatformContext } from './platform-context.svelte';
   import AppShell from './AppShell.svelte';
@@ -123,7 +129,11 @@
       platform,
       theme: {
         mode: getMode(),
-        appearancePack: getAppearancePack().id,
+        appearancePack: resolveThemeIdForFace(
+          getCurrentTheme(),
+          getLightThemeId(),
+          getDarkThemeId(),
+        ),
         reducedMotion,
         reducedTransparency,
       },

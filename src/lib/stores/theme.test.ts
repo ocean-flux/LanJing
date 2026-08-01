@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  DEFAULT_APPEARANCE_PACK_ID,
   DEFAULT_MATERIAL_TRANSPARENCY,
   DEFAULT_TEXT_READER_THEME,
   WEB_PREFERENCES_STORAGE_KEY,
-  getAppearancePack,
   getCurrentTheme,
   getDarkThemeId,
   getLightThemeId,
@@ -12,7 +10,6 @@ import {
   getMode,
   getTextReaderTheme,
   resolveThemeIdForFace,
-  setAppearancePack,
   setDarkThemeId,
   setLightThemeId,
   setMaterialTransparency,
@@ -21,7 +18,6 @@ import {
   syncMaterialTransparencyForA11y,
   toggle,
   updateTextReaderTheme,
-  type AppearancePack,
 } from './theme.svelte';
 import {
   BUILTIN_APPEARANCE_PACK_IDS,
@@ -70,7 +66,6 @@ vi.mock('@tauri-store/svelte', () => ({ RuneStore: tauriBoundary.MockRuneStore }
 
 function readWebPrefs(): {
   mode?: string;
-  appearancePackId?: string;
   lightThemeId?: string;
   darkThemeId?: string;
 } {
@@ -79,7 +74,6 @@ function readWebPrefs(): {
   try {
     return JSON.parse(raw) as {
       mode?: string;
-      appearancePackId?: string;
       lightThemeId?: string;
       darkThemeId?: string;
     };
@@ -196,16 +190,19 @@ describe('theme preferences', () => {
   });
 
   it('marks default L2 appearance pack on the document element', () => {
-    expect(DEFAULT_APPEARANCE_PACK_ID).toBe('obsidian-void');
     // system 默认随环境；强制 dark 断言暗轨默认
     setMode('dark');
-    expect(getAppearancePack().id).toBe('obsidian-void');
+    expect(resolveThemeIdForFace(getCurrentTheme(), getLightThemeId(), getDarkThemeId())).toBe(
+      'obsidian-void',
+    );
     expect(document.documentElement.dataset.appearancePack).toBe('obsidian-void');
 
-    setAppearancePack({ id: 'obsidian-void' });
+    setDarkThemeId('graphite-atelier');
     setMode('dark');
-    expect(getAppearancePack().id).toBe('obsidian-void');
-    expect(document.documentElement.dataset.appearancePack).toBe('obsidian-void');
+    expect(resolveThemeIdForFace(getCurrentTheme(), getLightThemeId(), getDarkThemeId())).toBe(
+      'graphite-atelier',
+    );
+    expect(document.documentElement.dataset.appearancePack).toBe('graphite-atelier');
   });
 
   it('keeps primary action text at AA contrast across every theme face', () => {
@@ -239,12 +236,16 @@ describe('theme preferences', () => {
     expect(getDarkThemeId()).toBe('graphite-atelier');
 
     setMode('light');
-    expect(getAppearancePack().id).toBe('porcelain-day');
+    expect(resolveThemeIdForFace(getCurrentTheme(), getLightThemeId(), getDarkThemeId())).toBe(
+      'porcelain-day',
+    );
     expect(document.documentElement.dataset.appearancePack).toBe('porcelain-day');
     expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#0f6e7a');
 
     setMode('dark');
-    expect(getAppearancePack().id).toBe('graphite-atelier');
+    expect(resolveThemeIdForFace(getCurrentTheme(), getLightThemeId(), getDarkThemeId())).toBe(
+      'graphite-atelier',
+    );
     expect(document.documentElement.dataset.appearancePack).toBe('graphite-atelier');
     // 石墨工坊使用中性冷青 lantern，不引入紫/靛色相
     expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#79a6ab');
@@ -263,19 +264,13 @@ describe('theme preferences', () => {
     );
   });
 
-  it('migrates a legacy localStorage pack to both face-specific tracks', async () => {
-    localStorage.removeItem(WEB_PREFERENCES_STORAGE_KEY);
-    localStorage.setItem('appearance-pack', 'cold-cinnabar');
-    // 该断言覆盖模块初始化边界，必须清缓存后重新执行初始化读取。
-    vi.resetModules();
-
-    const migratedTheme = await import('./theme.svelte');
-    const lightThemeId = migratedTheme.getLightThemeId();
-    const darkThemeId = migratedTheme.getDarkThemeId();
-    localStorage.removeItem('appearance-pack');
-
-    expect(lightThemeId).toBe('mist-studio');
-    expect(darkThemeId).toBe('graphite-atelier');
+  it('normalizes legacy appearance pack ids through normalizeAppearancePackId', () => {
+    expect(normalizeAppearancePackId('cold-cinnabar', 'light')).toBe('mist-studio');
+    expect(normalizeAppearancePackId('cold-cinnabar', 'dark')).toBe('graphite-atelier');
+    expect(normalizeAppearancePackId('inkstone-precision', 'light')).toBe('porcelain-day');
+    expect(normalizeAppearancePackId('inkstone-precision', 'dark')).toBe('obsidian-void');
+    expect(normalizeAppearancePackId('paper-lantern-precision', 'light')).toBe('porcelain-day');
+    expect(normalizeAppearancePackId('paper-lantern-precision', 'dark')).toBe('obsidian-void');
   });
 
   it('persists the active compatibility id when system color scheme changes', async () => {
@@ -312,7 +307,7 @@ describe('theme preferences', () => {
       listener?.({ matches: true, media: mediaQuery.media } as MediaQueryListEvent);
 
       expect(freshTheme.getCurrentTheme()).toBe('dark');
-      expect(readWebPrefs().appearancePackId).toBe('graphite-atelier');
+      expect(readWebPrefs().darkThemeId).toBe('graphite-atelier');
     } finally {
       Object.defineProperty(window, 'matchMedia', {
         configurable: true,
@@ -327,7 +322,8 @@ describe('theme preferences', () => {
     tauriBoundary.enabled = true;
     tauriBoundary.persistedState = {
       mode: 'light',
-      appearancePackId: 'cold-cinnabar',
+      lightThemeId: 'mist-studio',
+      darkThemeId: 'graphite-atelier',
     };
     vi.resetModules();
 
@@ -340,17 +336,21 @@ describe('theme preferences', () => {
       expect(freshTheme.getDarkThemeId()).toBe('graphite-atelier');
       expect(tauriBoundary.instance?.state.lightThemeId).toBe('mist-studio');
       expect(tauriBoundary.instance?.state.darkThemeId).toBe('graphite-atelier');
-      expect(tauriBoundary.instance?.state.appearancePackId).toBe('mist-studio');
 
       tauriBoundary.instance?.patchFrontend({
         mode: 'dark',
         lightThemeId: 'porcelain-day',
         darkThemeId: 'graphite-atelier',
-        appearancePackId: 'graphite-atelier',
       });
 
       expect(freshTheme.getCurrentTheme()).toBe('dark');
-      expect(freshTheme.getAppearancePack().id).toBe('graphite-atelier');
+      expect(
+        resolveThemeIdForFace(
+          freshTheme.getCurrentTheme(),
+          freshTheme.getLightThemeId(),
+          freshTheme.getDarkThemeId(),
+        ),
+      ).toBe('graphite-atelier');
       expect(document.documentElement.dataset.appearancePack).toBe('graphite-atelier');
     } finally {
       tauriBoundary.enabled = false;
@@ -361,26 +361,27 @@ describe('theme preferences', () => {
 
   it('maps legacy cinnabar and paper-lantern ids without orange', () => {
     setMode('light');
-    setAppearancePack({ id: 'cold-cinnabar' });
+    setLightThemeId('cold-cinnabar');
+    setDarkThemeId('cold-cinnabar');
     // 亮面解析为 mist-studio
-    expect(getAppearancePack().id).toBe('mist-studio');
+    expect(getLightThemeId()).toBe('mist-studio');
     expect(document.documentElement.dataset.appearancePack).toBe('mist-studio');
     expect(document.documentElement.style.getPropertyValue('--lantern').trim()).toBe('#0e7490');
 
-    setAppearancePack({ id: 'paper-lantern-precision' as AppearancePack['id'] });
+    setLightThemeId('paper-lantern-precision');
     setMode('light');
-    expect(getAppearancePack().id).toBe('porcelain-day');
+    expect(getLightThemeId()).toBe('porcelain-day');
     expect(document.documentElement.dataset.appearancePack).toBe('porcelain-day');
   });
 
   it('maps unknown appearance packs to face defaults', () => {
     setMode('dark');
-    setAppearancePack({ id: 'future-pack' as AppearancePack['id'] });
+    setLightThemeId('future-pack');
+    setDarkThemeId('future-pack');
 
     expect(getDarkThemeId()).toBe('obsidian-void');
     expect(getLightThemeId()).toBe('porcelain-day');
-    expect(getAppearancePack().id).toBe('obsidian-void');
-    expect(document.documentElement.dataset.appearancePack).toBe(DEFAULT_APPEARANCE_PACK_ID);
+    expect(document.documentElement.dataset.appearancePack).toBe('obsidian-void');
   });
 
   it('stores material transparency as a narrow two-option preference', () => {

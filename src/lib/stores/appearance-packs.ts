@@ -46,9 +46,6 @@ export type BuiltinThemeDefinition = {
 export const DEFAULT_DARK_THEME_ID: AppearancePackId = 'obsidian-void';
 export const DEFAULT_LIGHT_THEME_ID: AppearancePackId = 'porcelain-day';
 
-/** 兼容旧「单默认 pack」导出：产品默认暗轨 */
-export const DEFAULT_APPEARANCE_PACK_ID: AppearancePackId = DEFAULT_DARK_THEME_ID;
-
 export const BUILTIN_APPEARANCE_PACK_IDS: readonly AppearancePackId[] = [
   'obsidian-void',
   'graphite-atelier',
@@ -191,13 +188,6 @@ const LEGACY_TO_FACE: Record<string, { light: AppearancePackId; dark: Appearance
   'paper-lantern-precision': { light: 'porcelain-day', dark: 'obsidian-void' },
   'cold-cinnabar': { light: 'mist-studio', dark: 'graphite-atelier' },
 };
-
-/** 无 face 上下文时的默认映射（偏暗默认） */
-export const LEGACY_APPEARANCE_PACK_MAP = {
-  'paper-lantern-precision': DEFAULT_DARK_THEME_ID,
-  'inkstone-precision': DEFAULT_DARK_THEME_ID,
-  'cold-cinnabar': 'graphite-atelier',
-} as const satisfies Record<string, AppearancePackId>;
 
 export function isBuiltinAppearancePackId(id: string): id is AppearancePackId {
   return (BUILTIN_APPEARANCE_PACK_IDS as readonly string[]).includes(id);
