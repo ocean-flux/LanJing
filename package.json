@@ -18,7 +18,8 @@
     "lint": "pnpm run lint:web",
     "format": "pnpm run format:web",
     "format:check": "pnpm run format:check:web",
-    "check": "pnpm run lint:web && pnpm run typecheck:web && pnpm run format:check:web"
+    "check": "pnpm run lint:web && pnpm run typecheck:web && pnpm run format:check:web",
+    "gate:structure": "node scripts/structural-gate.mjs"
   },
   "dependencies": {
     "@inlang/paraglide-js": "^2.22.0",
@@ -28,12 +29,9 @@
     "@tauri-apps/plugin-os": "^2.3.2",
     "@tauri-store/svelte": "^3.2.0",
     "bits-ui": "^2.18.1",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "svelte": "^5.56.6",
     "svelte-sonner": "^1.1.1",
-    "svelte-toolbelt": "^0.10.6",
-    "tabbable": "^6.5.0",
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.2.2"
   },
@@ -44,7 +42,6 @@
     "@iconify-json/ph": "^1.2.2",
     "@iconify/tailwind4": "^1.2.3",
     "@internationalized/date": "^3.12.2",
-    "@lucide/svelte": "^1.26.0",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.70.1",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",

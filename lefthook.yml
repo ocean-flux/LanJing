@@ -39,6 +39,9 @@ commit-msg:
 pre-push:
   parallel: true
   jobs:
+    - name: structure
+      run: pnpm run gate:structure
+
     - name: web
       run: pnpm check && pnpm test:web
 

@@ -3518,6 +3518,7 @@ dependencies = [
  "lj-rule-model",
  "lj-runtime",
  "lj-storage",
+ "sea-orm",
  "serde",
  "serde_json",
  "thiserror 2.0.19",

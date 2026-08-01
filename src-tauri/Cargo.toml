@@ -49,7 +49,6 @@ tauri-plugin-mcp-bridge = "0.12"
 sea-orm = { version = "=2.0.0", default-features = false, features = ["macros", "runtime-tokio", "sqlx-sqlite", "with-json", "with-uuid", "schema-sync"] }
 sea-orm-migration = { version = "=2.0.0", default-features = false, features = ["runtime-tokio", "sqlx-sqlite"] }
 reqwest = { version = "0.13.4", features = ["cookies", "gzip", "brotli"] }
-cookie_store = "0.22.1"
 rquickjs = "0.12.1"
 blake3 = "1.8.5"
 aes-gcm = { version = "0.11.0", features = ["getrandom"] }
