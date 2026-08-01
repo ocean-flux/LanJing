@@ -66,6 +66,9 @@ pub enum StorageError {
     /// 来源尚未安装。
     #[error("来源尚未安装")]
     SourceMissing,
+    /// 原生规则文档不存在。
+    #[error("原生规则文档不存在")]
+    DocumentMissing,
     /// execution 尚未建立。
     #[error("execution 尚未建立")]
     ExecutionMissing,

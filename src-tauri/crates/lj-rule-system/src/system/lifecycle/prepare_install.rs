@@ -285,7 +285,7 @@ fn installed_source_from_storage(source: StorageInstalledSource) -> InstalledSou
     }
 }
 
-fn source_profile(
+pub(super) fn source_profile(
     definition: &lj_rule_model::RuleDefinition,
     version: &str,
     display_title: Option<String>,

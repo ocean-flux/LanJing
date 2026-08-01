@@ -87,17 +87,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fresh_baseline_builds_27_tables_and_reopens() {
+    async fn fresh_baseline_builds_31_tables_and_reopens() {
         let connection = memory_database().await;
         bootstrap_current_schema(&connection)
             .await
             .expect("bootstrap current schema");
-        assert_eq!(application_table_count(&connection).await, 27);
+        assert_eq!(application_table_count(&connection).await, 31);
 
         bootstrap_current_schema(&connection)
             .await
             .expect("reopen current schema");
-        assert_eq!(application_table_count(&connection).await, 27);
+        assert_eq!(application_table_count(&connection).await, 31);
     }
 
     #[tokio::test]
@@ -117,7 +117,7 @@ mod tests {
         bootstrap_current_schema(&connection)
             .await
             .expect("validate rebuilt schema");
-        assert_eq!(application_table_count(&connection).await, 27);
+        assert_eq!(application_table_count(&connection).await, 31);
     }
 
     #[tokio::test]

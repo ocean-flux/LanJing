@@ -6,6 +6,7 @@
 mod artifact;
 mod candidate;
 mod config;
+mod document;
 mod error;
 mod event;
 mod execution;
@@ -21,6 +22,13 @@ pub use candidate::{
 };
 pub use config::{
     DEFAULT_ARCHIVE_TTL_MS, DEFAULT_CANDIDATE_TTL_MS, StorageConfig, WRITER_CAPACITY,
+};
+pub use document::{
+    ClearDocumentCredentialSecretRequest, CreateDocumentRequest, DeleteDocumentRequest,
+    DocumentDetail, DocumentInitial, DocumentSummary, DomainSaveOutcome, LayoutSaveInput,
+    LayoutSnapshot, ProvenanceCreateInput, ProvenanceSummary, RenameDocumentRequest,
+    RevisionConflict, SaveDocumentOutcome, SaveDocumentRequest, SemanticSaveInput,
+    SemanticSnapshot, WriteDocumentCredentialSecretRequest,
 };
 pub use error::StorageError;
 pub use event::{AppendRequest, CommitReceipt, StoredEvent};

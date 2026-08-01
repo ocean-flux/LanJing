@@ -2,6 +2,7 @@
 
 mod archive;
 mod candidate;
+mod document;
 mod execution;
 mod maintenance;
 mod query;

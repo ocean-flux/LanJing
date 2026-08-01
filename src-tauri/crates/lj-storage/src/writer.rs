@@ -12,10 +12,13 @@ use uuid::Uuid;
 
 use crate::artifact::ArtifactStore;
 use crate::types::{
-    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt, DeltaCommit,
-    ExecutionFinish, ExecutionPin, ExecutionRecord, ExecutionStartReceipt, GcReport,
-    InstallCandidateRequest, LibraryUpdate, OrphanRecovery, ReplayExecutionStart, RetentionPolicy,
-    StorageError,
+    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt,
+    ClearDocumentCredentialSecretRequest, CommitReceipt, CreateDocumentRequest,
+    DeleteDocumentRequest, DeltaCommit, DocumentSummary, ExecutionFinish, ExecutionPin,
+    ExecutionRecord, ExecutionStartReceipt, GcReport, InstallCandidateRequest, LibraryUpdate,
+    OrphanRecovery, RenameDocumentRequest, ReplayExecutionStart, RetentionPolicy,
+    SaveDocumentOutcome, SaveDocumentRequest, SecretArtifactId, StorageError,
+    WriteDocumentCredentialSecretRequest,
 };
 
 const WRITER_BATCH_LIMIT: usize = 32;
@@ -85,6 +88,30 @@ pub(crate) enum WriterCommand {
         confirm_pinned: bool,
         now_ms: i64,
         reply: oneshot::Sender<Result<GcReport, StorageError>>,
+    },
+    CreateNativeDocument {
+        request: CreateDocumentRequest,
+        reply: oneshot::Sender<Result<DocumentSummary, StorageError>>,
+    },
+    SaveNativeDocument {
+        request: SaveDocumentRequest,
+        reply: oneshot::Sender<Result<SaveDocumentOutcome, StorageError>>,
+    },
+    RenameNativeDocument {
+        request: RenameDocumentRequest,
+        reply: oneshot::Sender<Result<DocumentSummary, StorageError>>,
+    },
+    DeleteNativeDocument {
+        request: DeleteDocumentRequest,
+        reply: oneshot::Sender<Result<(), StorageError>>,
+    },
+    WriteDocumentCredentialSecret {
+        request: WriteDocumentCredentialSecretRequest,
+        reply: oneshot::Sender<Result<SecretArtifactId, StorageError>>,
+    },
+    ClearDocumentCredentialSecret {
+        request: ClearDocumentCredentialSecretRequest,
+        reply: oneshot::Sender<Result<(), StorageError>>,
     },
     RecoverOrphans(oneshot::Sender<Result<OrphanRecovery, StorageError>>),
     Shutdown(oneshot::Sender<Result<(), StorageError>>),
@@ -218,6 +245,29 @@ async fn handle_writer_command(
         WriterCommand::RecoverOrphans(reply) => {
             let _ =
                 reply.send(crate::transaction::maintenance::recover_orphans(conn, artifacts).await);
+        }
+        WriterCommand::CreateNativeDocument { request, reply } => {
+            let _ =
+                reply.send(crate::transaction::document::create(conn, artifacts, request).await);
+        }
+        WriterCommand::SaveNativeDocument { request, reply } => {
+            let _ = reply.send(crate::transaction::document::save(conn, request).await);
+        }
+        WriterCommand::RenameNativeDocument { request, reply } => {
+            let _ = reply.send(crate::transaction::document::rename(conn, request).await);
+        }
+        WriterCommand::DeleteNativeDocument { request, reply } => {
+            let _ = reply.send(crate::transaction::document::delete(conn, request).await);
+        }
+        WriterCommand::WriteDocumentCredentialSecret { request, reply } => {
+            let _ = reply.send(
+                crate::transaction::document::write_credential_secret(conn, artifacts, request)
+                    .await,
+            );
+        }
+        WriterCommand::ClearDocumentCredentialSecret { request, reply } => {
+            let _ = reply
+                .send(crate::transaction::document::clear_credential_secret(conn, request).await);
         }
         WriterCommand::Shutdown(reply) => return Some(reply),
     }

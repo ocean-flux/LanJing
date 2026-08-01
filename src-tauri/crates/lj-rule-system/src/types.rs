@@ -2,6 +2,7 @@
 
 mod candidate;
 mod config;
+mod document;
 mod execution;
 mod query;
 
@@ -9,6 +10,15 @@ pub use candidate::{
     CandidateId, CapabilityGrant, InstallCandidate, InstalledSource, RuleInput, SourceId,
 };
 pub use config::RuleSystemConfig;
+pub use document::{
+    CreateMode, CreateNativeRuleDocumentRequest, CredentialMutationAction,
+    CredentialMutationRequest, DeleteNativeRuleDocumentRequest, DomainOutcome, ExpectedDataType,
+    GetNativeRuleDocumentRequest, GetNativeRuleProvenanceRequest, LayoutSave,
+    NativeRuleDocumentDetail, NativeRuleDocumentSummary, NativeRuleProvenanceView,
+    PrepareNativeRuleDocumentRequest, ProvenanceSummaryView, RenameNativeRuleDocumentRequest,
+    RevisionConflict, SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest, SemanticSave,
+    ValidateNativeRuleDocumentPreview, ValidateNativeRuleDocumentRequest,
+};
 pub use execution::{
     ExecuteRequest, ExecutionCancellation, ExecutionEvent, ExecutionEventKind, ExecutionId,
     ExecutionMode, ExecutionSession,

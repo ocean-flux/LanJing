@@ -3,6 +3,7 @@
 pub mod archive;
 pub mod artifact;
 pub mod core;
+pub mod document;
 pub mod lifecycle;
 pub mod projection;
 
@@ -42,6 +43,10 @@ active_model_behavior!(
     projection::action::ActiveModel,
     projection::hint::ActiveModel,
     projection::library::ActiveModel,
+    document::rule_document::ActiveModel,
+    document::rule_document_semantic::ActiveModel,
+    document::rule_document_layout::ActiveModel,
+    document::rule_document_provenance::ActiveModel,
 );
 
 /// 注册全部 current entities，供唯一 baseline migration 使用。
@@ -78,4 +83,8 @@ where
         .register(projection::action::Entity)
         .register(projection::hint::Entity)
         .register(projection::library::Entity)
+        .register(document::rule_document::Entity)
+        .register(document::rule_document_semantic::Entity)
+        .register(document::rule_document_layout::Entity)
+        .register(document::rule_document_provenance::Entity)
 }

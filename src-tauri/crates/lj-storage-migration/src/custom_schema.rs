@@ -27,6 +27,7 @@ const INDEXES: &[&str] = &[
     "CREATE INDEX idx_projection_actions_source ON projection_actions(source_identity, id)",
     "CREATE INDEX idx_projection_hints_source ON projection_hints(source_identity, resource_id)",
     "CREATE INDEX idx_library_projection_owned ON library_projection(favorite, pinned, resource_id)",
+    "CREATE INDEX idx_rule_documents_source_identity ON rule_documents(source_identity)",
 ];
 
 const CHECKS: &[(&str, &str)] = &[
@@ -89,6 +90,19 @@ const CHECKS: &[(&str, &str)] = &[
         "library_projection",
         "NEW.favorite NOT IN (0,1) OR NEW.pinned NOT IN (0,1) OR NEW.updated_global_seq <= 0",
     ),
+    (
+        "rule_documents",
+        "NEW.state NOT IN ('draft','linked') OR NEW.semantic_revision < 0 OR NEW.layout_revision < 0 OR NEW.link_revision < 0 OR NEW.created_at_ms < 0 OR NEW.updated_at_ms < 0",
+    ),
+    (
+        "rule_document_semantics",
+        "NEW.revision < 0 OR NEW.updated_at_ms < 0",
+    ),
+    (
+        "rule_document_layouts",
+        "NEW.revision < 0 OR NEW.updated_at_ms < 0",
+    ),
+    ("rule_document_provenances", "NEW.imported_at_ms < 0"),
 ];
 
 pub(crate) async fn apply<C>(connection: &C) -> Result<(), DbErr>
@@ -119,6 +133,10 @@ where
     C: ConnectionTrait,
 {
     for table in [
+        "rule_document_provenances",
+        "rule_document_semantics",
+        "rule_document_layouts",
+        "rule_documents",
         "library_projection",
         "projection_hints",
         "projection_actions",

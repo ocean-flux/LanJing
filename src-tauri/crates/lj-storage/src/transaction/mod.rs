@@ -5,6 +5,7 @@ use crate::types::StorageError;
 
 pub(crate) mod archive;
 pub(crate) mod candidate;
+pub(crate) mod document;
 pub(crate) mod event;
 pub(crate) mod execution;
 pub(crate) mod maintenance;

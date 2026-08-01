@@ -27,6 +27,15 @@ macro_rules! lanjing_commands {
             get_media_items => commands::query::get_media_items,
             list_media_units => commands::query::list_media_units,
             list_media_assets => commands::query::list_media_assets,
+            create_native_rule_document => commands::document::create_native_rule_document,
+            save_native_rule_document => commands::document::save_native_rule_document,
+            validate_native_rule_document => commands::document::validate_native_rule_document,
+            prepare_native_rule_document => commands::document::prepare_native_rule_document,
+            list_native_rule_documents => commands::document::list_native_rule_documents,
+            get_native_rule_document => commands::document::get_native_rule_document,
+            rename_native_rule_document => commands::document::rename_native_rule_document,
+            delete_native_rule_document => commands::document::delete_native_rule_document,
+            get_native_rule_provenance => commands::document::get_native_rule_provenance,
         }
     };
 }
@@ -124,6 +133,15 @@ mod tests {
             "get_media_items",
             "list_media_units",
             "list_media_assets",
+            "create_native_rule_document",
+            "save_native_rule_document",
+            "validate_native_rule_document",
+            "prepare_native_rule_document",
+            "list_native_rule_documents",
+            "get_native_rule_document",
+            "rename_native_rule_document",
+            "delete_native_rule_document",
+            "get_native_rule_provenance",
         ];
         assert_eq!(REGISTERED_COMMAND_NAMES, EXPECTED);
         assert_eq!(
@@ -134,6 +152,13 @@ mod tests {
                 .len(),
             EXPECTED.len(),
             "Tauri command 注册不得重复"
+        );
+        assert_eq!(EXPECTED.len(), 22, "facade 命令注册必须恰为 22 项");
+        assert!(
+            REGISTERED_COMMAND_NAMES
+                .iter()
+                .all(|name| !name.contains("source_document")),
+            "不得恢复旧 authoring 链的 source_document 命令名"
         );
     }
 }

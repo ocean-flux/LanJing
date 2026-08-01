@@ -181,6 +181,12 @@ pub(super) fn storage_error(
         | StorageError::CandidateTampered
         | StorageError::CandidateStale
         | StorageError::CandidateSchemaMismatch => candidate_storage_contract(error),
+        StorageError::DocumentMissing => (
+            RuleErrorStage::Persistence,
+            "document_not_found",
+            "文档不存在",
+            false,
+        ),
         StorageError::ContractSchemaUnsupported { .. }
         | StorageError::GrantInsufficient
         | StorageError::SourceCredentialUnavailable

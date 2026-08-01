@@ -11,11 +11,17 @@ mod types;
 pub use error::{RuleError, RuleErrorStage};
 pub use system::RuleSystem;
 pub use types::{
-    CandidateId, CapabilityGrant, ExecuteRequest, ExecutionCancellation, ExecutionEvent,
-    ExecutionEventKind, ExecutionId, ExecutionMode, ExecutionSession, InstallCandidate,
-    InstalledSource, LibraryEntryUpdate, LibraryProgress, LibraryProjection,
-    LibraryProjectionEntry, LibraryUpdateReceipt, MediaAssetPage, MediaUnitPage, RuleInput,
-    RuleSystemConfig, SourceId,
+    CandidateId, CapabilityGrant, CreateMode, CreateNativeRuleDocumentRequest,
+    CredentialMutationAction, CredentialMutationRequest, DeleteNativeRuleDocumentRequest,
+    DomainOutcome, ExecuteRequest, ExecutionCancellation, ExecutionEvent, ExecutionEventKind,
+    ExecutionId, ExecutionMode, ExecutionSession, ExpectedDataType, GetNativeRuleDocumentRequest,
+    GetNativeRuleProvenanceRequest, InstallCandidate, InstalledSource, LayoutSave,
+    LibraryEntryUpdate, LibraryProgress, LibraryProjection, LibraryProjectionEntry,
+    LibraryUpdateReceipt, MediaAssetPage, MediaUnitPage, NativeRuleDocumentDetail,
+    NativeRuleDocumentSummary, NativeRuleProvenanceView, PrepareNativeRuleDocumentRequest,
+    ProvenanceSummaryView, RenameNativeRuleDocumentRequest, RevisionConflict, RuleInput,
+    RuleSystemConfig, SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest, SemanticSave,
+    SourceId, ValidateNativeRuleDocumentPreview, ValidateNativeRuleDocumentRequest,
 };
 // 标准媒体模型经 façade 再导出，避免根 package 依赖 lj-media path。
 pub use lj_media::{MediaAsset, MediaItem, MediaUnit};
