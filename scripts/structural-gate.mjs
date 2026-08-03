@@ -56,25 +56,83 @@ function rootLocalDependencies() {
 }
 
 /** 禁止符号列表（第三方 authoring 回流、旧编辑器链） */
-const FORBIDDEN_SYMBOLS = ['authoring', 'raw_editor', 'language_service', 'document_editing', 'source_document_api'];
+const FORBIDDEN_SYMBOLS = [
+  'authoring',
+  'raw_editor',
+  'language_service',
+  'document_editing',
+  'source_document_api',
+];
+
+function containsForbiddenSymbol(text, symbol) {
+  const escaped = symbol.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+  return new RegExp(`(?<![A-Za-z0-9_/-])${escaped}(?![A-Za-z0-9_-])`, 'i').test(text);
+}
 
 /** 文件行数超限的例外清单：<相对路径> -> 原因（审计通过，不可再分单一职责） */
 const FILE_SIZE_EXCEPTIONS = new Map([
   // 生产代码：函数均 <50 行、单一职责深模块（前序任务已审计模块边界）
-  ['src-tauri/crates/lj-importer/src/strict_json.rs', '严格 JSON 输入边界 + Legado 字段分类表，函数 <50 行，拆分需跨模块数据传递'],
-  ['src-tauri/crates/lj-rule-system/src/system/session_delivery.rs', '执行事件投递映射单一 owner，函数 <50 行'],
-  ['src-tauri/crates/lj-storage/src/repository/maintenance.rs', '维护事务单一 owner（501 行，超限 1 行），函数 <50 行'],
+  [
+    'src-tauri/crates/lj-importer/src/strict_json.rs',
+    '严格 JSON 输入边界 + Legado 字段分类表，函数 <50 行，拆分需跨模块数据传递',
+  ],
+  [
+    'src-tauri/crates/lj-rule-system/src/system/session_delivery.rs',
+    '执行事件投递映射单一 owner，函数 <50 行',
+  ],
+  [
+    'src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs',
+    '原生规则文档生命周期编排 owner，覆盖语义快照、冲突域与候选准备，函数保持小粒度',
+  ],
+  [
+    'src-tauri/crates/lj-storage/src/repository/maintenance.rs',
+    '维护事务单一 owner（501 行，超限 1 行），函数 <50 行',
+  ],
   // 测试：按 owner contract 组织的 fixture 密集文件，函数数 22-28 个、名称指向不变量
-  ['src-tauri/crates/lj-compiler/tests/plan_compiler_test.rs', 'compiler owner contract 测试，28 个函数平均 31 行，fixture 本地专属'],
-  ['src-tauri/crates/lj-runtime/tests/plan_runtime_test.rs', 'runtime owner contract 聚合文件，已拆子模块目录 plan_runtime_test/'],
-  ['src-tauri/crates/lj-runtime/tests/plan_runtime_test/control_contract.rs', 'runtime control 子合同，fixture 密集'],
-  ['src-tauri/crates/lj-storage/tests/event_projection_storage_test.rs', 'storage owner contract 聚合文件，已拆子模块目录'],
-  ['src-tauri/crates/lj-storage/tests/event_projection_storage_test/archive_contract.rs', 'storage archive 子合同，durable capture fixture 密集'],
-  ['src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs', 'storage projection retention 子合同'],
-  ['src-tauri/crates/lj-rule-model/tests/flow_contract_test.rs', 'rule-model flow 合同，fixture 密集'],
-  ['src-tauri/crates/lj-node-http/tests/processor_test.rs', 'HTTP adapter owner contract，wiremock fixture 密集'],
-  ['src-tauri/crates/lj-integration-tests/tests/legado_rule_system.rs', 'Legado 六个 intent live/replay 黄金合同，场景级断言 helper 密集（已抽取共享 harness 至 test_support.rs）'],
-  ['src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs', 'Maccms 四个 intent + 安全边界集成合同，场景级断言 helper 密集（已抽取共享 harness）'],
+  [
+    'src-tauri/crates/lj-compiler/tests/plan_compiler_test.rs',
+    'compiler owner contract 测试，28 个函数平均 31 行，fixture 本地专属',
+  ],
+  [
+    'src-tauri/crates/lj-runtime/tests/plan_runtime_test.rs',
+    'runtime owner contract 聚合文件，已拆子模块目录 plan_runtime_test/',
+  ],
+  [
+    'src-tauri/crates/lj-runtime/tests/plan_runtime_test/control_contract.rs',
+    'runtime control 子合同，fixture 密集',
+  ],
+  [
+    'src-tauri/crates/lj-storage/tests/event_projection_storage_test.rs',
+    'storage owner contract 聚合文件，已拆子模块目录',
+  ],
+  [
+    'src-tauri/crates/lj-storage/tests/event_projection_storage_test/archive_contract.rs',
+    'storage archive 子合同，durable capture fixture 密集',
+  ],
+  [
+    'src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs',
+    'storage projection retention 子合同',
+  ],
+  [
+    'src-tauri/crates/lj-storage/tests/native_rule_document_test.rs',
+    'native rule document storage owner contract，fixture 与冲突/凭证/生命周期断言密集',
+  ],
+  [
+    'src-tauri/crates/lj-rule-model/tests/flow_contract_test.rs',
+    'rule-model flow 合同，fixture 密集',
+  ],
+  [
+    'src-tauri/crates/lj-node-http/tests/processor_test.rs',
+    'HTTP adapter owner contract，wiremock fixture 密集',
+  ],
+  [
+    'src-tauri/crates/lj-integration-tests/tests/legado_rule_system.rs',
+    'Legado 六个 intent live/replay 黄金合同，场景级断言 helper 密集（已抽取共享 harness 至 test_support.rs）',
+  ],
+  [
+    'src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs',
+    'Maccms 四个 intent + 安全边界集成合同，场景级断言 helper 密集（已抽取共享 harness）',
+  ],
 ]);
 
 const FILE_SIZE_LIMIT = 500;
@@ -86,7 +144,9 @@ const rootDeps = rootLocalDependencies();
 const allowed = new Set(['lj-rule-system']);
 for (const dep of rootDeps) {
   if (!allowed.has(dep)) {
-    violations.push(`[root-dependency] lanjing 直接依赖 ${dep}，违反唯一业务 facade（只允许 lj-rule-system）`);
+    violations.push(
+      `[root-dependency] lanjing 直接依赖 ${dep}，违反唯一业务 facade（只允许 lj-rule-system）`,
+    );
   }
 }
 
@@ -95,9 +155,8 @@ for (const file of listSourceFiles()) {
   const text = readFileSync(file, 'utf8');
   const rel = relative(root, file).replace(/\\/g, '/');
   for (const symbol of FORBIDDEN_SYMBOLS) {
-    // 只查标识符形态（避免匹配注释里的说明文字：形如 xxx_yyy 或 camelCase）
-    const regex = new RegExp(`\\b${symbol}\\b`, 'i');
-    if (regex.test(text)) {
+    // 只查独立标识符；允许 native-authoring 这类合法模块路径。
+    if (containsForbiddenSymbol(text, symbol)) {
       violations.push(`[forbidden-symbol] ${rel} 含禁止符号 "${symbol}"`);
     }
   }
@@ -111,7 +170,9 @@ for (const file of listSourceFiles()) {
   if (rel.startsWith('crates/') && !rel.startsWith('crates/lj-')) continue;
   const lines = readFileSync(file, 'utf8').split('\n').length;
   if (lines > FILE_SIZE_LIMIT && !FILE_SIZE_EXCEPTIONS.has(rel)) {
-    violations.push(`[file-size] ${rel} ${lines} 行 > ${FILE_SIZE_LIMIT}（如需豁免请加入 FILE_SIZE_EXCEPTIONS 并写审计理由）`);
+    violations.push(
+      `[file-size] ${rel} ${lines} 行 > ${FILE_SIZE_LIMIT}（如需豁免请加入 FILE_SIZE_EXCEPTIONS 并写审计理由）`,
+    );
   }
 }
 

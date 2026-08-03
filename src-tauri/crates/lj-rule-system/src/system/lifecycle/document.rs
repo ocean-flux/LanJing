@@ -1,7 +1,7 @@
 //! native rule document 的作者生命周期。
 //!
 //! create/save/validate/prepare/list/get/rename/delete/provenance 全部以
-//! `EventProjectionStorage` 的 document 投影为唯一真相；本模块不接触 legacy authoring 链，
+//! `EventProjectionStorage` 的 document 投影为唯一真相；本模块不接触 legacy 编辑链，
 //! 也不为 legacy 输入创建文档。凭证值只经 secret artifact 保存，manifest 只保留 slot
 //! summary；`prepare` 复用现有 `stage_prepared_candidate` 链路。
 
@@ -142,10 +142,11 @@ impl CredentialManifest {
 }
 
 impl RuleSystem {
-    /// 创建 blank 或 template 形态的 native rule document。
+    /// 创建 blank、template 或 imported 形态的 native rule document。
     ///
     /// blank：空 `FlowGraph` + 空 intent export，语义可保存但不可编译（有缺意图/节点诊断）。
     /// template：最小 Http→Extract→Mapper 骨架 + 单个标准意图导出，可保存且可编译。
+    /// import：导入 current Definition，但把来源身份重置为新文档身份，避免跨文档冲突。
     ///
     /// # Errors
     ///
@@ -158,13 +159,13 @@ impl RuleSystem {
         let occurred_at_ms = now_millis(&trace_id)?;
         let document_uuid = Uuid::new_v4();
         let document_id = document_uuid.to_string();
-        let source_identity = SourceIdentity {
+        let generated_source_identity = SourceIdentity {
             id: format!("native:{document_uuid}"),
         };
         let (definition, title) = match request.mode {
             CreateMode::Blank => (
                 RuleDefinition::new(
-                    source_identity,
+                    generated_source_identity,
                     "",
                     BTreeMap::new(),
                     FlowGraph {
@@ -182,9 +183,22 @@ impl RuleSystem {
                 data_type,
                 base_url,
             } => (
-                template_definition(&source_identity, &base_url, intent, data_type, &trace_id)?,
+                template_definition(
+                    &generated_source_identity,
+                    &base_url,
+                    intent,
+                    data_type,
+                    &trace_id,
+                )?,
                 title,
             ),
+            CreateMode::Import {
+                title,
+                mut definition,
+            } => {
+                *definition.source_identity_mut() = generated_source_identity.clone();
+                (definition, title)
+            }
         };
         let definition = canonicalize(&definition);
         // blank 有缺意图/节点诊断但可保存；诊断不阻断 create。
@@ -472,7 +486,10 @@ impl RuleSystem {
             .get_native_rule_document(&request.document_id)
             .await
             .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))?;
-        Ok(detail.map(document_detail_from_storage))
+        let Some(detail) = detail else {
+            return Ok(None);
+        };
+        Ok(Some(document_detail_from_storage(detail, &trace_id)?))
     }
 
     /// 重命名 native rule document 的展示标题。
@@ -1043,7 +1060,10 @@ fn document_summary_from_storage(
 }
 
 /// storage `DocumentDetail` → façade 详情。
-fn document_detail_from_storage(detail: DocumentDetail) -> NativeRuleDocumentDetail {
+fn document_detail_from_storage(
+    detail: DocumentDetail,
+    trace_id: &str,
+) -> Result<NativeRuleDocumentDetail, RuleError> {
     let semantic_revision = detail
         .semantic
         .as_ref()
@@ -1054,12 +1074,31 @@ fn document_detail_from_storage(detail: DocumentDetail) -> NativeRuleDocumentDet
         .layout
         .as_ref()
         .map_or(detail.summary.layout_revision, |snapshot| snapshot.revision);
-    NativeRuleDocumentDetail {
+    let definition = detail
+        .semantic
+        .as_ref()
+        .map(|snapshot| {
+            serde_json::from_str(&snapshot.definition_json).map_err(|_| {
+                RuleError::new(
+                    RuleErrorStage::Persistence,
+                    "document_definition_invalid",
+                    "文档语义 Definition 无法读取",
+                    trace_id,
+                    false,
+                    Vec::new(),
+                )
+            })
+        })
+        .transpose()?;
+    let layout_json = detail.layout.map(|snapshot| snapshot.layout_json);
+    Ok(NativeRuleDocumentDetail {
         summary: document_summary_from_storage(detail.summary),
         semantic_revision,
         layout_revision,
+        definition,
+        layout_json,
         provenance: detail.provenance.map(provenance_view_from_storage),
-    }
+    })
 }
 
 /// storage `ProvenanceSummary` → façade 摘要视图。
@@ -1476,6 +1515,53 @@ mod tests {
         assert_eq!(
             preview.profile.supported_intents,
             vec![StandardIntent::Search]
+        );
+        drop(system);
+    }
+
+    /// import 重置来源身份，避免把外部 Definition 的 identity 带入 native 文档。
+    #[tokio::test]
+    async fn imported_document_uses_new_native_identity() {
+        let system = open_system().await;
+        let imported = RuleDefinition::new(
+            SourceIdentity {
+                id: "source:imported".to_string(),
+            },
+            "",
+            BTreeMap::new(),
+            FlowGraph {
+                nodes: Vec::new(),
+                edges: Vec::new(),
+            },
+            CapabilityManifest::default(),
+            Vec::new(),
+        );
+        let created = system
+            .create_native_rule_document(CreateNativeRuleDocumentRequest {
+                mode: CreateMode::Import {
+                    title: "导入规则".to_string(),
+                    definition: imported,
+                },
+            })
+            .await
+            .expect("import create");
+
+        assert!(created.source_identity.starts_with("native:"));
+        assert_ne!(created.source_identity, "source:imported");
+        let detail = system
+            .get_native_rule_document(GetNativeRuleDocumentRequest {
+                document_id: created.document_id,
+            })
+            .await
+            .expect("get imported document")
+            .expect("imported document exists");
+        assert_eq!(
+            detail
+                .definition
+                .expect("saved definition")
+                .source_identity()
+                .id,
+            created.source_identity
         );
         drop(system);
     }

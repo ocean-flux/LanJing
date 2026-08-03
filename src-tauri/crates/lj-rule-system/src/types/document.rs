@@ -40,6 +40,13 @@ pub enum CreateMode {
         /// 来源基础 URL。
         base_url: String,
     },
+    /// 导入一个 current `RuleDefinition`；不接受历史 shape 或 rule package。
+    Import {
+        /// 展示标题；只写入文档 metadata，不进入 Definition/hash。
+        title: String,
+        /// 已通过 current schema 反序列化的 canonical Definition。
+        definition: RuleDefinition,
+    },
 }
 
 /// 创建 native rule document 请求。
@@ -226,6 +233,10 @@ pub struct NativeRuleDocumentDetail {
     pub semantic_revision: i64,
     /// 已保存布局 revision。
     pub layout_revision: i64,
+    /// 当前已保存的脱敏 Definition；凭证值不在 Definition 中。
+    pub definition: Option<RuleDefinition>,
+    /// 当前已保存的作者布局 JSON；布局不进入语义 hash。
+    pub layout_json: Option<String>,
     /// 可选 provenance 摘要（不含 secret 引用）。
     pub provenance: Option<ProvenanceSummaryView>,
 }

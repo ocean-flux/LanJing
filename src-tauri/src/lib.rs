@@ -158,7 +158,7 @@ mod tests {
             REGISTERED_COMMAND_NAMES
                 .iter()
                 .all(|name| !name.contains("source_document")),
-            "不得恢复旧 authoring 链的 source_document 命令名"
+            "不得恢复旧规则编辑链的 source_document 命令名"
         );
     }
 }

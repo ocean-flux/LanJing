@@ -38,6 +38,7 @@
     | 'star-fill'
     | 'sun'
     | 'translate'
+    | 'upload-simple'
     | 'trash'
     | 'tree-structure'
     | 'warning-circle'
@@ -78,6 +79,7 @@
     'star-fill': 'icon-[ph--star-fill]',
     sun: 'icon-[ph--sun]',
     translate: 'icon-[ph--translate]',
+    'upload-simple': 'icon-[ph--upload-simple]',
     trash: 'icon-[ph--trash]',
     'tree-structure': 'icon-[ph--tree-structure]',
     'warning-circle': 'icon-[ph--warning-circle]',

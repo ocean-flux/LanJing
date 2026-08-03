@@ -11,7 +11,8 @@
       "./messages/{locale}/sources.json",
       "./messages/{locale}/apps.json",
       "./messages/{locale}/library.json",
-      "./messages/{locale}/settings.json"
+      "./messages/{locale}/settings.json",
+      "./messages/{locale}/rules.json"
     ]
   }
 }

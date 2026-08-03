@@ -88,10 +88,15 @@ export interface FlowGraph {
 }
 
 /** 规则定义作者合同（RuleDefinition serde current shape，含 contract tag）。 */
+export interface SourceIdentity {
+  id: string;
+}
+
 export interface RuleDefinition {
   contract: 'rule_definition';
   schema_version: typeof RULE_CONTRACT_SCHEMA_VERSION;
-  source_identity: string;
+  /** Rust current wire 是 `{ id }`；string 仅保留旧前端 skeleton 兼容。 */
+  source_identity: SourceIdentity | string;
   base_url: string;
   intent_exports: Partial<Record<StandardIntent, IntentExport>>;
   flow: FlowGraph;
@@ -115,6 +120,11 @@ export type CreateMode =
       intent: StandardIntent;
       data_type: ExpectedDataType;
       base_url: string;
+    }
+  | {
+      kind: 'import';
+      title: string;
+      definition: RuleDefinition;
     };
 
 export interface CreateNativeRuleDocumentRequest {
@@ -246,6 +256,10 @@ export interface NativeRuleDocumentDetail {
   summary: NativeRuleDocumentSummary;
   semantic_revision: number;
   layout_revision: number;
+  /** 后端返回的当前 masked Definition；旧后端可能省略。 */
+  definition?: RuleDefinition | null;
+  /** 后端返回的作者布局 JSON；旧后端可能省略。 */
+  layout_json?: string | null;
   provenance?: ProvenanceSummaryView | null;
 }
 

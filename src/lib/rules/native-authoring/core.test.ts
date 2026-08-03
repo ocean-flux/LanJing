@@ -116,6 +116,41 @@ describe('NativeRuleAuthoringCore undo/redo', () => {
     state = run(state, { kind: 'setField', field: 'base_url', value: 'https://c.test' });
     expect(state.redo).toHaveLength(0);
   });
+
+  it('节点增删及引用边都进入可回放历史', () => {
+    const addedNode = {
+      id: 'node:extract',
+      config: { kind: 'extract' as const, value: {} },
+    };
+    let state = reduce(initialState(), { kind: 'nodeAdd', node: addedNode });
+    expect(state.definition.flow.nodes.some((node) => node.id === addedNode.id)).toBe(true);
+
+    state = reduce(state, { kind: 'undo' });
+    expect(state.definition.flow.nodes.some((node) => node.id === addedNode.id)).toBe(false);
+    state = reduce(state, { kind: 'redo' });
+    expect(state.definition.flow.nodes.some((node) => node.id === addedNode.id)).toBe(true);
+
+    state = reduce(state, { kind: 'edgeConnect', edge, connected: true });
+    const replacement: FlowEdge = {
+      from: edge.from,
+      to: { node_id: 'node:mapper', handle: 'input' },
+    };
+    state = reduce(state, { kind: 'edgeReconnect', from: edge, to: replacement });
+    expect(state.definition.flow.edges).toEqual([replacement]);
+    expect(state.history.at(-1)?.kind).toBe('edgeReconnect');
+
+    state = reduce(state, { kind: 'undo' });
+    expect(state.definition.flow.edges).toEqual([edge]);
+    state = reduce(state, { kind: 'redo' });
+    expect(state.definition.flow.edges).toEqual([replacement]);
+
+    state = reduce(state, { kind: 'nodeDelete', nodeId: 'node:http' });
+    expect(state.definition.flow.nodes.some((node) => node.id === 'node:http')).toBe(false);
+    expect(state.definition.flow.edges).toHaveLength(0);
+    state = reduce(state, { kind: 'undo' });
+    expect(state.definition.flow.nodes.some((node) => node.id === 'node:http')).toBe(true);
+    expect(state.definition.flow.edges).toEqual([replacement]);
+  });
 });
 
 describe('NativeRuleAuthoringCore dirty 域分离', () => {
@@ -139,6 +174,27 @@ describe('NativeRuleAuthoringCore dirty 域分离', () => {
       collapsed: true,
     });
     expect(state.dirty).toEqual({ semantic: false, layout: true });
+  });
+
+  it('Loop region 折叠只写 layout，并支持 undo/redo', () => {
+    let state = run(initialState(), {
+      kind: 'collapseLoopRegion',
+      loopNodeId: 'node:loop',
+      collapsed: true,
+    });
+    expect(state.definition.flow).toEqual(initialState().definition.flow);
+    expect(state.layout).toEqual({
+      nodes: {},
+      loopRegions: { 'node:loop': { collapsed: true } },
+    });
+
+    state = reduce(state, { kind: 'undo' });
+    expect(state.layout).toEqual({ nodes: {} });
+    state = reduce(state, { kind: 'redo' });
+    expect(state.layout).toEqual({
+      nodes: {},
+      loopRegions: { 'node:loop': { collapsed: true } },
+    });
   });
 });
 
@@ -438,6 +494,43 @@ describe('NativeRuleAuthoringCore layout coalescing', () => {
       { kind: 'moveNode', nodeId: 'node:mapper', position: { x: 2, y: 2 } },
     );
     expect(state.history).toHaveLength(2);
+  });
+
+  it('批量布局作为一条历史并完整支持 undo/redo', () => {
+    let state = run(initialState(), {
+      kind: 'layoutNodes',
+      positions: {
+        'node:http': { x: 320, y: 64 },
+        'node:mapper': { x: 720, y: 64 },
+      },
+    });
+
+    expect(state.history).toHaveLength(1);
+    expect(state.history[0]?.kind).toBe('layoutNodes');
+    expect(
+      (state.layout as { nodes: Record<string, { position: { x: number; y: number } }> }).nodes[
+        'node:http'
+      ]?.position,
+    ).toEqual({ x: 320, y: 64 });
+
+    state = reduce(state, { kind: 'undo' });
+    expect(
+      (state.layout as { nodes: Record<string, { position: { x: number; y: number } }> }).nodes[
+        'node:http'
+      ]?.position,
+    ).toEqual({ x: 0, y: 0 });
+    expect(
+      (state.layout as { nodes: Record<string, { position: { x: number; y: number } }> }).nodes[
+        'node:mapper'
+      ]?.position,
+    ).toEqual({ x: 0, y: 0 });
+
+    state = reduce(state, { kind: 'redo' });
+    expect(
+      (state.layout as { nodes: Record<string, { position: { x: number; y: number } }> }).nodes[
+        'node:mapper'
+      ]?.position,
+    ).toEqual({ x: 720, y: 64 });
   });
 
   it('连续 collapse 合并；undo 恢复原折叠状态', () => {

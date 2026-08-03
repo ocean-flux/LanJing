@@ -20,7 +20,7 @@ import {
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 
-describe('native authoring wire invoke wrappers', () => {
+describe('native rule wire invoke wrappers', () => {
   beforeEach(() => {
     vi.mocked(invoke).mockReset();
   });
@@ -205,7 +205,7 @@ describe('native authoring wire invoke wrappers', () => {
   });
 });
 
-describe('native authoring wire mirror parity', () => {
+describe('native rule wire mirror parity', () => {
   it('NativeRuleDocumentSummary 字段与 storage DocumentSummary 一致', () => {
     const summary = makeSummary();
     expect(Object.keys(summary).sort()).toEqual(

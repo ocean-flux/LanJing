@@ -19,11 +19,13 @@ import type {
   CapabilityManifest,
   CredentialMutationRequest,
   FlowEdge,
+  FlowNode,
   InstallDiagnostic,
   IntentExport,
   RevisionConflict,
   RuleDefinition,
   SaveNativeRuleDocumentOutcome,
+  SourceIdentity,
   StandardIntent,
 } from './wire';
 
@@ -41,13 +43,14 @@ export interface Position {
  */
 export interface NativeDocumentLayout {
   nodes: Record<string, { position: Position; collapsed: boolean }>;
+  loopRegions?: Record<string, { collapsed: boolean }>;
 }
 
 /** 定义顶层可编辑字段（set-field 语义命令的目标）。 */
 export type DefinitionField =
   'base_url' | 'source_identity' | 'source_id_rules' | 'capability_manifest';
 
-export type DefinitionFieldValue = string | string[] | CapabilityManifest;
+export type DefinitionFieldValue = string | SourceIdentity | string[] | CapabilityManifest;
 
 /**
  * 可回放命令（history / redo 栈条目）。
@@ -78,9 +81,26 @@ export type TypedCommand =
     }
   | {
       domain: 'semantic';
+      kind: 'nodeAdd';
+      node: FlowNode;
+    }
+  | {
+      domain: 'semantic';
+      kind: 'nodeDelete';
+      node: FlowNode;
+      edges: FlowEdge[];
+    }
+  | {
+      domain: 'semantic';
       kind: 'edgeConnect';
       edge: FlowEdge;
       connected: boolean;
+    }
+  | {
+      domain: 'semantic';
+      kind: 'edgeReconnect';
+      from: FlowEdge;
+      to: FlowEdge;
     }
   | {
       domain: 'layout';
@@ -91,8 +111,21 @@ export type TypedCommand =
     }
   | {
       domain: 'layout';
+      kind: 'layoutNodes';
+      positions: Record<string, Position>;
+      prev: Record<string, Position>;
+    }
+  | {
+      domain: 'layout';
       kind: 'collapseNode';
       nodeId: string;
+      collapsed: boolean;
+      prev: boolean;
+    }
+  | {
+      domain: 'layout';
+      kind: 'collapseLoopRegion';
+      loopNodeId: string;
       collapsed: boolean;
       prev: boolean;
     };
@@ -153,9 +186,14 @@ export type AuthoringAction =
   | { kind: 'setField'; field: DefinitionField; value: DefinitionFieldValue }
   | { kind: 'setIntentExport'; intent: StandardIntent; value: IntentExport | null }
   | { kind: 'setNodeConfig'; nodeId: string; patch: Record<string, unknown> }
+  | { kind: 'nodeAdd'; node: FlowNode }
+  | { kind: 'nodeDelete'; nodeId: string }
   | { kind: 'edgeConnect'; edge: FlowEdge; connected: boolean }
+  | { kind: 'edgeReconnect'; from: FlowEdge; to: FlowEdge }
   | { kind: 'moveNode'; nodeId: string; position: Position }
+  | { kind: 'layoutNodes'; positions: Record<string, Position> }
   | { kind: 'collapseNode'; nodeId: string; collapsed: boolean }
+  | { kind: 'collapseLoopRegion'; loopNodeId: string; collapsed: boolean }
   | { kind: 'viewport'; viewport: unknown }
   | { kind: 'selection'; nodeId: string | null }
   | { kind: 'intentFocus'; intent: StandardIntent | null }
@@ -253,7 +291,7 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 }
 
 /** 读取布局；非 NativeDocumentLayout 结构时返回 null（core 不解释未知布局）。 */
-function readLayout(layout: unknown): NativeDocumentLayout | null {
+export function readLayout(layout: unknown): NativeDocumentLayout | null {
   if (layout === null || layout === undefined) return null;
   if (typeof layout !== 'object') return null;
   const candidate = layout as { nodes?: unknown };
@@ -269,6 +307,13 @@ function layoutNode(
   const entry = layout?.nodes[nodeId];
   if (!entry) return { position: { x: 0, y: 0 }, collapsed: false };
   return { position: { ...entry.position }, collapsed: entry.collapsed };
+}
+
+function loopRegionLayout(
+  layout: NativeDocumentLayout | null,
+  loopNodeId: string,
+): { collapsed: boolean } {
+  return layout?.loopRegions?.[loopNodeId] ?? { collapsed: false };
 }
 
 /** 应用命令的正向效果（dispatch 与 redo 共用）。 */
@@ -292,10 +337,47 @@ function applyCommand(
         ...state,
         definition: setNodeConfigValue(state.definition, command.nodeId, command.value),
       };
+    case 'nodeAdd': {
+      if (state.definition.flow.nodes.some((node) => node.id === command.node.id)) return state;
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes: [...state.definition.flow.nodes, cloneJson(command.node)],
+          },
+        },
+      };
+    }
+    case 'nodeDelete': {
+      const nodes = state.definition.flow.nodes.filter((node) => node.id !== command.node.id);
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes,
+            edges: state.definition.flow.edges.filter(
+              (edge) =>
+                edge.from.node_id !== command.node.id && edge.to.node_id !== command.node.id,
+            ),
+          },
+        },
+      };
+    }
     case 'edgeConnect': {
       const edges = command.connected
         ? addEdge(state.definition.flow.edges, command.edge)
         : removeEdge(state.definition.flow.edges, command.edge);
+      return {
+        ...state,
+        definition: { ...state.definition, flow: { ...state.definition.flow, edges } },
+      };
+    }
+    case 'edgeReconnect': {
+      const edges = addEdge(removeEdge(state.definition.flow.edges, command.from), command.to);
       return {
         ...state,
         definition: { ...state.definition, flow: { ...state.definition.flow, edges } },
@@ -310,6 +392,15 @@ function applyCommand(
       };
       return { ...state, layout: { ...layout, nodes } };
     }
+    case 'layoutNodes': {
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const nodes = { ...layout.nodes };
+      for (const [nodeId, position] of Object.entries(command.positions)) {
+        const current = layoutNode(layout, nodeId);
+        nodes[nodeId] = { ...current, position: { ...position } };
+      }
+      return { ...state, layout: { ...layout, nodes } };
+    }
     case 'collapseNode': {
       const layout = readLayout(state.layout) ?? { nodes: {} };
       const current = layoutNode(layout, command.nodeId);
@@ -318,6 +409,14 @@ function applyCommand(
         [command.nodeId]: { ...current, collapsed: command.collapsed },
       };
       return { ...state, layout: { ...layout, nodes } };
+    }
+    case 'collapseLoopRegion': {
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const loopRegions = {
+        ...layout.loopRegions,
+        [command.loopNodeId]: { collapsed: command.collapsed },
+      };
+      return { ...state, layout: { ...layout, loopRegions } };
     }
   }
 }
@@ -343,10 +442,50 @@ function revertCommand(
         ...state,
         definition: setNodeConfigValue(state.definition, command.nodeId, command.prev),
       };
+    case 'nodeAdd': {
+      const nodes = state.definition.flow.nodes.filter((node) => node.id !== command.node.id);
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes,
+            edges: state.definition.flow.edges.filter(
+              (edge) =>
+                edge.from.node_id !== command.node.id && edge.to.node_id !== command.node.id,
+            ),
+          },
+        },
+      };
+    }
+    case 'nodeDelete': {
+      const nodes = state.definition.flow.nodes.some((node) => node.id === command.node.id)
+        ? state.definition.flow.nodes
+        : [...state.definition.flow.nodes, cloneJson(command.node)];
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes,
+            edges: command.edges.reduce(addEdge, state.definition.flow.edges),
+          },
+        },
+      };
+    }
     case 'edgeConnect': {
       const edges = command.connected
         ? removeEdge(state.definition.flow.edges, command.edge)
         : addEdge(state.definition.flow.edges, command.edge);
+      return {
+        ...state,
+        definition: { ...state.definition, flow: { ...state.definition.flow, edges } },
+      };
+    }
+    case 'edgeReconnect': {
+      const edges = addEdge(removeEdge(state.definition.flow.edges, command.to), command.from);
       return {
         ...state,
         definition: { ...state.definition, flow: { ...state.definition.flow, edges } },
@@ -358,11 +497,38 @@ function revertCommand(
       const nodes = { ...layout.nodes, [command.nodeId]: { ...current, position: command.prev } };
       return { ...state, layout: { ...layout, nodes } };
     }
+    case 'layoutNodes': {
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const nodes = { ...layout.nodes };
+      for (const [nodeId, position] of Object.entries(command.prev)) {
+        const current = layoutNode(layout, nodeId);
+        nodes[nodeId] = { ...current, position: { ...position } };
+      }
+      return { ...state, layout: { ...layout, nodes } };
+    }
     case 'collapseNode': {
       const layout = readLayout(state.layout) ?? { nodes: {} };
       const current = layoutNode(layout, command.nodeId);
       const nodes = { ...layout.nodes, [command.nodeId]: { ...current, collapsed: command.prev } };
       return { ...state, layout: { ...layout, nodes } };
+    }
+    case 'collapseLoopRegion': {
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const loopRegions = { ...layout.loopRegions };
+      if (command.prev) {
+        loopRegions[command.loopNodeId] = { collapsed: true };
+      } else {
+        delete loopRegions[command.loopNodeId];
+      }
+      if (Object.keys(loopRegions).length === 0) {
+        const layoutWithoutRegions = { ...layout };
+        delete layoutWithoutRegions.loopRegions;
+        return { ...state, layout: layoutWithoutRegions };
+      }
+      return {
+        ...state,
+        layout: { ...layout, loopRegions },
+      };
     }
   }
 }
@@ -377,7 +543,7 @@ function setDefinitionField(
     case 'base_url':
       return { ...definition, base_url: value as string };
     case 'source_identity':
-      return { ...definition, source_identity: value as string };
+      return { ...definition, source_identity: value as SourceIdentity | string };
     case 'source_id_rules':
       return { ...definition, source_id_rules: cloneJson(value as string[]) };
     case 'capability_manifest':
@@ -458,19 +624,23 @@ type LayoutCommand = Extract<TypedCommand, { domain: 'layout' }>;
  */
 function coalesceLayout(history: TypedCommand[], command: LayoutCommand): TypedCommand[] {
   const last = history[history.length - 1];
-  if (
-    !last ||
-    last.domain !== 'layout' ||
-    last.kind !== command.kind ||
-    last.nodeId !== command.nodeId
-  ) {
+  if (!last || last.domain !== 'layout' || last.kind !== command.kind) {
     return [...history, command];
   }
-  if (last.kind === 'moveNode' && command.kind === 'moveNode') {
+  if (last.kind === 'moveNode' && command.kind === 'moveNode' && last.nodeId === command.nodeId) {
     return [...history.slice(0, -1), { ...command, prev: last.prev }];
   }
-  if (last.kind === 'collapseNode' && command.kind === 'collapseNode') {
+  if (
+    last.kind === 'collapseNode' &&
+    command.kind === 'collapseNode' &&
+    last.nodeId === command.nodeId
+  ) {
     return [...history.slice(0, -1), { ...command, prev: last.prev }];
+  }
+  if (last.kind === 'collapseLoopRegion' && command.kind === 'collapseLoopRegion') {
+    if (last.loopNodeId === command.loopNodeId) {
+      return [...history.slice(0, -1), { ...command, prev: last.prev }];
+    }
   }
   return [...history, command];
 }
@@ -662,6 +832,28 @@ export function reduce(
         prev: cloneJson(node.config.value),
       });
     }
+    case 'nodeAdd': {
+      if (state.definition.flow.nodes.some((node) => node.id === action.node.id)) return state;
+      return pushSemanticCommand(state, {
+        domain: 'semantic',
+        kind: 'nodeAdd',
+        node: cloneJson(action.node),
+      });
+    }
+    case 'nodeDelete': {
+      const node = state.definition.flow.nodes.find((candidate) => candidate.id === action.nodeId);
+      if (!node) return state;
+      return pushSemanticCommand(state, {
+        domain: 'semantic',
+        kind: 'nodeDelete',
+        node: cloneJson(node),
+        edges: cloneJson(
+          state.definition.flow.edges.filter(
+            (edge) => edge.from.node_id === node.id || edge.to.node_id === node.id,
+          ),
+        ),
+      });
+    }
     case 'edgeConnect': {
       const edges = state.definition.flow.edges;
       const identity = edgeIdentity(action.edge);
@@ -672,6 +864,21 @@ export function reduce(
         kind: 'edgeConnect',
         edge: cloneJson(action.edge),
         connected: action.connected,
+      });
+    }
+    case 'edgeReconnect': {
+      const fromIdentity = edgeIdentity(action.from);
+      const toIdentity = edgeIdentity(action.to);
+      if (fromIdentity === toIdentity) return state;
+      const fromExists = state.definition.flow.edges.some(
+        (edge) => edgeIdentity(edge) === fromIdentity,
+      );
+      if (!fromExists) return state;
+      return pushSemanticCommand(state, {
+        domain: 'semantic',
+        kind: 'edgeReconnect',
+        from: cloneJson(action.from),
+        to: cloneJson(action.to),
       });
     }
     case 'moveNode': {
@@ -686,6 +893,26 @@ export function reduce(
         prev: { ...current.position },
       });
     }
+    case 'layoutNodes': {
+      const nodeIds = new Set(state.definition.flow.nodes.map((node) => node.id));
+      const positions = Object.fromEntries(
+        Object.entries(action.positions).filter(
+          ([nodeId, position]) =>
+            nodeIds.has(nodeId) && Number.isFinite(position.x) && Number.isFinite(position.y),
+        ),
+      );
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const prev = Object.fromEntries(
+        Object.keys(positions).map((nodeId) => [nodeId, layoutNode(layout, nodeId).position]),
+      );
+      if (Object.keys(positions).length === 0 || deepEqual(positions, prev)) return state;
+      return pushLayoutCommand(state, {
+        domain: 'layout',
+        kind: 'layoutNodes',
+        positions: cloneJson(positions),
+        prev: cloneJson(prev),
+      });
+    }
     case 'collapseNode': {
       const layout = readLayout(state.layout) ?? { nodes: {} };
       const current = layoutNode(layout, action.nodeId);
@@ -694,6 +921,18 @@ export function reduce(
         domain: 'layout',
         kind: 'collapseNode',
         nodeId: action.nodeId,
+        collapsed: action.collapsed,
+        prev: current.collapsed,
+      });
+    }
+    case 'collapseLoopRegion': {
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const current = loopRegionLayout(layout, action.loopNodeId);
+      if (current.collapsed === action.collapsed) return state;
+      return pushLayoutCommand(state, {
+        domain: 'layout',
+        kind: 'collapseLoopRegion',
+        loopNodeId: action.loopNodeId,
         collapsed: action.collapsed,
         prev: current.collapsed,
       });
