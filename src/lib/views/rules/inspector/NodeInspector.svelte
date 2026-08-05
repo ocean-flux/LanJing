@@ -11,8 +11,8 @@
   import ExtractRuleList from './ExtractRuleList.svelte';
   import ConfigSelect from './ConfigSelect.svelte';
   import type { FlowNodeKind } from '$lib/rules/native-authoring/wire';
+  import { canonicalConfig } from '$lib/rules/native-authoring/node-defaults';
   import {
-    canonicalConfig,
     collectionPatch,
     collectionSelector,
     conditionExpression,

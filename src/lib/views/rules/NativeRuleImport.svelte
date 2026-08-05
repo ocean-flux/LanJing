@@ -108,7 +108,7 @@
   <Input
     type="file"
     accept="application/json,.json"
-    class="sr-only"
+    class="!absolute !h-px !w-px !overflow-hidden"
     aria-label={m.rules_import_native()}
     onchange={handleFileChange}
   />

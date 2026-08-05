@@ -30,9 +30,10 @@
     type FlowHandleDirection,
   } from '$lib/rules/native-authoring/flow-adapter';
   import {
+    type ConnectionRejectReason,
+    flowEntryByIntentFromDefinition,
     semanticEdgeFromConnection,
     validateConnection,
-    flowEntryByIntentFromDefinition,
   } from './connection-gate';
   import FlowTopBar from './FlowTopBar.svelte';
   import NodePalette from './NodePalette.svelte';
@@ -101,9 +102,28 @@
     () => (connection: Connection) => validateConnection(connection, gateGraph).ok,
   );
 
+  const connectionReasonText: Record<ConnectionRejectReason, string> = {
+    'missing-handle': '连接缺少端口。',
+    'unknown-node': '连接节点已不存在。',
+    'unknown-handle': '端口已失效，请重新选择。',
+    'self-loop': '节点不能连接自身。',
+    'incompatible-ports': '端口数据类型不兼容。',
+    'duplicate-edge': '这条连接已经存在。',
+    'entry-occupied': '入口只能保留一条连接。',
+    'back-edge': '普通回路不允许连接。',
+    'loop-yield-occupied': 'Loop yield 只能保留一条回边。',
+    'intent-mismatch': '连接不属于当前意图子图。',
+  };
+
+  function checkConnection(connection: Connection, graph = gateGraph): boolean {
+    const verdict = validateConnection(connection, graph);
+    connectionRejectReason = verdict.ok ? null : verdict.reason;
+    return verdict.ok;
+  }
+
   /** onconnect：gate 通过才派发 typed action。 */
   function handleConnect(connection: Connection) {
-    if (!gate(connection)) return;
+    if (!checkConnection(connection)) return;
     session.connect(toSemanticEdge(connection));
   }
 
@@ -128,12 +148,13 @@
 
   /** onbeforeconnect：不兼容返回 false，不写无效 semantic state。 */
   function handleBeforeConnect(connection: Connection): Connection | false {
-    return gate(connection) ? connection : false;
+    return checkConnection(connection) ? connection : false;
   }
 
-  /** onreconnect：重连目标同样过 gate。 */
+  /** onreconnect：校验时排除正在替换的旧边，避免原位置误判 duplicate。 */
   function handleReconnect(oldEdge: FlowViewEdge, connection: Connection) {
-    if (!gate(connection)) return;
+    const reconnectGraph = { ...gateGraph, excludeEdgeId: oldEdge.id };
+    if (!checkConnection(connection, reconnectGraph)) return;
     session.reconnect(oldEdge.data.edge, toSemanticEdge(connection));
   }
 
@@ -200,18 +221,37 @@
     session.selectNode(null);
   }
 
-  /** ondelete：删除已选节点与边。 */
+  type DeleteSelectionFacade = {
+    disconnect: (edge: FlowViewEdge['data']['edge']) => void;
+    deleteNode: (nodeId: string) => void;
+    flowProjection: { edges: FlowViewEdge[] };
+    [key: string]: unknown;
+  };
+
+  function deleteSelection(nodeIds: string[], edgeIds: string[]): void {
+    const facade = session as unknown as DeleteSelectionFacade;
+    const deletion = facade['deleteSelection'];
+    if (typeof deletion === 'function') {
+      deletion.call(facade, nodeIds, edgeIds);
+      return;
+    }
+    for (const edgeId of edgeIds) {
+      const edge = facade.flowProjection.edges.find((candidate) => candidate.id === edgeId);
+      if (edge) facade.disconnect(edge.data.edge);
+    }
+    for (const nodeId of nodeIds) facade.deleteNode(nodeId);
+  }
+
+  /** ondelete：节点与连线使用一个 semantic transaction 删除。 */
   function handleDelete(event: { nodes: FlowViewNode[]; edges: FlowViewEdge[] }) {
-    for (const edge of event.edges) {
-      session.disconnect(edge.data.edge);
-    }
-    for (const node of event.nodes) {
-      session.deleteNode(node.id);
-    }
+    deleteSelection(
+      event.nodes.map((node) => node.id),
+      event.edges.map((edge) => edge.id),
+    );
   }
 
   // ---- 键盘删除：Backspace/Delete 删除选中节点（incident 边由 session 组合） ----
-  // 外部监听挂载即订阅、卸载即 teardown。
+  // 外部监听挂载即订阅、卸载即 teardown；快捷键只作用于画布选择。
   onMount(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target;
@@ -224,15 +264,25 @@
       ) {
         return;
       }
+      const modifier = event.metaKey || event.ctrlKey;
+      if (modifier && !event.altKey && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) session.redo();
+        else session.undo();
+        return;
+      }
+      if (modifier && !event.altKey && event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        session.redo();
+        return;
+      }
       if ((event.key === 'Delete' || event.key === 'Backspace') && session.selection) {
         event.preventDefault();
         const selection = parseEditorSelection(session.selection);
         if (selection.kind === 'edge') {
-          const edgeId = selection.edgeId;
-          const edge = session.flowProjection.edges.find((candidate) => candidate.id === edgeId);
-          if (edge) session.disconnect(edge.data.edge);
+          deleteSelection([], [selection.edgeId]);
         } else if (selection.kind === 'node') {
-          session.deleteNode(selection.nodeId);
+          deleteSelection([selection.nodeId], []);
         }
       }
     };
@@ -241,6 +291,7 @@
   });
 
   // ---- palette 开关 ----
+  let connectionRejectReason = $state<ConnectionRejectReason | null>(null);
   let paletteOpen = $state(false);
   let flowNodeMeasurementEpoch = $state(0);
   let flowRoot: HTMLElement | null = null;
@@ -385,6 +436,18 @@
       {paletteOpen}
       onTogglePalette={() => (paletteOpen = !paletteOpen)}
     />
+    {#if connectionRejectReason}
+      <div class="pointer-events-none absolute inset-x-3 top-14 z-20 flex justify-center">
+        <p
+          class="border-danger/30 bg-surface text-danger max-w-full rounded border px-3 py-1.5 text-xs shadow-sm"
+          role="status"
+          aria-live="polite"
+        >
+          {connectionReasonText[connectionRejectReason]}
+          <span class="ml-1 font-mono text-[10px] opacity-70">{connectionRejectReason}</span>
+        </p>
+      </div>
+    {/if}
     {#key viewNodes.length}
       <ViewportSync />
     {/key}

@@ -25,7 +25,15 @@ vi.mock('$lib/rules/native-authoring/session.svelte', () => {
     selection: string | null = null;
     definition = { flow: { nodes: [] }, intent_exports: {} };
     dirty = { semantic: false, layout: false };
+    dirtySemantic = false;
     isSaving = false;
+    validation = {
+      status: 'unknown',
+      revision: null,
+      definitionHash: null,
+      planHash: null,
+      diagnostics: [],
+    };
     conflict = { semantic: null, layout: null };
     hasUnsavedChanges = false;
     canUndo = false;
@@ -39,6 +47,8 @@ vi.mock('$lib/rules/native-authoring/session.svelte', () => {
       this.title = 'Test Rule';
     });
     save = vi.fn(async () => ({}));
+    validate = vi.fn(async () => ({ valid: true }));
+    prepare = vi.fn(async () => ({ id: 'candidate:1', expires_at_ms: 1 }));
     undo = vi.fn();
     redo = vi.fn();
     setNodeConfig = vi.fn();
@@ -50,7 +60,7 @@ vi.mock('$lib/rules/native-authoring/session.svelte', () => {
   return { NativeRuleEditorSession: FakeSession };
 });
 
-vi.mock('$app/state', () => ({ page: { url: new URL('https://lanjing.test/rules') } }));
+vi.mock('$app/state', () => ({ page: { url: { pathname: '/rules' } } }));
 
 const docSummary: NativeRuleDocumentSummary = {
   document_id: 'doc:1',

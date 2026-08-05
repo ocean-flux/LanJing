@@ -153,6 +153,104 @@ describe('NativeRuleAuthoringCore undo/redo', () => {
   });
 });
 
+describe('NativeRuleAuthoringCore dynamic semantic transactions', () => {
+  it('Condition branch rename/removal migrates or removes edges as one undoable command', () => {
+    const definition = makeDefinition();
+    definition.flow.nodes.push(
+      { id: 'node:condition', config: { kind: 'condition', value: { branches: ['yes', 'no'] } } },
+      { id: 'node:target', config: { kind: 'mapper', value: {} } },
+    );
+    definition.flow.edges = [
+      {
+        from: { node_id: 'node:condition', handle: 'yes' },
+        to: { node_id: 'node:target', handle: 'input' },
+      },
+    ];
+    let state = initialState({ definition });
+    state = run(state, {
+      kind: 'setNodeConfig',
+      nodeId: 'node:condition',
+      patch: { branches: ['match', 'no'] },
+    });
+    expect(state.definition.flow.edges[0]?.from.handle).toBe('match');
+    expect(state.history).toHaveLength(1);
+
+    state = run(state, {
+      kind: 'setNodeConfig',
+      nodeId: 'node:condition',
+      patch: { branches: ['no'] },
+    });
+    expect(state.definition.flow.edges).toHaveLength(0);
+
+    state = reduce(state, { kind: 'undo' });
+    expect(state.definition.flow.edges[0]?.from.handle).toBe('match');
+    state = reduce(state, { kind: 'undo' });
+    expect(state.definition.flow.edges[0]?.from.handle).toBe('yes');
+  });
+
+  it('Merge input handle rename migrates edge and undo restores config plus edge', () => {
+    const definition = makeDefinition();
+    definition.flow.nodes.push({
+      id: 'node:merge',
+      config: {
+        kind: 'merge',
+        value: {
+          inputs: [
+            { input_id: 'first', handle: 'in:0', order: 0, activation: 'required' },
+            { input_id: 'second', handle: 'in:1', order: 1, activation: 'optional' },
+          ],
+          strategy: 'single_active',
+        },
+      },
+    });
+    definition.flow.edges = [
+      {
+        from: { node_id: 'node:http', handle: 'output' },
+        to: { node_id: 'node:merge', handle: 'in:0' },
+      },
+    ];
+    let state = initialState({ definition });
+    state = run(state, {
+      kind: 'setNodeConfig',
+      nodeId: 'node:merge',
+      patch: {
+        inputs: [
+          { input_id: 'first', handle: 'primary', order: 0, activation: 'required' },
+          { input_id: 'second', handle: 'in:1', order: 1, activation: 'optional' },
+        ],
+      },
+    });
+    expect(state.definition.flow.edges[0]?.to.handle).toBe('primary');
+    state = reduce(state, { kind: 'undo' });
+    expect(state.definition.flow.edges[0]?.to.handle).toBe('in:0');
+    expect(
+      (
+        state.definition.flow.nodes.find((node) => node.id === 'node:merge')?.config.value
+          .inputs as Array<{ handle: string }>
+      )[0]?.handle,
+    ).toBe('in:0');
+  });
+
+  it('deleteSelection removes selected nodes and independent edges in one history entry', () => {
+    const state = run(initialState(), {
+      kind: 'edgeConnect',
+      edge,
+      connected: true,
+    });
+    const deleted = reduce(state, {
+      kind: 'deleteSelection',
+      nodeIds: ['node:http'],
+      edgeIds: [],
+    });
+    expect(deleted.definition.flow.nodes.some((node) => node.id === 'node:http')).toBe(false);
+    expect(deleted.definition.flow.edges).toHaveLength(0);
+    expect(deleted.history).toHaveLength(2);
+    const restored = reduce(deleted, { kind: 'undo' });
+    expect(restored.definition.flow.nodes.some((node) => node.id === 'node:http')).toBe(true);
+    expect(restored.definition.flow.edges).toEqual([edge]);
+  });
+});
+
 describe('NativeRuleAuthoringCore dirty 域分离', () => {
   it('语义编辑只置 semantic dirty；布局编辑只置 layout dirty', () => {
     let state = initialState();
@@ -556,12 +654,19 @@ describe('NativeRuleAuthoringCore transient 与 reset', () => {
     expect(next.history).toHaveLength(0);
   });
 
-  it('setDiagnostics 更新诊断但不入历史', () => {
+  it('setValidation 更新带身份的校验结果但不入历史', () => {
     const state = run(initialState(), {
-      kind: 'setDiagnostics',
-      diagnostics: [{ code: 'missing_intent', severity: 'warning', message: '缺少意图导出' }],
+      kind: 'setValidation',
+      validation: {
+        status: 'invalid',
+        revision: 1,
+        definitionHash: 'hash:def',
+        planHash: null,
+        diagnostics: [{ code: 'missing_intent', severity: 'warning', message: '缺少意图导出' }],
+      },
     });
-    expect(state.diagnostics).toHaveLength(1);
+    expect(state.validation.diagnostics).toHaveLength(1);
+    expect(state.validation.status).toBe('invalid');
     expect(state.history).toHaveLength(0);
   });
 

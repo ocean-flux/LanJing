@@ -9,8 +9,16 @@ const invoke = vi.hoisted(() => vi.fn());
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke }));
 
+import { createBlankDefinition } from './core';
 import { NativeRuleEditorSession } from './session.svelte';
-import type { NativeRuleDocumentSummary, SaveNativeRuleDocumentOutcome } from './wire';
+import type {
+  NativeRuleDocumentDetail,
+  NativeRuleDocumentSummary,
+  RuleDefinition,
+  SaveNativeRuleDocumentOutcome,
+  FlowNodeKind,
+  InstallCandidate,
+} from './wire';
 
 // ---------------------------------------------------------------------------
 // helper
@@ -34,6 +42,23 @@ function mockSummary(
   };
 }
 
+function mockDefinition(overrides: Partial<RuleDefinition> = {}): RuleDefinition {
+  return { ...createBlankDefinition('source:test'), ...overrides };
+}
+
+function mockDetail(overrides: Partial<NativeRuleDocumentDetail> = {}): NativeRuleDocumentDetail {
+  const summary = overrides.summary ?? mockSummary();
+  return {
+    summary,
+    semantic_revision: summary.semantic_revision,
+    layout_revision: summary.layout_revision,
+    definition: mockDefinition(),
+    layout_json: null,
+    provenance: null,
+    ...overrides,
+  };
+}
+
 /** 模拟后端 save 返回的 outcome。 */
 function mockOutcome(
   overrides: Partial<SaveNativeRuleDocumentOutcome> = {},
@@ -43,6 +68,27 @@ function mockOutcome(
     semantic: { revision: 2, conflict: null },
     layout: { revision: 2, conflict: null },
     ...overrides,
+  };
+}
+
+function mockCandidate(): InstallCandidate {
+  return {
+    id: 'candidate:1',
+    expected_installed_revision: 0,
+    profile: {
+      id: 'source:test',
+      title: '',
+      icon_url: null,
+      version: null,
+      group: null,
+      supported_intents: [],
+      risk_notes: [],
+    },
+    required_grant: { network: false, system: { fs: false, env: false, process: false } },
+    diagnostics: [],
+    definition_hash: 'hash:def',
+    plan_hash: 'hash:plan',
+    expires_at_ms: 1_700_000_000_000,
   };
 }
 
@@ -59,9 +105,9 @@ describe('NativeRuleEditorSession', () => {
   // loadDocument
   // -----------------------------------------------------------------------
 
-  it('loadDocument reads summary from wire and builds skeleton state', async () => {
+  it('loadDocument reads saved Definition and layout from wire', async () => {
     const summary = mockSummary();
-    invoke.mockResolvedValueOnce({ summary });
+    invoke.mockResolvedValueOnce(mockDetail({ summary }));
 
     const session = new NativeRuleEditorSession();
     await session.loadDocument('doc:1');
@@ -71,9 +117,15 @@ describe('NativeRuleEditorSession', () => {
     });
     expect(session.documentId).toBe('doc:1');
     expect(session.title).toBe('测试规则');
-    // skeleton: blank definition with source_identity
     expect(session.definition.source_identity).toBe('source:test');
+    expect(session.definition.flow.nodes).toEqual([]);
     expect(session.dirty).toEqual({ semantic: false, layout: false });
+  });
+
+  it('loadDocument rejects missing semantic snapshot instead of creating blank Definition', async () => {
+    invoke.mockResolvedValueOnce(mockDetail({ definition: null }));
+    const session = new NativeRuleEditorSession();
+    await expect(session.loadDocument('doc:1')).rejects.toThrow('document_semantic_missing');
   });
 
   it('loadDocument on missing doc throws', async () => {
@@ -86,17 +138,15 @@ describe('NativeRuleEditorSession', () => {
   // createTemplate
   // -----------------------------------------------------------------------
 
-  it('createTemplate calls wire and builds skeleton state', async () => {
+  it('createTemplate calls wire and builds saved state', async () => {
     const summary = mockSummary();
     invoke.mockResolvedValueOnce(summary);
-    invoke.mockResolvedValueOnce({
-      summary,
-      semantic_revision: summary.semantic_revision,
-      layout_revision: summary.layout_revision,
-      definition: null,
-      layout_json: null,
-      provenance: null,
-    });
+    invoke.mockResolvedValueOnce(
+      mockDetail({
+        summary,
+        definition: mockDefinition({ base_url: 'https://example.test' }),
+      }),
+    );
 
     const session = new NativeRuleEditorSession();
     await session.createTemplate({
@@ -130,14 +180,7 @@ describe('NativeRuleEditorSession', () => {
   it('createBlank calls wire with blank mode', async () => {
     const summary = mockSummary();
     invoke.mockResolvedValueOnce(summary);
-    invoke.mockResolvedValueOnce({
-      summary,
-      semantic_revision: summary.semantic_revision,
-      layout_revision: summary.layout_revision,
-      definition: null,
-      layout_json: null,
-      provenance: null,
-    });
+    invoke.mockResolvedValueOnce(mockDetail({ summary }));
 
     const session = new NativeRuleEditorSession();
     await session.createBlank();
@@ -154,8 +197,7 @@ describe('NativeRuleEditorSession', () => {
 
   it('dispatch applies action via core reduce', () => {
     const session = new NativeRuleEditorSession();
-    // 先 load 一个文档
-    invoke.mockResolvedValueOnce({ summary: mockSummary() });
+    invoke.mockResolvedValueOnce(mockDetail());
     invoke.mockResolvedValueOnce(mockOutcome());
 
     // 用 loadDocument 跳过 first load
@@ -201,10 +243,9 @@ describe('NativeRuleEditorSession', () => {
 
   it('save calls wire with semantic+layout payloads', async () => {
     const session = new NativeRuleEditorSession();
-    invoke.mockResolvedValueOnce({
-      summary: mockSummary({ semantic_revision: 1, layout_revision: 1 }),
-    });
-    invoke.mockResolvedValueOnce(mockOutcome());
+    invoke.mockResolvedValueOnce(
+      mockDetail({ summary: mockSummary({ semantic_revision: 1, layout_revision: 1 }) }),
+    );
     await session.loadDocument('doc:1'); // getNativeRuleDocument
 
     // 修改 semantic（dirtySemantic → true）
@@ -235,7 +276,7 @@ describe('NativeRuleEditorSession', () => {
 
   it('save is idempotent when nothing dirty', async () => {
     const session = new NativeRuleEditorSession();
-    invoke.mockResolvedValueOnce({ summary: mockSummary() });
+    invoke.mockResolvedValueOnce(mockDetail());
     await session.loadDocument('doc:1');
 
     invoke.mockClear();
@@ -244,9 +285,21 @@ describe('NativeRuleEditorSession', () => {
     expect(outcome.semantic?.revision).toBe(1);
   });
 
+  it('save failure clears isSaving but keeps semantic dirty', async () => {
+    const session = new NativeRuleEditorSession();
+    invoke.mockResolvedValueOnce(mockDetail());
+    await session.loadDocument('doc:1');
+    session.dispatch({ kind: 'setField', field: 'base_url', value: 'https://failed.test' });
+
+    invoke.mockRejectedValueOnce(new Error('storage unavailable'));
+    await expect(session.save()).rejects.toThrow('storage unavailable');
+    expect(session.isSaving).toBe(false);
+    expect(session.dirtySemantic).toBe(true);
+  });
+
   it('saveResponse conflict: keeps dirty', async () => {
     const session = new NativeRuleEditorSession();
-    invoke.mockResolvedValueOnce({ summary: mockSummary() });
+    invoke.mockResolvedValueOnce(mockDetail());
     await session.loadDocument('doc:1');
 
     session.dispatch({ kind: 'setField', field: 'base_url', value: 'https://new.test' });
@@ -337,13 +390,13 @@ describe('NativeRuleEditorSession', () => {
 
   it('validate calls wire and sets diagnostics', async () => {
     const session = new NativeRuleEditorSession();
-    invoke.mockResolvedValueOnce({ summary: mockSummary() });
+    invoke.mockResolvedValueOnce(mockDetail());
     await session.loadDocument('doc:1');
 
     invoke.mockClear();
     invoke.mockResolvedValueOnce({
+      valid: true,
       revision: 1,
-      definition_hash: 'hash:def',
       plan_hash: 'hash:plan',
       diagnostics: [],
       profile: {
@@ -366,41 +419,104 @@ describe('NativeRuleEditorSession', () => {
     expect(session.diagnostics).toEqual([]);
   });
 
-  it('prepare calls wire after auto-save', async () => {
+  it('prepare refuses after auto-save until current revision validates', async () => {
     const session = new NativeRuleEditorSession();
-    invoke.mockResolvedValueOnce({ summary: mockSummary() });
+    invoke.mockResolvedValueOnce(mockDetail());
     await session.loadDocument('doc:1');
 
-    // make dirty, prepare should auto-save first
     session.dispatch({ kind: 'setField', field: 'base_url', value: 'https://new.test' });
 
     invoke.mockClear();
-    invoke.mockResolvedValueOnce(mockOutcome()); // save
-    invoke.mockResolvedValueOnce({
-      id: 'candidate:1',
-      expected_installed_revision: 0,
-      profile: {
-        id: 'source:test',
-        title: '',
-        icon_url: null,
-        version: null,
-        group: null,
-        supported_intents: [],
-        risk_notes: [],
-      },
-      required_grant: { network: false, system: { fs: false, env: false, process: false } },
-      diagnostics: [],
+    invoke.mockResolvedValueOnce(mockOutcome());
+
+    await expect(session.prepare()).rejects.toThrow('document_validation_required');
+    expect(invoke).toHaveBeenCalledWith('save_native_rule_document', expect.anything());
+    expect(invoke).not.toHaveBeenCalledWith('prepare_native_rule_document', expect.anything());
+  });
+
+  it('validation response becomes stale when semantic edit lands while request is pending', async () => {
+    const session = new NativeRuleEditorSession();
+    invoke.mockResolvedValueOnce(mockDetail());
+    await session.loadDocument('doc:1');
+
+    let resolvePreview: ((preview: unknown) => void) | undefined;
+    const previewPromise = new Promise<unknown>((resolve) => {
+      resolvePreview = resolve;
+    });
+    invoke.mockClear();
+    invoke.mockReturnValueOnce(previewPromise);
+    const pending = session.validate();
+    session.dispatch({ kind: 'setField', field: 'base_url', value: 'https://drift.test' });
+    resolvePreview?.({
+      valid: true,
+      revision: 1,
       definition_hash: 'hash:def',
       plan_hash: 'hash:plan',
-      expires_at_ms: 1_700_000_000_000,
+      diagnostics: [],
+      profile: null,
+      capability: { network: false, system: { fs: false, env: false, process: false } },
     });
+    await pending;
+    expect(session.validation.status).toBe('stale');
+  });
 
+  it('prepare calls wire only after saved revision validates', async () => {
+    const session = new NativeRuleEditorSession();
+    invoke.mockResolvedValueOnce(mockDetail());
+    await session.loadDocument('doc:1');
+
+    session.dispatch({ kind: 'setField', field: 'base_url', value: 'https://new.test' });
+    invoke.mockClear();
+    invoke.mockResolvedValueOnce(mockOutcome());
+    await session.save();
+
+    invoke.mockResolvedValueOnce({
+      valid: true,
+      revision: 2,
+      definition_hash: 'hash:def',
+      plan_hash: 'hash:plan',
+      diagnostics: [],
+      profile: null,
+      capability: { network: false, system: { fs: false, env: false, process: false } },
+    });
+    await session.validate();
+
+    invoke.mockResolvedValueOnce(mockCandidate());
     const candidate = await session.prepare();
-    expect(invoke).toHaveBeenCalledWith('save_native_rule_document', expect.anything());
+    expect(candidate.id).toBe('candidate:1');
+    expect(session.candidate?.id).toBe('candidate:1');
     expect(invoke).toHaveBeenCalledWith('prepare_native_rule_document', {
       request: { document_id: 'doc:1', revision: 2 },
     });
+  });
+
+  it('prepare continues with validated semantic revision after layout-only conflict', async () => {
+    const session = new NativeRuleEditorSession();
+    invoke.mockResolvedValueOnce(mockDetail());
+    await session.loadDocument('doc:1');
+
+    session.setValidation({
+      status: 'valid',
+      revision: 1,
+      definitionHash: 'hash:def',
+      planHash: 'hash:plan',
+      diagnostics: [],
+    });
+    session.moveNode('node:missing', { x: 10, y: 20 });
+
+    invoke.mockResolvedValueOnce(
+      mockOutcome({
+        semantic: null,
+        layout: { revision: 1, conflict: { expected: 1, current: 2 } },
+      }),
+    );
+    invoke.mockResolvedValueOnce(mockCandidate());
+
+    const candidate = await session.prepare();
     expect(candidate.id).toBe('candidate:1');
+    expect(invoke).toHaveBeenCalledWith('prepare_native_rule_document', {
+      request: { document_id: 'doc:1', revision: 1 },
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -421,13 +537,23 @@ describe('NativeRuleEditorSession', () => {
   // addNode / deleteNode
   // -----------------------------------------------------------------------
 
-  it('addNode returns new id and alters projection', () => {
+  it('addNode emits closed defaults for every current node kind', () => {
     const session = new NativeRuleEditorSession();
-    const id = session.addNode('http');
-    expect(id).toBeTruthy();
-    expect(typeof id).toBe('string');
-    expect(session.definition.flow.nodes).toHaveLength(1);
-    expect(session.dirtySemantic).toBe(true);
+    const requiredFields: Record<FlowNodeKind, string[]> = {
+      http: ['method', 'url', 'headers', 'body', 'charset', 'expected_type'],
+      js: ['code', 'output'],
+      extract: ['rules', 'field_rules', 'expected_type', 'output_target'],
+      mapper: ['output', 'identity_fields'],
+      merge: ['inputs', 'strategy'],
+      condition: ['branches', 'expression'],
+      loop: ['collection', 'item_binding', 'index_binding', 'max_iterations'],
+    };
+
+    for (const [kind, fields] of Object.entries(requiredFields)) {
+      session.addNode(kind as FlowNodeKind);
+      const node = session.definition.flow.nodes.at(-1);
+      expect(Object.keys(node?.config.value ?? {})).toEqual(expect.arrayContaining(fields));
+    }
   });
 
   it('deleteNode removes node and incident edges', () => {

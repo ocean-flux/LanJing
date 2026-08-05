@@ -171,12 +171,14 @@ pub struct ValidateNativeRuleDocumentPreview {
     pub revision: i64,
     /// canonical Definition BLAKE3。
     pub definition_hash: String,
-    /// immutable Plan BLAKE3。
-    pub plan_hash: String,
+    /// Definition 是否通过 compiler 校验并可准备安装。
+    pub valid: bool,
+    /// immutable Plan BLAKE3；Definition 无效时为空。
+    pub plan_hash: Option<String>,
     /// validator 与 compiler 诊断。
     pub diagnostics: Vec<lj_rule_model::Diagnostic>,
-    /// 稳定来源资料。
-    pub profile: lj_media::SourceProfile,
+    /// 稳定来源资料；Definition 无效时为空。
+    pub profile: Option<lj_media::SourceProfile>,
     /// 所需最小能力。
     pub capability: lj_rule_model::PolicyCapabilities,
 }

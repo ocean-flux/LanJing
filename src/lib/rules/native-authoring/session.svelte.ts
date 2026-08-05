@@ -16,6 +16,7 @@ import {
   type AuthoringAction,
   type NativeRuleAuthoringState,
   type Position,
+  type ValidationState,
 } from './core';
 import {
   loopRegionSelectionToken,
@@ -24,6 +25,7 @@ import {
   type FlowHandleDirection,
   type FlowProjection,
 } from './flow-adapter';
+import { canonicalConfig } from './node-defaults';
 import type {
   CreateMode,
   CredentialMutationRequest,
@@ -50,7 +52,7 @@ import {
 } from './wire';
 
 // ---------------------------------------------------------------------------
-// 详情快照辅助：旧版本 wire 可能没有 definition/layout，保留空图回退以兼容旧文档。
+// 详情快照辅助：Definition 是已保存语义的唯一来源，不再用空 skeleton 覆盖缺失内容。
 // ---------------------------------------------------------------------------
 
 /** 解析后端保存的 opaque layout；非法布局不影响语义快照打开。 */
@@ -63,19 +65,15 @@ function parseLayoutJson(layoutJson: string | null | undefined): unknown {
   }
 }
 
-/** 从详情快照重建本地 state；definition 缺失时回退空图。 */
-function stateFromDetail(
-  detail: NativeRuleDocumentDetail,
-  fallbackDefinition?: NativeRuleAuthoringState['definition'],
-): NativeRuleAuthoringState {
-  const definition =
-    detail.definition ??
-    fallbackDefinition ??
-    createBlankDefinition(detail.summary.source_identity);
+/** 从详情快照重建本地 state；缺少语义快照时返回稳定错误。 */
+function stateFromDetail(detail: NativeRuleDocumentDetail): NativeRuleAuthoringState {
+  if (!detail.definition) {
+    throw new Error('document_semantic_missing');
+  }
   const semanticRevision = detail.semantic_revision ?? detail.summary.semantic_revision;
   const layoutRevision = detail.layout_revision ?? detail.summary.layout_revision;
   return createInitialState({
-    definition,
+    definition: detail.definition,
     layout: parseLayoutJson(detail.layout_json),
     savedSemanticRevision: semanticRevision === 0 ? null : semanticRevision,
     savedLayoutRevision: layoutRevision === 0 ? null : layoutRevision,
@@ -163,9 +161,14 @@ export class NativeRuleEditorSession {
     return this.#core.redo.length > 0;
   }
 
-  /** 当前诊断列表。 */
+  /** 当前诊断列表（validation state 的只读兼容投影）。 */
   get diagnostics(): InstallDiagnostic[] {
-    return this.#core.diagnostics;
+    return this.#core.validation.diagnostics;
+  }
+
+  /** 当前完整校验状态，包含 revision/hash 身份。 */
+  get validation(): ValidationState {
+    return this.#core.validation;
   }
 
   /** 已暂存的安装候选（语义变更后失效为 null）。 */
@@ -267,11 +270,8 @@ export class NativeRuleEditorSession {
     const detail = await getNativeRuleDocument({ document_id: summary.document_id });
     if (!detail) throw new Error(`文档 ${summary.document_id} 创建后无法读取`);
 
-    // 旧后端未返回 Definition 时保留模板基础 URL，避免展示空表单。
-    const definition = createBlankDefinition(summary.source_identity);
-    definition.base_url = baseUrl;
     this.#summary = detail.summary;
-    this.#core = stateFromDetail(detail, definition);
+    this.#core = stateFromDetail(detail);
     return summary;
   }
 
@@ -290,7 +290,7 @@ export class NativeRuleEditorSession {
     const detail = await getNativeRuleDocument({ document_id: summary.document_id });
     if (!detail) throw new Error(`文档 ${summary.document_id} 创建后无法读取`);
     this.#summary = detail.summary;
-    this.#core = stateFromDetail(detail, definition);
+    this.#core = stateFromDetail(detail);
     return summary;
   }
 
@@ -345,26 +345,30 @@ export class NativeRuleEditorSession {
         }
       : undefined;
 
-    // 3. 调用 wire
-    const outcome = await saveNativeRuleDocument({
-      document_id: docId,
-      semantic: semanticPayload ?? null,
-      layout: layoutPayload ?? null,
-    });
+    try {
+      const outcome = await saveNativeRuleDocument({
+        document_id: docId,
+        semantic: semanticPayload ?? null,
+        layout: layoutPayload ?? null,
+      });
 
-    // 4. saveResponse（按 epoch merge + increament）
-    this.#core = reduce(this.#core, { kind: 'saveResponse', epoch: inFlight.epoch, outcome });
+      // 4. saveResponse（按 epoch merge + increment）
+      this.#core = reduce(this.#core, { kind: 'saveResponse', epoch: inFlight.epoch, outcome });
 
-    // 5. 更新 summary revision metadata
-    if (this.#summary) {
-      this.#summary = {
-        ...this.#summary,
-        semantic_revision: outcome.semantic?.revision ?? this.#summary.semantic_revision,
-        layout_revision: outcome.layout?.revision ?? this.#summary.layout_revision,
-      };
+      // 5. 更新 summary revision metadata
+      if (this.#summary) {
+        this.#summary = {
+          ...this.#summary,
+          semantic_revision: outcome.semantic?.revision ?? this.#summary.semantic_revision,
+          layout_revision: outcome.layout?.revision ?? this.#summary.layout_revision,
+        };
+      }
+
+      return outcome;
+    } catch (error) {
+      this.#core = reduce(this.#core, { kind: 'saveFailure', epoch: inFlight.epoch });
+      throw error;
     }
-
-    return outcome;
   }
 
   /**
@@ -373,13 +377,38 @@ export class NativeRuleEditorSession {
   async validate(): Promise<ValidateNativeRuleDocumentPreview> {
     const docId = this.#summary?.document_id;
     if (!docId) throw new Error('未打开文档，无法校验');
+    if (this.#core.dirty.semantic || this.#core.conflict.semantic) {
+      throw new Error('document_semantic_unsaved');
+    }
     const revision = this.#core.savedSemanticRevision ?? 0;
-    const preview = await validateNativeRuleDocument({ document_id: docId, revision });
     this.#core = reduce(this.#core, {
-      kind: 'setDiagnostics',
-      diagnostics: preview.diagnostics as unknown as InstallDiagnostic[],
+      kind: 'setValidation',
+      validation: { ...this.#core.validation, status: 'pending' },
     });
-    return preview;
+    try {
+      const preview = await validateNativeRuleDocument({ document_id: docId, revision });
+      const currentRevision =
+        this.#core.savedSemanticRevision === revision &&
+        !this.#core.dirty.semantic &&
+        !this.#core.conflict.semantic;
+      this.#core = reduce(this.#core, {
+        kind: 'setValidation',
+        validation: {
+          status: currentRevision ? (preview.valid ? 'valid' : 'invalid') : 'stale',
+          revision: preview.revision,
+          definitionHash: preview.definition_hash,
+          planHash: preview.plan_hash,
+          diagnostics: cloneJson(preview.diagnostics),
+        },
+      });
+      return preview;
+    } catch (error) {
+      this.#core = reduce(this.#core, {
+        kind: 'setValidation',
+        validation: { ...this.#core.validation, status: 'error' },
+      });
+      throw error;
+    }
   }
 
   /**
@@ -389,12 +418,26 @@ export class NativeRuleEditorSession {
   async prepare(): Promise<InstallCandidate> {
     const docId = this.#summary?.document_id;
     if (!docId) throw new Error('未打开文档，无法 prepare');
-    // 强制保存未保存的修改
+    // 先保存所有 dirty 域；冲突响应不会被误当作成功。
     if (this.#core.dirty.semantic || this.#core.dirty.layout) {
       await this.save();
     }
-    const revision = this.#core.savedSemanticRevision ?? 0;
+    const revision = this.#core.savedSemanticRevision;
+    if (
+      revision === null ||
+      this.#core.dirty.semantic ||
+      this.#core.conflict.semantic ||
+      this.#core.validation.status !== 'valid' ||
+      this.#core.validation.revision !== revision ||
+      !this.#core.validation.definitionHash
+    ) {
+      throw new Error('document_validation_required');
+    }
     const candidate = await prepareNativeRuleDocument({ document_id: docId, revision });
+    this.#core = reduce(this.#core, {
+      kind: 'setCandidate',
+      candidate: { id: candidate.id, expires_at_ms: candidate.expires_at_ms },
+    });
     return candidate;
   }
 
@@ -505,9 +548,18 @@ export class NativeRuleEditorSession {
     this.dispatch({ kind: 'credentialClear', nodeId, jsonPointer, logicalName });
   }
 
-  /** 设置 diagnostics（校验/编译后）。 */
+  /** 设置完整校验结果；调用方不得只写入脱离 revision 的裸诊断。 */
+  setValidation(validation: ValidationState): void {
+    this.dispatch({ kind: 'setValidation', validation });
+  }
+
+  /** 兼容旧调用方：仅设置诊断时标记为 error，避免伪装成已验证。 */
   setDiagnostics(diagnostics: InstallDiagnostic[]): void {
-    this.dispatch({ kind: 'setDiagnostics', diagnostics });
+    this.setValidation({
+      ...this.#core.validation,
+      status: 'error',
+      diagnostics: cloneJson(diagnostics),
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -523,7 +575,7 @@ export class NativeRuleEditorSession {
     const id = crypto.randomUUID();
     const node: FlowNode = {
       id,
-      config: { kind, value: configValue ?? {} },
+      config: { kind, value: canonicalConfig(kind, configValue ?? null) },
     };
     this.dispatch({ kind: 'nodeAdd', node });
     this.selectNode(id);
@@ -538,6 +590,14 @@ export class NativeRuleEditorSession {
   deleteNode(nodeId: string): void {
     this.dispatch({ kind: 'nodeDelete', nodeId });
     if (this.selection === nodeId) this.selectNode(null);
+  }
+
+  /** 原子删除所选节点与连线；一次 semantic history command 可整体撤销。 */
+  deleteSelection(nodeIds: string[], edgeIds: string[]): void {
+    this.dispatch({ kind: 'deleteSelection', nodeIds, edgeIds });
+    if (this.selection && !this.definition.flow.nodes.some((node) => node.id === this.selection)) {
+      this.selectNode(null);
+    }
   }
 
   // -----------------------------------------------------------------------

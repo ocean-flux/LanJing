@@ -84,13 +84,13 @@ describe('validateConnection：端口类型', () => {
     });
   });
 
-  it('拒绝重复边（同一语义 identity）', () => {
+  it('重连排除正在替换的旧边，不把原位置判为 duplicate', () => {
     const existing = edge('http-a', 'http_response', 'extract-a', 'source');
-    const result = validateConnection(
-      conn('http-a', 'http_response', 'extract-a', 'source'),
-      graph([httpA, extractA], [existing]),
-    );
-    expect(result).toEqual({ ok: false, reason: 'duplicate-edge' });
+    const result = validateConnection(conn('http-a', 'http_response', 'extract-a', 'source'), {
+      ...graph([httpA, extractA], [existing]),
+      excludeEdgeId: 'http-a:http_response->extract-a:source',
+    });
+    expect(result).toEqual({ ok: true });
   });
 });
 

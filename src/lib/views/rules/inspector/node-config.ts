@@ -1,6 +1,6 @@
 //! 节点 Inspector 的 canonical config 辅助。
 
-import type { FlowNodeKind } from '$lib/rules/native-authoring/wire';
+import { canonicalConfig } from '$lib/rules/native-authoring/node-defaults';
 
 export type JsonObject = Record<string, unknown>;
 
@@ -37,49 +37,12 @@ export type MergeInputValue = {
   activation: 'required' | 'optional';
 };
 
-const DEFAULTS: Record<FlowNodeKind, JsonObject> = {
-  http: {
-    method: 'Get',
-    url: '',
-    headers: {},
-    body: null,
-    charset: null,
-    expected_type: 'Html',
-  },
-  js: { code: '', output: 'json' },
-  extract: { rules: [], field_rules: {}, expected_type: 'Html', output_target: 'Media' },
-  mapper: { output: 'items', identity_fields: [] },
-  merge: {
-    inputs: [
-      { input_id: 'input_1', handle: 'in:0', order: 0, activation: 'required' },
-      { input_id: 'input_2', handle: 'in:1', order: 1, activation: 'optional' },
-    ],
-    strategy: 'single_active',
-  },
-  condition: {
-    branches: ['true', 'false'],
-    expression: {
-      mode: 'typed',
-      predicate: { operator: 'exists', pointer: '' },
-      true_branch: 'true',
-      false_branch: 'false',
-    },
-  },
-  loop: {
-    collection: { mode: 'typed', pointer: '' },
-    item_binding: 'item',
-    index_binding: 'index',
-    max_iterations: 64,
-  },
-};
-
 function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
-/** 空白节点也展示可编辑的 canonical 初始字段。 */
-export function canonicalConfig(kind: FlowNodeKind, config: JsonObject | null): JsonObject {
-  return { ...clone(DEFAULTS[kind]), ...(config ?? {}) };
+  try {
+    return structuredClone(value);
+  } catch {
+    throw new Error('无法复制节点配置');
+  }
 }
 
 export function stringValue(value: unknown, fallback = ''): string {
@@ -122,7 +85,7 @@ export function mergeInputValues(value: unknown): MergeInputValue[] {
 export function conditionExpression(config: JsonObject): ConditionExpression {
   const value = config.expression;
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return clone(DEFAULTS.condition.expression) as ConditionExpression;
+    return clone(canonicalConfig('condition', null).expression) as ConditionExpression;
   }
   const expression = value as JsonObject;
   if (expression.mode === 'js') {
@@ -175,20 +138,33 @@ export function parseLiteral(value: string): unknown {
 
 export function conditionPatch(config: JsonObject, patch: ConditionExpressionPatch): JsonObject {
   const current = conditionExpression(config);
+  const nextBranches = patch.branches ?? stringArray(config.branches);
+  const oldBranches = stringArray(config.branches);
+  const normalizeBranch = (branch: string, fallbackIndex: number): string => {
+    if (nextBranches.includes(branch)) return branch;
+    const oldIndex = oldBranches.indexOf(branch);
+    const samePosition = oldIndex >= 0 ? nextBranches[oldIndex] : undefined;
+    if (samePosition && !oldBranches.includes(samePosition)) return samePosition;
+    return nextBranches[fallbackIndex] ?? nextBranches[0] ?? branch;
+  };
   const expression =
     patch.mode === 'js'
       ? { mode: 'js', code: patch.code ?? '' }
       : {
-          mode: 'typed',
+          mode: 'typed' as const,
           predicate:
             patch.predicate ??
             ('predicate' in current ? current.predicate : { operator: 'exists', pointer: '' }),
-          true_branch:
+          true_branch: normalizeBranch(
             patch.true_branch ?? ('true_branch' in current ? current.true_branch : 'true'),
-          false_branch:
+            0,
+          ),
+          false_branch: normalizeBranch(
             patch.false_branch ?? ('false_branch' in current ? current.false_branch : 'false'),
+            1,
+          ),
         };
-  return { ...config, ...(patch.branches ? { branches: patch.branches } : {}), expression };
+  return { ...config, ...(patch.branches ? { branches: nextBranches } : {}), expression };
 }
 
 export function collectionPatch(config: JsonObject, selector: CollectionSelector): JsonObject {

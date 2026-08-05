@@ -187,9 +187,10 @@ export interface ValidateNativeRuleDocumentRequest {
 export interface ValidateNativeRuleDocumentPreview {
   revision: number;
   definition_hash: string;
-  plan_hash: string;
+  valid: boolean;
+  plan_hash: string | null;
   diagnostics: InstallDiagnostic[];
-  profile: SourceProfile;
+  profile: SourceProfile | null;
   capability: PolicyCapabilities;
 }
 
@@ -247,7 +248,7 @@ export interface ProvenanceSummaryView {
   format: string;
   adapter_version: string;
   input_hash: string;
-  diagnostics_json: string;
+  diagnostics: InstallDiagnostic[];
   imported_at_ms: number;
 }
 
@@ -256,10 +257,10 @@ export interface NativeRuleDocumentDetail {
   summary: NativeRuleDocumentSummary;
   semantic_revision: number;
   layout_revision: number;
-  /** 后端返回的当前 masked Definition；旧后端可能省略。 */
-  definition?: RuleDefinition | null;
-  /** 后端返回的作者布局 JSON；旧后端可能省略。 */
-  layout_json?: string | null;
+  /** 后端当前保存的 Definition；缺失时 session 必须返回 document_semantic_missing。 */
+  definition: RuleDefinition | null;
+  /** 后端当前保存的作者布局 JSON；布局不进入语义 hash。 */
+  layout_json: string | null;
   provenance?: ProvenanceSummaryView | null;
 }
 

@@ -35,6 +35,8 @@ export type GateGraph = {
   edges: FlowEdge[];
   /** 当前焦点意图的 flow_entry node id；null/缺省 = 全部视图（不校验意图）。 */
   focusEntry?: string | null;
+  /** 重连时排除正在替换的旧边 identity。 */
+  excludeEdgeId?: string;
 };
 
 /** 连接被拒原因（闭集）。 */
@@ -157,15 +159,18 @@ export function validateConnection(
   if (!portCompatible(outPort, inPort)) return { ok: false, reason: 'incompatible-ports' };
 
   const nextEdge = semanticEdgeFromConnection(connection, sourceNode, targetNode);
+  const activeEdges = graph.excludeEdgeId
+    ? graph.edges.filter((edge) => edgeIdentity(edge) !== graph.excludeEdgeId)
+    : graph.edges;
   const nextIdentity = edgeIdentity(nextEdge);
-  if (graph.edges.some((edge) => edgeIdentity(edge) === nextIdentity)) {
+  if (activeEdges.some((edge) => edgeIdentity(edge) === nextIdentity)) {
     return { ok: false, reason: 'duplicate-edge' };
   }
 
   if (
     targetNode.kind === 'loop' &&
     targetHandle === 'yield' &&
-    graph.edges.some(
+    activeEdges.some(
       (edge) =>
         edge.to.node_id === target &&
         edge.to.handle ===
@@ -179,7 +184,7 @@ export function validateConnection(
   if (
     targetNode.kind === 'http' &&
     targetHandle === 'in' &&
-    graph.edges.some(
+    activeEdges.some(
       (edge) =>
         edge.to.node_id === target &&
         edge.to.handle ===
@@ -192,14 +197,14 @@ export function validateConnection(
   }
 
   // 只有 Loop 的唯一 yield edge 可以形成 structured region 回边。
-  const structuredYield = isStructuredYieldBackedge(connection, source, targetNode, graph.edges);
-  if (reachableNodes(target, [...graph.edges, nextEdge]).has(source) && !structuredYield) {
+  const structuredYield = isStructuredYieldBackedge(connection, source, targetNode, activeEdges);
+  if (reachableNodes(target, [...activeEdges, nextEdge]).has(source) && !structuredYield) {
     return { ok: false, reason: 'back-edge' };
   }
 
   // 意图兼容：焦点激活时，源节点必须在焦点子图内（构建方向为“焦点内 → 外扩”）。
   if (graph.focusEntry) {
-    const focused = reachableNodes(graph.focusEntry, graph.edges);
+    const focused = reachableNodes(graph.focusEntry, activeEdges);
     if (!focused.has(source)) return { ok: false, reason: 'intent-mismatch' };
   }
 

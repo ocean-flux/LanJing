@@ -8,11 +8,11 @@
 use std::collections::{BTreeMap, HashMap};
 
 use lj_capability::{IntentExport, StandardIntent};
-use lj_compiler::{canonicalize, validate};
+use lj_compiler::{CompilerError, canonicalize, validate};
 use lj_rule_model::{
-    CapabilityManifest, ControlledMapper, ExtractRule, ExtractSpec, ExtractType, FlowEdge,
-    FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec, LINEAR_INPUT_HANDLE,
-    LINEAR_OUTPUT_HANDLE, MapperOutputKind, OutputTarget, PolicyCapabilities,
+    CapabilityManifest, ControlledMapper, DiagnosticSeverity, ExtractRule, ExtractSpec,
+    ExtractType, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec,
+    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MapperOutputKind, OutputTarget, PolicyCapabilities,
     RequestHeaderDisposition, RuleDefinition, SensitiveNamePolicy, SourceIdentity,
     SystemCapabilities, definition_hash,
 };
@@ -273,34 +273,38 @@ impl RuleSystem {
                 definition,
                 credential_mutations,
             }) => {
-                let mut manifest = match self
+                let existing_detail = self
                     .state
                     .storage
                     .get_native_rule_document(&request.document_id)
                     .await
                     .map_err(|error| {
                         storage_error(&error, RuleErrorStage::Persistence, &trace_id)
-                    })? {
-                    Some(detail) => detail
-                        .semantic
-                        .map(|snapshot| {
-                            CredentialManifest::parse(&snapshot.manifest_json, &trace_id)
-                        })
-                        .transpose()?
-                        .unwrap_or_else(CredentialManifest::empty),
-                    None => CredentialManifest::empty(),
-                };
+                    })?;
+                let current_semantic_revision = existing_detail
+                    .as_ref()
+                    .and_then(|detail| detail.semantic.as_ref())
+                    .map(|snapshot| snapshot.revision);
+                let mut manifest = existing_detail
+                    .and_then(|detail| detail.semantic)
+                    .map(|snapshot| CredentialManifest::parse(&snapshot.manifest_json, &trace_id))
+                    .transpose()?
+                    .unwrap_or_else(CredentialManifest::empty);
                 let definition = canonicalize(&definition);
                 let _ = validate(&definition);
-                self.apply_credential_mutations(
-                    &definition,
-                    &request.document_id,
-                    &mut manifest,
-                    credential_mutations,
-                    &trace_id,
-                    occurred_at_ms,
-                )
-                .await?;
+                // 凭证 secret 写入独立于 semantic save；先用同一 authoritative snapshot
+                // 检查 revision，避免过期 clear/replace 在后续 conflict 前产生副作用。
+                if current_semantic_revision == Some(expected_revision) {
+                    self.apply_credential_mutations(
+                        &definition,
+                        &request.document_id,
+                        &mut manifest,
+                        credential_mutations,
+                        &trace_id,
+                        occurred_at_ms,
+                    )
+                    .await?;
+                }
                 let definition_json = serde_json::to_string(&definition).map_err(|_| {
                     RuleError::new(
                         RuleErrorStage::Internal,
@@ -359,7 +363,8 @@ impl RuleSystem {
     ///
     /// # Errors
     ///
-    /// 文档不存在、revision 过期、快照损坏或 Definition 无法编译时返回 `RuleError`。
+    /// 文档不存在、revision 过期、快照损坏或存储读取失败时返回 `RuleError`；Definition
+    /// 语义无效时返回 `valid=false` 的安全预览。
     pub async fn validate_native_rule_document(
         &self,
         request: ValidateNativeRuleDocumentRequest,
@@ -380,11 +385,37 @@ impl RuleSystem {
         })?;
         let definition = read_snapshot_definition(semantic, &trace_id)?;
         let diagnostics = validate(&definition);
-        let plan = self
-            .state
-            .compiler
-            .compile(&definition)
-            .map_err(|error| compiler_error(&error, &trace_id))?;
+        let capability = definition.capability_manifest().required.clone();
+        let valid = !diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error);
+        if !valid {
+            return Ok(ValidateNativeRuleDocumentPreview {
+                revision: semantic.revision,
+                definition_hash: semantic.definition_hash.clone(),
+                valid: false,
+                plan_hash: None,
+                diagnostics,
+                profile: None,
+                capability,
+            });
+        }
+
+        let plan = match self.state.compiler.compile(&definition) {
+            Ok(plan) => plan,
+            Err(CompilerError::Validation { diagnostics }) => {
+                return Ok(ValidateNativeRuleDocumentPreview {
+                    revision: semantic.revision,
+                    definition_hash: semantic.definition_hash.clone(),
+                    valid: false,
+                    plan_hash: None,
+                    diagnostics,
+                    profile: None,
+                    capability,
+                });
+            }
+            Err(error) => return Err(compiler_error(&error, &trace_id)),
+        };
         let profile = source_profile(
             &definition,
             plan.definition_hash(),
@@ -394,10 +425,11 @@ impl RuleSystem {
         Ok(ValidateNativeRuleDocumentPreview {
             revision: semantic.revision,
             definition_hash: semantic.definition_hash.clone(),
-            plan_hash: plan.plan_hash().to_string(),
+            valid: true,
+            plan_hash: Some(plan.plan_hash().to_string()),
             diagnostics,
-            profile,
-            capability: definition.capability_manifest().required.clone(),
+            profile: Some(profile),
+            capability,
         })
     }
 
@@ -427,6 +459,22 @@ impl RuleSystem {
                 Vec::new(),
             )
         })?;
+        let preview = self
+            .validate_native_rule_document(ValidateNativeRuleDocumentRequest {
+                document_id: request.document_id.clone(),
+                revision: request.revision,
+            })
+            .await?;
+        if !preview.valid {
+            return Err(RuleError::new(
+                RuleErrorStage::Validation,
+                "document_definition_invalid",
+                "文档校验未通过",
+                trace_id.clone(),
+                false,
+                preview.diagnostics,
+            ));
+        }
         let definition = read_snapshot_definition(semantic, &trace_id)?;
         let expected_installed_revision = self
             .state
@@ -1469,8 +1517,13 @@ mod tests {
             })
             .await
             .expect("validate");
-        assert_eq!(preview.revision, 2);
-        assert!(!preview.plan_hash.is_empty());
+        assert!(preview.valid);
+        assert!(
+            preview
+                .plan_hash
+                .as_deref()
+                .is_some_and(|hash| !hash.is_empty())
+        );
 
         let candidate = system
             .prepare_native_rule_document(PrepareNativeRuleDocumentRequest {
@@ -1485,6 +1538,65 @@ mod tests {
             .expect("install");
         assert_eq!(installed.source_id.as_identity(), created.source_identity);
         drop(system);
+    }
+
+    /// 无效 Definition 返回安全 preview；prepare 必须拒绝未通过校验的 revision。
+    #[tokio::test]
+    async fn invalid_definition_preview_blocks_prepare() {
+        let system = open_system().await;
+        let created = system
+            .create_native_rule_document(CreateNativeRuleDocumentRequest {
+                mode: CreateMode::Blank,
+            })
+            .await
+            .expect("blank create");
+        let invalid = RuleDefinition::new(
+            SourceIdentity {
+                id: created.source_identity.clone(),
+            },
+            "",
+            BTreeMap::new(),
+            FlowGraph {
+                nodes: Vec::new(),
+                edges: Vec::new(),
+            },
+            CapabilityManifest::default(),
+            Vec::new(),
+        );
+        let saved = system
+            .save_native_rule_document(SaveNativeRuleDocumentRequest {
+                document_id: created.document_id.clone(),
+                semantic: Some(SemanticSave {
+                    expected_revision: 1,
+                    definition: invalid,
+                    credential_mutations: Vec::new(),
+                }),
+                layout: None,
+            })
+            .await
+            .expect("invalid draft save is allowed");
+        assert_eq!(saved.semantic.expect("semantic outcome").revision, 2);
+
+        let preview = system
+            .validate_native_rule_document(ValidateNativeRuleDocumentRequest {
+                document_id: created.document_id.clone(),
+                revision: 2,
+            })
+            .await
+            .expect("invalid Definition returns preview");
+        assert!(!preview.valid);
+        assert!(preview.plan_hash.is_none());
+        assert!(preview.profile.is_none());
+        assert!(!preview.diagnostics.is_empty());
+
+        let error = system
+            .prepare_native_rule_document(PrepareNativeRuleDocumentRequest {
+                document_id: created.document_id,
+                revision: 2,
+            })
+            .await
+            .expect_err("invalid Definition must not prepare");
+        assert_eq!(error.code, "document_definition_invalid");
     }
 
     /// template create 后 validate 即可编译（骨架满足 compiler 全部 Error 级合同）。
@@ -1510,10 +1622,19 @@ mod tests {
             })
             .await
             .expect("模板 validate 必须可编译");
-        assert!(!preview.definition_hash.is_empty());
-        assert!(!preview.plan_hash.is_empty());
+        assert!(preview.valid);
+        assert!(
+            preview
+                .plan_hash
+                .as_deref()
+                .is_some_and(|hash| !hash.is_empty())
+        );
         assert_eq!(
-            preview.profile.supported_intents,
+            preview
+                .profile
+                .as_ref()
+                .expect("valid preview profile")
+                .supported_intents,
             vec![StandardIntent::Search]
         );
         drop(system);
@@ -1601,6 +1722,25 @@ mod tests {
                 .await
                 .expect("原位更新保存成功");
         assert_eq!(second.semantic.as_ref().expect("语义域").revision, 3);
+
+        // 过期 semantic save 不应先解析/执行凭证 mutation；否则会在 conflict 前
+        // 清除或写入 secret。用无效目标锁住调用顺序：结果必须仍是分域 conflict。
+        let stale = save_with_credentials(
+            &system,
+            &document_id,
+            2,
+            vec![CredentialMutationRequest {
+                node_id: Uuid::from_u128(9_999),
+                json_pointer: "/headers/Authorization".to_string(),
+                logical_name: "Authorization".to_string(),
+                action: CredentialMutationAction::Clear,
+                value: None,
+            }],
+        )
+        .await
+        .expect("过期凭证保存必须返回 conflict outcome");
+        assert!(stale.semantic.as_ref().expect("语义域").conflict.is_some());
+
         let third = save_with_credentials(&system, &document_id, 3, vec![clear])
             .await
             .expect("clear 保存成功");

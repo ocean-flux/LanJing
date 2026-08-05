@@ -20,6 +20,7 @@ import type {
   CredentialMutationRequest,
   FlowEdge,
   FlowNode,
+  FlowNodeKind,
   InstallDiagnostic,
   IntentExport,
   RevisionConflict,
@@ -52,6 +53,25 @@ export type DefinitionField =
 
 export type DefinitionFieldValue = string | SourceIdentity | string[] | CapabilityManifest;
 
+/** 校验结果身份，避免旧诊断被误显示为当前 Definition 结果。 */
+export type ValidationState = {
+  status: 'unknown' | 'pending' | 'valid' | 'invalid' | 'stale' | 'error';
+  revision: number | null;
+  definitionHash: string | null;
+  planHash: string | null;
+  diagnostics: InstallDiagnostic[];
+};
+
+function unknownValidation(): ValidationState {
+  return {
+    status: 'unknown',
+    revision: null,
+    definitionHash: null,
+    planHash: null,
+    diagnostics: [],
+  };
+}
+
 /**
  * 可回放命令（history / redo 栈条目）。
  *
@@ -78,6 +98,8 @@ export type TypedCommand =
       nodeId: string;
       value: Record<string, unknown>;
       prev: Record<string, unknown>;
+      edges: FlowEdge[];
+      prevEdges: FlowEdge[];
     }
   | {
       domain: 'semantic';
@@ -88,6 +110,18 @@ export type TypedCommand =
       domain: 'semantic';
       kind: 'nodeDelete';
       node: FlowNode;
+      edges: FlowEdge[];
+    }
+  | {
+      domain: 'semantic';
+      kind: 'nodeDeleteMany';
+      nodes: FlowNode[];
+      edges: FlowEdge[];
+    }
+  | {
+      domain: 'semantic';
+      kind: 'deleteSelection';
+      nodes: FlowNode[];
       edges: FlowEdge[];
     }
   | {
@@ -165,8 +199,8 @@ export interface NativeRuleAuthoringState {
   selection: string | null;
   /** 当前意图焦点；不进 history。 */
   intentFocus: StandardIntent | null;
-  /** 最近一次校验/编译诊断（只读呈现）。 */
-  diagnostics: InstallDiagnostic[];
+  /** 最近一次校验/编译结果及其 semantic revision/hash 身份。 */
+  validation: ValidationState;
   /** 已暂存的安装候选；语义变更后失效。 */
   candidate: { id: string; expires_at_ms: number } | null;
   /** 分域乐观并发冲突。 */
@@ -188,6 +222,8 @@ export type AuthoringAction =
   | { kind: 'setNodeConfig'; nodeId: string; patch: Record<string, unknown> }
   | { kind: 'nodeAdd'; node: FlowNode }
   | { kind: 'nodeDelete'; nodeId: string }
+  | { kind: 'nodesDelete'; nodeIds: string[] }
+  | { kind: 'deleteSelection'; nodeIds: string[]; edgeIds: string[] }
   | { kind: 'edgeConnect'; edge: FlowEdge; connected: boolean }
   | { kind: 'edgeReconnect'; from: FlowEdge; to: FlowEdge }
   | { kind: 'moveNode'; nodeId: string; position: Position }
@@ -197,7 +233,8 @@ export type AuthoringAction =
   | { kind: 'viewport'; viewport: unknown }
   | { kind: 'selection'; nodeId: string | null }
   | { kind: 'intentFocus'; intent: StandardIntent | null }
-  | { kind: 'setDiagnostics'; diagnostics: InstallDiagnostic[] }
+  | { kind: 'setValidation'; validation: ValidationState }
+  | { kind: 'setCandidate'; candidate: NativeRuleAuthoringState['candidate'] }
   | { kind: 'undo' }
   | { kind: 'redo' }
   | {
@@ -210,6 +247,7 @@ export type AuthoringAction =
   | { kind: 'credentialClear'; nodeId: string; jsonPointer: string; logicalName: string }
   | { kind: 'saveRequest' }
   | { kind: 'saveResponse'; epoch: number; outcome: SaveNativeRuleDocumentOutcome }
+  | { kind: 'saveFailure'; epoch: number }
   | { kind: 'reset'; state: NativeRuleAuthoringState };
 
 /** 空能力清单（对应 Rust `CapabilityManifest::default()`）。 */
@@ -251,7 +289,7 @@ export function createInitialState(options: {
     epoch: 0,
     selection: null,
     intentFocus: null,
-    diagnostics: [],
+    validation: unknownValidation(),
     candidate: null,
     conflict: { semantic: null, layout: null },
     history: [],
@@ -261,10 +299,14 @@ export function createInitialState(options: {
   };
 }
 
-/** 深拷贝 JSON 结构（definition/layout 均为纯 JSON，JSON round-trip 足够）。 */
+/** 深拷贝 JSON 结构（definition/layout 均为纯 JSON）。 */
 export function cloneJson<T>(value: T): T {
   if (value === null || value === undefined) return value;
-  return JSON.parse(JSON.stringify(value)) as T;
+  try {
+    return structuredClone(value);
+  } catch {
+    throw new Error('无法复制 JSON 状态');
+  }
 }
 
 /** 递归 JSON 深比较（对象键序无关）。 */
@@ -332,11 +374,16 @@ function applyCommand(
         ...state,
         definition: setIntentExport(state.definition, command.intent, command.value),
       };
-    case 'setNodeConfig':
+    case 'setNodeConfig': {
+      const definition = setNodeConfigValue(state.definition, command.nodeId, command.value);
       return {
         ...state,
-        definition: setNodeConfigValue(state.definition, command.nodeId, command.value),
+        definition: {
+          ...definition,
+          flow: { ...definition.flow, edges: cloneJson(command.edges) },
+        },
       };
+    }
     case 'nodeAdd': {
       if (state.definition.flow.nodes.some((node) => node.id === command.node.id)) return state;
       return {
@@ -362,6 +409,42 @@ function applyCommand(
             edges: state.definition.flow.edges.filter(
               (edge) =>
                 edge.from.node_id !== command.node.id && edge.to.node_id !== command.node.id,
+            ),
+          },
+        },
+      };
+    }
+    case 'nodeDeleteMany': {
+      const nodeIds = new Set(command.nodes.map((node) => node.id));
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes: state.definition.flow.nodes.filter((node) => !nodeIds.has(node.id)),
+            edges: state.definition.flow.edges.filter(
+              (edge) => !nodeIds.has(edge.from.node_id) && !nodeIds.has(edge.to.node_id),
+            ),
+          },
+        },
+      };
+    }
+    case 'deleteSelection': {
+      const nodeIds = new Set(command.nodes.map((node) => node.id));
+      const edgeIds = new Set(command.edges.map(edgeIdentity));
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes: state.definition.flow.nodes.filter((node) => !nodeIds.has(node.id)),
+            edges: state.definition.flow.edges.filter(
+              (edge) =>
+                !nodeIds.has(edge.from.node_id) &&
+                !nodeIds.has(edge.to.node_id) &&
+                !edgeIds.has(edgeIdentity(edge)),
             ),
           },
         },
@@ -437,11 +520,16 @@ function revertCommand(
         ...state,
         definition: setIntentExport(state.definition, command.intent, command.prev),
       };
-    case 'setNodeConfig':
+    case 'setNodeConfig': {
+      const definition = setNodeConfigValue(state.definition, command.nodeId, command.prev);
       return {
         ...state,
-        definition: setNodeConfigValue(state.definition, command.nodeId, command.prev),
+        definition: {
+          ...definition,
+          flow: { ...definition.flow, edges: cloneJson(command.prevEdges) },
+        },
       };
+    }
     case 'nodeAdd': {
       const nodes = state.definition.flow.nodes.filter((node) => node.id !== command.node.id);
       return {
@@ -463,6 +551,40 @@ function revertCommand(
       const nodes = state.definition.flow.nodes.some((node) => node.id === command.node.id)
         ? state.definition.flow.nodes
         : [...state.definition.flow.nodes, cloneJson(command.node)];
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes,
+            edges: command.edges.reduce(addEdge, state.definition.flow.edges),
+          },
+        },
+      };
+    }
+    case 'nodeDeleteMany': {
+      const nodes = [...state.definition.flow.nodes];
+      for (const node of command.nodes) {
+        if (!nodes.some((current) => current.id === node.id)) nodes.push(cloneJson(node));
+      }
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes,
+            edges: command.edges.reduce(addEdge, state.definition.flow.edges),
+          },
+        },
+      };
+    }
+    case 'deleteSelection': {
+      const nodes = [...state.definition.flow.nodes];
+      for (const node of command.nodes) {
+        if (!nodes.some((current) => current.id === node.id)) nodes.push(cloneJson(node));
+      }
       return {
         ...state,
         definition: {
@@ -594,11 +716,84 @@ function edgeIdentity(edge: FlowEdge): string {
   return `${edge.from.node_id}:${edge.from.handle}->${edge.to.node_id}:${edge.to.handle}`;
 }
 
+/** 读取会生成动态 semantic handle 的闭集配置。 */
+function dynamicHandles(kind: FlowNodeKind, config: Record<string, unknown>): string[] {
+  if (kind === 'condition') {
+    return Array.isArray(config.branches)
+      ? config.branches.filter(
+          (value): value is string => typeof value === 'string' && value.length > 0,
+        )
+      : [];
+  }
+  if (kind === 'merge') {
+    return Array.isArray(config.inputs)
+      ? [...config.inputs]
+          .filter(
+            (value): value is Record<string, unknown> =>
+              typeof value === 'object' && value !== null,
+          )
+          .sort((left, right) => {
+            const leftOrder = typeof left.order === 'number' ? left.order : 0;
+            const rightOrder = typeof right.order === 'number' ? right.order : 0;
+            return leftOrder - rightOrder;
+          })
+          .map((value) => (typeof value.handle === 'string' ? value.handle : ''))
+          .filter((value) => value.length > 0)
+      : [];
+  }
+  return [];
+}
+
+/**
+ * 动态端口变更时迁移同序重命名的 handle，并移除已不存在的 handle 边。
+ * 同一命令保存 config 与 edges，保证一次 undo 恢复完整 canonical 状态。
+ */
+function reconcileDynamicEdges(
+  nodeId: string,
+  kind: FlowNodeKind,
+  previousConfig: Record<string, unknown>,
+  nextConfig: Record<string, unknown>,
+  edges: FlowEdge[],
+): FlowEdge[] {
+  if (kind !== 'condition' && kind !== 'merge') return cloneJson(edges);
+  const previousHandles = dynamicHandles(kind, previousConfig);
+  const nextHandles = dynamicHandles(kind, nextConfig);
+  const nextSet = new Set(nextHandles);
+  const previousSet = new Set(previousHandles);
+  const migrations = new Map<string, string>();
+  previousHandles.forEach((handle, index) => {
+    if (nextSet.has(handle)) return;
+    const replacement = nextHandles[index];
+    if (replacement && !previousSet.has(replacement)) migrations.set(handle, replacement);
+  });
+  const output: FlowEdge[] = [];
+  for (const edge of edges) {
+    let nextEdge = edge;
+    if (kind === 'condition' && edge.from.node_id === nodeId) {
+      const handle = migrations.get(edge.from.handle) ?? edge.from.handle;
+      if (!nextSet.has(handle)) continue;
+      nextEdge = { ...edge, from: { ...edge.from, handle } };
+    } else if (kind === 'merge' && edge.to.node_id === nodeId) {
+      const handle = migrations.get(edge.to.handle) ?? edge.to.handle;
+      if (!nextSet.has(handle)) continue;
+      nextEdge = { ...edge, to: { ...edge.to, handle } };
+    }
+    if (!output.some((current) => edgeIdentity(current) === edgeIdentity(nextEdge))) {
+      output.push(cloneJson(nextEdge));
+    }
+  }
+  return output;
+}
+
 /** 语义 action 统一副作用：清 candidate、置 semantic dirty、清 redo。 */
 function markSemanticDirty(state: NativeRuleAuthoringState): NativeRuleAuthoringState {
   return {
     ...state,
     dirty: { ...state.dirty, semantic: true },
+    validation: {
+      ...state.validation,
+      status: state.validation.revision === null ? 'unknown' : 'stale',
+    },
     candidate: null,
     redo: [],
   };
@@ -645,6 +840,40 @@ function coalesceLayout(history: TypedCommand[], command: LayoutCommand): TypedC
   return [...history, command];
 }
 
+function sanitizeSelection(
+  state: NativeRuleAuthoringState,
+  command: SemanticCommand,
+): NativeRuleAuthoringState {
+  let selection = state.selection;
+  if (selection?.startsWith('edge:')) {
+    const edgeId = selection.slice('edge:'.length);
+    if (!state.definition.flow.edges.some((edge) => edgeIdentity(edge) === edgeId))
+      selection = null;
+  }
+  if (selection && !selection.startsWith('edge:') && !selection.startsWith('port:')) {
+    if (!state.definition.flow.nodes.some((node) => node.id === selection)) selection = null;
+  }
+  if (selection?.startsWith('port:')) {
+    const encodedNodeId = selection.slice('port:'.length).split(':', 1)[0];
+    try {
+      const nodeId = decodeURIComponent(encodedNodeId);
+      if (!state.definition.flow.nodes.some((node) => node.id === nodeId)) selection = null;
+    } catch {
+      selection = null;
+    }
+  }
+  if (
+    command.kind === 'setNodeConfig' &&
+    selection?.startsWith(`port:${encodeURIComponent(command.nodeId)}:`)
+  ) {
+    selection = null;
+  }
+  if (command.kind === 'edgeReconnect' && selection === `edge:${edgeIdentity(command.from)}`) {
+    selection = `edge:${edgeIdentity(command.to)}`;
+  }
+  return selection === state.selection ? state : { ...state, selection };
+}
+
 /** 语义命令执行入口：应用 + 入 history（语义命令不合并）。 */
 function pushSemanticCommand(
   state: NativeRuleAuthoringState,
@@ -652,7 +881,8 @@ function pushSemanticCommand(
 ): NativeRuleAuthoringState {
   const applied = applyCommand(state, command);
   const dirty = markSemanticDirty(applied);
-  return { ...dirty, history: [...dirty.history, command] };
+  const sanitized = sanitizeSelection(dirty, command);
+  return { ...sanitized, history: [...sanitized.history, command] };
 }
 
 /** 布局命令执行入口：应用 + 入 history（layout 连续操作合并为一条历史）。 */
@@ -791,6 +1021,13 @@ function saveResponse(
   return { ...next, epoch: next.epoch + 1, inFlightSave: null };
 }
 
+/** 保存调用失败：清理 in-flight，保留 dirty，且不恢复一次性 credential 明文。 */
+function saveFailure(state: NativeRuleAuthoringState, epoch: number): NativeRuleAuthoringState {
+  const inFlight = state.inFlightSave;
+  if (!inFlight || inFlight.epoch !== epoch || state.epoch !== epoch) return state;
+  return { ...state, epoch: state.epoch + 1, inFlightSave: null };
+}
+
 /** 不可变 reducer。 */
 export function reduce(
   state: NativeRuleAuthoringState,
@@ -823,13 +1060,24 @@ export function reduce(
       const node = state.definition.flow.nodes.find((candidate) => candidate.id === action.nodeId);
       if (!node) return state;
       const merged = { ...node.config.value, ...action.patch };
-      if (deepEqual(node.config.value, merged)) return state;
+      const edges = reconcileDynamicEdges(
+        node.id,
+        node.config.kind,
+        node.config.value,
+        merged,
+        state.definition.flow.edges,
+      );
+      if (deepEqual(node.config.value, merged) && deepEqual(state.definition.flow.edges, edges)) {
+        return state;
+      }
       return pushSemanticCommand(state, {
         domain: 'semantic',
         kind: 'setNodeConfig',
         nodeId: action.nodeId,
         value: merged,
         prev: cloneJson(node.config.value),
+        edges: cloneJson(edges),
+        prevEdges: cloneJson(state.definition.flow.edges),
       });
     }
     case 'nodeAdd': {
@@ -852,6 +1100,39 @@ export function reduce(
             (edge) => edge.from.node_id === node.id || edge.to.node_id === node.id,
           ),
         ),
+      });
+    }
+    case 'nodesDelete': {
+      const nodeIds = new Set(action.nodeIds);
+      const nodes = state.definition.flow.nodes.filter((node) => nodeIds.has(node.id));
+      if (nodes.length === 0) return state;
+      return pushSemanticCommand(state, {
+        domain: 'semantic',
+        kind: 'nodeDeleteMany',
+        nodes: cloneJson(nodes),
+        edges: cloneJson(
+          state.definition.flow.edges.filter(
+            (edge) => nodeIds.has(edge.from.node_id) || nodeIds.has(edge.to.node_id),
+          ),
+        ),
+      });
+    }
+    case 'deleteSelection': {
+      const nodeIds = new Set(action.nodeIds);
+      const edgeIds = new Set(action.edgeIds);
+      const nodes = state.definition.flow.nodes.filter((node) => nodeIds.has(node.id));
+      const edges = state.definition.flow.edges.filter(
+        (edge) =>
+          nodeIds.has(edge.from.node_id) ||
+          nodeIds.has(edge.to.node_id) ||
+          edgeIds.has(edgeIdentity(edge)),
+      );
+      if (nodes.length === 0 && edges.length === 0) return state;
+      return pushSemanticCommand(state, {
+        domain: 'semantic',
+        kind: 'deleteSelection',
+        nodes: cloneJson(nodes),
+        edges: cloneJson(edges),
       });
     }
     case 'edgeConnect': {
@@ -946,8 +1227,10 @@ export function reduce(
     case 'intentFocus':
       if (state.intentFocus === action.intent) return state;
       return { ...state, intentFocus: action.intent };
-    case 'setDiagnostics':
-      return { ...state, diagnostics: cloneJson(action.diagnostics) };
+    case 'setValidation':
+      return { ...state, validation: cloneJson(action.validation) };
+    case 'setCandidate':
+      return { ...state, candidate: action.candidate ? cloneJson(action.candidate) : null };
     case 'undo':
       return undo(state);
     case 'redo':
@@ -971,6 +1254,8 @@ export function reduce(
       return saveRequest(state);
     case 'saveResponse':
       return saveResponse(state, action.epoch, action.outcome);
+    case 'saveFailure':
+      return saveFailure(state, action.epoch);
     case 'reset':
       return cloneJson(action.state);
   }

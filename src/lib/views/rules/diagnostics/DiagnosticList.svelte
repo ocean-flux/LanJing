@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { m } from '$lib/i18n';
+  import { getLocale, m } from '$lib/i18n';
   import Icon from '$lib/components/Icon.svelte';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
+  import type { ValidationState } from '$lib/rules/native-authoring/core';
   import type { InstallDiagnostic } from '$lib/rules/native-authoring/wire';
   import type { NativeRuleEditorSession } from '$lib/rules/native-authoring/session.svelte';
 
@@ -12,7 +13,23 @@
 
   let { session }: Props = $props();
 
+  function localizedMessage(key: string, fallback: { en: string; 'zh-CN': string }): string {
+    const candidate = (m as unknown as Record<string, () => string>)[key];
+    if (typeof candidate === 'function') return candidate();
+    if (getLocale() === 'en') return fallback.en;
+    return fallback['zh-CN'];
+  }
+
   const diagnostics = $derived(session.diagnostics);
+  const validation = $derived<ValidationState>(
+    session.validation ?? {
+      status: 'unknown',
+      revision: null,
+      definitionHash: null,
+      planHash: null,
+      diagnostics: [],
+    },
+  );
 
   /** severity 排序权重 */
   function severityOrder(sev: InstallDiagnostic['severity']): number {
@@ -45,16 +62,48 @@
         ? 'text-warning'
         : 'text-ink-muted';
   }
+
+  function validationLabel(status: typeof validation.status): string {
+    const labels = {
+      unknown: ['rules_validation_unknown', 'Not validated', '未校验'],
+      pending: ['rules_validation_pending', 'Validating', '校验中'],
+      valid: ['rules_validation_valid', 'Validated', '已通过'],
+      invalid: ['rules_validation_invalid', 'Validation failed', '未通过'],
+      stale: ['rules_validation_stale', 'Validation is stale', '结果已过期'],
+      error: ['rules_validation_error', 'Validation error', '校验失败'],
+    } as const;
+    const [key, en, zhCN] = labels[status];
+    return localizedMessage(key, { en, 'zh-CN': zhCN });
+  }
+
+  function focusDiagnostic(diagnostic: InstallDiagnostic): void {
+    const path = diagnostic.span?.path;
+    const nodeId = path?.match(/^\/flow\/nodes\/([^/]+)/)?.[1];
+    if (nodeId && session.definition.flow.nodes.some((node) => node.id === nodeId)) {
+      session.selectNode(nodeId);
+      return;
+    }
+    const edge = session.flowProjection.edges.find((candidate) => {
+      const semantic = candidate.data.edge;
+      return Boolean(path?.includes(semantic.from.node_id) && path?.includes(semantic.to.node_id));
+    });
+    if (edge) session.selectEdge(edge.id);
+  }
 </script>
 
 <div class="flex flex-col gap-2">
-  <h3 class="flex items-center gap-2 text-sm font-medium">
-    <Icon name="warning-circle" class="size-4 text-lantern-strong" />
-    <span>{m.rules_diagnostics()}</span>
-    {#if diagnostics.length > 0}
-      <Badge variant="outline" class="ml-auto">{diagnostics.length}</Badge>
-    {/if}
-  </h3>
+  <div class="flex items-center gap-2">
+    <h3 class="flex items-center gap-2 text-sm font-medium">
+      <Icon name="warning-circle" class="size-4 text-lantern-strong" />
+      <span>{m.rules_diagnostics()}</span>
+      {#if diagnostics.length > 0}
+        <Badge variant="outline">{diagnostics.length}</Badge>
+      {/if}
+    </h3>
+    <Badge variant={validation.status === 'valid' ? 'default' : 'outline'} class="ml-auto">
+      {validationLabel(validation.status)}
+    </Badge>
+  </div>
 
   {#if diagnostics.length === 0}
     <p class="text-xs text-ink-muted">{m.rules_diagnostics_empty()}</p>
@@ -62,8 +111,11 @@
     <ScrollArea class="max-h-80">
       <div class="flex flex-col gap-1">
         {#each [...diagnostics].sort((a, b) => severityOrder(a.severity) - severityOrder(b.severity)) as diag (diag.code + diag.severity + (diag.span?.start ?? 0))}
-          <div
-            class="flex items-start gap-2 rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-surface-2"
+          <button
+            type="button"
+            class="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-surface-2"
+            aria-label={diag.code}
+            onclick={() => focusDiagnostic(diag)}
           >
             <Icon
               name={severityIcon(diag.severity)}
@@ -83,7 +135,7 @@
                 </p>
               {/if}
             </div>
-          </div>
+          </button>
         {/each}
       </div>
     </ScrollArea>

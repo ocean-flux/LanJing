@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { m } from '$lib/i18n';
-  import { onMount } from 'svelte';
+  import { getLocale, m } from '$lib/i18n';
   import PageFrame from '$lib/components/PageFrame.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import Notice from '$lib/components/Notice.svelte';
@@ -33,6 +32,33 @@
   import { NativeRuleEditorSession } from '$lib/rules/native-authoring/session.svelte';
   import { parseEditorSelection } from '$lib/rules/native-authoring/flow-adapter';
 
+  import { onMount } from 'svelte';
+
+  function localizedMessage(key: string, fallback: { en: string; 'zh-CN': string }): string {
+    const candidate = (m as unknown as Record<string, () => string>)[key];
+    if (typeof candidate === 'function') return candidate();
+    if (getLocale() === 'en') return fallback.en;
+    return fallback['zh-CN'];
+  }
+
+  const validationCopy = {
+    validate: () => localizedMessage('rules_validate', { en: 'Validate', 'zh-CN': '校验' }),
+    validating: () =>
+      localizedMessage('rules_validating', { en: 'Validating…', 'zh-CN': '正在校验…' }),
+    prepare: () =>
+      localizedMessage('rules_prepare', { en: 'Prepare install', 'zh-CN': '准备安装' }),
+    required: () =>
+      localizedMessage('rules_validation_required', {
+        en: 'Save and validate this revision first',
+        'zh-CN': '请先保存并通过校验',
+      }),
+    prepared: () =>
+      localizedMessage('rules_prepared', {
+        en: 'Install candidate prepared',
+        'zh-CN': '已准备安装候选',
+      }),
+  };
+
   /** 唯一页面 owner：持有 session，组件只调 session 方法、读 session 投影。 */
   const session = new NativeRuleEditorSession();
 
@@ -47,6 +73,8 @@
   let diagnosticsSheetOpen = $state(false);
   let previewSheetOpen = $state(false);
   let documentSheetOpen = $state(false);
+  let operationError = $state<string | null>(null);
+  let operationNotice = $state<string | null>(null);
 
   // 平板及移动端把次要 rails 收进 Sheet，主画布保持可用宽度。
   let isNarrow = $state(false);
@@ -70,6 +98,11 @@
   const hasUnsaved = $derived(session.hasUnsavedChanges);
   const canUndo = $derived(session.canUndo);
   const canRedo = $derived(session.canRedo);
+  const validation = $derived(session.validation);
+  const validationBusy = $derived(validation.status === 'pending');
+  const canPrepare = $derived(
+    validation.status === 'valid' && !session.dirtySemantic && !session.conflict.semantic,
+  );
 
   // ---- 选中节点投影（NodeInspector 输入） ----
   const editorSelection = $derived(parseEditorSelection(session.selection));
@@ -121,7 +154,6 @@
     const handler = (event: BeforeUnloadEvent) => {
       if (session.hasUnsavedChanges) {
         event.preventDefault();
-        event.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handler);
@@ -146,9 +178,13 @@
 
   async function selectDocument(id: string) {
     selectedDocId = id;
+    loadError = null;
+    operationError = null;
+    operationNotice = null;
     try {
       await session.loadDocument(id);
     } catch (caught) {
+      selectedDocId = null;
       loadError = errorMessage(caught);
     }
   }
@@ -177,10 +213,38 @@
   }
 
   async function handleSave() {
+    operationError = null;
+    operationNotice = null;
     try {
       await session.save();
     } catch (caught) {
-      loadError = errorMessage(caught);
+      operationError = errorMessage(caught);
+    }
+  }
+
+  async function handleValidate() {
+    operationError = null;
+    operationNotice = null;
+    try {
+      await session.validate();
+      showDiagnostics = true;
+      if (isNarrow) diagnosticsSheetOpen = true;
+    } catch (caught) {
+      operationError = errorMessage(caught);
+    }
+  }
+
+  async function handlePrepare() {
+    operationError = null;
+    operationNotice = null;
+    try {
+      await session.prepare();
+      operationNotice = validationCopy.prepared();
+    } catch (caught) {
+      operationError =
+        caught instanceof Error && caught.message === 'document_validation_required'
+          ? validationCopy.required()
+          : errorMessage(caught);
     }
   }
 
@@ -192,6 +256,8 @@
   }
 
   function handleNodeChange(patch: Record<string, unknown>) {
+    operationError = null;
+    operationNotice = null;
     const id = selectedNode?.id;
     if (!id) return;
     session.setNodeConfig(id, patch);
@@ -371,7 +437,40 @@
                 type="button"
                 variant={showDiagnostics ? 'secondary' : 'ghost'}
                 size="sm"
+                disabled={validationBusy ||
+                  session.dirtySemantic ||
+                  Boolean(session.conflict.semantic)}
+                aria-busy={validationBusy}
+                aria-label={validationBusy
+                  ? validationCopy.validating()
+                  : validationCopy.validate()}
+                title={validationBusy ? validationCopy.validating() : validationCopy.validate()}
+                onclick={handleValidate}
+              >
+                <Icon name="shield-check" class="size-3.5" />
+                <span class="hidden lg:inline"
+                  >{validationBusy ? validationCopy.validating() : validationCopy.validate()}</span
+                >
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={!canPrepare || sessionSaving}
+                aria-label={validationCopy.prepare()}
+                title={validationCopy.prepare()}
+                onclick={handlePrepare}
+              >
+                <Icon name="upload-simple" class="size-3.5" />
+                <span class="hidden lg:inline">{validationCopy.prepare()}</span>
+              </Button>
+              <Button
+                type="button"
+                variant={showDiagnostics ? 'secondary' : 'ghost'}
+                size="sm"
                 aria-pressed={showDiagnostics}
+                aria-label={m.rules_diagnostics()}
+                title={m.rules_diagnostics()}
                 onclick={() => {
                   showDiagnostics = !showDiagnostics;
                   if (isNarrow) diagnosticsSheetOpen = showDiagnostics;
@@ -419,6 +518,15 @@
               class="m-2 shrink-0"
             >
               {m.rules_conflict_hint()}
+            </Notice>
+          {/if}
+          {#if operationError}
+            <Notice tone="danger" role="alert" icon="warning-circle" class="m-2 shrink-0">
+              <span class="break-words">{operationError}</span>
+            </Notice>
+          {:else if operationNotice}
+            <Notice tone="info" role="status" icon="check-circle" class="m-2 shrink-0">
+              {operationNotice}
             </Notice>
           {/if}
 

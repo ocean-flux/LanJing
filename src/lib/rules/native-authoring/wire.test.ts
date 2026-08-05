@@ -245,7 +245,7 @@ describe('native rule wire mirror parity', () => {
         format: 'legado',
         adapter_version: '1.0.0',
         input_hash: 'hash:input',
-        diagnostics_json: '[]',
+        diagnostics: [],
         imported_at_ms: 1_700_000_000_000,
       },
     };
@@ -253,7 +253,7 @@ describe('native rule wire mirror parity', () => {
       ['summary', 'semantic_revision', 'layout_revision', 'provenance'].sort(),
     );
     expect(Object.keys(detail.provenance ?? {}).sort()).toEqual(
-      ['format', 'adapter_version', 'input_hash', 'diagnostics_json', 'imported_at_ms'].sort(),
+      ['format', 'adapter_version', 'input_hash', 'diagnostics', 'imported_at_ms'].sort(),
     );
   });
 

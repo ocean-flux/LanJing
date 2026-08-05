@@ -103,7 +103,7 @@ describe('NodeInspector', () => {
     expect(patch.inputs[1]?.order).toBe(1);
   });
 
-  it('switches condition expression mode by writing canonical tagged config', async () => {
+  it('renaming a condition branch updates expression branch identity in same patch', async () => {
     const onChange = vi.fn();
     render(NodeInspector, {
       props: {
@@ -115,7 +115,7 @@ describe('NodeInspector', () => {
           branches: ['true', 'false'],
           expression: {
             mode: 'typed',
-            predicate: { operator: 'eq', pointer: '$.x', value: '1' },
+            predicate: { operator: 'exists', pointer: '$.title' },
             true_branch: 'true',
             false_branch: 'false',
           },
@@ -123,9 +123,62 @@ describe('NodeInspector', () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole('radio', { name: 'JS' }));
-    expect(onChange).toHaveBeenCalledWith({
-      expression: { mode: 'js', code: '' },
+    await fireEvent.input(screen.getAllByRole('textbox', { name: '分支 handle' })[0]!, {
+      target: { value: 'match' },
     });
+    expect(onChange).toHaveBeenLastCalledWith({
+      branches: ['match', 'false'],
+      expression: expect.objectContaining({ true_branch: 'match', false_branch: 'false' }),
+    });
+  });
+
+  it('edits extract rules and loop bindings through canonical patches', async () => {
+    const extractChange = vi.fn();
+    render(NodeInspector, {
+      props: {
+        ...baseProps,
+        onChange: extractChange,
+        nodeId: 'node:extract-1',
+        nodeType: 'extract',
+        config: { rules: [], expected_type: 'Html', output_target: 'Media' },
+      },
+    });
+    await fireEvent.click(screen.getByRole('button', { name: '添加提取规则' }));
+    expect(extractChange).toHaveBeenCalledWith({
+      rules: [{ CssSelector: { selector: '', extract_type: 'Text', regex_clean: null } }],
+    });
+
+    const loopChange = vi.fn();
+    render(NodeInspector, {
+      props: {
+        ...baseProps,
+        onChange: loopChange,
+        nodeId: 'node:loop-1',
+        nodeType: 'loop',
+        config: {},
+      },
+    });
+    await fireEvent.input(screen.getByDisplayValue('item'), { target: { value: 'entry' } });
+    expect(loopChange).toHaveBeenCalledWith({ item_binding: 'entry' });
+  });
+
+  it('edits JS output port mode through canonical config', async () => {
+    const onChange = vi.fn();
+    render(NodeInspector, {
+      props: {
+        ...baseProps,
+        onChange,
+        nodeId: 'node:js-1',
+        nodeType: 'js',
+        config: { output: 'json', code: '' },
+      },
+    });
+    const outputSelect = screen.getByRole('button', { name: '输出类型' });
+    outputSelect.focus();
+    await fireEvent.keyDown(outputSelect, { key: 'ArrowDown' });
+    await screen.findByRole('listbox');
+    await fireEvent.keyDown(document.activeElement ?? outputSelect, { key: 'ArrowDown' });
+    await fireEvent.keyDown(document.activeElement ?? outputSelect, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith({ output: 'raw' });
   });
 });
