@@ -1,7 +1,5 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "settings_open": "Open settings",
-  "settings_title": "Settings",
   "settings_appearance_group": "Appearance",
   "settings_mode_label": "Appearance mode",
   "settings_theme_light_label": "Light theme",
@@ -10,16 +8,14 @@
   "settings_theme_graphite_atelier": "Graphite Atelier",
   "settings_theme_porcelain_day": "Porcelain Day",
   "settings_theme_mist_studio": "Mist Studio",
+  "settings_theme_swatch": "{name} colour preview",
   "settings_language_group": "Language",
   "settings_language": "Interface language",
   "settings_lang_zh": "中文",
   "settings_lang_en": "EN",
-  "settings_description": "Preferences apply only to this device. No account or sync service is required.",
-  "settings_appearance_description": "Choose how the interface responds to different lighting.",
-  "settings_reduce_motion": "Reduce motion",
-  "settings_reduce_motion_description": "Respects your system accessibility preference.",
-  "settings_auto": "Automatic",
   "settings_privacy_group": "Local and privacy",
   "settings_privacy_description": "Source rules, reading progress, and library content are stored in the app data directory. LanJing has no cloud backend and never requires sign-in.",
-  "settings_architecture": "Current architecture"
+  "settings_about_group": "About",
+  "settings_version": "Version",
+  "settings_version_unknown": "Unknown"
 }

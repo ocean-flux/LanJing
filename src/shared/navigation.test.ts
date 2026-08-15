@@ -7,13 +7,17 @@ describe('navigation', () => {
     expect(isNavigationActive('/sources', '/')).toBe(false);
   });
 
-  it('exposes the five primary workspaces', () => {
+  it('exposes the four primary workspaces; settings lives in the sidebar footer', () => {
     expect(getNavigationItems().map((item) => item.href)).toEqual([
       '/',
       '/apps',
       '/sources',
       '/library',
-      '/settings',
     ]);
+  });
+
+  it('nests the rule workspace under sources', () => {
+    const sources = getNavigationItems().find((item) => item.href === '/sources');
+    expect(sources?.children?.map((child) => child.href)).toEqual(['/sources/rules']);
   });
 });

@@ -1,19 +1,25 @@
-import { Compass, FolderHeart, Home, Layers3, Settings, type LucideIcon } from 'lucide-react';
+import type { IconName } from '@/components/Icon';
 import { m } from '@/shared/i18n/messages';
 
 export interface NavigationItem {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: IconName;
+  /** 子项在侧栏里渲染为 SidebarMenuSub。 */
+  children?: NavigationItem[];
 }
 
 export function getNavigationItems(): NavigationItem[] {
   return [
-    { href: '/', label: m.nav_realm(), icon: Home },
-    { href: '/apps', label: m.nav_apps(), icon: Layers3 },
-    { href: '/sources', label: m.nav_sources(), icon: Compass },
-    { href: '/library', label: m.nav_library(), icon: FolderHeart },
-    { href: '/settings', label: m.settings(), icon: Settings },
+    { href: '/', label: m.nav_realm(), icon: 'compass' },
+    { href: '/apps', label: m.nav_apps(), icon: 'squares-four' },
+    {
+      href: '/sources',
+      label: m.nav_sources(),
+      icon: 'broadcast',
+      children: [{ href: '/sources/rules', label: m.nav_rules(), icon: 'tree-structure' }],
+    },
+    { href: '/library', label: m.nav_library(), icon: 'books' },
   ];
 }
 

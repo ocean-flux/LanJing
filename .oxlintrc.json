@@ -109,15 +109,30 @@
     "require-await": "off",
     "max-lines": "off",
     "max-lines-per-function": "off",
-    "max-statements": "off"
+    "max-statements": "off",
+    "import/max-dependencies": ["error", { "max": 20 }]
   },
   "overrides": [
     {
-      "files": ["src/components/ui/sidebar.tsx"],
+      "files": ["src/components/ui/**", "src/hooks/use-mobile.ts"],
       "rules": {
-        "import/max-dependencies": "off",
+        "capitalized-comments": "off",
+        "eqeqeq": "off",
+        "no-implicit-coercion": "off",
+        "no-negated-condition": "off",
+        "typescript/array-type": "off",
+        "unicorn/max-nested-calls": "off",
+        "unicorn/explicit-length-check": "off",
+        "unicorn/no-negated-condition": "off",
+        "unicorn/switch-case-braces": "off",
+        "react/function-component-definition": "off",
+        "react/jsx-no-constructed-context-values": "off",
+        "react/no-array-index-key": "off",
         "react/hook-use-state": "off",
-        "arrow-body-style": "off"
+        "arrow-body-style": "off",
+        "jsx-a11y/click-events-have-key-events": "off",
+        "jsx-a11y/no-noninteractive-element-interactions": "off",
+        "jsx-a11y/label-has-associated-control": "off"
       }
     },
     {

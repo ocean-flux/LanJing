@@ -1,14 +1,9 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "app_name": "LanJing",
-  "settings": "Settings",
-  "action_add_source": "Add source",
-  "action_manage_sources": "Manage sources",
   "action_retry": "Retry",
   "action_close": "Close",
-  "brand_mark_label": "{label} brand mark",
-  "brand_mark_fallback": "LanJing brand mark",
-  "launch_label": "LanJing launch animation",
-  "launch_product_name": "LanJing",
-  "launch_slogan": "Build your media realm"
+  "action_cancel": "Cancel",
+  "action_copy": "Copy",
+  "action_copied": "Copied"
 }

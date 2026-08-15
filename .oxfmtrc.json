@@ -10,8 +10,16 @@
   "sortPackageJson": false,
   "sortTailwindcss": {
     "stylesheet": "./src/index.css",
-    "functions": ["cn", "clsx", "tv", "cva"]
+    "functions": [
+      "cn",
+      "clsx",
+      "tv",
+      "cva"
+    ]
   },
   "svelte": {},
-  "ignorePatterns": ["src-tauri/"]
+  "ignorePatterns": [
+    "src-tauri/",
+    "src/shared/paraglide/"
+  ]
 }

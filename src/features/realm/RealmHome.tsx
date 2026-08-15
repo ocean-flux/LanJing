@@ -1,134 +1,226 @@
-import { ArrowRight, BookOpen, Headphones, Image, Play, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Icon } from '@/components/Icon';
+import { PageToolbar } from '@/components/PageToolbar';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui';
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { Item, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useMessages } from '@/shared/i18n/messages';
+import { loadLibraryProjection, projectLibrary, type LibraryEntry } from '@/shared/tauri/library';
+import { listNativeRuleDocuments } from '@/shared/tauri/rules';
+import { listInstalledSources } from '@/shared/tauri/sources';
+
+const CONTINUE_LIMIT = 5;
+
+type RealmData = {
+  continueEntries: LibraryEntry[];
+  sourceCount: number;
+  libraryCount: number;
+  ruleCount: number;
+};
+
+const EMPTY_DATA: RealmData = {
+  continueEntries: [],
+  sourceCount: 0,
+  libraryCount: 0,
+  ruleCount: 0,
+};
+
+function progressPercent(entry: LibraryEntry): number | null {
+  const { progress } = entry;
+  if (!progress?.total) return null;
+  return Math.min(100, Math.round((progress.position / progress.total) * 100));
+}
 
 export function RealmHome() {
   const m = useMessages();
-  const recent = [
-    {
-      title: m.realm_recent_tide_title(),
-      detail: m.realm_recent_tide_detail(),
-      icon: BookOpen,
-      tone: 'bg-(--lantern-tint)',
-    },
-    {
-      title: m.realm_recent_night_title(),
-      detail: m.realm_recent_night_detail(),
-      icon: Headphones,
-      tone: 'bg-(--lantern-tint)',
-    },
-    {
-      title: m.realm_recent_city_title(),
-      detail: m.realm_recent_city_detail(),
-      icon: Image,
-      tone: 'bg-(--lantern-tint)',
-    },
+  const [data, setData] = useState<RealmData>(EMPTY_DATA);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [error, setError] = useState('');
+
+  const load = useCallback(async (signal: { cancelled: boolean }) => {
+    setStatus('loading');
+    setError('');
+    try {
+      const [projection, sources, rules] = await Promise.all([
+        loadLibraryProjection(),
+        listInstalledSources(),
+        listNativeRuleDocuments(),
+      ]);
+      if (signal.cancelled) return;
+      const entries = projectLibrary(projection);
+      setData({
+        continueEntries: entries
+          .filter((entry) => entry.progress !== null)
+          .sort((left, right) =>
+            (right.last_opened_at ?? '').localeCompare(left.last_opened_at ?? ''),
+          )
+          .slice(0, CONTINUE_LIMIT),
+        sourceCount: sources.length,
+        libraryCount: entries.length,
+        ruleCount: rules.length,
+      });
+      setStatus('ready');
+    } catch (caught) {
+      if (signal.cancelled) return;
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    const signal = { cancelled: false };
+    void load(signal);
+    return () => {
+      signal.cancelled = true;
+    };
+  }, [load]);
+
+  const stats = [
+    { label: m.realm_stat_sources(), value: data.sourceCount },
+    { label: m.realm_stat_library(), value: data.libraryCount },
+    { label: m.realm_stat_rules(), value: data.ruleCount },
   ];
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <section className="relative overflow-hidden border-b border-(--border) pt-3 pb-12 lg:pb-16">
-        <div className="max-w-3xl">
-          <Badge className="border-(--accent)/30 bg-(--accent-soft) text-(--accent-strong)">
-            <Sparkles size={13} className="mr-1" />
-            {m.realm_badge()}
-          </Badge>
-          <h2 className="font-display mt-5 max-w-2xl text-4xl leading-[1.08] font-semibold tracking-normal sm:text-6xl">
-            {m.realm_headline_before()}
-            <br />
-            <span className="text-(--accent-strong)">{m.realm_headline_after()}</span>
+    <>
+      <PageToolbar
+        actions={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={m.realm_refresh()}
+            title={m.realm_refresh()}
+            onClick={() => void load({ cancelled: false })}
+          >
+            <Icon name="arrow-clockwise" className="text-base" />
+          </Button>
+        }
+      />
+
+      <div className="grid gap-(--density-section-gap) px-(--page-gutter) py-(--density-section-gap) lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <section aria-labelledby="realm-continue" className="min-w-0">
+          <h2 id="realm-continue" className="mb-2 text-ui-sm font-medium text-ink-muted">
+            {m.realm_continue()}
           </h2>
-          <p className="mt-6 max-w-xl text-base leading-7 text-(--muted-text)">
-            {m.realm_description()}
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link to="/apps">
-                {m.realm_explore()} <ArrowRight size={17} />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/sources">{m.action_manage_sources()}</Link>
-            </Button>
-          </div>
-        </div>
-        <div className="pointer-events-none absolute right-8 -bottom-16 hidden h-56 w-56 rotate-12 border border-(--accent)/25 md:block">
-          <div className="absolute inset-5 border border-(--accent)/25" />
-          <div className="absolute top-1/2 -left-8 h-px w-72 bg-(--accent)/30" />
-        </div>
-      </section>
-      <section className="grid gap-10 py-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-        <div>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="eyebrow">{m.realm_continue()}</p>
-              <h3 className="font-display mt-2 text-2xl font-semibold">{m.realm_recent()}</h3>
+
+          {status === 'loading' ? (
+            <div className="flex flex-col gap-px">
+              {[0, 1, 2].map((index) => (
+                <Skeleton key={index} className="h-(--density-row) w-full" />
+              ))}
             </div>
-            <Link className="text-sm text-(--accent-strong) hover:underline" to="/library">
-              {m.realm_open_library()}
-            </Link>
-          </div>
-          <div className="mt-5 space-y-3">
-            {recent.map(({ title, detail, icon: Icon, tone }) => (
-              <Link
-                key={title}
-                to="/library"
-                className="group flex items-center gap-4 border-b border-(--border) py-4 transition-colors hover:border-(--accent)"
+          ) : null}
+
+          {status === 'error' ? (
+            <div role="alert" className="border border-hairline p-3">
+              <p className="font-medium">{m.realm_load_error()}</p>
+              <p className="mt-1 font-mono text-ui-sm break-words text-ink-muted">{error}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => void load({ cancelled: false })}
               >
-                <span
-                  className={`grid h-12 w-12 shrink-0 place-items-center rounded-md ${tone} text-(--accent-strong)`}
+                {m.action_retry()}
+              </Button>
+            </div>
+          ) : null}
+
+          {status === 'ready' && data.continueEntries.length === 0 ? (
+            <Empty className="border border-dashed border-hairline">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Icon name="book-open" className="text-base" />
+                </EmptyMedia>
+                <EmptyTitle>{m.realm_continue_empty()}</EmptyTitle>
+                <EmptyDescription>{m.realm_continue_empty_hint()}</EmptyDescription>
+              </EmptyHeader>
+              <Button variant="outline" size="sm" render={<Link to="/library" />}>
+                {m.realm_open_library()}
+              </Button>
+            </Empty>
+          ) : null}
+
+          {status === 'ready' && data.continueEntries.length > 0 ? (
+            <ul className="divide-y divide-hairline border-y border-hairline">
+              {data.continueEntries.map((entry) => {
+                const percent = progressPercent(entry);
+                return (
+                  <li key={entry.resource_id}>
+                    <Item
+                      size="xs"
+                      className="hover:bg-surface-2"
+                      render={
+                        <Link to={`/library/item/${encodeURIComponent(entry.resource_id)}`} />
+                      }
+                    >
+                      <ItemMedia variant="icon">
+                        <Icon name="book-open" className="text-base text-ink-subtle" />
+                      </ItemMedia>
+                      <ItemContent>
+                        <ItemTitle className="truncate font-mono">{entry.resource_id}</ItemTitle>
+                      </ItemContent>
+                      <span className="shrink-0 font-mono text-ui-sm text-ink-subtle tabular-nums">
+                        {percent === null ? m.library_progress_recorded() : `${percent}%`}
+                      </span>
+                    </Item>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </section>
+
+        <div className="flex min-w-0 flex-col gap-(--density-section-gap)">
+          <section aria-labelledby="realm-overview">
+            <h2 id="realm-overview" className="mb-2 text-ui-sm font-medium text-ink-muted">
+              {m.realm_overview()}
+            </h2>
+            <dl className="divide-y divide-hairline border-y border-hairline">
+              {stats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex h-(--density-row) items-center justify-between gap-2"
                 >
-                  <Icon size={21} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <strong className="font-display block text-lg font-semibold">{title}</strong>
-                  <span className="text-sm text-(--muted-text)">{detail}</span>
-                </span>
-                <ArrowRight
-                  className="text-(--muted-text) transition-transform group-hover:translate-x-1"
-                  size={18}
-                />
-              </Link>
-            ))}
-          </div>
+                  <dt className="truncate text-ink-muted">{stat.label}</dt>
+                  <dd className="font-mono tabular-nums">
+                    {status === 'ready' ? stat.value : '—'}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <section aria-labelledby="realm-actions">
+            <h2 id="realm-actions" className="mb-2 text-ui-sm font-medium text-ink-muted">
+              {m.realm_quick_actions()}
+            </h2>
+            <ButtonGroup className="w-full">
+              <Button variant="outline" size="sm" render={<Link to="/sources" />}>
+                <Icon name="download-simple" className="text-base" />
+                {m.realm_action_import_source()}
+              </Button>
+              <Button variant="outline" size="sm" render={<Link to="/sources/rules" />}>
+                <Icon name="tree-structure" className="text-base" />
+                {m.realm_action_new_rule()}
+              </Button>
+              <Button variant="outline" size="sm" render={<Link to="/settings" />}>
+                <Icon name="gear-six" className="text-base" />
+                {m.realm_action_settings()}
+              </Button>
+            </ButtonGroup>
+          </section>
         </div>
-        <Card className="self-start border-(--accent)/20 bg-(--accent-soft)">
-          <CardHeader>
-            <p className="eyebrow">{m.realm_workspace_status()}</p>
-            <CardTitle className="text-2xl">{m.realm_status_title()}</CardTitle>
-            <CardDescription>{m.realm_status_description()}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between border-t border-(--accent)/20 pt-4 text-sm">
-              <span className="text-(--muted-text)">{m.realm_indexed_content()}</span>
-              <strong>{m.realm_indexed_count({ count: 12 })}</strong>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <span className="text-(--muted-text)">{m.realm_storage_location()}</span>
-              <strong>{m.realm_this_device()}</strong>
-            </div>
-            <Link
-              to="/settings"
-              className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-(--accent-strong)"
-            >
-              {m.realm_privacy_settings()} <ArrowRight size={15} />
-            </Link>
-          </CardContent>
-        </Card>
-      </section>
-      <div className="flex items-center gap-2 border-t border-(--border) pt-5 text-xs text-(--muted-text)">
-        <Play size={13} className="text-(--accent)" />
-        {m.realm_footer()}
       </div>
-    </div>
+    </>
   );
 }

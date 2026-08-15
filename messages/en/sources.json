@@ -1,12 +1,12 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "sources_title": "Sources",
   "sources_loading": "Loading installed sources…",
+  "sources_refresh": "Refresh sources",
+  "sources_import_open": "Import source",
   "sources_load_error": "Sources could not be loaded.",
   "sources_empty_title": "No installed sources yet",
   "sources_empty_hint": "Paste Legado source JSON or open a local file to install your first source.",
   "sources_installed_title": "Installed sources",
-  "sources_add_close": "Close installer",
   "sources_revision": "Revision",
   "sources_supported_intents": "Supported intents",
   "sources_no_intents": "No standard intents declared",
@@ -107,10 +107,5 @@
   "sources_deeplink_install_partial": "Installed {ok}, failed {fail}.",
   "sources_deeplink_install_failed": "Installation failed.",
   "sources_device_projection": "Projected from the current device RuleSystem",
-  "sources_browser_projection": "Browser preview is not connected to local device data",
-  "sources_rules_migration_eyebrow": "Rule workspace",
-  "sources_rules_migration_title": "Editor migration in progress",
-  "sources_rules_migration_description": "The previous editor is archived in src-legacy/. React Flow now owns canvas projection and layout persistence while semantic configuration editing is still migrating.",
-  "sources_rules_migration_boundary_title": "Migration boundary is explicit",
-  "sources_rules_migration_boundary_description": "Rule parsing, validation, capability approval, and IPC contracts remain owned by local domain modules."
+  "sources_browser_projection": "Browser preview is not connected to local device data"
 }

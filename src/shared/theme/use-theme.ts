@@ -1,63 +1,51 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import {
-  applyTheme,
-  getAppearancePackIds,
-  persistTheme,
-  readTheme,
+  activePackId,
+  getPreferences,
+  resolveTheme,
   setAppearancePack,
-  subscribeToTheme,
+  setTheme,
+  subscribe,
   type AppearancePackId,
+  type ResolvedTheme,
   type Theme,
-} from '@/shared/theme/theme';
+  type ThemePreferences,
+} from './theme';
 
-export function useTheme() {
-  const [currentTheme, setCurrentTheme] = useState<Theme>(() => readTheme());
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() =>
-    document.documentElement.classList.contains('dark') ? 'dark' : 'light',
-  );
-  const [appearancePacks, setAppearancePacks] = useState(getAppearancePackIds);
+export { applyTheme } from './theme';
 
-  useEffect(() => {
-    setResolvedTheme(applyTheme(currentTheme));
-    const unsubscribe = subscribeToTheme((nextTheme) => {
-      setCurrentTheme(nextTheme);
-      setAppearancePacks(getAppearancePackIds());
-    });
-    if (typeof window.matchMedia !== 'function') return unsubscribe;
+const SERVER_SNAPSHOT: ThemePreferences = {
+  theme: 'system',
+  lightThemeId: 'porcelain-day',
+  darkThemeId: 'obsidian-void',
+};
 
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const update = () => {
-      if (currentTheme === 'system') setResolvedTheme(applyTheme(currentTheme));
-    };
-    media.addEventListener('change', update);
-    return () => {
-      unsubscribe();
-      media.removeEventListener('change', update);
-    };
-  }, [currentTheme]);
+export type UseThemeResult = {
+  theme: Theme;
+  resolvedTheme: ResolvedTheme;
+  packId: AppearancePackId;
+  lightThemeId: AppearancePackId;
+  darkThemeId: AppearancePackId;
+  setTheme: (theme: Theme) => void;
+  chooseAppearancePack: (id: AppearancePackId) => void;
+};
 
-  const setTheme = useCallback((next: Theme) => {
-    setCurrentTheme(next);
-    persistTheme(next);
-    setResolvedTheme(applyTheme(next));
+export function useTheme(): UseThemeResult {
+  const preferences = useSyncExternalStore(subscribe, getPreferences, () => SERVER_SNAPSHOT);
+  const choose = useCallback((id: AppearancePackId) => {
+    setAppearancePack(id);
   }, []);
-
-  const chooseAppearancePack = useCallback((next: AppearancePackId) => {
-    setAppearancePack(next);
-    setAppearancePacks(getAppearancePackIds());
+  const change = useCallback((next: Theme) => {
+    setTheme(next);
   }, []);
-
-  const toggleTheme = useCallback(() => {
-    const resolved = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
-    setTheme(resolved);
-  }, [setTheme]);
 
   return {
-    theme: currentTheme,
-    resolvedTheme,
-    ...appearancePacks,
-    setTheme,
-    chooseAppearancePack,
-    toggleTheme,
+    theme: preferences.theme,
+    resolvedTheme: resolveTheme(preferences.theme),
+    packId: activePackId(preferences.theme),
+    lightThemeId: preferences.lightThemeId,
+    darkThemeId: preferences.darkThemeId,
+    setTheme: change,
+    chooseAppearancePack: choose,
   };
 }

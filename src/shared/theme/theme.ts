@@ -1,181 +1,102 @@
+/**
+ * 主题与外观包。
+ *
+ * 职责边界：本模块只负责「选了哪套」以及把选择写到 <html> 的属性上，
+ * 不持有任何色值。色值唯一来源是 src/index.css 第 4 段的
+ * `:root[data-appearance-pack='...']` 四个块。
+ */
+
 export type Theme = 'light' | 'dark' | 'system';
+export type ResolvedTheme = 'light' | 'dark';
 export type AppearancePackId =
   | 'obsidian-void'
   | 'graphite-atelier'
   | 'porcelain-day'
   | 'mist-studio';
-export type ResolvedTheme = 'light' | 'dark';
 
-type ThemeTokens = Record<string, string>;
-type ThemeEvent = { theme: Theme; lightThemeId: AppearancePackId; darkThemeId: AppearancePackId };
+export type ThemePreferences = {
+  theme: Theme;
+  lightThemeId: AppearancePackId;
+  darkThemeId: AppearancePackId;
+};
 
 const STORAGE_KEY = 'lanjing-theme';
 const PREFERENCES_KEY = 'lanjing-preferences-v1';
 const LEGACY_PACK_KEY = 'appearance-pack';
-const THEME_EVENT = 'lanjing:theme-change';
 
-export const BUILTIN_APPEARANCE_PACK_IDS: readonly AppearancePackId[] = [
-  'obsidian-void',
-  'graphite-atelier',
-  'porcelain-day',
-  'mist-studio',
-];
-
-const PACK_FACE: Record<AppearancePackId, ResolvedTheme> = {
+/** 每套外观包只有单面，这里决定它属于亮轨还是暗轨。 */
+export const PACK_FACE: Record<AppearancePackId, ResolvedTheme> = {
   'obsidian-void': 'dark',
   'graphite-atelier': 'dark',
   'porcelain-day': 'light',
   'mist-studio': 'light',
 };
 
-const PACK_TOKENS: Record<AppearancePackId, ThemeTokens> = {
-  'obsidian-void': {
-    '--canvas': '#0b0e12',
-    '--canvas-elevated': '#12171d',
-    '--ink': '#e8eaed',
-    '--ink-muted': '#9aa3ad',
-    '--ink-subtle': '#6f7882',
-    '--hairline': 'rgb(232 234 237 / 0.12)',
-    '--hairline-strong': 'rgb(232 234 237 / 0.2)',
-    '--surface-1': '#151a20',
-    '--surface-2': '#1b2229',
-    '--surface-3': '#252d36',
-    '--lantern': '#6ec8d4',
-    '--lantern-strong': '#3aa9b8',
-    '--lantern-hover': '#2f96a4',
-    '--lantern-soft': 'rgb(110 200 212 / 0.18)',
-    '--lantern-tint': '#143038',
-    '--on-lantern': '#061016',
-    '--media-void': '#12171d',
-    '--reader-canvas': '#1a1714',
-    '--reader-ink': '#d8d2c4',
-    '--ring': 'rgb(58 169 184 / 0.34)',
-    '--focus-ring': '0 0 0 2px rgb(58 169 184 / 0.28)',
-  },
-  'graphite-atelier': {
-    '--canvas': '#111416',
-    '--canvas-elevated': '#181c1e',
-    '--ink': '#eceff0',
-    '--ink-muted': '#a4abad',
-    '--ink-subtle': '#7d8588',
-    '--hairline': 'rgb(236 239 240 / 0.1)',
-    '--hairline-strong': 'rgb(236 239 240 / 0.16)',
-    '--surface-1': '#1c2022',
-    '--surface-2': '#252a2c',
-    '--surface-3': '#303638',
-    '--lantern': '#79a6ab',
-    '--lantern-strong': '#4d777d',
-    '--lantern-hover': '#456b71',
-    '--lantern-soft': 'rgb(121 166 171 / 0.16)',
-    '--lantern-tint': '#1b2b2e',
-    '--on-lantern': '#f2f8f8',
-    '--media-void': '#171d1f',
-    '--reader-canvas': '#1a1714',
-    '--reader-ink': '#d8d2c4',
-    '--ring': 'rgb(77 119 125 / 0.34)',
-    '--focus-ring': '0 0 0 2px rgb(77 119 125 / 0.28)',
-  },
-  'porcelain-day': {
-    '--canvas': '#f3f4f6',
-    '--canvas-elevated': '#ffffff',
-    '--ink': '#1a1b1e',
-    '--ink-muted': '#5c616a',
-    '--ink-subtle': '#7a808a',
-    '--hairline': 'rgb(26 27 30 / 0.1)',
-    '--hairline-strong': 'rgb(26 27 30 / 0.16)',
-    '--surface-1': '#ffffff',
-    '--surface-2': '#f6f7f9',
-    '--surface-3': '#e8eaee',
-    '--lantern': '#0f6e7a',
-    '--lantern-strong': '#0b5a64',
-    '--lantern-hover': '#094c55',
-    '--lantern-soft': 'rgb(15 110 122 / 0.12)',
-    '--lantern-tint': '#d9e8ea',
-    '--on-lantern': '#f4fcfd',
-    '--media-void': '#e4e6ea',
-    '--reader-canvas': '#f3efe6',
-    '--reader-ink': '#211e1a',
-    '--ring': 'rgb(11 90 100 / 0.34)',
-    '--focus-ring': '0 0 0 2px rgb(11 90 100 / 0.24)',
-  },
-  'mist-studio': {
-    '--canvas': '#eef1f5',
-    '--canvas-elevated': '#f7f9fc',
-    '--ink': '#171a1f',
-    '--ink-muted': '#5a6370',
-    '--ink-subtle': '#76808f',
-    '--hairline': 'rgb(23 26 31 / 0.1)',
-    '--hairline-strong': 'rgb(23 26 31 / 0.16)',
-    '--surface-1': '#ffffff',
-    '--surface-2': '#f1f4f8',
-    '--surface-3': '#e4e9f0',
-    '--lantern': '#0e7490',
-    '--lantern-strong': '#0b5f75',
-    '--lantern-hover': '#0a5568',
-    '--lantern-soft': 'rgb(14 116 144 / 0.12)',
-    '--lantern-tint': '#d9eef3',
-    '--on-lantern': '#f3fbfd',
-    '--media-void': '#e2e7ee',
-    '--reader-canvas': '#f3efe6',
-    '--reader-ink': '#211e1a',
-    '--ring': 'rgb(11 95 117 / 0.34)',
-    '--focus-ring': '0 0 0 2px rgb(11 95 117 / 0.24)',
-  },
-};
+export const LIGHT_PACK_IDS: readonly AppearancePackId[] = ['porcelain-day', 'mist-studio'];
+export const DARK_PACK_IDS: readonly AppearancePackId[] = ['obsidian-void', 'graphite-atelier'];
 
 const DEFAULT_LIGHT: AppearancePackId = 'porcelain-day';
 const DEFAULT_DARK: AppearancePackId = 'obsidian-void';
 
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+
 function isTheme(value: unknown): value is Theme {
   return value === 'light' || value === 'dark' || value === 'system';
 }
+
 function isPack(value: unknown): value is AppearancePackId {
-  return typeof value === 'string' && value in PACK_TOKENS;
+  return typeof value === 'string' && value in PACK_FACE;
 }
-function resolveMode(mode: Theme): ResolvedTheme {
-  return mode === 'system' &&
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : mode === 'system'
-      ? 'light'
-      : mode;
+
+function prefersDark(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia(DARK_QUERY).matches;
 }
-function readPreferences(): ThemeEvent {
-  let mode: Theme = 'system';
+
+export function resolveTheme(theme: Theme): ResolvedTheme {
+  if (theme !== 'system') return theme;
+  return prefersDark() ? 'dark' : 'light';
+}
+
+function readPreferences(): ThemePreferences {
+  let theme: Theme = 'system';
   let lightThemeId = DEFAULT_LIGHT;
   let darkThemeId = DEFAULT_DARK;
   try {
     const legacyMode = window.localStorage.getItem(STORAGE_KEY);
-    if (isTheme(legacyMode)) mode = legacyMode;
+    if (isTheme(legacyMode)) theme = legacyMode;
+
     const raw = window.localStorage.getItem(PREFERENCES_KEY);
     if (raw) {
-      const value = JSON.parse(raw) as Record<string, unknown>;
-      const {
-        mode: storedMode,
-        lightThemeId: storedLightThemeId,
-        darkThemeId: storedDarkThemeId,
-      } = value;
-      if (isTheme(storedMode)) mode = storedMode;
-      if (isPack(storedLightThemeId) && PACK_FACE[storedLightThemeId] === 'light')
-        lightThemeId = storedLightThemeId;
-      if (isPack(storedDarkThemeId) && PACK_FACE[storedDarkThemeId] === 'dark')
-        darkThemeId = storedDarkThemeId;
+      const stored = JSON.parse(raw) as Record<string, unknown>;
+      const { mode, lightThemeId: storedLight, darkThemeId: storedDark } = stored;
+      if (isTheme(mode)) theme = mode;
+      if (isPack(storedLight) && PACK_FACE[storedLight] === 'light') {
+        lightThemeId = storedLight;
+      }
+      if (isPack(storedDark) && PACK_FACE[storedDark] === 'dark') {
+        darkThemeId = storedDark;
+      }
     }
+
     const legacyPack = window.localStorage.getItem(LEGACY_PACK_KEY);
     if (isPack(legacyPack)) {
       if (PACK_FACE[legacyPack] === 'light') lightThemeId = legacyPack;
       else darkThemeId = legacyPack;
     }
   } catch {
-    // Restricted WebViews can reject localStorage; defaults remain usable.
+    // 受限 WebView 会拒绝 localStorage，此时保持默认值可用。
   }
-  return { theme: mode, lightThemeId, darkThemeId };
+  return { theme, lightThemeId, darkThemeId };
 }
 
-let preferences = readPreferences();
+let preferences: ThemePreferences =
+  typeof window === 'undefined'
+    ? { theme: 'system', lightThemeId: DEFAULT_LIGHT, darkThemeId: DEFAULT_DARK }
+    : readPreferences();
 
-function persistPreferences() {
+const listeners = new Set<() => void>();
+
+function persist() {
   try {
     window.localStorage.setItem(STORAGE_KEY, preferences.theme);
     window.localStorage.setItem(
@@ -187,60 +108,85 @@ function persistPreferences() {
       }),
     );
   } catch {
-    // Keep the current session preference when persistence is unavailable.
+    // 无法持久化时保留当前会话内的选择。
   }
 }
 
-function getAppearancePackId(face: ResolvedTheme): AppearancePackId {
-  return face === 'dark' ? preferences.darkThemeId : preferences.lightThemeId;
-}
-export function getAppearancePackIds() {
-  return { lightThemeId: preferences.lightThemeId, darkThemeId: preferences.darkThemeId };
-}
-export function setAppearancePack(id: AppearancePackId) {
-  if (PACK_FACE[id] === 'dark') preferences.darkThemeId = id;
-  else preferences.lightThemeId = id;
-  applyTheme(preferences.theme);
-  persistPreferences();
-  window.dispatchEvent(new CustomEvent<ThemeEvent>(THEME_EVENT, { detail: preferences }));
+function emit() {
+  for (const listener of listeners) listener();
 }
 
-export function applyTheme(theme: Theme) {
-  const resolved = resolveMode(theme);
-  const pack = getAppearancePackId(resolved);
+export function activePackId(theme: Theme = preferences.theme): AppearancePackId {
+  return resolveTheme(theme) === 'dark' ? preferences.darkThemeId : preferences.lightThemeId;
+}
+
+/**
+ * 把当前选择写到 <html>：
+ * - `.dark` 供 Tailwind 的 dark: 变体与 registry 组件使用
+ * - `data-appearance-pack` 供 index.css 的色值块匹配
+ * - `color-scheme` 供原生控件与滚动条配色
+ * theme-color 从计算样式读取，避免在 JS 里维护第二份色值。
+ */
+export function applyTheme(theme: Theme = preferences.theme): ResolvedTheme {
+  const resolved = resolveTheme(theme);
+  const pack = activePackId(theme);
   const root = document.documentElement;
   root.classList.toggle('dark', resolved === 'dark');
   root.dataset.theme = theme;
   root.dataset.appearancePack = pack;
   root.style.colorScheme = resolved;
-  const themeColor = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
-  themeColor?.setAttribute('content', PACK_TOKENS[pack]['--canvas']);
+
+  const meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (meta) {
+    const canvas = getComputedStyle(root).getPropertyValue('--canvas').trim();
+    if (canvas) meta.setAttribute('content', canvas);
+  }
   return resolved;
 }
 
-export function readTheme(): Theme {
-  return preferences.theme;
-}
-export function persistTheme(theme: Theme) {
-  preferences = { ...preferences, theme };
-  persistPreferences();
-  applyTheme(theme);
-  window.dispatchEvent(new CustomEvent<ThemeEvent>(THEME_EVENT, { detail: preferences }));
-}
-export function subscribeToTheme(listener: (theme: Theme) => void) {
-  const handleChange = (event: Event) => {
-    const { detail } = event as CustomEvent<ThemeEvent>;
-    const { theme } = detail ?? {};
-    if (detail && isTheme(theme)) {
-      preferences = detail;
-      listener(theme);
-    }
-  };
-  window.addEventListener(THEME_EVENT, handleChange);
-  return () => window.removeEventListener(THEME_EVENT, handleChange);
+export function getPreferences(): ThemePreferences {
+  return preferences;
 }
 
-if (typeof document !== 'undefined') {
-  const { theme: initialTheme } = preferences;
-  applyTheme(initialTheme);
+export function setTheme(theme: Theme) {
+  if (preferences.theme === theme) return;
+  preferences = { ...preferences, theme };
+  applyTheme();
+  persist();
+  emit();
+}
+
+export function setAppearancePack(id: AppearancePackId) {
+  const face = PACK_FACE[id];
+  if (face === 'dark') {
+    if (preferences.darkThemeId === id) return;
+    preferences = { ...preferences, darkThemeId: id };
+  } else {
+    if (preferences.lightThemeId === id) return;
+    preferences = { ...preferences, lightThemeId: id };
+  }
+  applyTheme();
+  persist();
+  emit();
+}
+
+export function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * 跟随系统：theme 为 system 时，系统配色变化要实时重算。
+ * 在模块加载时挂载一次，整个应用生命周期内有效。
+ */
+if (typeof window !== 'undefined') {
+  const query = window.matchMedia(DARK_QUERY);
+  query.addEventListener('change', () => {
+    if (preferences.theme !== 'system') return;
+    applyTheme();
+    emit();
+  });
+  applyTheme();
 }

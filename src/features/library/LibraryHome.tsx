@@ -1,9 +1,40 @@
-import { BookOpen, Clock3, FolderHeart, RefreshCw } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Card, CardContent, Input } from '@/components/ui';
+import { Icon } from '@/components/Icon';
+import { PageToolbar } from '@/components/PageToolbar';
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useMessages } from '@/shared/i18n/messages';
 import { loadLibraryProjection, projectLibrary, type LibraryEntry } from '@/shared/tauri/library';
+
+function progressLabel(entry: LibraryEntry, recorded: string, none: string): string {
+  const { progress } = entry;
+  if (!progress) return none;
+  if (!progress.total) return recorded;
+  return `${Math.min(100, Math.round((progress.position / progress.total) * 100))}%`;
+}
+
+function progressRatio(entry: LibraryEntry): number | null {
+  const { progress } = entry;
+  if (!progress?.total) return null;
+  return Math.min(1, progress.position / progress.total);
+}
 
 export function LibraryHome() {
   const m = useMessages();
@@ -11,189 +42,160 @@ export function LibraryHome() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState('');
-  const latestLoadRequest = useRef(0);
 
-  const load = async () => {
-    const requestId = latestLoadRequest.current + 1;
-    latestLoadRequest.current = requestId;
+  const load = useCallback(async (signal: { cancelled: boolean }) => {
     setStatus('loading');
     setError('');
     try {
       const projection = await loadLibraryProjection();
-      if (requestId !== latestLoadRequest.current) return;
+      if (signal.cancelled) return;
       setEntries(projectLibrary(projection));
       setStatus('ready');
     } catch (caught) {
-      if (requestId !== latestLoadRequest.current) return;
+      if (signal.cancelled) return;
       setError(caught instanceof Error ? caught.message : String(caught));
       setStatus('error');
     }
-  };
-
-  useEffect(() => {
-    void load();
   }, []);
 
-  const filtered = useMemo(
-    () => entries.filter((entry) => entry.resource_id.toLowerCase().includes(query.toLowerCase())),
-    [entries, query],
-  );
+  useEffect(() => {
+    const signal = { cancelled: false };
+    void load(signal);
+    return () => {
+      signal.cancelled = true;
+    };
+  }, [load]);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return entries;
+    return entries.filter((entry) => entry.resource_id.toLowerCase().includes(needle));
+  }, [entries, query]);
 
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <div className="flex flex-col justify-between gap-5 border-b border-(--border) pb-8 sm:flex-row sm:items-end">
-        <div>
-          <p className="eyebrow">{m.library_eyebrow()}</p>
-          <h1 className="font-display mt-2 text-4xl font-semibold text-balance">
-            {m.library_heading()}
-          </h1>
-          <p className="mt-3 text-(--muted-text)">{m.library_description()}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge className="w-fit">{m.library_item_count({ count: entries.length })}</Badge>
+    <>
+      <PageToolbar
+        meta={m.library_item_count({ count: filtered.length })}
+        actions={
           <Button
-            variant="outline"
-            size="icon"
-            onClick={() => void load()}
+            variant="ghost"
+            size="icon-sm"
             aria-label={m.library_refresh()}
             title={m.library_refresh()}
+            onClick={() => void load({ cancelled: false })}
           >
-            <RefreshCw size={16} aria-hidden="true" />
+            <Icon name="arrow-clockwise" className="text-base" />
           </Button>
-        </div>
-      </div>
+        }
+      >
+        <InputGroup className="ml-2 max-w-xs">
+          <InputGroupAddon>
+            <Icon name="magnifying-glass" className="text-base text-ink-subtle" />
+          </InputGroupAddon>
+          <InputGroupInput
+            type="search"
+            autoComplete="off"
+            aria-label={m.library_search_label()}
+            placeholder={m.library_search_placeholder()}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </InputGroup>
+      </PageToolbar>
 
-      <div className="mt-7 max-w-md">
-        <label className="sr-only" htmlFor="library-search">
-          {m.library_search_label()}
-        </label>
-        <Input
-          id="library-search"
-          name="library-search"
-          type="search"
-          autoComplete="off"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={m.library_search_placeholder()}
-        />
-      </div>
-
-      {status === 'error' && (
-        <div className="mt-6 border border-(--border) p-4" role="alert">
-          <p className="font-medium">{m.library_load_error()}</p>
-          <p className="mt-1 text-sm break-words text-(--muted-text)">{error}</p>
-        </div>
-      )}
-      {status === 'ready' && filtered.length === 0 && (
-        <div className="mt-6 border border-dashed border-(--border) p-8 text-center">
-          <FolderHeart className="mx-auto text-(--muted-text)" size={24} aria-hidden="true" />
-          <p className="mt-3 font-medium">{m.library_empty_title()}</p>
-          <p className="mt-2 text-sm text-(--muted-text)">
-            {query ? m.library_empty_filtered() : m.library_empty_unfiltered()}
-          </p>
-        </div>
-      )}
-      <div className="mt-8 grid gap-4 lg:grid-cols-3">
-        {filtered.map((entry) => (
-          <Link
-            key={entry.resource_id}
-            to={`/library/item/${encodeURIComponent(entry.resource_id)}`}
-          >
-            <Card className="h-full transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-md">
-              <CardContent className="pt-5">
-                <div className="flex items-start justify-between gap-4">
-                  <span className="grid h-11 w-11 place-items-center rounded-md bg-(--accent-soft) text-(--accent-strong)">
-                    <BookOpen size={20} aria-hidden="true" />
-                  </span>
-                  {entry.pinned && <Badge>{m.library_pinned()}</Badge>}
-                </div>
-                <h2 className="mt-8 font-mono text-base font-semibold break-words">
-                  {entry.resource_id}
-                </h2>
-                {entry.progress && (
-                  <div className="mt-6">
-                    <div className="flex justify-between text-xs text-(--muted-text)">
-                      <span>{m.library_progress()}</span>
-                      <span>
-                        {entry.progress.total
-                          ? `${Math.round((entry.progress.position / entry.progress.total) * 100)}%`
-                          : m.library_progress_recorded()}
-                      </span>
-                    </div>
-                    {entry.progress.total && (
-                      <div className="mt-2 h-1 overflow-hidden rounded-full bg-(--surface-3)">
-                        <div
-                          className="h-full rounded-full bg-(--accent)"
-                          style={{
-                            width: `${Math.min(100, (entry.progress.position / entry.progress.total) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function LibraryItem({ resourceId }: { resourceId: string }) {
-  const m = useMessages();
-  const [entry, setEntry] = useState<LibraryEntry>();
-  const [loadError, setLoadError] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    setEntry(undefined);
-    setLoadError('');
-    void loadLibraryProjection()
-      .then((projection) => {
-        if (cancelled) return;
-        setEntry(projectLibrary(projection).find((item) => item.resource_id === resourceId));
-      })
-      .catch((caught: unknown) => {
-        if (cancelled) return;
-        setLoadError(caught instanceof Error ? caught.message : String(caught));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [resourceId]);
-
-  return (
-    <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <Link to="/library" className="text-sm text-(--accent-strong) hover:underline">
-        ← {m.library_detail_back()}
-      </Link>
-      <div className="mt-10 max-w-2xl">
-        <Badge>{m.library_local_resource()}</Badge>
-        <h1 className="mt-4 font-mono text-3xl font-semibold break-words sm:text-5xl">
-          {resourceId}
-        </h1>
-        <p className="mt-8 leading-8 text-(--muted-text)">{m.library_detail_description()}</p>
-      </div>
-      {loadError && (
-        <p className="mt-6 text-sm break-words text-(--muted-text)" role="alert">
-          {m.library_local_state_error({ detail: loadError })}
-        </p>
-      )}
-      <Card className="mt-10">
-        <CardContent className="flex items-center gap-4 pt-5">
-          <Clock3 className="text-(--accent-strong)" aria-hidden="true" />
-          <div>
-            <p className="font-medium">
-              {entry ? m.library_local_state_found() : m.library_local_state_waiting()}
-            </p>
-            <p className="mt-1 text-sm text-(--muted-text)">
-              {entry?.progress ? m.library_progress_loaded() : m.library_progress_missing()}
-            </p>
+      <div className="px-(--page-gutter) py-(--density-section-gap)">
+        {status === 'loading' ? (
+          <div className="flex flex-col gap-px">
+            {[0, 1, 2, 3, 4].map((index) => (
+              <Skeleton key={index} className="h-(--density-row) w-full" />
+            ))}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : null}
+
+        {status === 'error' ? (
+          <div role="alert" className="border border-hairline p-3">
+            <p className="font-medium">{m.library_load_error()}</p>
+            <p className="mt-1 font-mono text-ui-sm break-words text-ink-muted">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => void load({ cancelled: false })}
+            >
+              {m.action_retry()}
+            </Button>
+          </div>
+        ) : null}
+
+        {status === 'ready' && filtered.length === 0 ? (
+          <Empty className="border border-dashed border-hairline">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Icon name="books" className="text-base" />
+              </EmptyMedia>
+              <EmptyTitle>{m.library_empty_title()}</EmptyTitle>
+              <EmptyDescription>
+                {query ? m.library_empty_filtered() : m.library_empty_unfiltered()}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : null}
+
+        {status === 'ready' && filtered.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{m.library_col_resource()}</TableHead>
+                <TableHead className="w-32">{m.library_col_progress()}</TableHead>
+                <TableHead className="w-24">{m.library_col_state()}</TableHead>
+                <TableHead className="w-44">{m.library_col_opened()}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((entry) => {
+                const ratio = progressRatio(entry);
+                return (
+                  <TableRow key={entry.resource_id}>
+                    <TableCell className="max-w-0">
+                      <Link
+                        to={`/library/item/${encodeURIComponent(entry.resource_id)}`}
+                        className="block truncate font-mono hover:underline"
+                      >
+                        {entry.resource_id}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="w-10 shrink-0 font-mono text-ink-muted tabular-nums">
+                          {progressLabel(
+                            entry,
+                            m.library_progress_recorded(),
+                            m.library_value_none(),
+                          )}
+                        </span>
+                        {ratio === null ? null : (
+                          <span className="h-0.5 min-w-0 flex-1 bg-surface-3">
+                            <span
+                              className="block h-full bg-lantern-strong"
+                              style={{ width: `${ratio * 100}%` }}
+                            />
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-ink-muted">
+                      {entry.pinned ? m.library_pinned() : null}
+                    </TableCell>
+                    <TableCell className="font-mono text-ink-muted">
+                      {entry.last_opened_at ?? m.library_value_none()}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : null}
+      </div>
+    </>
   );
 }

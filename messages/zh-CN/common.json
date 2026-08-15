@@ -1,14 +1,9 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "app_name": "览境",
-  "settings": "设置",
-  "action_add_source": "添加来源",
-  "action_manage_sources": "管理来源",
   "action_retry": "重试",
   "action_close": "关闭",
-  "brand_mark_label": "{label} 品牌标识",
-  "brand_mark_fallback": "LanJing 品牌标识",
-  "launch_label": "LanJing 启动动画",
-  "launch_product_name": "LanJing / 览境",
-  "launch_slogan": "构建媒体境场"
+  "action_cancel": "取消",
+  "action_copy": "复制",
+  "action_copied": "已复制"
 }

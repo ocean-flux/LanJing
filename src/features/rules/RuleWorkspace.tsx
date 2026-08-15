@@ -12,9 +12,19 @@ import {
   useNodesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { AlertCircle, Braces, Check, Cloud, Code2, GitMerge, RefreshCw, Save } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui';
+import { useNavigate } from 'react-router-dom';
+import { Icon, type IconName } from '@/components/Icon';
+import { PageToolbar } from '@/components/PageToolbar';
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { useMessages } from '@/shared/i18n/messages';
 import { useTheme } from '@/shared/theme/use-theme';
 import {
@@ -31,58 +41,35 @@ import {
 
 type Messages = ReturnType<typeof useMessages>;
 
-function getNodeMeta(
-  m: Messages,
-): Record<FlowNodeKind, { label: string; description: string; icon: typeof Cloud; color: string }> {
+/** 节点数超过该阈值才渲染缩略图，小图不占画布空间。 */
+const MINIMAP_NODE_THRESHOLD = 12;
+
+const NODE_ICONS: Record<FlowNodeKind, IconName> = {
+  http: 'broadcast',
+  js: 'code',
+  extract: 'tree-structure',
+  mapper: 'translate',
+  merge: 'git-merge',
+  condition: 'compass',
+  loop: 'arrow-counter-clockwise',
+};
+
+function nodeLabels(m: Messages): Record<FlowNodeKind, string> {
   return {
-    http: {
-      label: m.rules_node_inspector_type_http(),
-      description: m.rules_node_inspector_type_http(),
-      icon: Cloud,
-      color: 'var(--lantern-strong)',
-    },
-    js: {
-      label: m.rules_node_inspector_type_js(),
-      description: m.rules_node_inspector_type_js(),
-      icon: Code2,
-      color: 'var(--lantern)',
-    },
-    extract: {
-      label: m.rules_node_inspector_type_extract(),
-      description: m.rules_node_inspector_type_extract(),
-      icon: Braces,
-      color: 'var(--lantern-hover)',
-    },
-    mapper: {
-      label: m.rules_node_inspector_type_mapper(),
-      description: m.rules_node_inspector_type_mapper(),
-      icon: RefreshCw,
-      color: 'var(--accent)',
-    },
-    merge: {
-      label: m.rules_node_inspector_type_merge(),
-      description: m.rules_node_inspector_type_merge(),
-      icon: GitMerge,
-      color: 'var(--lantern-strong)',
-    },
-    condition: {
-      label: m.rules_node_inspector_type_condition(),
-      description: m.rules_node_inspector_type_condition(),
-      icon: AlertCircle,
-      color: 'var(--lantern)',
-    },
-    loop: {
-      label: m.rules_node_inspector_type_loop(),
-      description: m.rules_node_inspector_type_loop(),
-      icon: RefreshCw,
-      color: 'var(--lantern-hover)',
-    },
+    http: m.rules_node_inspector_type_http(),
+    js: m.rules_node_inspector_type_js(),
+    extract: m.rules_node_inspector_type_extract(),
+    mapper: m.rules_node_inspector_type_mapper(),
+    merge: m.rules_node_inspector_type_merge(),
+    condition: m.rules_node_inspector_type_condition(),
+    loop: m.rules_node_inspector_type_loop(),
   };
 }
 
 interface RuleNodeData {
   [key: string]: unknown;
   kind: FlowNodeKind;
+  label: string;
   summary: string;
   inputs: string[];
   outputs: string[];
@@ -96,12 +83,10 @@ function portTop(index: number, count: number) {
 
 function RuleNode({ data, selected }: NodeProps<RuleFlowNode>) {
   const m = useMessages();
-  const meta = getNodeMeta(m)[data.kind];
-  const Icon = meta.icon;
   return (
     <div
-      className={`w-60 border bg-(--surface) shadow-sm ${selected ? 'border-(--accent) ring-2 ring-(--ring)/30' : 'border-(--border)'}`}
-      aria-label={`${meta.label}：${data.summary}`}
+      aria-label={`${data.label}: ${data.summary}`}
+      className={`w-56 border bg-surface-1 ${selected ? 'border-lantern-strong ring-1 ring-lantern-strong/40' : 'border-hairline-strong'}`}
     >
       {data.inputs.map((handle, index) => (
         <Handle
@@ -113,19 +98,12 @@ function RuleNode({ data, selected }: NodeProps<RuleFlowNode>) {
           aria-label={m.rules_port_input({ handle })}
         />
       ))}
-      <div className="flex items-center gap-3 border-b border-(--border) px-4 py-3">
-        <span
-          className="grid h-8 w-8 place-items-center rounded-md text-(--on-lantern)"
-          style={{ backgroundColor: meta.color }}
-        >
-          <Icon size={16} aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-(--muted-text) uppercase">{data.kind}</p>
-          <p className="truncate text-sm font-semibold">{meta.label}</p>
-        </div>
+      <div className="flex h-(--density-row) items-center gap-2 border-b border-hairline px-2">
+        <Icon name={NODE_ICONS[data.kind]} className="text-base text-lantern-strong" />
+        <span className="truncate font-medium">{data.label}</span>
+        <span className="ml-auto shrink-0 font-mono text-ui-sm text-ink-subtle">{data.kind}</span>
       </div>
-      <p className="px-4 py-3 text-xs leading-5 text-(--muted-text)">{data.summary}</p>
+      <p className="px-2 py-1.5 font-mono text-ui-sm break-words text-ink-muted">{data.summary}</p>
       {data.outputs.map((handle, index) => (
         <Handle
           key={`source:${handle}`}
@@ -150,10 +128,11 @@ function summarizeNode(kind: FlowNodeKind, config: Record<string, unknown>, m: M
   if (kind === 'condition' && Array.isArray(config.branches)) {
     return m.rules_condition_branches({ count: config.branches.length });
   }
-  return getNodeMeta(m)[kind].description;
+  return nodeLabels(m)[kind];
 }
 
 function createGraph(definition: RuleDefinition, layout: RuleLayout, m: Messages) {
+  const labels = nodeLabels(m);
   const inputHandles = new Map<string, Set<string>>();
   const outputHandles = new Map<string, Set<string>>();
   for (const edge of definition.flow.edges) {
@@ -169,11 +148,12 @@ function createGraph(definition: RuleDefinition, layout: RuleLayout, m: Messages
     id: node.id,
     type: 'rule',
     position: layout.nodes[node.id]?.position ?? {
-      x: 48 + (index % 3) * 320,
-      y: 48 + Math.floor(index / 3) * 190,
+      x: 48 + (index % 3) * 288,
+      y: 48 + Math.floor(index / 3) * 160,
     },
     data: {
       kind: node.config.kind,
+      label: labels[node.config.kind],
       summary: summarizeNode(node.config.kind, node.config.value, m),
       inputs: [...(inputHandles.get(node.id) ?? [])],
       outputs: [...(outputHandles.get(node.id) ?? [])],
@@ -191,28 +171,31 @@ function createGraph(definition: RuleDefinition, layout: RuleLayout, m: Messages
   return { nodes, edges };
 }
 
-export function RuleWorkspace() {
+/**
+ * 规则工作区。当前是语义图的只读投影 + 布局保存；
+ * 节点面板、检查器、连接校验与撤销重做仍在迁移（阶段 C/D）。
+ */
+export function RuleWorkspace({ documentId }: { documentId?: string }) {
   const m = useMessages();
+  const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const [documents, setDocuments] = useState<NativeRuleDocumentSummary[]>([]);
-  const [selectedDocumentId, setSelectedDocumentId] = useState('');
+  const [selectedDocumentId, setSelectedDocumentId] = useState(documentId ?? '');
   const [detail, setDetail] = useState<NativeRuleDocumentDetail>();
   const [edges, setEdges] = useState<Edge[]>([]);
   const [nodes, setNodes, onNodesChange] = useNodesState<RuleFlowNode>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'saving' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [isLayoutDirty, setIsLayoutDirty] = useState(false);
-  const currentDocumentId = useRef('');
+  const currentDocumentId = useRef(documentId ?? '');
 
   const loadDocument = useCallback(
-    async (documentId: string, signal?: AbortSignal) => {
+    async (id: string, signal?: AbortSignal) => {
       setStatus('loading');
       setMessage('');
       try {
-        const nextDetail = await getNativeRuleDocument(documentId);
-        if (signal?.aborted || currentDocumentId.current !== documentId) {
-          return;
-        }
+        const nextDetail = await getNativeRuleDocument(id);
+        if (signal?.aborted || currentDocumentId.current !== id) return;
         setDetail(nextDetail ?? undefined);
         if (!nextDetail?.definition) {
           setNodes([]);
@@ -242,18 +225,16 @@ export function RuleWorkspace() {
     const controller = new AbortController();
     void listNativeRuleDocuments()
       .then((items) => {
-        if (controller.signal.aborted) {
-          return;
-        }
+        if (controller.signal.aborted) return;
         setDocuments(items);
-        const first = items[0]?.document_id ?? '';
-        currentDocumentId.current = first;
-        setSelectedDocumentId(first);
-        if (first) {
-          void loadDocument(first, controller.signal);
-        } else {
-          setStatus('ready');
-        }
+        const requested =
+          documentId && items.some((item) => item.document_id === documentId)
+            ? documentId
+            : (items[0]?.document_id ?? '');
+        currentDocumentId.current = requested;
+        setSelectedDocumentId(requested);
+        if (requested) void loadDocument(requested, controller.signal);
+        else setStatus('ready');
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
@@ -261,21 +242,18 @@ export function RuleWorkspace() {
         setMessage(error instanceof Error ? error.message : String(error));
       });
     return () => controller.abort();
-  }, [loadDocument]);
+  }, [documentId, loadDocument]);
 
-  const handleDocumentChange = (documentId: string) => {
+  const handleDocumentChange = (nextId: string) => {
     if (isLayoutDirty && !window.confirm(m.rules_switch_document_confirm())) return;
-    currentDocumentId.current = documentId;
-    setSelectedDocumentId(documentId);
-    const controller = new AbortController();
-    void loadDocument(documentId, controller.signal);
+    currentDocumentId.current = nextId;
+    setSelectedDocumentId(nextId);
+    navigate(`/sources/rules/${encodeURIComponent(nextId)}`);
   };
 
   const saveLayout = async () => {
-    if (!detail) {
-      return;
-    }
-    const documentId = detail.summary.document_id;
+    if (!detail) return;
+    const targetId = detail.summary.document_id;
     setStatus('saving');
     setMessage('');
     const previousLayout = parseRuleLayout(detail.layout_json);
@@ -292,8 +270,8 @@ export function RuleWorkspace() {
       ),
     };
     try {
-      const result = await saveRuleLayout(documentId, detail.layout_revision, layout);
-      if (currentDocumentId.current !== documentId) return;
+      const result = await saveRuleLayout(targetId, detail.layout_revision, layout);
+      if (currentDocumentId.current !== targetId) return;
       const conflict = result.layout?.conflict;
       if (conflict) {
         setStatus('error');
@@ -319,66 +297,66 @@ export function RuleWorkspace() {
     }
   };
 
-  const minimapColor = useMemo(
-    () => (node: RuleFlowNode) => getNodeMeta(m)[node.data.kind].color,
-    [m],
-  );
+  const minimapColor = useMemo(() => () => 'var(--lantern-strong)', []);
 
   return (
-    <div className="mx-auto max-w-[1600px] px-5 py-6 sm:px-8 lg:px-10">
-      <div className="flex flex-col justify-between gap-4 border-b border-(--border) pb-5 lg:flex-row lg:items-end">
-        <div>
-          <p className="eyebrow">{m.rules_canvas_eyebrow()}</p>
-          <h1 className="font-display mt-2 text-3xl font-semibold">{m.rules_canvas_title()}</h1>
-          <p className="mt-2 text-sm text-(--muted-text)">{m.rules_canvas_description()}</p>
-        </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="grid gap-1 text-xs text-(--muted-text)">
-            {m.rules_document_label()}
-            <select
-              className="h-10 min-w-64 rounded-md border border-(--border) bg-(--surface) px-3 text-sm text-(--text) focus-visible:ring-2 focus-visible:ring-(--ring) focus-visible:outline-none"
-              value={selectedDocumentId}
-              onChange={(event) => handleDocumentChange(event.target.value)}
-              disabled={status === 'loading' || documents.length === 0}
-            >
-              {documents.length === 0 && <option value="">{m.rules_no_documents_option()}</option>}
-              {documents.map((document) => (
-                <option key={document.document_id} value={document.document_id}>
-                  {document.title}
-                </option>
-              ))}
-            </select>
-          </label>
+    <div className="flex h-full min-h-0 flex-col">
+      <PageToolbar
+        meta={
+          documents.length > 0 ? m.rules_document_count({ count: documents.length }) : undefined
+        }
+        actions={
           <Button
+            size="sm"
             onClick={() => void saveLayout()}
             disabled={!detail || !isLayoutDirty || status === 'saving'}
           >
-            <Save size={16} aria-hidden="true" />
+            <Icon name="floppy-disk" className="text-base" />
             {status === 'saving' ? m.rules_save_layout_saving() : m.rules_save_layout()}
           </Button>
-        </div>
-      </div>
+        }
+      >
+        <NativeSelect
+          size="sm"
+          className="ml-2 min-w-56"
+          aria-label={m.rules_document_label()}
+          value={selectedDocumentId}
+          onChange={(event) => handleDocumentChange(event.target.value)}
+          disabled={status === 'loading' || documents.length === 0}
+        >
+          {documents.length === 0 ? (
+            <NativeSelectOption value="">{m.rules_no_documents_option()}</NativeSelectOption>
+          ) : null}
+          {documents.map((document) => (
+            <NativeSelectOption key={document.document_id} value={document.document_id}>
+              {document.title}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </PageToolbar>
 
-      {message && (
+      {message ? (
         <p
-          className="mt-4 text-sm text-(--muted-text)"
           role={status === 'error' ? 'alert' : 'status'}
+          className={`border-b border-hairline px-(--page-gutter) py-1.5 text-ui-sm ${status === 'error' ? 'text-danger' : 'text-ink-muted'}`}
         >
           {message}
         </p>
-      )}
+      ) : null}
 
-      <div className="mt-5 h-[min(72vh,760px)] min-h-[480px] overflow-hidden border border-(--border) bg-(--surface-2)">
+      <div className="min-h-0 flex-1 bg-canvas">
         {nodes.length === 0 ? (
-          <div className="grid h-full place-items-center px-6 text-center">
-            <div>
-              <Check className="mx-auto text-(--muted-text)" size={24} aria-hidden="true" />
-              <p className="mt-3 font-medium">
+          <Empty className="h-full">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Icon name="tree-structure" className="text-base" />
+              </EmptyMedia>
+              <EmptyTitle>
                 {status === 'loading' ? m.rules_canvas_loading() : m.rules_canvas_empty()}
-              </p>
-              <p className="mt-1 text-sm text-(--muted-text)">{m.rules_canvas_empty_hint()}</p>
-            </div>
-          </div>
+              </EmptyTitle>
+              <EmptyDescription>{m.rules_canvas_empty_hint()}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <ReactFlow
             nodes={nodes}
@@ -395,15 +373,20 @@ export function RuleWorkspace() {
             nodesConnectable={false}
             nodesDraggable={status !== 'saving'}
             edgesReconnectable={false}
+            snapGrid={[16, 16]}
+            snapToGrid
             fitView
             minZoom={0.2}
-            maxZoom={1.8}
+            maxZoom={2}
             colorMode={resolvedTheme}
+            proOptions={{ hideAttribution: true }}
             aria-label={m.rules_canvas_aria()}
           >
-            <MiniMap pannable zoomable nodeColor={minimapColor} />
+            {nodes.length > MINIMAP_NODE_THRESHOLD ? (
+              <MiniMap pannable zoomable nodeColor={minimapColor} />
+            ) : null}
             <Controls showInteractive={false} />
-            <Background gap={22} size={1} />
+            <Background gap={16} size={1} />
           </ReactFlow>
         )}
       </div>

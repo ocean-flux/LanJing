@@ -2,23 +2,51 @@
 <html lang="zh-CN" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#f3f4f6" />
-    <style>
-      .skip-link {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0 0 0 0);
-        white-space: nowrap;
-      }
-    </style>
     <title>LanJing / 览境</title>
+    <script>
+      /* 冷启动防白闪：在 bundle 加载前把主题写到 <html>。
+         这里只读偏好、不含色值，色值仍由 index.css 提供。 */
+      (function () {
+        var PACK_FACE = {
+          'obsidian-void': 'dark',
+          'graphite-atelier': 'dark',
+          'porcelain-day': 'light',
+          'mist-studio': 'light',
+        };
+        var mode = 'system';
+        var light = 'porcelain-day';
+        var dark = 'obsidian-void';
+        try {
+          var raw = localStorage.getItem('lanjing-preferences-v1');
+          if (raw) {
+            var stored = JSON.parse(raw);
+            if (stored.mode === 'light' || stored.mode === 'dark' || stored.mode === 'system') {
+              mode = stored.mode;
+            }
+            if (PACK_FACE[stored.lightThemeId] === 'light') light = stored.lightThemeId;
+            if (PACK_FACE[stored.darkThemeId] === 'dark') dark = stored.darkThemeId;
+          }
+        } catch (error) {
+          /* 受限 WebView 会拒绝 localStorage，走默认值。 */
+        }
+        var resolved =
+          mode === 'system'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : mode;
+        var root = document.documentElement;
+        root.classList.toggle('dark', resolved === 'dark');
+        root.dataset.theme = mode;
+        root.dataset.appearancePack = resolved === 'dark' ? dark : light;
+        root.style.colorScheme = resolved;
+      })();
+    </script>
   </head>
   <body>
-    <a class="skip-link" href="#main-content">跳转到主要内容</a>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

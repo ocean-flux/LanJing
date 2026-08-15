@@ -1,16 +1,31 @@
 import { isTauri } from '@tauri-apps/api/core';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Icon } from '@/components/Icon';
+import { PageToolbar } from '@/components/PageToolbar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
-  ArrowRight,
-  CheckCircle2,
-  Code2,
-  Download,
-  FileCode2,
-  RefreshCw,
-  ShieldAlert,
-} from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Badge, Button, Card, CardContent, Input } from '@/components/ui';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { Item, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { useMessages } from '@/shared/i18n/messages';
 import {
   CATALOG_INSTALL_CAP,
@@ -35,6 +50,7 @@ type ImportPhase =
   | 'installing'
   | 'done'
   | 'error';
+
 type PreparedSource = { candidate: InstallCandidate; item: CatalogItem };
 
 function candidateRequestsSystem(candidate: InstallCandidate) {
@@ -57,7 +73,7 @@ export function SourcesHome() {
   const highlightedSourceId = searchParams.get('highlight');
   const pendingImport = searchParams.get('import');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setStatus('loading');
     setError('');
     try {
@@ -67,11 +83,11 @@ export function SourcesHome() {
       setError(caught instanceof Error ? caught.message : String(caught));
       setStatus('error');
     }
-  };
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     if (!pendingImport) {
@@ -113,6 +129,13 @@ export function SourcesHome() {
   );
   const requestsSystem = prepared.some((entry) => candidateRequestsSystem(entry.candidate));
   const requestsNetwork = prepared.some((entry) => entry.candidate.required_grant.network);
+
+  const closeImport = useCallback(() => {
+    setSearchParams((current) => {
+      current.delete('import');
+      return current;
+    });
+  }, [setSearchParams]);
 
   const toggleSelected = (itemId: string) => {
     setSelectedIds((current) =>
@@ -165,256 +188,260 @@ export function SourcesHome() {
     if (failures.length > 0) {
       setImportError(failures.join('\n'));
       setImportPhase('confirm');
+      toast.error(m.sources_deeplink_install_partial({ ok: successCount, fail: failures.length }));
       return;
     }
     setImportPhase('done');
     setPrepared([]);
     setSelectedIds([]);
-    setSearchParams((current) => {
-      current.delete('import');
-      return current;
-    });
-    if (successCount === 0) setImportPhase('error');
+    closeImport();
+    if (successCount === 0) {
+      setImportPhase('error');
+      return;
+    }
+    toast.success(m.sources_deeplink_install_success({ count: successCount }));
   };
 
+  const dialogOpen =
+    pendingImport !== null &&
+    (importPhase === 'loading' ||
+      importPhase === 'pick' ||
+      importPhase === 'preparing' ||
+      importPhase === 'confirm' ||
+      importPhase === 'installing' ||
+      importPhase === 'error');
+
   return (
-    <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <div className="border-b border-(--border) pb-8">
-        <p className="eyebrow">{m.sources_title()}</p>
-        <h1 className="font-display mt-2 text-4xl font-semibold text-balance">
-          {m.sources_deeplink_import_title()}
-        </h1>
-        <p className="mt-3 max-w-xl text-(--muted-text)">{m.sources_deeplink_import_hint()}</p>
+    <>
+      <PageToolbar
+        meta={m.sources_group_count({ count: sources.length })}
+        actions={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={m.sources_refresh()}
+            title={m.sources_refresh()}
+            disabled={status === 'loading'}
+            onClick={() => void load()}
+          >
+            <Icon name="arrow-clockwise" className="text-base" />
+          </Button>
+        }
+      />
+
+      <div className="px-(--page-gutter) py-(--density-section-gap)">
+        <p className="mb-2 text-ui-sm text-ink-subtle">
+          {isTauri() ? m.sources_device_projection() : m.sources_browser_projection()}
+        </p>
+
+        {status === 'loading' ? (
+          <div className="flex flex-col gap-px">
+            {[0, 1, 2].map((index) => (
+              <Skeleton key={index} className="h-(--density-row) w-full" />
+            ))}
+          </div>
+        ) : null}
+
+        {status === 'error' ? (
+          <div role="alert" className="border border-hairline p-3">
+            <p className="font-medium">{m.sources_load_error()}</p>
+            <p className="mt-1 font-mono text-ui-sm break-words text-ink-muted">{error}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
+              {m.action_retry()}
+            </Button>
+          </div>
+        ) : null}
+
+        {status === 'ready' && sources.length === 0 ? (
+          <Empty className="border border-dashed border-hairline">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Icon name="broadcast" className="text-base" />
+              </EmptyMedia>
+              <EmptyTitle>{m.sources_empty_title()}</EmptyTitle>
+              <EmptyDescription>{m.sources_empty_hint()}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : null}
+
+        {status === 'ready' && sources.length > 0 ? (
+          <ul className="divide-y divide-hairline border-y border-hairline">
+            {sources.map((source) => (
+              <li key={source.source_id}>
+                <Item
+                  size="xs"
+                  className={
+                    highlightedSourceId === source.source_id
+                      ? 'bg-lantern-soft ring-1 ring-lantern-strong/40'
+                      : undefined
+                  }
+                >
+                  <ItemMedia variant="icon">
+                    <Icon name="check-circle" className="text-base text-positive" />
+                  </ItemMedia>
+                  <ItemContent className="min-w-0">
+                    <ItemTitle className="truncate">{source.profile.title}</ItemTitle>
+                  </ItemContent>
+                  <span className="hidden min-w-0 flex-1 truncate font-mono text-ui-sm text-ink-subtle sm:block">
+                    {source.source_id}
+                  </span>
+                  <span className="hidden shrink-0 gap-1 md:flex">
+                    {source.profile.supported_intents.map((intent) => (
+                      <Badge key={intent} variant="outline">
+                        {intent}
+                      </Badge>
+                    ))}
+                  </span>
+                  <span className="shrink-0 font-mono text-ui-sm text-ink-muted">
+                    {source.version}
+                  </span>
+                </Item>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
 
-      {pendingImport && (
-        <Card className="mt-6 border-(--accent)/40 bg-(--surface-2)">
-          <CardContent className="pt-5">
-            <div className="flex items-start gap-3">
-              <Download
-                className="mt-0.5 shrink-0 text-(--accent-strong)"
-                size={19}
-                aria-hidden="true"
-              />
-              <div className="min-w-0 flex-1">
-                <h2 className="font-medium">{m.sources_deeplink_import_title()}</h2>
-                <p className="mt-1 text-sm break-words text-(--muted-text)">{pendingImport}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setSearchParams((current) => {
-                    current.delete('import');
-                    return current;
-                  })
-                }
-              >
-                {m.action_close()}
-              </Button>
-            </div>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeImport();
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {importPhase === 'confirm'
+                ? m.sources_deeplink_grant_title()
+                : m.sources_deeplink_import_title()}
+            </DialogTitle>
+            <DialogDescription className="font-mono break-all">
+              {pendingImport ?? ''}
+            </DialogDescription>
+          </DialogHeader>
 
-            {importPhase === 'loading' && (
-              <p className="mt-4 text-sm">{m.sources_deeplink_fetching()}</p>
-            )}
-            {importPhase === 'error' && (
-              <p className="mt-4 text-sm break-words text-(--danger)" role="alert">
-                {importError}
+          {importPhase === 'loading' ? (
+            <p className="flex items-center gap-2" role="status">
+              <Spinner className="animate-spin" />
+              {m.sources_deeplink_fetching()}
+            </p>
+          ) : null}
+
+          {importPhase === 'error' ? (
+            <p role="alert" className="break-words text-danger">
+              {importError}
+            </p>
+          ) : null}
+
+          {importPhase === 'pick' || importPhase === 'preparing' ? (
+            <>
+              <p className="text-ink-muted">
+                {m.sources_deeplink_install_cap({
+                  selected: selectedItems.length,
+                  cap: CATALOG_INSTALL_CAP,
+                })}
               </p>
-            )}
-            {importPhase === 'pick' && (
-              <div className="mt-4">
-                <p className="text-sm text-(--muted-text)">
-                  {m.sources_deeplink_install_cap({
-                    selected: selectedItems.length,
-                    cap: CATALOG_INSTALL_CAP,
-                  })}
+              <ul className="app-scroll-region max-h-64 divide-y divide-hairline border border-hairline">
+                {catalog.map((item) => (
+                  <li key={item.id}>
+                    <Label className="flex h-(--density-row) items-center gap-2 px-2 hover:bg-surface-2">
+                      <Checkbox
+                        checked={selectedIds.includes(item.id)}
+                        onCheckedChange={() => toggleSelected(item.id)}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                      {item.group ? <Badge variant="outline">{item.group}</Badge> : null}
+                    </Label>
+                  </li>
+                ))}
+              </ul>
+              {importError ? (
+                <p role="alert" className="break-words text-danger">
+                  {importError}
                 </p>
-                <ul className="mt-3 max-h-64 divide-y divide-(--border) overflow-y-auto border border-(--border)">
-                  {catalog.map((item) => (
-                    <li key={item.id}>
-                      <label className="flex items-center gap-3 px-3 py-2 hover:bg-(--surface)">
-                        <Input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={() => toggleSelected(item.id)}
-                          aria-label={item.name}
-                          className="h-4 w-4"
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm">{item.name}</span>
-                        {item.group && <Badge>{item.group}</Badge>}
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+              ) : null}
+              <DialogFooter>
+                <Button variant="outline" onClick={closeImport}>
+                  {m.action_cancel()}
+                </Button>
                 <Button
-                  className="mt-4"
                   disabled={
-                    selectedItems.length === 0 || selectedItems.length > CATALOG_INSTALL_CAP
+                    importPhase === 'preparing' ||
+                    selectedItems.length === 0 ||
+                    selectedItems.length > CATALOG_INSTALL_CAP
                   }
                   onClick={() => void prepareSelected()}
                 >
                   {m.sources_deeplink_install_selected()}
                 </Button>
-              </div>
-            )}
-            {importPhase === 'confirm' && (
-              <div className="mt-4 space-y-4">
-                <div>
-                  <h3 className="font-medium">{m.sources_deeplink_grant_title()}</h3>
-                  <ul className="mt-2 text-sm text-(--muted-text)">
-                    {prepared.map((entry) => (
-                      <li key={entry.item.id}>{entry.item.name}</li>
-                    ))}
-                  </ul>
-                </div>
-                {requestsSystem && (
-                  <div
-                    className="flex gap-2 border border-(--danger) bg-(--danger-soft) p-3 text-sm text-(--danger)"
-                    role="alert"
-                  >
-                    <ShieldAlert size={18} aria-hidden="true" />
-                    {m.sources_install_system_unsupported()}
-                  </div>
-                )}
-                {requestsNetwork && !requestsSystem && (
-                  <label htmlFor="network-grant" className="flex items-start gap-2 text-sm">
-                    <Input
-                      id="network-grant"
-                      type="checkbox"
-                      onChange={(event) => setAllowNetwork(event.target.checked)}
-                      className="mt-0.5 h-4 w-4"
+              </DialogFooter>
+            </>
+          ) : null}
+
+          {importPhase === 'confirm' || importPhase === 'installing' ? (
+            <>
+              <ul className="divide-y divide-hairline border-y border-hairline">
+                {prepared.map((entry) => (
+                  <li key={entry.item.id} className="flex h-(--density-row) items-center truncate">
+                    {entry.item.name}
+                  </li>
+                ))}
+              </ul>
+
+              {requestsSystem ? (
+                <p
+                  role="alert"
+                  className="flex items-start gap-2 border border-danger bg-danger-soft p-2 text-danger"
+                >
+                  <Icon name="shield-check" className="mt-0.5 text-base" />
+                  {m.sources_install_system_unsupported()}
+                </p>
+              ) : null}
+
+              {requestsNetwork && !requestsSystem ? (
+                <>
+                  <p className="text-ink-muted">{m.sources_deeplink_network_required_notice()}</p>
+                  <Label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={allowNetwork}
+                      onCheckedChange={(checked) => setAllowNetwork(checked === true)}
                     />
                     {m.sources_install_grant_network_only()}
-                  </label>
-                )}
-                {importError && (
-                  <p className="text-sm whitespace-pre-wrap text-(--danger)" role="alert">
-                    {importError}
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setImportPhase('pick')}>
-                    {m.sources_deeplink_back_to_pick()}
-                  </Button>
-                  <Button
-                    disabled={requestsSystem || (requestsNetwork && !allowNetwork)}
-                    onClick={() => void installSelected()}
-                  >
-                    {m.sources_deeplink_install_selected()}
-                  </Button>
-                </div>
-              </div>
-            )}
-            {importPhase === 'installing' && (
-              <p className="mt-4 text-sm" role="status">
-                {m.sources_install_installing()}
-              </p>
-            )}
-            {importPhase === 'done' && (
-              <p className="mt-4 text-sm text-(--accent-strong)" role="status">
-                {m.sources_deeplink_done_title()}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                  </Label>
+                </>
+              ) : null}
 
-      <section className="mt-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="font-display text-2xl font-semibold">{m.sources_installed_title()}</h2>
-            <p className="mt-1 text-sm text-(--muted-text)">
-              {isTauri() ? m.sources_device_projection() : m.sources_browser_projection()}
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => void load()} disabled={status === 'loading'}>
-            <RefreshCw size={16} aria-hidden="true" />
-            {status === 'loading' ? m.sources_loading() : m.library_refresh()}
-          </Button>
-        </div>
+              {importError ? (
+                <p role="alert" className="whitespace-pre-wrap text-danger">
+                  {importError}
+                </p>
+              ) : null}
 
-        {status === 'error' && (
-          <p className="mt-5 text-sm break-words text-(--danger)" role="alert">
-            {m.sources_load_error()} {error}
-          </p>
-        )}
-        {status === 'ready' && sources.length === 0 && (
-          <p className="mt-5 border border-dashed border-(--border) p-8 text-center text-sm text-(--muted-text)">
-            {m.sources_empty_title()}
-          </p>
-        )}
-
-        <div className="mt-5 grid gap-3">
-          {sources.map((source) => (
-            <Card
-              key={source.source_id}
-              className={
-                highlightedSourceId === source.source_id
-                  ? 'border-(--accent) ring-2 ring-(--ring)/30'
-                  : undefined
-              }
-            >
-              <CardContent className="flex items-start gap-4 pt-5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-(--surface-2) text-(--accent-strong)">
-                  <CheckCircle2 size={19} aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium break-words">{source.profile.title}</p>
-                  <p className="mt-1 text-xs break-all text-(--muted-text)">{source.source_id}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {source.profile.supported_intents.map((intent) => (
-                      <Badge key={intent}>{intent}</Badge>
-                    ))}
-                  </div>
-                </div>
-                <Badge>{source.version}</Badge>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <div className="mt-8 border-t border-(--border) pt-5">
-        <Link
-          to="/sources/rules"
-          className="inline-flex items-center gap-2 text-sm text-(--accent-strong) hover:underline focus-visible:ring-2 focus-visible:ring-(--ring) focus-visible:outline-none"
-        >
-          <Code2 size={15} aria-hidden="true" />
-          {m.rules_workspace_title()} <ArrowRight size={14} aria-hidden="true" />
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-export function RulesMigration() {
-  const m = useMessages();
-  return (
-    <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <Link to="/sources" className="text-sm text-(--accent-strong) hover:underline">
-        ← {m.sources_title()}
-      </Link>
-      <div className="mt-8 border-b border-(--border) pb-8">
-        <p className="eyebrow">{m.sources_rules_migration_eyebrow()}</p>
-        <h1 className="font-display mt-2 text-4xl font-semibold">
-          {m.sources_rules_migration_title()}
-        </h1>
-        <p className="mt-3 max-w-2xl leading-7 text-(--muted-text)">
-          {m.sources_rules_migration_description()}
-        </p>
-      </div>
-      <Card className="mt-8">
-        <CardContent className="flex items-start gap-4 pt-5">
-          <FileCode2 className="mt-0.5 shrink-0 text-(--accent-strong)" aria-hidden="true" />
-          <div>
-            <h2 className="font-medium">{m.sources_rules_migration_boundary_title()}</h2>
-            <p className="mt-1 text-sm leading-6 text-(--muted-text)">
-              {m.sources_rules_migration_boundary_description()}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  disabled={importPhase === 'installing'}
+                  onClick={() => setImportPhase('pick')}
+                >
+                  {m.sources_deeplink_back_to_pick()}
+                </Button>
+                <Button
+                  disabled={
+                    importPhase === 'installing' ||
+                    requestsSystem ||
+                    (requestsNetwork && !allowNetwork)
+                  }
+                  onClick={() => void installSelected()}
+                >
+                  {importPhase === 'installing'
+                    ? m.sources_install_installing()
+                    : m.sources_install_action()}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

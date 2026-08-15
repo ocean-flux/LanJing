@@ -1,12 +1,12 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "sources_title": "来源",
   "sources_loading": "正在加载已安装来源…",
   "sources_load_error": "来源加载失败。",
   "sources_empty_title": "还没有已安装来源",
   "sources_empty_hint": "粘贴 Legado 书源 JSON，或打开本地文件安装第一个来源。",
   "sources_installed_title": "已安装来源",
-  "sources_add_close": "收起安装",
+  "sources_refresh": "刷新来源",
+  "sources_import_open": "导入来源",
   "sources_revision": "修订",
   "sources_supported_intents": "支持的意图",
   "sources_no_intents": "未声明标准意图",
@@ -107,10 +107,5 @@
   "sources_deeplink_install_partial": "成功 {ok}，失败 {fail}。",
   "sources_deeplink_install_failed": "安装失败。",
   "sources_device_projection": "来自当前设备的 RuleSystem 投影",
-  "sources_browser_projection": "浏览器预览不会连接本机数据",
-  "sources_rules_migration_eyebrow": "规则工作区",
-  "sources_rules_migration_title": "编辑器迁移中",
-  "sources_rules_migration_description": "旧版完整编辑器已归档至 src-legacy/。React Flow 已接管画布投影和布局保存，语义配置编辑仍在迁移。",
-  "sources_rules_migration_boundary_title": "迁移边界已明确",
-  "sources_rules_migration_boundary_description": "规则解析、校验、能力审批和 IPC 契约继续由本地领域模块拥有。"
+  "sources_browser_projection": "浏览器预览不会连接本机数据"
 }

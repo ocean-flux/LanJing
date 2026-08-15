@@ -1,23 +1,9 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
-  "apps_title": "应用",
-  "apps_empty_title": "当前没有已接线的媒体应用",
-  "apps_eyebrow": "应用空间",
-  "apps_heading": "按媒介进入",
-  "apps_description": "每种内容都有自己的消费节奏。选择一个空间，继续你的发现。",
-  "apps_create": "创建空间",
-  "apps_search_label": "搜索应用",
-  "apps_search_placeholder": "搜索应用空间",
   "apps_reading_title": "阅读",
-  "apps_reading_description": "小说、文章与 RSS 的沉浸式阅读空间",
   "apps_podcast_title": "播客",
-  "apps_podcast_description": "发现节目、管理队列，随时继续收听",
   "apps_video_title": "影视",
-  "apps_video_description": "跨来源整理剧集、电影与观看进度",
   "apps_gallery_title": "图集",
-  "apps_gallery_description": "把图片来源聚合成自己的视觉档案",
   "apps_music_title": "音乐",
-  "apps_music_description": "专辑、歌单和本地播放资产",
-  "apps_more_title": "更多空间正在规划",
-  "apps_more_description": "由统一媒体模型持续扩展"
+  "apps_unavailable": "未启用"
 }
