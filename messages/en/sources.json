@@ -105,5 +105,12 @@
   "sources_deeplink_network_required_notice": "One or more selected sources require network access. Choose the network-only grant before installing.",
   "sources_deeplink_install_success": "Installed {count} sources.",
   "sources_deeplink_install_partial": "Installed {ok}, failed {fail}.",
-  "sources_deeplink_install_failed": "Installation failed."
+  "sources_deeplink_install_failed": "Installation failed.",
+  "sources_device_projection": "Projected from the current device RuleSystem",
+  "sources_browser_projection": "Browser preview is not connected to local device data",
+  "sources_rules_migration_eyebrow": "Rule workspace",
+  "sources_rules_migration_title": "Editor migration in progress",
+  "sources_rules_migration_description": "The previous editor is archived in src-legacy/. React Flow now owns canvas projection and layout persistence while semantic configuration editing is still migrating.",
+  "sources_rules_migration_boundary_title": "Migration boundary is explicit",
+  "sources_rules_migration_boundary_description": "Rule parsing, validation, capability approval, and IPC contracts remain owned by local domain modules."
 }

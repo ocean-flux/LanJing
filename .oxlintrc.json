@@ -1,0 +1,138 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "oxc",
+    "typescript",
+    "unicorn",
+    "import",
+    "node",
+    "promise",
+    "react",
+    "react-perf",
+    "jsx-a11y",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    "src-legacy/**",
+    "src-tauri/**",
+    "build/**",
+    "node_modules/**",
+    "src/shared/paraglide/**"
+  ],
+  "rules": {
+    "no-console": "error",
+    "no-unused-vars": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-definitions": "off",
+    "import/no-duplicates": "error",
+    "import/no-namespace": "off",
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+    "import/no-unassigned-import": "off",
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+    "import/consistent-type-specifier-style": "off",
+    "promise/catch-or-return": "error",
+    "promise/no-return-wrap": "error",
+    "promise/prefer-await-to-then": "off",
+    "promise/prefer-await-to-callbacks": "off",
+    "promise/always-return": "off",
+    "react/no-danger": "error",
+    "react/jsx-props-no-spreading": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-filename-extension": "off",
+    "react/jsx-no-literals": "off",
+    "react/jsx-max-depth": "off",
+    "react/no-multi-comp": "off",
+    "react/forbid-component-props": "off",
+    "react-perf/jsx-no-new-object-as-prop": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "react-perf/jsx-no-new-array-as-prop": "off",
+    "react-perf/jsx-no-jsx-as-prop": "off",
+    "jsx-a11y/alt-text": "error",
+    "jsx-a11y/anchor-has-content": "error",
+    "jsx-a11y/aria-props": "error",
+    "jsx-a11y/aria-role": "error",
+    "jsx-a11y/click-events-have-key-events": "error",
+    "jsx-a11y/heading-has-content": "off",
+    "jsx-a11y/label-has-associated-control": "error",
+    "jsx-a11y/no-autofocus": "error",
+    "jsx-a11y/no-noninteractive-element-interactions": "error",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "jsx-a11y/role-has-required-aria-props": "error",
+    "vitest/expect-expect": "off",
+    "vitest/no-focused-tests": "error",
+    "vitest/no-identical-title": "error",
+    "vitest/no-importing-vitest-globals": "off",
+    "vitest/require-hook": "off",
+    "vitest/prefer-expect-assertions": "off",
+    "vitest/prefer-strict-equal": "off",
+    "vitest/prefer-lowercase-title": "off",
+    "vitest/prefer-describe-function-title": "off",
+    "vitest/prefer-to-be-truthy": "off",
+    "vitest/prefer-to-be-falsy": "off",
+    "unicorn/filename-case": "off",
+    "unicorn/no-null": "off",
+    "unicorn/catch-error-name": "off",
+    "unicorn/prefer-global-this": "off",
+    "unicorn/no-useless-undefined": "off",
+    "unicorn/no-array-callback-reference": "off",
+    "unicorn/no-nested-ternary": "off",
+    "unicorn/no-array-sort": "off",
+    "sort-imports": "off",
+    "sort-keys": "off",
+    "one-var": "off",
+    "func-style": "off",
+    "curly": "off",
+    "no-ternary": "off",
+    "no-nested-ternary": "off",
+    "no-magic-numbers": "off",
+    "id-length": "off",
+    "init-declarations": "off",
+    "no-shadow": "off",
+    "require-await": "off",
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "max-statements": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/components/ui/sidebar.tsx"],
+      "rules": {
+        "import/max-dependencies": "off",
+        "react/hook-use-state": "off",
+        "arrow-body-style": "off"
+      }
+    },
+    {
+      "files": ["vite.config.js"],
+      "rules": {
+        "import/no-nodejs-modules": "off",
+        "unicorn/relative-url-style": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "env": { "vitest": true },
+      "rules": {
+        "no-warning-comments": "off"
+      }
+    }
+  ]
+}

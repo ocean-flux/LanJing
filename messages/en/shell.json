@@ -20,5 +20,11 @@
   "shell_error_heading": "Page unavailable",
   "shell_error_description": "LanJing couldn't display this page. Return to Realm to continue.",
   "shell_error_status": "Error {status}",
-  "shell_error_return": "Return to Realm"
+  "shell_error_return": "Return to Realm",
+  "shell_workspace_label": "Workspace",
+  "shell_workspace_title": "Media Atlas",
+  "shell_workspace_description": "Discover, organize, and enjoy your local media.",
+  "shell_local_only": "Local only",
+  "shell_local_only_description": "Your rules, history, and saved items stay on this device.",
+  "shell_about_tauri": "About Tauri"
 }

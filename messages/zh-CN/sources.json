@@ -105,5 +105,12 @@
   "sources_deeplink_network_required_notice": "所选来源中有需要网络访问的项。安装前请明确选择“仅授权网络访问”。",
   "sources_deeplink_install_success": "已安装 {count} 个来源。",
   "sources_deeplink_install_partial": "成功 {ok}，失败 {fail}。",
-  "sources_deeplink_install_failed": "安装失败。"
+  "sources_deeplink_install_failed": "安装失败。",
+  "sources_device_projection": "来自当前设备的 RuleSystem 投影",
+  "sources_browser_projection": "浏览器预览不会连接本机数据",
+  "sources_rules_migration_eyebrow": "规则工作区",
+  "sources_rules_migration_title": "编辑器迁移中",
+  "sources_rules_migration_description": "旧版完整编辑器已归档至 src-legacy/。React Flow 已接管画布投影和布局保存，语义配置编辑仍在迁移。",
+  "sources_rules_migration_boundary_title": "迁移边界已明确",
+  "sources_rules_migration_boundary_description": "规则解析、校验、能力审批和 IPC 契约继续由本地领域模块拥有。"
 }

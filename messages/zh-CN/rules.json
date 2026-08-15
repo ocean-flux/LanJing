@@ -144,5 +144,21 @@
   "rules_canvas_zoom_out": "缩小画布",
   "rules_canvas_fit_view": "适应画布",
   "rules_canvas_interactive": "切换画布交互模式",
-  "rules_canvas_auto_layout": "一键整理布局"
+  "rules_canvas_auto_layout": "一键整理布局",
+  "rules_canvas_eyebrow": "规则工作区",
+  "rules_canvas_title": "React Flow 规则画布",
+  "rules_canvas_description": "语义图只读投影，支持节点布局编辑与保存；连接校验和配置编辑仍沿用迁移边界。",
+  "rules_document_label": "规则文档",
+  "rules_no_documents_option": "暂无文档",
+  "rules_save_layout_saving": "保存中…",
+  "rules_layout_conflict_detail": "布局版本冲突：本地 {expected}，当前 {current}",
+  "rules_layout_saved": "布局已保存。",
+  "rules_canvas_loading": "正在读取规则图…",
+  "rules_canvas_empty": "没有可显示的规则图",
+  "rules_canvas_empty_hint": "请在 Tauri 应用中选择包含语义定义的规则文档。",
+  "rules_canvas_aria": "规则流程图",
+  "rules_port_input": "输入端口 {handle}",
+  "rules_port_output": "输出端口 {handle}",
+  "rules_switch_document_confirm": "布局尚未保存，确定要切换文档吗？",
+  "rules_condition_branches": "{count} 个条件分支"
 }

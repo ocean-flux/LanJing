@@ -1,27 +1,27 @@
-import { defineConfig } from 'vitest/config';
-import { sveltekit } from '@sveltejs/kit/vite';
-import { svelteTesting } from '@testing-library/svelte/vite';
-import tailwindcss from '@tailwindcss/vite';
+import { fileURLToPath } from 'node:url';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 
 const host = process.env.TAURI_DEV_HOST;
 
-// https://vite.dev/config/
 export default defineConfig({
-  // paraglide 必须在 sveltekit 之前，确保消息模块在 Svelte 编译前生成
+  publicDir: 'static',
   plugins: [
     paraglideVitePlugin({
       project: './project.inlang',
-      outdir: './src/lib/paraglide',
-      // SPA 模式（ssr=false）不使用 url 策略，避免依赖服务端路由
-      strategy: ['cookie', 'globalVariable', 'baseLocale'],
+      outdir: './src/shared/paraglide',
+      strategy: ['cookie', 'globalVariable', 'localStorage', 'baseLocale'],
     }),
-    sveltekit(),
-    svelteTesting(),
+    react(),
     tailwindcss(),
   ],
-
-  // Vite options tailored for Tauri development
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   clearScreen: false,
   server: {
     port: 1420,
@@ -32,10 +32,11 @@ export default defineConfig({
       ignored: ['**/src-tauri/**', '**/docs/**', '**/.tmp/**'],
     },
   },
+  build: {
+    outDir: 'build',
+    emptyOutDir: true,
+  },
   test: {
-    // 前端套件只收集 src；.pi 扩展使用 node:test，不能混入 Vitest。
-    include: ['src/**/*.test.ts'],
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 });

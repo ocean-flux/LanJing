@@ -13,5 +13,13 @@
   "settings_language_group": "语言",
   "settings_language": "界面语言",
   "settings_lang_zh": "中文",
-  "settings_lang_en": "EN"
+  "settings_lang_en": "EN",
+  "settings_description": "偏好设置只作用于当前设备，不需要账号或同步服务。",
+  "settings_appearance_description": "选择界面在不同时间的光线表现。",
+  "settings_reduce_motion": "减少动态效果",
+  "settings_reduce_motion_description": "尊重系统的无障碍偏好。",
+  "settings_auto": "自动",
+  "settings_privacy_group": "本地与隐私",
+  "settings_privacy_description": "来源规则、阅读进度和资料库内容都保存在应用数据目录。览境没有云端后端，也不会要求登录。",
+  "settings_architecture": "当前架构"
 }

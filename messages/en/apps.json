@@ -1,5 +1,23 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "apps_title": "Apps",
-  "apps_empty_title": "No connected media apps yet"
+  "apps_empty_title": "No connected media apps yet",
+  "apps_eyebrow": "Media spaces",
+  "apps_heading": "Enter by medium",
+  "apps_description": "Each kind of content has its own rhythm. Choose a space and continue discovering.",
+  "apps_create": "Create space",
+  "apps_search_label": "Search apps",
+  "apps_search_placeholder": "Search media spaces",
+  "apps_reading_title": "Reading",
+  "apps_reading_description": "An immersive space for novels, articles, and RSS.",
+  "apps_podcast_title": "Podcasts",
+  "apps_podcast_description": "Discover shows, manage your queue, and resume listening.",
+  "apps_video_title": "Video",
+  "apps_video_description": "Organize series, films, and watch progress across sources.",
+  "apps_gallery_title": "Galleries",
+  "apps_gallery_description": "Gather image sources into your own visual archive.",
+  "apps_music_title": "Music",
+  "apps_music_description": "Albums, playlists, and local playback assets.",
+  "apps_more_title": "More spaces are planned",
+  "apps_more_description": "Expanded continuously from the unified media model."
 }

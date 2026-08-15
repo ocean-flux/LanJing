@@ -20,5 +20,11 @@
   "shell_error_heading": "暂时无法打开此页面",
   "shell_error_description": "览境无法显示此页面。你可以返回境场继续使用。",
   "shell_error_status": "错误代码 {status}",
-  "shell_error_return": "返回境场"
+  "shell_error_return": "返回境场",
+  "shell_workspace_label": "工作台",
+  "shell_workspace_title": "内容航海图",
+  "shell_workspace_description": "发现、整理并沉浸式消费你的本地媒体。",
+  "shell_local_only": "仅本地运行",
+  "shell_local_only_description": "你的规则、历史与收藏只保存在当前设备。",
+  "shell_about_tauri": "关于 Tauri"
 }

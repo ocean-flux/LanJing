@@ -144,5 +144,21 @@
   "rules_canvas_zoom_out": "Zoom out on canvas",
   "rules_canvas_fit_view": "Fit canvas to view",
   "rules_canvas_interactive": "Toggle canvas interaction mode",
-  "rules_canvas_auto_layout": "Auto-layout"
+  "rules_canvas_auto_layout": "Auto-layout",
+  "rules_canvas_eyebrow": "Rule workspace",
+  "rules_canvas_title": "React Flow rule canvas",
+  "rules_canvas_description": "Read-only semantic projection with editable and saved node layout. Connection validation and configuration editing remain within the migration boundary.",
+  "rules_document_label": "Rule document",
+  "rules_no_documents_option": "No documents",
+  "rules_save_layout_saving": "Saving layout…",
+  "rules_layout_conflict_detail": "Layout revision conflict: local {expected}, current {current}",
+  "rules_layout_saved": "Layout saved.",
+  "rules_canvas_loading": "Loading rule graph…",
+  "rules_canvas_empty": "No rule graph to display",
+  "rules_canvas_empty_hint": "Choose a rule document with a semantic definition in the Tauri app.",
+  "rules_canvas_aria": "Rule flow graph",
+  "rules_port_input": "Input port {handle}",
+  "rules_port_output": "Output port {handle}",
+  "rules_switch_document_confirm": "The layout has unsaved changes. Switch documents anyway?",
+  "rules_condition_branches": "{count} condition branches"
 }

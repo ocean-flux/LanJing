@@ -6,23 +6,23 @@
 pre-commit:
   parallel: true
   jobs:
-    - name: eslint-prettier-src
+    - name: oxlint-oxfmt-src
       glob:
         - src/**/*.{svelte,ts,js,css,html,json}
-      run: pnpm exec eslint --fix {staged_files} && pnpm exec prettier --write {staged_files}
+      run: pnpm exec oxlint --fix {staged_files} && pnpm exec oxfmt --write {staged_files}
       stage_fixed: true
 
-    - name: prettier-root
+    - name: oxfmt-root
       # lefthook 的 * 会匹配任意深度 basename；只列仓库根配置，避免扫到 src/messages
       glob:
         - package.json
         - components.json
         - tsconfig.json
-        - "*.config.js"
-        - "*.config.mjs"
-        - "*.config.ts"
-        - "*.config.cjs"
-      run: pnpm exec prettier --write {staged_files}
+        - '*.config.js'
+        - '*.config.mjs'
+        - '*.config.ts'
+        - '*.config.cjs'
+      run: pnpm exec oxfmt --write {staged_files}
       stage_fixed: true
 
     - name: cargo-fmt
@@ -39,9 +39,6 @@ commit-msg:
 pre-push:
   parallel: true
   jobs:
-    - name: structure
-      run: pnpm run gate:structure
-
     - name: web
       run: pnpm check && pnpm test:web
 
