@@ -410,6 +410,69 @@
   display: none;
 }
 
+/* --------------------------------------------------------------------------
+   检查器里的 CodeMirror
+   CodeMirror 自带一套内置主题变量，这里全部改绑设计 token，避免亮暗切换时
+   编辑器还留着上一轨的底色。
+   -------------------------------------------------------------------------- */
+
+.js-code-editor .cm-editor {
+  min-height: var(--js-editor-min-height);
+  font-family: var(--font-code);
+  font-size: var(--text-code);
+  background: var(--surface-1);
+  color: var(--ink);
+}
+
+.js-code-editor .cm-editor.cm-focused {
+  outline: 2px solid var(--lantern-strong);
+  outline-offset: -2px;
+}
+
+.js-code-editor .cm-scroller {
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.js-code-editor .cm-gutters {
+  color: var(--ink-subtle);
+  background: var(--surface-2);
+  border-right: 1px solid var(--hairline);
+}
+
+.js-code-editor .cm-activeLine,
+.js-code-editor .cm-activeLineGutter {
+  background: var(--surface-2);
+}
+
+.js-code-editor .cm-cursor,
+.js-code-editor .cm-dropCursor {
+  border-left-color: var(--ink);
+}
+
+.js-code-editor .cm-selectionBackground,
+.js-code-editor .cm-content ::selection,
+.js-code-editor .cm-focused .cm-selectionBackground {
+  background: var(--lantern-soft);
+}
+
+.js-code-editor .cm-matchingBracket,
+.js-code-editor .cm-focused .cm-matchingBracket {
+  outline: 1px solid var(--lantern-strong);
+  background: transparent;
+}
+
+.js-code-editor .cm-tooltip {
+  color: var(--ink);
+  background: var(--canvas-elevated);
+  border: 1px solid var(--hairline-strong);
+}
+
+.js-code-editor .cm-tooltip-autocomplete > ul > li[aria-selected] {
+  color: var(--ink);
+  background: var(--lantern-soft);
+}
+
 @media (pointer: coarse) {
   .flow-node-port-row {
     min-height: var(--density-touch-target);

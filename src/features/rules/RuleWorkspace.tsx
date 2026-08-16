@@ -5,6 +5,7 @@
 
 import { ReactFlowProvider } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDefaultLayout } from 'react-resizable-panels';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Icon } from '@/components/Icon';
@@ -19,11 +20,13 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { Spinner } from '@/components/ui/spinner';
 import { useMessages } from '@/shared/i18n/messages';
 import { listNativeRuleDocuments, type NativeRuleDocumentSummary } from '@/shared/tauri/rules';
 import { RuleFlowCanvas } from './RuleFlowCanvas';
 import { DiagnosticList } from './DiagnosticList';
+import { Inspector } from './inspector/Inspector';
 import {
   createRuleEditorSession,
   selectCanRedo,
@@ -40,6 +43,10 @@ import {
 } from './use-session';
 
 type Messages = ReturnType<typeof useMessages>;
+
+/** 分栏 panel id；持久化的 layout 以它们为键，改名会丢用户已保存的宽度。 */
+const CANVAS_PANEL_ID = 'canvas';
+const INSPECTOR_PANEL_ID = 'inspector';
 
 /** SessionError 的稳定 code → 本地化文案。 */
 function sessionErrorText(m: Messages, error: unknown): string {
@@ -142,6 +149,12 @@ function EditorSurface({ documentId }: { documentId: string }) {
   const store = useRuleEditorSessionStore();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [message, setMessage] = useState('');
+  // 分栏宽度是编辑器偏好，不进文档 layout：它跟着人走，不跟着规则走。
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'lanjing-rules-workspace',
+    panelIds: [CANVAS_PANEL_ID, INSPECTOR_PANEL_ID],
+    onlySaveAfterUserInteractions: true,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -191,12 +204,25 @@ function EditorSurface({ documentId }: { documentId: string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1">
-        <RuleFlowCanvas />
-      </div>
-      <DiagnosticList />
-    </div>
+    // 数值尺寸是 px，百分比要写成字符串；检查器给 px 下限，窄窗口下也放得下一列表单。
+    <ResizablePanelGroup
+      orientation="horizontal"
+      defaultLayout={defaultLayout}
+      onLayoutChanged={onLayoutChanged}
+    >
+      <ResizablePanel id={CANVAS_PANEL_ID} defaultSize="70%" minSize={420}>
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="min-h-0 flex-1">
+            <RuleFlowCanvas />
+          </div>
+          <DiagnosticList />
+        </div>
+      </ResizablePanel>
+      <ResizableHandle withHandle aria-label={m.rules_inspector_resize()} />
+      <ResizablePanel id={INSPECTOR_PANEL_ID} defaultSize="30%" minSize={280} maxSize={560}>
+        <Inspector />
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
 
