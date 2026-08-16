@@ -41,7 +41,7 @@ tauri-plugin-os = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-svelte = "3"
+tauri-plugin-zustand = "1"
 tauri-plugin-mcp-bridge = "0.12"
 # 第三方依赖统一在 workspace.dependencies 钉版本；子 crate 仅 { workspace = true }
 # tauri 系用主版本轨解析最新兼容版。
@@ -102,7 +102,7 @@ tauri-plugin-deep-link = { workspace = true }
 tauri-plugin-notification = { workspace = true }
 tauri-plugin-opener = { workspace = true }
 tauri-plugin-os = { workspace = true }
-tauri-plugin-svelte = { workspace = true }
+tauri-plugin-zustand = { workspace = true }
 tauri-plugin-window-state = { workspace = true }
 tauri-plugin-mcp-bridge = { workspace = true }
 lj-rule-system = { path = "crates/lj-rule-system" }

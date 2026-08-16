@@ -82,8 +82,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        // 主题/偏好：@tauri-store/svelte 后端（替换官方 plugin-store）。
-        .plugin(tauri_plugin_svelte::init())
+        // 主题/偏好：@tauri-store/zustand 后端（替换官方 plugin-store）。
+        .plugin(tauri_plugin_zustand::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app| {
             #[cfg(any(windows, target_os = "linux"))]

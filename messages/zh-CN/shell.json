@@ -21,5 +21,7 @@
   "shell_window_command_failed_hint": "请重试或使用系统窗口控件。",
   "shell_not_found_title": "页面不存在",
   "shell_not_found_description": "该地址没有对应的页面。",
-  "shell_not_found_return": "返回境场"
+  "shell_not_found_return": "返回境场",
+  "shell_preferences_persist_failed": "偏好无法保存到本地",
+  "shell_preferences_persist_failed_hint": "本次会话的主题设置仍然生效，但重启后会还原。"
 }

@@ -21,5 +21,7 @@
   "shell_window_command_failed_hint": "Try again or use the system window controls.",
   "shell_not_found_title": "Page not found",
   "shell_not_found_description": "No page matches this address.",
-  "shell_not_found_return": "Return to Realm"
+  "shell_not_found_return": "Return to Realm",
+  "shell_preferences_persist_failed": "Preferences could not be saved locally",
+  "shell_preferences_persist_failed_hint": "Theme settings still apply for this session but will reset on restart."
 }

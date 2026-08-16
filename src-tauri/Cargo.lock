@@ -3200,8 +3200,8 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-os",
  "tauri-plugin-single-instance",
- "tauri-plugin-svelte",
  "tauri-plugin-window-state",
+ "tauri-plugin-zustand",
  "tokio",
  "tracing",
  "uuid",
@@ -6875,18 +6875,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-svelte"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f423011119e8ebf9cfd6249d844830555bd6b85dd377a1c610c61b14a549869"
-dependencies = [
- "serde",
- "tauri",
- "tauri-plugin",
- "tauri-store",
-]
-
-[[package]]
 name = "tauri-plugin-window-state"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6899,6 +6887,18 @@ dependencies = [
  "tauri",
  "tauri-plugin",
  "thiserror 2.0.19",
+]
+
+[[package]]
+name = "tauri-plugin-zustand"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5f191ccb0930fb90aab9c6d3aafd09a940e0625a8a845021772090ad04ee888"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "tauri-store",
 ]
 
 [[package]]

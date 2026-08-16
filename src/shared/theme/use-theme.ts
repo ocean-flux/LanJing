@@ -1,24 +1,16 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback } from 'react';
 import {
   activePackId,
-  getPreferences,
   resolveTheme,
   setAppearancePack,
   setTheme,
-  subscribe,
+  usePreferencesStore,
   type AppearancePackId,
   type ResolvedTheme,
   type Theme,
-  type ThemePreferences,
 } from './theme';
 
 export { applyTheme } from './theme';
-
-const SERVER_SNAPSHOT: ThemePreferences = {
-  theme: 'system',
-  lightThemeId: 'porcelain-day',
-  darkThemeId: 'obsidian-void',
-};
 
 export type UseThemeResult = {
   theme: Theme;
@@ -30,8 +22,15 @@ export type UseThemeResult = {
   chooseAppearancePack: (id: AppearancePackId) => void;
 };
 
+/**
+ * 逐字段订阅而不是返回整个 state：zustand 是选择器订阅的，
+ * 返回新对象会让任何一次变更都触发重渲染。
+ */
 export function useTheme(): UseThemeResult {
-  const preferences = useSyncExternalStore(subscribe, getPreferences, () => SERVER_SNAPSHOT);
+  const theme = usePreferencesStore((state) => state.theme);
+  const lightThemeId = usePreferencesStore((state) => state.lightThemeId);
+  const darkThemeId = usePreferencesStore((state) => state.darkThemeId);
+
   const choose = useCallback((id: AppearancePackId) => {
     setAppearancePack(id);
   }, []);
@@ -40,11 +39,11 @@ export function useTheme(): UseThemeResult {
   }, []);
 
   return {
-    theme: preferences.theme,
-    resolvedTheme: resolveTheme(preferences.theme),
-    packId: activePackId(preferences.theme),
-    lightThemeId: preferences.lightThemeId,
-    darkThemeId: preferences.darkThemeId,
+    theme,
+    resolvedTheme: resolveTheme(theme),
+    packId: activePackId({ theme, lightThemeId, darkThemeId }),
+    lightThemeId,
+    darkThemeId,
     setTheme: change,
     chooseAppearancePack: choose,
   };

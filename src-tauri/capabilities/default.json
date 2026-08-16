@@ -8,7 +8,7 @@
     "core:event:default",
     "mcp-bridge:default",
     "dialog:default",
-    "svelte:default",
+    "zustand:default",
     "deep-link:default",
     "opener:default",
     "core:window:default",
