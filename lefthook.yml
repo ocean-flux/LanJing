@@ -6,11 +6,20 @@
 pre-commit:
   parallel: true
   jobs:
+    # oxlint 只认代码文件，oxfmt 还要管 css/html/json；两者共用一个 glob 时，
+    # 只暂存 css 的提交会让 oxlint 拿到空输入并以 1 退出。拆成串行两步。
     - name: oxlint-oxfmt-src
-      glob:
-        - src/**/*.{svelte,ts,js,css,html,json}
-      run: pnpm exec oxlint --fix {staged_files} && pnpm exec oxfmt --write {staged_files}
-      stage_fixed: true
+      group:
+        piped: true
+        jobs:
+          - name: oxlint
+            glob: src/**/*.{ts,tsx,js,jsx}
+            run: pnpm exec oxlint --fix {staged_files}
+            stage_fixed: true
+          - name: oxfmt
+            glob: src/**/*.{ts,tsx,js,jsx,css,html,json}
+            run: pnpm exec oxfmt --write {staged_files}
+            stage_fixed: true
 
     - name: oxfmt-root
       # lefthook 的 * 会匹配任意深度 basename；只列仓库根配置，避免扫到 src/messages
