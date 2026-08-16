@@ -14,7 +14,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icon, type IconName } from '@/components/Icon';
+import { Icon } from '@/components/Icon';
 import { PageToolbar } from '@/components/PageToolbar';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,41 +30,22 @@ import { useTheme } from '@/shared/theme/use-theme';
 import {
   getNativeRuleDocument,
   listNativeRuleDocuments,
-  parseRuleLayout,
-  saveRuleLayout,
+  saveNativeRuleDocument,
   type FlowNodeKind,
   type NativeRuleDocumentDetail,
   type NativeRuleDocumentSummary,
   type RuleDefinition,
-  type RuleLayout,
 } from '@/shared/tauri/rules';
+import { type NativeDocumentLayout } from './model/core';
+import { NODE_KIND_ICONS } from './model/meta';
+import { describeNode } from './model/summary';
+import { nodeKindLabel, nodeSummaryText } from './labels';
+import { readDocumentLayout } from './model/layout-json';
 
 type Messages = ReturnType<typeof useMessages>;
 
 /** 节点数超过该阈值才渲染缩略图，小图不占画布空间。 */
 const MINIMAP_NODE_THRESHOLD = 12;
-
-const NODE_ICONS: Record<FlowNodeKind, IconName> = {
-  http: 'broadcast',
-  js: 'code',
-  extract: 'tree-structure',
-  mapper: 'translate',
-  merge: 'git-merge',
-  condition: 'compass',
-  loop: 'arrow-counter-clockwise',
-};
-
-function nodeLabels(m: Messages): Record<FlowNodeKind, string> {
-  return {
-    http: m.rules_node_inspector_type_http(),
-    js: m.rules_node_inspector_type_js(),
-    extract: m.rules_node_inspector_type_extract(),
-    mapper: m.rules_node_inspector_type_mapper(),
-    merge: m.rules_node_inspector_type_merge(),
-    condition: m.rules_node_inspector_type_condition(),
-    loop: m.rules_node_inspector_type_loop(),
-  };
-}
 
 interface RuleNodeData {
   [key: string]: unknown;
@@ -99,7 +80,7 @@ function RuleNode({ data, selected }: NodeProps<RuleFlowNode>) {
         />
       ))}
       <div className="flex h-(--density-row) items-center gap-2 border-b border-hairline px-2">
-        <Icon name={NODE_ICONS[data.kind]} className="text-base text-lantern-strong" />
+        <Icon name={NODE_KIND_ICONS[data.kind]} className="text-base text-lantern-strong" />
         <span className="truncate font-medium">{data.label}</span>
         <span className="ml-auto shrink-0 font-mono text-ui-sm text-ink-subtle">{data.kind}</span>
       </div>
@@ -120,19 +101,7 @@ function RuleNode({ data, selected }: NodeProps<RuleFlowNode>) {
 
 const nodeTypes: NodeTypes = { rule: RuleNode };
 
-function summarizeNode(kind: FlowNodeKind, config: Record<string, unknown>, m: Messages) {
-  if (kind === 'http' && typeof config.url === 'string') {
-    const method = typeof config.method === 'string' ? config.method.toUpperCase() : 'GET';
-    return `${method} ${config.url}`;
-  }
-  if (kind === 'condition' && Array.isArray(config.branches)) {
-    return m.rules_condition_branches({ count: config.branches.length });
-  }
-  return nodeLabels(m)[kind];
-}
-
-function createGraph(definition: RuleDefinition, layout: RuleLayout, m: Messages) {
-  const labels = nodeLabels(m);
+function createGraph(definition: RuleDefinition, layout: NativeDocumentLayout | null, m: Messages) {
   const inputHandles = new Map<string, Set<string>>();
   const outputHandles = new Map<string, Set<string>>();
   for (const edge of definition.flow.edges) {
@@ -147,14 +116,14 @@ function createGraph(definition: RuleDefinition, layout: RuleLayout, m: Messages
   const nodes: RuleFlowNode[] = definition.flow.nodes.map((node, index) => ({
     id: node.id,
     type: 'rule',
-    position: layout.nodes[node.id]?.position ?? {
+    position: layout?.nodes[node.id]?.position ?? {
       x: 48 + (index % 3) * 288,
       y: 48 + Math.floor(index / 3) * 160,
     },
     data: {
       kind: node.config.kind,
-      label: labels[node.config.kind],
-      summary: summarizeNode(node.config.kind, node.config.value, m),
+      label: nodeKindLabel(m, node.config.kind),
+      summary: nodeSummaryText(m, describeNode(node.config.kind, node.config.value)),
       inputs: [...(inputHandles.get(node.id) ?? [])],
       outputs: [...(outputHandles.get(node.id) ?? [])],
     },
@@ -194,7 +163,7 @@ export function RuleWorkspace({ documentId }: { documentId?: string }) {
       setStatus('loading');
       setMessage('');
       try {
-        const nextDetail = await getNativeRuleDocument(id);
+        const nextDetail = await getNativeRuleDocument({ document_id: id });
         if (signal?.aborted || currentDocumentId.current !== id) return;
         setDetail(nextDetail ?? undefined);
         if (!nextDetail?.definition) {
@@ -205,7 +174,7 @@ export function RuleWorkspace({ documentId }: { documentId?: string }) {
         }
         const graph = createGraph(
           nextDetail.definition,
-          parseRuleLayout(nextDetail.layout_json),
+          readDocumentLayout(nextDetail.layout_json),
           m,
         );
         setNodes(graph.nodes);
@@ -256,21 +225,28 @@ export function RuleWorkspace({ documentId }: { documentId?: string }) {
     const targetId = detail.summary.document_id;
     setStatus('saving');
     setMessage('');
-    const previousLayout = parseRuleLayout(detail.layout_json);
-    const layout: RuleLayout = {
+    const previousLayout = readDocumentLayout(detail.layout_json);
+    const layout: NativeDocumentLayout = {
       ...previousLayout,
       nodes: Object.fromEntries(
         nodes.map((node) => [
           node.id,
           {
             position: { x: node.position.x, y: node.position.y },
-            collapsed: previousLayout.nodes[node.id]?.collapsed ?? false,
+            collapsed: previousLayout?.nodes[node.id]?.collapsed ?? false,
           },
         ]),
       ),
     };
     try {
-      const result = await saveRuleLayout(targetId, detail.layout_revision, layout);
+      const result = await saveNativeRuleDocument({
+        document_id: targetId,
+        semantic: null,
+        layout: {
+          expected_revision: detail.layout_revision,
+          layout_json: JSON.stringify(layout),
+        },
+      });
       if (currentDocumentId.current !== targetId) return;
       const conflict = result.layout?.conflict;
       if (conflict) {

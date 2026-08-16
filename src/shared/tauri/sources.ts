@@ -19,6 +19,21 @@ export interface SourceProfile {
   risk_notes: string[];
 }
 
+/** 诊断源码定位（镜像 lj-rule-model 的 SourceSpan）。 */
+export interface SourceSpan {
+  start: number;
+  end: number;
+  path: string | null;
+}
+
+/** 导入 / 编译诊断（镜像 lj-rule-model 的 Diagnostic）。 */
+export interface InstallDiagnostic {
+  code: string;
+  severity: 'info' | 'warning' | 'error';
+  message: string;
+  span?: SourceSpan;
+}
+
 export interface InstalledSource {
   source_id: string;
   version: string;
@@ -26,13 +41,19 @@ export interface InstalledSource {
   revision: number;
 }
 
+/** Prepare_install 返回的安全候选；不含 Definition、Plan、body 或 secret。 */
 export interface InstallCandidate {
   id: string;
+  expected_installed_revision: number;
   profile: SourceProfile;
   required_grant: {
     network: boolean;
     system: { env: boolean; fs: boolean; process: boolean };
   };
+  diagnostics: InstallDiagnostic[];
+  definition_hash: string;
+  plan_hash: string;
+  expires_at_ms: number;
 }
 
 export function listInstalledSources(): Promise<InstalledSource[]> {
