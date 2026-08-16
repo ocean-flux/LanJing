@@ -22,7 +22,7 @@ LanJing 是规则驱动的本地媒体工作台。来源规则只输出标准媒
 媒体源规则 → 标准媒体模型 → React 模板 → 阅读 / 播放 / 收藏 / 管理
 ```
 
-支持文本、图像、音频、视频和混合内容。当前新架构提供首页、应用空间、来源管理、资料库和设置工作区；规则编辑器与深链导入保留明确迁移入口。
+支持文本、图像、音频、视频和混合内容。当前新架构提供境场、应用、来源管理、规则、资料库和设置工作区；规则编辑器目前是语义图的只读投影加布局保存，完整编辑能力仍在迁移中。
 
 ## 技术栈
 
@@ -31,8 +31,9 @@ LanJing 是规则驱动的本地媒体工作台。来源规则只输出标准媒
 | 应用壳 | Tauri 2，跨 Windows/macOS/Linux/iOS/Android |
 | 前端框架 | React 19 + React Router |
 | 构建工具 | Vite 8，输出 `build/` |
-| 样式 | Tailwind CSS 4 + shadcn/ui 风格组件 |
-| 图标 | lucide-react |
+| 样式 | Tailwind CSS 4 + Base UI + shadcn `base-lyra` registry |
+| 图标 | Iconify（`@iconify/tailwind4` + Phosphor 图标集，构建期内联） |
+| 状态 | zustand，偏好经 `@tauri-store/zustand` 持久化到应用数据目录 |
 | 本地化 | inlang/paraglide，边界消息表位于 `src/shared/i18n` |
 | 后端 | Rust edition 2024，IPC 契约保持不变 |
 
@@ -69,10 +70,11 @@ cargo test --manifest-path src-tauri/Cargo.toml --workspace
 
 ```text
 src/
-├── app/                 # AppShell、标题栏、响应式导航和启动逻辑
-├── components/ui/       # shadcn/ui 风格 button、card、badge 等原语
-├── features/            # realm、apps、sources、library、settings 工作区
-├── shared/              # 配置、消息、主题、Tauri 入口和媒体类型
+├── app/                 # AppShell、Titlebar、AppSidebar
+├── components/          # Icon、PageToolbar 与 ui/ 下的 registry 原语
+├── features/            # realm、apps、sources、rules、library、settings 工作区
+├── shared/              # 配置、消息、导航、主题、Tauri 入口和媒体类型
+├── index.css            # 主题 token 层与四套 appearance pack 色值
 ├── App.tsx              # BrowserRouter 路由与全局启动
 └── main.tsx             # React 19 createRoot 入口
 src-legacy/              # 一次性 Svelte 迁移归档
