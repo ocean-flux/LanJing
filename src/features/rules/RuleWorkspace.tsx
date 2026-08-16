@@ -1,22 +1,16 @@
-import {
-  Background,
-  Controls,
-  Handle,
-  MiniMap,
-  Position,
-  ReactFlow,
-  type Edge,
-  type Node,
-  type NodeProps,
-  type NodeTypes,
-  useNodesState,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+//! 规则工作区：文档切换 + 编辑器 session 的宿主。
+//!
+//! 每份文档一个 session 实例（用 documentId 作 key 重挂载），切换文档不会
+//! 继承上一份的撤销历史。工具栏只调 session 的 action，不直接接触 core。
+
+import { ReactFlowProvider } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Icon } from '@/components/Icon';
 import { PageToolbar } from '@/components/PageToolbar';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import {
   Empty,
   EmptyDescription,
@@ -25,255 +19,249 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Spinner } from '@/components/ui/spinner';
 import { useMessages } from '@/shared/i18n/messages';
-import { useTheme } from '@/shared/theme/use-theme';
+import { listNativeRuleDocuments, type NativeRuleDocumentSummary } from '@/shared/tauri/rules';
+import { RuleFlowCanvas } from './RuleFlowCanvas';
+import { DiagnosticList } from './DiagnosticList';
 import {
-  getNativeRuleDocument,
-  listNativeRuleDocuments,
-  saveNativeRuleDocument,
-  type FlowNodeKind,
-  type NativeRuleDocumentDetail,
-  type NativeRuleDocumentSummary,
-  type RuleDefinition,
-} from '@/shared/tauri/rules';
-import { type NativeDocumentLayout } from './model/core';
-import { NODE_KIND_ICONS } from './model/meta';
-import { describeNode } from './model/summary';
-import { nodeKindLabel, nodeSummaryText } from './labels';
-import { readDocumentLayout } from './model/layout-json';
+  createRuleEditorSession,
+  selectCanRedo,
+  selectCanUndo,
+  selectHasUnsavedChanges,
+  selectIsSaving,
+  SessionError,
+  type RuleEditorSession,
+} from './model/session';
+import {
+  RuleEditorSessionProvider,
+  useRuleEditorSession,
+  useRuleEditorSessionStore,
+} from './use-session';
 
 type Messages = ReturnType<typeof useMessages>;
 
-/** 节点数超过该阈值才渲染缩略图，小图不占画布空间。 */
-const MINIMAP_NODE_THRESHOLD = 12;
-
-interface RuleNodeData {
-  [key: string]: unknown;
-  kind: FlowNodeKind;
-  label: string;
-  summary: string;
-  inputs: string[];
-  outputs: string[];
+/** SessionError 的稳定 code → 本地化文案。 */
+function sessionErrorText(m: Messages, error: unknown): string {
+  if (!(error instanceof SessionError)) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  switch (error.code) {
+    case 'document_not_found': {
+      return m.rules_error_document_not_found();
+    }
+    case 'document_semantic_missing': {
+      return m.rules_error_semantic_missing();
+    }
+    case 'document_semantic_unsaved': {
+      return m.rules_unsaved_changes();
+    }
+    case 'document_validation_required': {
+      return m.rules_validation_required();
+    }
+    case 'document_not_open': {
+      return m.rules_error_document_not_open();
+    }
+  }
 }
 
-type RuleFlowNode = Node<RuleNodeData, 'rule'>;
-
-function portTop(index: number, count: number) {
-  return `${((index + 1) / (count + 1)) * 100}%`;
-}
-
-function RuleNode({ data, selected }: NodeProps<RuleFlowNode>) {
+/** 编辑器工具栏：撤销/重做 + 校验 + 保存。 */
+function EditorToolbar() {
   const m = useMessages();
+  const store = useRuleEditorSessionStore();
+  const canUndo = useRuleEditorSession(selectCanUndo);
+  const canRedo = useRuleEditorSession(selectCanRedo);
+  const isSaving = useRuleEditorSession(selectIsSaving);
+  const hasUnsaved = useRuleEditorSession(selectHasUnsavedChanges);
+  const [validating, setValidating] = useState(false);
+
+  const run = useCallback(
+    async (action: () => Promise<unknown>, success: string) => {
+      try {
+        await action();
+        toast.success(success);
+      } catch (error) {
+        toast.error(sessionErrorText(m, error));
+      }
+    },
+    [m],
+  );
+
   return (
-    <div
-      aria-label={`${data.label}: ${data.summary}`}
-      className={`w-56 border bg-surface-1 ${selected ? 'border-lantern-strong ring-1 ring-lantern-strong/40' : 'border-hairline-strong'}`}
-    >
-      {data.inputs.map((handle, index) => (
-        <Handle
-          key={`target:${handle}`}
-          id={handle}
-          type="target"
-          position={Position.Left}
-          style={{ top: portTop(index, data.inputs.length) }}
-          aria-label={m.rules_port_input({ handle })}
-        />
-      ))}
-      <div className="flex h-(--density-row) items-center gap-2 border-b border-hairline px-2">
-        <Icon name={NODE_KIND_ICONS[data.kind]} className="text-base text-lantern-strong" />
-        <span className="truncate font-medium">{data.label}</span>
-        <span className="ml-auto shrink-0 font-mono text-ui-sm text-ink-subtle">{data.kind}</span>
+    <ButtonGroup>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        disabled={!canUndo}
+        aria-label={m.rules_undo()}
+        title={m.rules_undo()}
+        onClick={() => store.getState().undo()}
+      >
+        <Icon name="arrow-counter-clockwise" />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        disabled={!canRedo}
+        aria-label={m.rules_redo()}
+        title={m.rules_redo()}
+        onClick={() => store.getState().redo()}
+      >
+        <Icon name="arrow-clockwise" />
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={validating || hasUnsaved}
+        title={hasUnsaved ? m.rules_unsaved_changes() : m.rules_validate()}
+        onClick={() => {
+          setValidating(true);
+          void run(() => store.getState().validate(), m.rules_validated()).finally(() =>
+            setValidating(false),
+          );
+        }}
+      >
+        {validating ? <Spinner /> : <Icon name="check-circle" />}
+        <span>{m.rules_validate()}</span>
+      </Button>
+      <Button
+        size="sm"
+        disabled={!hasUnsaved || isSaving}
+        onClick={() => void run(() => store.getState().save(), m.rules_saved())}
+      >
+        {isSaving ? <Spinner /> : <Icon name="floppy-disk" />}
+        <span>{isSaving ? m.rules_saving() : m.rules_save()}</span>
+      </Button>
+    </ButtonGroup>
+  );
+}
+
+/** 已打开文档的编辑器主体。 */
+function EditorSurface({ documentId }: { documentId: string }) {
+  const m = useMessages();
+  const store = useRuleEditorSessionStore();
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus('loading');
+    setMessage('');
+    store
+      .getState()
+      .loadDocument(documentId)
+      .then(() => {
+        if (!cancelled) setStatus('ready');
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setStatus('error');
+        setMessage(sessionErrorText(m, error));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [documentId, store, m]);
+
+  if (status === 'loading') {
+    return (
+      <Empty className="h-full">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Spinner />
+          </EmptyMedia>
+          <EmptyTitle>{m.rules_canvas_loading()}</EmptyTitle>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <Empty className="h-full">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Icon name="warning-circle" className="text-danger" />
+          </EmptyMedia>
+          <EmptyTitle>{m.rules_load_error()}</EmptyTitle>
+          <EmptyDescription>{message}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1">
+        <RuleFlowCanvas />
       </div>
-      <p className="px-2 py-1.5 font-mono text-ui-sm break-words text-ink-muted">{data.summary}</p>
-      {data.outputs.map((handle, index) => (
-        <Handle
-          key={`source:${handle}`}
-          id={handle}
-          type="source"
-          position={Position.Right}
-          style={{ top: portTop(index, data.outputs.length) }}
-          aria-label={m.rules_port_output({ handle })}
-        />
-      ))}
+      <DiagnosticList />
     </div>
   );
 }
 
-const nodeTypes: NodeTypes = { rule: RuleNode };
-
-function createGraph(definition: RuleDefinition, layout: NativeDocumentLayout | null, m: Messages) {
-  const inputHandles = new Map<string, Set<string>>();
-  const outputHandles = new Map<string, Set<string>>();
-  for (const edge of definition.flow.edges) {
-    const inputs = inputHandles.get(edge.to.node_id) ?? new Set<string>();
-    inputs.add(edge.to.handle);
-    inputHandles.set(edge.to.node_id, inputs);
-    const outputs = outputHandles.get(edge.from.node_id) ?? new Set<string>();
-    outputs.add(edge.from.handle);
-    outputHandles.set(edge.from.node_id, outputs);
-  }
-
-  const nodes: RuleFlowNode[] = definition.flow.nodes.map((node, index) => ({
-    id: node.id,
-    type: 'rule',
-    position: layout?.nodes[node.id]?.position ?? {
-      x: 48 + (index % 3) * 288,
-      y: 48 + Math.floor(index / 3) * 160,
-    },
-    data: {
-      kind: node.config.kind,
-      label: nodeKindLabel(m, node.config.kind),
-      summary: nodeSummaryText(m, describeNode(node.config.kind, node.config.value)),
-      inputs: [...(inputHandles.get(node.id) ?? [])],
-      outputs: [...(outputHandles.get(node.id) ?? [])],
-    },
-  }));
-  const edges: Edge[] = definition.flow.edges.map((edge) => ({
-    id: `${edge.from.node_id}:${edge.from.handle}->${edge.to.node_id}:${edge.to.handle}`,
-    source: edge.from.node_id,
-    target: edge.to.node_id,
-    sourceHandle: edge.from.handle,
-    targetHandle: edge.to.handle,
-    type: 'smoothstep',
-    animated: false,
-  }));
-  return { nodes, edges };
-}
-
-/**
- * 规则工作区。当前是语义图的只读投影 + 布局保存；
- * 节点面板、检查器、连接校验与撤销重做仍在迁移（阶段 C/D）。
- */
 export function RuleWorkspace({ documentId }: { documentId?: string }) {
   const m = useMessages();
   const navigate = useNavigate();
-  const { resolvedTheme } = useTheme();
   const [documents, setDocuments] = useState<NativeRuleDocumentSummary[]>([]);
-  const [selectedDocumentId, setSelectedDocumentId] = useState(documentId ?? '');
-  const [detail, setDetail] = useState<NativeRuleDocumentDetail>();
-  const [edges, setEdges] = useState<Edge[]>([]);
-  const [nodes, setNodes, onNodesChange] = useNodesState<RuleFlowNode>([]);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'saving' | 'error'>('loading');
-  const [message, setMessage] = useState('');
-  const [isLayoutDirty, setIsLayoutDirty] = useState(false);
-  const currentDocumentId = useRef(documentId ?? '');
+  const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [listMessage, setListMessage] = useState('');
+  const [creating, setCreating] = useState(false);
 
-  const loadDocument = useCallback(
-    async (id: string, signal?: AbortSignal) => {
-      setStatus('loading');
-      setMessage('');
-      try {
-        const nextDetail = await getNativeRuleDocument({ document_id: id });
-        if (signal?.aborted || currentDocumentId.current !== id) return;
-        setDetail(nextDetail ?? undefined);
-        if (!nextDetail?.definition) {
-          setNodes([]);
-          setEdges([]);
-          setStatus('ready');
-          return;
-        }
-        const graph = createGraph(
-          nextDetail.definition,
-          readDocumentLayout(nextDetail.layout_json),
-          m,
-        );
-        setNodes(graph.nodes);
-        setEdges(graph.edges);
-        setIsLayoutDirty(false);
-        setStatus('ready');
-      } catch (error) {
-        if (signal?.aborted) return;
-        setStatus('error');
-        setMessage(error instanceof Error ? error.message : String(error));
-      }
-    },
-    [m, setNodes],
-  );
+  const refresh = useCallback(async (): Promise<NativeRuleDocumentSummary[]> => {
+    const items = await listNativeRuleDocuments();
+    setDocuments(items);
+    return items;
+  }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void listNativeRuleDocuments()
+    let cancelled = false;
+    setListStatus('loading');
+    refresh()
       .then((items) => {
-        if (controller.signal.aborted) return;
-        setDocuments(items);
-        const requested =
-          documentId && items.some((item) => item.document_id === documentId)
-            ? documentId
-            : (items[0]?.document_id ?? '');
-        currentDocumentId.current = requested;
-        setSelectedDocumentId(requested);
-        if (requested) void loadDocument(requested, controller.signal);
-        else setStatus('ready');
+        if (cancelled) return;
+        setListStatus('ready');
+        // 深链没指定文档时落到第一份，避免打开空工作区。
+        if (!documentId && items[0]) {
+          navigate(`/sources/rules/${encodeURIComponent(items[0].document_id)}`, {
+            replace: true,
+          });
+        }
       })
       .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setStatus('error');
-        setMessage(error instanceof Error ? error.message : String(error));
+        if (cancelled) return;
+        setListStatus('error');
+        setListMessage(error instanceof Error ? error.message : String(error));
       });
-    return () => controller.abort();
-  }, [documentId, loadDocument]);
-
-  const handleDocumentChange = (nextId: string) => {
-    if (isLayoutDirty && !window.confirm(m.rules_switch_document_confirm())) return;
-    currentDocumentId.current = nextId;
-    setSelectedDocumentId(nextId);
-    navigate(`/sources/rules/${encodeURIComponent(nextId)}`);
-  };
-
-  const saveLayout = async () => {
-    if (!detail) return;
-    const targetId = detail.summary.document_id;
-    setStatus('saving');
-    setMessage('');
-    const previousLayout = readDocumentLayout(detail.layout_json);
-    const layout: NativeDocumentLayout = {
-      ...previousLayout,
-      nodes: Object.fromEntries(
-        nodes.map((node) => [
-          node.id,
-          {
-            position: { x: node.position.x, y: node.position.y },
-            collapsed: previousLayout?.nodes[node.id]?.collapsed ?? false,
-          },
-        ]),
-      ),
+    return () => {
+      cancelled = true;
     };
-    try {
-      const result = await saveNativeRuleDocument({
-        document_id: targetId,
-        semantic: null,
-        layout: {
-          expected_revision: detail.layout_revision,
-          layout_json: JSON.stringify(layout),
-        },
-      });
-      if (currentDocumentId.current !== targetId) return;
-      const conflict = result.layout?.conflict;
-      if (conflict) {
-        setStatus('error');
-        setMessage(
-          m.rules_layout_conflict_detail({
-            expected: conflict.expected,
-            current: conflict.current,
-          }),
-        );
-        return;
-      }
-      setDetail({
-        ...detail,
-        layout_revision: result.layout?.revision ?? detail.layout_revision,
-        layout_json: JSON.stringify(layout),
-      });
-      setIsLayoutDirty(false);
-      setStatus('ready');
-      setMessage(m.rules_layout_saved());
-    } catch (error) {
-      setStatus('error');
-      setMessage(error instanceof Error ? error.message : String(error));
-    }
-  };
+  }, [documentId, navigate, refresh]);
 
-  const minimapColor = useMemo(() => () => 'var(--lantern-strong)', []);
+  const selected = useMemo(
+    () => documents.find((item) => item.document_id === documentId) ?? null,
+    [documents, documentId],
+  );
+
+  // 每份文档一个 session；documentId 变化时换实例并重挂载子树。
+  const sessionRef = useRef<{ id: string; session: RuleEditorSession } | null>(null);
+  if (documentId && sessionRef.current?.id !== documentId) {
+    sessionRef.current = { id: documentId, session: createRuleEditorSession() };
+  }
+  const session = sessionRef.current?.session;
+
+  const createBlank = useCallback(async () => {
+    setCreating(true);
+    try {
+      const summary = await createRuleEditorSession().getState().createBlank();
+      await refresh();
+      navigate(`/sources/rules/${encodeURIComponent(summary.document_id)}`);
+    } catch (error) {
+      toast.error(sessionErrorText(m, error));
+    } finally {
+      setCreating(false);
+    }
+  }, [m, navigate, refresh]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -282,23 +270,31 @@ export function RuleWorkspace({ documentId }: { documentId?: string }) {
           documents.length > 0 ? m.rules_document_count({ count: documents.length }) : undefined
         }
         actions={
-          <Button
-            size="sm"
-            onClick={() => void saveLayout()}
-            disabled={!detail || !isLayoutDirty || status === 'saving'}
-          >
-            <Icon name="floppy-disk" className="text-base" />
-            {status === 'saving' ? m.rules_save_layout_saving() : m.rules_save_layout()}
-          </Button>
+          <>
+            {documentId && session ? (
+              <RuleEditorSessionProvider session={session}>
+                <EditorToolbar />
+              </RuleEditorSessionProvider>
+            ) : null}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={creating}
+              onClick={() => void createBlank()}
+            >
+              {creating ? <Spinner /> : <Icon name="plus" />}
+              <span>{m.rules_new_rule()}</span>
+            </Button>
+          </>
         }
       >
         <NativeSelect
           size="sm"
           className="ml-2 min-w-56"
           aria-label={m.rules_document_label()}
-          value={selectedDocumentId}
-          onChange={(event) => handleDocumentChange(event.target.value)}
-          disabled={status === 'loading' || documents.length === 0}
+          value={documentId ?? ''}
+          onChange={(event) => navigate(`/sources/rules/${encodeURIComponent(event.target.value)}`)}
+          disabled={listStatus === 'loading' || documents.length === 0}
         >
           {documents.length === 0 ? (
             <NativeSelectOption value="">{m.rules_no_documents_option()}</NativeSelectOption>
@@ -311,59 +307,34 @@ export function RuleWorkspace({ documentId }: { documentId?: string }) {
         </NativeSelect>
       </PageToolbar>
 
-      {message ? (
+      {listStatus === 'error' ? (
         <p
-          role={status === 'error' ? 'alert' : 'status'}
-          className={`border-b border-hairline px-(--page-gutter) py-1.5 text-ui-sm ${status === 'error' ? 'text-danger' : 'text-ink-muted'}`}
+          role="alert"
+          className="border-b border-hairline px-(--page-gutter) py-1.5 text-ui-sm text-danger"
         >
-          {message}
+          {listMessage}
         </p>
       ) : null}
 
       <div className="min-h-0 flex-1 bg-canvas">
-        {nodes.length === 0 ? (
+        {documentId && selected && session ? (
+          <RuleEditorSessionProvider key={documentId} session={session}>
+            <ReactFlowProvider>
+              <EditorSurface documentId={documentId} />
+            </ReactFlowProvider>
+          </RuleEditorSessionProvider>
+        ) : (
           <Empty className="h-full">
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <Icon name="tree-structure" className="text-base" />
+                <Icon name="tree-structure" />
               </EmptyMedia>
               <EmptyTitle>
-                {status === 'loading' ? m.rules_canvas_loading() : m.rules_canvas_empty()}
+                {listStatus === 'loading' ? m.rules_loading() : m.rules_canvas_empty()}
               </EmptyTitle>
               <EmptyDescription>{m.rules_canvas_empty_hint()}</EmptyDescription>
             </EmptyHeader>
           </Empty>
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            onNodesChange={(changes) => {
-              onNodesChange(changes);
-              if (
-                changes.some((change) => change.type === 'position' && change.dragging === false)
-              ) {
-                setIsLayoutDirty(true);
-              }
-            }}
-            nodesConnectable={false}
-            nodesDraggable={status !== 'saving'}
-            edgesReconnectable={false}
-            snapGrid={[16, 16]}
-            snapToGrid
-            fitView
-            minZoom={0.2}
-            maxZoom={2}
-            colorMode={resolvedTheme}
-            proOptions={{ hideAttribution: true }}
-            aria-label={m.rules_canvas_aria()}
-          >
-            {nodes.length > MINIMAP_NODE_THRESHOLD ? (
-              <MiniMap pannable zoomable nodeColor={minimapColor} />
-            ) : null}
-            <Controls showInteractive={false} />
-            <Background gap={16} size={1} />
-          </ReactFlow>
         )}
       </div>
     </div>

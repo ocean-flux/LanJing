@@ -7,12 +7,18 @@
    ========================================================================== */
 
 /* --- 1. 引入 ------------------------------------------------------------- */
-@import 'tailwindcss';
+@import 'tailwindcss' source(none);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @plugin '@iconify/tailwind4';
 
 @custom-variant dark (&:is(.dark *));
+
+/* 关掉自动扫描并显式登记来源：类名只可能出现在这两处。
+   自动扫描会把 src-legacy/ 的 Svelte 类名和 Markdown 里的
+   `icon-[ph--*]` 示例一起吃进来。 */
+@source './';
+@source '../index.html';
 
 /* --- 2. 字体（自托管，见 static/fonts） --------------------------------- */
 @font-face {

@@ -1,0 +1,433 @@
+/**
+ * 规则画布样式。
+ *
+ * 只在规则工作区加载（随 RuleWorkspace 的懒加载 chunk 一起进包）。
+ * 这些规则用 CSS 而不是 utility class，原因有三：端口行按 data 属性做四向绝对
+ * 定位、handle 的连接态由 xyflow 自己加的 class 驱动、以及粗指针下的尺寸降级。
+ * 色值一律引用 index.css 的 token，本文件不出现字面量颜色。
+ */
+
+/* --------------------------------------------------------------------------
+ * 节点卡
+ * ----------------------------------------------------------------------- */
+
+.flow-node-card {
+  --node-accent: var(--lantern-strong);
+
+  position: relative;
+  width: 252px;
+  min-height: 142px;
+  overflow: visible;
+  border: 1px solid var(--hairline-strong);
+  border-top: 2px solid var(--node-accent);
+  color: var(--ink);
+  background: var(--surface-1);
+  transition:
+    opacity var(--motion-fast) var(--motion-standard),
+    border-color var(--motion-fast) var(--motion-standard),
+    box-shadow var(--motion-fast) var(--motion-standard);
+}
+
+.flow-node-card[data-node-kind='js'] {
+  --node-accent: var(--ink-muted);
+}
+
+.flow-node-card[data-node-kind='condition'],
+.flow-node-card[data-node-kind='loop'] {
+  --node-accent: var(--lantern);
+}
+
+.flow-node-card[data-selected='true'] {
+  border-color: var(--lantern-strong);
+  box-shadow: 0 0 0 2px var(--ring);
+  opacity: 1;
+}
+
+.flow-node-card[data-dimmed='true'] {
+  opacity: 0.38;
+}
+
+.flow-node-entry {
+  display: flex;
+  min-height: 25px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px 4px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--lantern-strong);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.flow-node-entry-marker {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border: 2px solid var(--surface-1);
+  border-radius: 9999px;
+  background: var(--lantern);
+  box-shadow: 0 0 0 1px var(--lantern-strong);
+}
+
+.flow-node-entry-intents {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-node-header {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px 8px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.flow-node-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in oklab, var(--node-accent) 48%, var(--hairline-strong));
+  color: var(--node-accent);
+  background: color-mix(in oklab, var(--node-accent) 12%, var(--surface-1));
+}
+
+.flow-node-kind {
+  margin: 0 0 1px;
+  color: var(--ink-subtle);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.flow-node-issue {
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flow-node-summary {
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 11px 7px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.flow-node-extra {
+  margin: 0 11px 8px;
+  padding-top: 7px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* --------------------------------------------------------------------------
+ * 端口行：常态隐藏，节点选中 / 端口选中 / 键盘聚焦时浮出
+ * ----------------------------------------------------------------------- */
+
+.flow-node-ports {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+.flow-node-port-row {
+  position: absolute;
+  display: flex;
+  z-index: 4;
+  width: max-content;
+  max-width: 180px;
+  min-height: 20px;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  border: 1px solid var(--hairline);
+  color: var(--ink-muted);
+  background: var(--surface-2);
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--motion-fast) var(--motion-standard),
+    transform var(--motion-fast) var(--motion-standard);
+}
+
+.flow-node-card[data-selected='true'] .flow-node-port-row,
+.flow-node-port-row[data-port-selected='true'],
+.flow-node-port-row:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.flow-node-port-row[data-port-position='left'] {
+  right: calc(100% + 12px);
+  justify-content: flex-end;
+  transform: translateY(-50%);
+}
+
+.flow-node-port-row[data-port-position='right'] {
+  left: calc(100% + 12px);
+  justify-content: flex-start;
+  transform: translateY(-50%);
+}
+
+.flow-node-port-row[data-port-position='top'] {
+  bottom: calc(100% + 12px);
+  justify-content: center;
+  transform: translate(-50%, 0);
+}
+
+.flow-node-port-row[data-port-position='bottom'] {
+  top: calc(100% + 12px);
+  justify-content: center;
+  transform: translate(-50%, 0);
+}
+
+.flow-node-port-row:hover {
+  color: var(--ink);
+}
+
+.flow-node-port-row:focus-visible {
+  z-index: 5;
+  outline: 2px solid var(--ring);
+  outline-offset: -1px;
+}
+
+.flow-node-port-row[data-port-selected='true'] {
+  color: var(--ink);
+  background: var(--lantern-soft);
+}
+
+.flow-node-port-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-node-port-type {
+  flex: 0 0 auto;
+  color: var(--ink-subtle);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+ * Handle：小而清晰；连接态由 xyflow 自己加的 class 驱动
+ * ----------------------------------------------------------------------- */
+
+.react-flow__handle.flow-node-handle {
+  z-index: 3;
+  width: 11px;
+  height: 11px;
+  min-width: 11px;
+  min-height: 11px;
+  border: 2px solid var(--surface-1);
+  border-radius: 9999px;
+  background: var(--node-accent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--node-accent) 42%, transparent);
+  transition:
+    width var(--motion-fast) var(--motion-standard),
+    height var(--motion-fast) var(--motion-standard),
+    background-color var(--motion-fast) var(--motion-standard),
+    box-shadow var(--motion-fast) var(--motion-standard);
+}
+
+.flow-node-port-row:hover ~ .react-flow__handle.flow-node-handle,
+.react-flow__handle.flow-node-handle.connectingfrom,
+.react-flow__handle.flow-node-handle.connectingto,
+.react-flow__handle.flow-node-handle.valid {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
+  background: var(--lantern);
+  box-shadow: 0 0 0 3px var(--lantern-soft);
+}
+
+.react-flow__handle.flow-node-handle[data-port-role='control'] {
+  background: var(--lantern);
+}
+
+.react-flow__handle.flow-node-handle[data-port-role='binding'] {
+  background: var(--ink-muted);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink-muted) 42%, transparent);
+}
+
+.flow-node-diagnostics {
+  display: grid;
+  gap: 4px;
+  margin: 0 11px 10px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--hairline);
+  list-style: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 视口层级
+ *
+ * React 版的 ViewportPortal 只有一个容器（没有 Svelte 版的 back/front），
+ * 所以循环域覆盖层靠 z-index 压在图形之下，而不是靠 portal target。
+ * ----------------------------------------------------------------------- */
+
+.react-flow__viewport-portal {
+  z-index: 0;
+}
+
+.react-flow__edges {
+  z-index: 1;
+}
+
+.react-flow__nodes {
+  z-index: 2;
+}
+
+.react-flow__node[data-selected='true'] {
+  z-index: 3;
+}
+
+/* --------------------------------------------------------------------------
+ * 边
+ * ----------------------------------------------------------------------- */
+
+.flow-edge-path {
+  stroke: var(--hairline-strong);
+  stroke-width: 1.5;
+  transition:
+    stroke var(--motion-fast) var(--motion-standard),
+    stroke-width var(--motion-fast) var(--motion-standard),
+    opacity var(--motion-fast) var(--motion-standard);
+}
+
+.flow-edge[data-lane='branch'] .flow-edge-path {
+  stroke: var(--lantern);
+  stroke-dasharray: 5 3;
+}
+
+.flow-edge[data-lane='auxiliary'] .flow-edge-path {
+  stroke: var(--ink-subtle);
+  stroke-dasharray: 2 3;
+}
+
+.flow-edge[data-lane='loop'] .flow-edge-path {
+  stroke: var(--lantern);
+  stroke-dasharray: 7 4;
+}
+
+.flow-edge[data-selected='true'] .flow-edge-path {
+  stroke: var(--lantern-strong);
+  stroke-width: 2.5;
+}
+
+.flow-edge[data-dimmed='true'] .flow-edge-path {
+  opacity: 0.28;
+}
+
+.flow-edge-label {
+  padding: 1px 5px;
+  border: 1px solid var(--hairline);
+  color: var(--ink-muted);
+  background: var(--surface-2);
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 循环域覆盖层
+ * ----------------------------------------------------------------------- */
+
+.flow-loop-region {
+  position: absolute;
+  border: 1px dashed color-mix(in oklab, var(--lantern) 55%, transparent);
+  background: color-mix(in oklab, var(--lantern) 6%, transparent);
+  pointer-events: none;
+}
+
+.flow-loop-region[data-status='invalid'] {
+  border-color: color-mix(in oklab, var(--danger) 60%, transparent);
+  background: color-mix(in oklab, var(--danger) 6%, transparent);
+}
+
+.flow-loop-region-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 1px 6px;
+  transform: translateY(-100%);
+  color: var(--lantern-strong);
+  background: var(--surface-1);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.flow-loop-region[data-status='invalid'] .flow-loop-region-label {
+  color: var(--danger);
+}
+
+/* --------------------------------------------------------------------------
+ * 画布 chrome：让 xyflow 自带控件对齐当前主题
+ * ----------------------------------------------------------------------- */
+
+.react-flow__controls,
+.react-flow__minimap {
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-1);
+  box-shadow: none;
+}
+
+.react-flow__controls-button {
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink-muted);
+  background: var(--surface-1);
+  fill: currentcolor;
+}
+
+.react-flow__controls-button:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .flow-node-port-row {
+    min-height: var(--density-touch-target);
+  }
+
+  .react-flow__handle.flow-node-handle {
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    min-height: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-node-card,
+  .flow-node-port-row,
+  .flow-edge-path,
+  .react-flow__handle.flow-node-handle {
+    transition: none;
+  }
+}

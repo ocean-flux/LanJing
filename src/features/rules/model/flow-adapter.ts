@@ -102,8 +102,6 @@ export interface FlowViewEdge {
   sourceHandle?: string | null;
   targetHandle?: string | null;
   selected?: boolean;
-  label?: EdgeLabel;
-  labelShowBg?: boolean;
   data: FlowEdgeData;
   hidden?: boolean;
 }
@@ -849,8 +847,6 @@ export function semanticToFlow(
         : edge.to.handle,
       selected,
       hidden: collapsedBodyNodes.has(edge.from.node_id) && collapsedBodyNodes.has(edge.to.node_id),
-      label: presentation.label,
-      labelShowBg: Boolean(presentation.label),
       data: {
         edge,
         dimmed: sourceDimmed || targetDimmed,
