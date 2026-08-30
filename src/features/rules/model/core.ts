@@ -1289,6 +1289,9 @@ export function reduce(
     case 'reset': {
       return cloneJson(action.state);
     }
+    default: {
+      throw new Error('Unknown authoring action');
+    }
   }
 }
 

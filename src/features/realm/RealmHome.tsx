@@ -123,7 +123,7 @@ export function RealmHome() {
           {status === 'error' ? (
             <div role="alert" className="border border-hairline p-3">
               <p className="font-medium">{m.realm_load_error()}</p>
-              <p className="mt-1 font-mono text-ui-sm break-words text-ink-muted">{error}</p>
+              <p className="mt-1 font-mono text-ui-sm wrap-break-word text-ink-muted">{error}</p>
               <Button
                 variant="outline"
                 size="sm"

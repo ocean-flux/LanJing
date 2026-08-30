@@ -13,6 +13,7 @@
     "jsx-a11y",
     "vitest"
   ],
+  "jsPlugins": ["oxlint-tailwindcss"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -34,6 +35,11 @@
     "node_modules/**",
     "src/shared/paraglide/**"
   ],
+  "settings": {
+    "tailwindcss": {
+      "entryPoint": "src/index.css"
+    }
+  },
   "rules": {
     "no-console": "error",
     "no-unused-vars": "error",
@@ -60,6 +66,10 @@
     "react/jsx-no-literals": "off",
     "react/jsx-max-depth": "off",
     "react/no-multi-comp": "off",
+    "react/memo-dependencies": "off",
+    "react/no-deriving-state-in-effects": "off",
+    "react/refs": "off",
+    "react/set-state-in-effect": "off",
     "react/forbid-component-props": "off",
     "react-perf/jsx-no-new-object-as-prop": "off",
     "react-perf/jsx-no-new-function-as-prop": "off",
@@ -76,6 +86,27 @@
     "jsx-a11y/no-noninteractive-element-interactions": "error",
     "jsx-a11y/prefer-tag-over-role": "off",
     "jsx-a11y/role-has-required-aria-props": "error",
+    "tailwindcss/no-conflicting-classes": [
+      "error",
+      {
+        "allow": [["^focus-visible:outline$", "^focus-visible:outline-2$"]]
+      }
+    ],
+    "tailwindcss/no-deprecated-classes": "error",
+    "tailwindcss/no-duplicate-classes": "warn",
+    "tailwindcss/no-unknown-classes": [
+      "error",
+      {
+        "allowlist": ["js-code-editor", "nodrag", "nopan", "toaster"],
+        "ignorePrefixes": ["flow-"]
+      }
+    ],
+    "tailwindcss/enforce-canonical": "warn",
+    "tailwindcss/no-unnecessary-arbitrary-value": "warn",
+    "tailwindcss/enforce-sort-order": "warn",
+    "tailwindcss/consistent-variant-order": "warn",
+    "tailwindcss/enforce-consistent-important-position": "warn",
+    "tailwindcss/no-unnecessary-whitespace": "warn",
     "vitest/expect-expect": "off",
     "vitest/no-focused-tests": "error",
     "vitest/no-identical-title": "error",
@@ -147,7 +178,8 @@
     {
       "files": [
         "src/components/ui/**",
-        "src/hooks/use-mobile.ts"
+        "src/hooks/use-mobile.ts",
+        "src/shared/utils.ts"
       ],
       "rules": {
         "capitalized-comments": "off",

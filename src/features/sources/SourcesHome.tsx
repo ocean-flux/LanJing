@@ -245,7 +245,7 @@ export function SourcesHome() {
         {status === 'error' ? (
           <div role="alert" className="border border-hairline p-3">
             <p className="font-medium">{m.sources_load_error()}</p>
-            <p className="mt-1 font-mono text-ui-sm break-words text-ink-muted">{error}</p>
+            <p className="mt-1 font-mono text-ui-sm wrap-break-word text-ink-muted">{error}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
               {m.action_retry()}
             </Button>
@@ -328,7 +328,7 @@ export function SourcesHome() {
           ) : null}
 
           {importPhase === 'error' ? (
-            <p role="alert" className="break-words text-danger">
+            <p role="alert" className="wrap-break-word text-danger">
               {importError}
             </p>
           ) : null}
@@ -356,7 +356,7 @@ export function SourcesHome() {
                 ))}
               </ul>
               {importError ? (
-                <p role="alert" className="break-words text-danger">
+                <p role="alert" className="wrap-break-word text-danger">
                   {importError}
                 </p>
               ) : null}

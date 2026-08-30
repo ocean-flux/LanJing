@@ -41,7 +41,7 @@ Tauri 配置继续使用 `frontendDist: ../build`、开发端口 `1420` 和 SPA 
 
 ## 快速开始
 
-环境要求：Rust stable、Node.js 20+、pnpm 11，以及目标平台的 Tauri 工具链。
+环境要求：Rust stable、Node.js 20+、pnpm 12，以及目标平台的 Tauri 工具链。
 
 ```bash
 pnpm install

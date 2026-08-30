@@ -6,7 +6,7 @@
 
 - Rust stable 工具链
 - Node.js 20+
-- pnpm 11（通过 `corepack enable` 启用）
+- pnpm 12（通过 `corepack enable` 启用）
 - Tauri 平台依赖：Windows WebView2/MSVC、macOS Xcode Command Line Tools，或 Linux webkit2gtk/libssl-dev/pkg-config
 
 ```bash
@@ -74,7 +74,7 @@ project.inlang/          # Paraglide 项目配置
 - 前端保持本地优先，不新增登录、云同步或云端后端假设。
 - Rust 使用 `cargo fmt` 与 Clippy，不能通过无理由的 `#[allow]` 绕过警告。
 
-`src/components/ui/**` 与 `src/hooks/use-mobile.ts` 是 registry 生成物，`.oxlintrc.json` 已豁免其纯风格规则。修改它们时保持可被后续 `shadcn add` 升级；每次 `shadcn add` 之后需把新组件里的 `@phosphor-icons/react` import 换成 `@/components/ui/icon-glyphs`。
+`src/components/ui/**`、`src/shared/utils.ts` 与 `src/hooks/use-mobile.ts` 是 registry 生成物，但也纳入 Oxlint 与 Oxfmt，允许在保留 shadcn 可更新性的同时进行项目级魔改。每次 `shadcn add` 之后需把新组件里的 `@phosphor-icons/react` import 换成 `@/components/ui/icon-glyphs`，再运行格式化与 lint。
 
 ## Commit 规范
 
