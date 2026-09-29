@@ -9,6 +9,7 @@ import {
   MiniMap,
   ReactFlow,
   ViewportPortal,
+  applyNodeChanges,
   useReactFlow,
   type Connection,
   type EdgeTypes,
@@ -17,6 +18,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Position } from './model/core';
 import { cn } from '@/shared/utils';
 import { useMessages } from '@/shared/i18n/messages';
 import { useTheme } from '@/shared/theme/use-theme';
@@ -36,7 +38,11 @@ import {
   type FlowViewNode,
   type LoopRegionView,
 } from './model/flow-adapter';
-import { selectFlowProjection } from './model/session';
+import {
+  selectFlowProjection,
+  subgraphFromProjection,
+  type SubgraphClipboard,
+} from './model/session';
 import { useRuleEditorSession, useRuleEditorSessionStore } from './use-session';
 import { RuleFlowNode } from './nodes/RuleFlowNode';
 import { SemanticEdge } from './edges/SemanticEdge';
@@ -47,6 +53,9 @@ import './rules-flow.css';
 
 /** 节点数超过该阈值才渲染缩略图，小图不占画布空间。 */
 const MINIMAP_NODE_THRESHOLD = 12;
+
+/** 布局过渡时长；与 rules-flow.css 的 transition 保持一致。 */
+const LAYOUT_ANIMATION_MS = 200;
 
 /** 未实测到真实尺寸时的兜底，与 rules-flow.css 的卡片尺寸一致。 */
 const NODE_FALLBACK = { width: 252, height: 142 };
@@ -67,6 +76,15 @@ const nodeTypes: NodeTypes = {
 };
 
 const edgeTypes: EdgeTypes = { semantic: SemanticEdge };
+
+const NO_MARQUEE: MarqueeSelection = { nodes: [], edges: [] };
+
+/** 框选集合；只存 id，节点数据始终来自投影。 */
+type MarqueeSelection = { nodes: string[]; edges: string[] };
+
+function sameIds(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
 
 function rejectText(m: ReturnType<typeof useMessages>, reason: ConnectionRejectReason): string {
   switch (reason) {
@@ -112,12 +130,12 @@ function useNodeSizes(rootRef: React.RefObject<HTMLDivElement | null>) {
     if (!root) return;
 
     let disposed = false;
-    let queued = false;
+    let frame: number | null = null;
     const bump = () => {
-      if (disposed || queued) return;
-      queued = true;
-      queueMicrotask(() => {
-        queued = false;
+      if (disposed || frame !== null) return;
+      // ResizeObserver 回调内同步 setState 会触发布局回环告警；下一帧统一量尺寸。
+      frame = requestAnimationFrame(() => {
+        frame = null;
         if (!disposed) setEpoch((value) => value + 1);
       });
     };
@@ -136,6 +154,7 @@ function useNodeSizes(rootRef: React.RefObject<HTMLDivElement | null>) {
 
     return () => {
       disposed = true;
+      if (frame !== null) cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
@@ -165,12 +184,20 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
   const nodeSize = useNodeSizes(rootRef);
   const [rejectReason, setRejectReason] = useState<ConnectionRejectReason | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // 框选是画布本地状态：core.selection 只表达检查器的单点输入，
+  // 把多选写回 core 会让投影重算，反过来把框选清掉。
+  const [marquee, setMarquee] = useState<MarqueeSelection>(NO_MARQUEE);
+  const [layoutAnimating, setLayoutAnimating] = useState(false);
+  const [flowNodes, setFlowNodes] = useState<FlowViewNode[]>([]);
+  const dragPositionsRef = useRef<Record<string, Position>>({});
+  const clipboardRef = useRef<SubgraphClipboard | null>(null);
   const { fitView } = useReactFlow();
   const { onDragOver, onDrop } = usePaletteDrop();
 
   const projection = useRuleEditorSession(selectFlowProjection);
   const definition = useRuleEditorSession((state) => state.core.definition);
   const selection = useRuleEditorSession((state) => state.core.selection);
+  const revealRequest = useRuleEditorSession((state) => state.revealRequest);
   const intentFocus = useRuleEditorSession((state) => state.core.intentFocus);
 
   /** 端口选择要把可视 handle 还原成 compiler 的 semantic handle。 */
@@ -191,23 +218,55 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
     [store],
   );
 
-  const nodes = useMemo<FlowViewNode[]>(
-    () =>
-      projection.nodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          onPortSelect: (direction: FlowHandleDirection, handle: string) =>
-            selectPort(node.id, direction, handle),
-        },
-      })),
-    [projection.nodes, selectPort],
+  const multiSelected = marquee.nodes.length + marquee.edges.length > 1;
+
+  const nodes = useMemo<FlowViewNode[]>(() => {
+    const picked = new Set(marquee.nodes);
+    return projection.nodes.map((node) => ({
+      ...node,
+      // 多选期间由框选说了算：受控的 selected 必须与 xyflow 内部一致，
+      // 否则下一次投影会把框选覆盖掉。
+      selected: multiSelected ? picked.has(node.id) : node.selected,
+      data: {
+        ...node.data,
+        onPortSelect: (direction: FlowHandleDirection, handle: string) =>
+          selectPort(node.id, direction, handle),
+      },
+    }));
+  }, [projection.nodes, selectPort, marquee.nodes, multiSelected]);
+
+  const edges = useMemo<FlowViewEdge[]>(() => {
+    const picked = new Set(marquee.edges);
+    return projection.edges.map((edge) => ({
+      ...edge,
+      type: 'semantic',
+      selected: multiSelected ? picked.has(edge.id) : edge.selected,
+    }));
+  }, [projection.edges, marquee.edges, multiSelected]);
+
+  // 受控模式需要自己消费所有变更。位置只暂存本地，避免拖动每一帧
+  // 都创建 layout history 和重新投影整个语义图；停止拖动后再一次性持久化。
+  useEffect(() => {
+    setFlowNodes(nodes);
+  }, [nodes]);
+
+  const onNodesChange = useCallback(
+    (changes: Parameters<typeof applyNodeChanges<FlowViewNode>>[0]) => {
+      for (const change of changes) {
+        if (change.type === 'position' && change.position) {
+          dragPositionsRef.current[change.id] = { ...change.position };
+        }
+      }
+      setFlowNodes((current) => applyNodeChanges(changes, current));
+    },
+    [],
   );
 
-  const edges = useMemo<FlowViewEdge[]>(
-    () => projection.edges.map((edge) => ({ ...edge, type: 'semantic' })),
-    [projection.edges],
-  );
+  const commitDraggedPositions = useCallback(() => {
+    const positions = dragPositionsRef.current;
+    dragPositionsRef.current = {};
+    if (Object.keys(positions).length > 0) store.getState().layoutNodes(positions);
+  }, [store]);
 
   const entryByIntent = useMemo(() => flowEntryByIntentFromDefinition(definition), [definition]);
 
@@ -251,15 +310,30 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
     [gateGraph],
   );
 
+  /** 当前作用于批量操作的节点集合：优先框选，其次单点选中。 */
+  const operableNodeIds = useCallback((): string[] => {
+    if (marquee.nodes.length > 0) return marquee.nodes;
+    const parsed = parseEditorSelection(store.getState().core.selection);
+    return parsed.kind === 'node' ? [parsed.nodeId] : [];
+  }, [marquee.nodes, store]);
+
+  /** 把一组节点连同其内部边打包成可粘贴的子图。 */
+  const snapshot = useCallback(
+    (nodeIds: string[]) => subgraphFromProjection(projection, nodeIds),
+    [projection],
+  );
+
   const deleteSelection = useCallback(
     (nodeIds: string[], edgeIds: string[]) => {
       if (nodeIds.length === 0 && edgeIds.length === 0) return;
+      setMarquee(NO_MARQUEE);
       store.getState().deleteSelection(nodeIds, edgeIds);
     },
     [store],
   );
 
-  // 快捷键：撤销 / 重做 / 删除。输入类元素内不拦截。
+  // 快捷键：撤销 / 重做 / 复制 / 粘贴 / 直接复制。
+  // 删除交给 xyflow 内置的 deleteKeyCode，它本来就按整个选中集走 onDelete。
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const { target } = event;
@@ -273,33 +347,47 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
         return;
       }
       const modifier = event.metaKey || event.ctrlKey;
+      if (!modifier || event.altKey) return;
       const state = store.getState();
-      if (modifier && !event.altKey && event.key.toLowerCase() === 'z') {
-        event.preventDefault();
-        if (event.shiftKey) state.redo();
-        else state.undo();
-        return;
-      }
-      if (modifier && !event.altKey && event.key.toLowerCase() === 'y') {
-        event.preventDefault();
-        state.redo();
-        return;
-      }
-      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
-      const current = state.core.selection;
-      if (!current) return;
-      const parsed = parseEditorSelection(current);
-      if (parsed.kind === 'edge') {
-        event.preventDefault();
-        deleteSelection([], [parsed.edgeId]);
-      } else if (parsed.kind === 'node') {
-        event.preventDefault();
-        deleteSelection([parsed.nodeId], []);
+      switch (event.key.toLowerCase()) {
+        case 'z': {
+          event.preventDefault();
+          if (event.shiftKey) state.redo();
+          else state.undo();
+          return;
+        }
+        case 'y': {
+          event.preventDefault();
+          state.redo();
+          return;
+        }
+        case 'c': {
+          const copied = snapshot(operableNodeIds());
+          if (!copied) return;
+          event.preventDefault();
+          clipboardRef.current = copied;
+          return;
+        }
+        case 'v': {
+          const pending = clipboardRef.current;
+          if (!pending) return;
+          event.preventDefault();
+          setMarquee(NO_MARQUEE);
+          state.pasteSubgraph(pending);
+          return;
+        }
+        case 'd': {
+          const ids = operableNodeIds();
+          if (ids.length === 0) return;
+          event.preventDefault();
+          setMarquee(NO_MARQUEE);
+          state.duplicateNodes(ids);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [store, deleteSelection]);
+  }, [store, snapshot, operableNodeIds]);
 
   // 意图焦点切换后把可达子图带进视野。
   useEffect(() => {
@@ -307,6 +395,15 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
     const timer = setTimeout(() => fitView({ padding: 0.3, duration: 240 }), 0);
     return () => clearTimeout(timer);
   }, [intentFocus, fitView]);
+
+  // 诊断点击消费一次 reveal 请求：选中节点并让它进入可视区。
+  useEffect(() => {
+    if (!revealRequest) return;
+    const frame = requestAnimationFrame(() => {
+      void fitView({ nodes: [{ id: revealRequest.nodeId }], padding: 0.4, duration: 240 });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [fitView, revealRequest]);
 
   const regionBounds = useCallback(
     (region: LoopRegionView): LoopRegionBounds => {
@@ -341,27 +438,52 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes, edges: selectedEdges }: OnSelectionChangeParams) => {
       const state = store.getState();
-      const [selectedEdge] = selectedEdges;
-      if (selectedEdge) {
-        if (state.core.selection !== `edge:${selectedEdge.id}`) state.selectEdge(selectedEdge.id);
+      const nodeIds = selectedNodes.map((node) => node.id);
+      const edgeIds = selectedEdges.map((edge) => edge.id);
+      setMarquee((prev) =>
+        sameIds(prev.nodes, nodeIds) && sameIds(prev.edges, edgeIds)
+          ? prev
+          : { nodes: nodeIds, edges: edgeIds },
+      );
+      // 多选时检查器留空：它只处理单个对象，选了一堆再显示其中一个会误导。
+      if (nodeIds.length + edgeIds.length > 1) {
+        if (state.core.selection !== null) state.selectNode(null);
         return;
       }
-      const next = selectedNodes[0]?.id ?? null;
+      const [selectedEdge] = edgeIds;
+      if (selectedEdge) {
+        if (state.core.selection !== `edge:${selectedEdge}`) state.selectEdge(selectedEdge);
+        return;
+      }
+      const next = nodeIds[0] ?? null;
       if (state.core.selection !== next) state.selectNode(next);
     },
     [store],
   );
+
+  /** ELK 布局落下后给一段位移过渡；跳变会让人丢失空间定位。 */
+  const onLayoutApplied = useCallback(() => {
+    setLayoutAnimating(true);
+  }, []);
+
+  useEffect(() => {
+    if (!layoutAnimating) return;
+    const timer = setTimeout(() => setLayoutAnimating(false), LAYOUT_ANIMATION_MS + 40);
+    return () => clearTimeout(timer);
+  }, [layoutAnimating]);
 
   return (
     <div
       ref={rootRef}
       data-slot="rule-flow-canvas"
       data-intent-focus={intentFocus ?? 'all'}
+      data-layout-animating={layoutAnimating ? '' : undefined}
       className={cn('relative h-full w-full overflow-hidden bg-canvas', className)}
     >
       <ReactFlow
-        nodes={nodes}
+        nodes={flowNodes}
         edges={edges}
+        onNodesChange={onNodesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         isValidConnection={(connection) =>
@@ -377,9 +499,7 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
           const { edge: previous } = (oldEdge as FlowViewEdge).data;
           store.getState().reconnect(previous, toSemanticEdge(connection));
         }}
-        onNodeDragStop={(_event, node) => {
-          store.getState().moveNode(node.id, { x: node.position.x, y: node.position.y });
-        }}
+        onNodeDragStop={commitDraggedPositions}
         onNodeClick={(_event, node) => store.getState().selectNode(node.id)}
         onEdgeClick={(_event, edge) => store.getState().selectEdge(edge.id)}
         onPaneClick={() => store.getState().selectNode(null)}
@@ -405,7 +525,11 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
         onDrop={onDrop}
         aria-label={m.rules_canvas_aria()}
       >
-        <FlowTopBar paletteOpen={paletteOpen} onTogglePalette={() => setPaletteOpen((v) => !v)} />
+        <FlowTopBar
+          paletteOpen={paletteOpen}
+          onTogglePalette={() => setPaletteOpen((v) => !v)}
+          onLayoutApplied={onLayoutApplied}
+        />
         {paletteOpen ? <NodePalette onClose={() => setPaletteOpen(false)} /> : null}
         <Background gap={20} size={1.5} />
         {/* React 版 ViewportPortal 只有一个容器，层级靠 rules-flow.css 的 z-index。 */}

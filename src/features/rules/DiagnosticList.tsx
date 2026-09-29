@@ -114,7 +114,7 @@ export function DiagnosticList() {
                 onClick={() => {
                   // 诊断的 span.path 目前对应节点 id，用于把画布焦点带过去。
                   const nodeId = diagnostic.span?.path;
-                  if (nodeId) store.getState().selectNode(nodeId);
+                  if (nodeId) store.getState().revealNode(nodeId);
                 }}
               >
                 <Icon

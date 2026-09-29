@@ -38,6 +38,7 @@ export type IconName =
   | 'git-merge'
   | 'image'
   | 'info'
+  | 'keyboard'
   | 'list-bullets'
   | 'lock'
   | 'magnifying-glass'
@@ -97,6 +98,7 @@ const ICON_CLASSES: Record<IconName, string> = {
   'git-merge': 'icon-[ph--git-merge]',
   image: 'icon-[ph--image]',
   info: 'icon-[ph--info]',
+  keyboard: 'icon-[ph--keyboard]',
   'list-bullets': 'icon-[ph--list-bullets]',
   lock: 'icon-[ph--lock]',
   'magnifying-glass': 'icon-[ph--magnifying-glass]',

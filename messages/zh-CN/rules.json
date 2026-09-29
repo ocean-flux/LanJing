@@ -299,5 +299,18 @@
   "rules_loop_region_boundary_edges": "边界边",
   "rules_loop_region_unconnected": "未连接",
   "rules_loop_region_diagnostics": "结构诊断",
-  "rules_loop_region_hint": "区域由 flat Flow graph 即时推导；折叠只保存布局，不改变规则定义。"
+  "rules_loop_region_hint": "区域由 flat Flow graph 即时推导；折叠只保存布局，不改变规则定义。",
+  "rules_node_actions_aria": "节点操作",
+  "rules_node_action_duplicate": "复制节点",
+  "rules_node_action_collapse": "折叠节点",
+  "rules_node_action_expand": "展开节点",
+  "rules_node_action_delete": "删除节点",
+  "rules_shortcuts": "快捷键",
+  "rules_shortcut_undo": "撤销",
+  "rules_shortcut_redo": "重做",
+  "rules_shortcut_copy": "复制选中",
+  "rules_shortcut_paste": "粘贴",
+  "rules_shortcut_duplicate": "直接复制",
+  "rules_shortcut_delete": "删除选中",
+  "rules_shortcut_marquee": "框选多个节点"
 }

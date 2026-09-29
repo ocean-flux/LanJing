@@ -301,6 +301,12 @@
   z-index: 3;
 }
 
+/* 自动布局落下时给节点一段位移过渡；跳变会让人丢失空间定位。
+   只在 data-layout-animating 期间开启，拖拽节点时不能跟手延迟。 */
+[data-slot='rule-flow-canvas'][data-layout-animating] .react-flow__node {
+  transition: transform 200ms var(--motion-standard);
+}
+
 /* --------------------------------------------------------------------------
  * 边
  * ----------------------------------------------------------------------- */
@@ -490,7 +496,8 @@
   .flow-node-card,
   .flow-node-port-row,
   .flow-edge-path,
-  .react-flow__handle.flow-node-handle {
+  .react-flow__handle.flow-node-handle,
+  [data-slot='rule-flow-canvas'][data-layout-animating] .react-flow__node {
     transition: none;
   }
 }

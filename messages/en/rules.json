@@ -299,5 +299,18 @@
   "rules_loop_region_boundary_edges": "Boundary edges",
   "rules_loop_region_unconnected": "Not connected",
   "rules_loop_region_diagnostics": "Structure diagnostics",
-  "rules_loop_region_hint": "The region is derived from the flat flow graph on the fly. Collapsing only affects layout, never the rule definition."
+  "rules_loop_region_hint": "The region is derived from the flat flow graph on the fly. Collapsing only affects layout, never the rule definition.",
+  "rules_node_actions_aria": "Node actions",
+  "rules_node_action_duplicate": "Duplicate node",
+  "rules_node_action_collapse": "Collapse node",
+  "rules_node_action_expand": "Expand node",
+  "rules_node_action_delete": "Delete node",
+  "rules_shortcuts": "Shortcuts",
+  "rules_shortcut_undo": "Undo",
+  "rules_shortcut_redo": "Redo",
+  "rules_shortcut_copy": "Copy selection",
+  "rules_shortcut_paste": "Paste",
+  "rules_shortcut_duplicate": "Duplicate",
+  "rules_shortcut_delete": "Delete selection",
+  "rules_shortcut_marquee": "Box select nodes"
 }

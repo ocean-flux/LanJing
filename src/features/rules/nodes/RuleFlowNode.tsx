@@ -9,6 +9,7 @@ import type { FlowNodeData } from '../model/flow-adapter';
 import { getNodePorts } from '../model/ports';
 import { describeNode } from '../model/summary';
 import { nodeSummaryText } from '../labels';
+import { NodeActionToolbar } from './NodeActionToolbar';
 import { NodeShell } from './NodeShell';
 
 export type RuleFlowNodeType = Node<FlowNodeData, string>;
@@ -38,20 +39,23 @@ export function RuleFlowNode({ id, data, selected }: NodeProps<RuleFlowNodeType>
   const m = useMessages();
   const ports = getNodePorts(data.kind, data.config);
   return (
-    <NodeShell
-      nodeId={id}
-      kind={data.kind}
-      summary={nodeSummaryText(m, describeNode(data.kind, data.config))}
-      inputs={ports.inputs}
-      outputs={ports.outputs}
-      diagnostics={data.diagnostics}
-      entryIntents={data.entryIntents}
-      focused={data.focused}
-      dimmed={data.dimmed}
-      selectedPort={data.selectedPort}
-      onPortSelect={data.onPortSelect ?? undefined}
-      selected={selected ?? false}
-      extra={data.kind === 'loop' ? <LoopPortLegend /> : undefined}
-    />
+    <>
+      <NodeActionToolbar nodeId={id} collapsed={data.collapsed} visible={selected ?? false} />
+      <NodeShell
+        nodeId={id}
+        kind={data.kind}
+        summary={nodeSummaryText(m, describeNode(data.kind, data.config))}
+        inputs={ports.inputs}
+        outputs={ports.outputs}
+        diagnostics={data.diagnostics}
+        entryIntents={data.entryIntents}
+        focused={data.focused}
+        dimmed={data.dimmed}
+        selectedPort={data.selectedPort}
+        onPortSelect={data.onPortSelect ?? undefined}
+        selected={selected ?? false}
+        extra={data.kind === 'loop' ? <LoopPortLegend /> : undefined}
+      />
+    </>
   );
 }

@@ -15,6 +15,7 @@ import { STANDARD_INTENTS } from './model/intents';
 import { layoutNativeRuleFlow, type FlowNodeDimensions } from './model/flow-layout';
 import { selectFlowProjection } from './model/session';
 import { intentLabel } from './labels';
+import { ShortcutHints } from './ShortcutHints';
 import { useRuleEditorSession, useRuleEditorSessionStore } from './use-session';
 
 const TOGGLE_ITEM_CLASS =
@@ -23,9 +24,12 @@ const TOGGLE_ITEM_CLASS =
 export function FlowTopBar({
   paletteOpen,
   onTogglePalette,
+  onLayoutApplied,
 }: {
   paletteOpen: boolean;
   onTogglePalette: () => void;
+  /** 自动布局写入新坐标的时机；画布据此开一段位移过渡。 */
+  onLayoutApplied: () => void;
 }) {
   const m = useMessages();
   const store = useRuleEditorSessionStore();
@@ -72,13 +76,14 @@ export function FlowTopBar({
         }),
       );
       const positions = await layoutNativeRuleFlow(state.core.definition, dimensions);
+      onLayoutApplied();
       store.getState().layoutNodes(positions);
       // 等 xyflow 应用完新坐标再对齐视口。
       requestAnimationFrame(() => void flow.fitView({ padding: 0.24, duration: 240 }));
     } finally {
       setLayoutPending(false);
     }
-  }, [layoutPending, nodeCount, store, flow]);
+  }, [layoutPending, nodeCount, store, flow, onLayoutApplied]);
 
   return (
     <Panel position="top-left">
@@ -117,6 +122,8 @@ export function FlowTopBar({
           <Icon name={layoutPending ? 'arrow-clockwise' : 'tree-structure'} />
           <span>{m.rules_canvas_auto_layout()}</span>
         </Button>
+
+        <ShortcutHints />
 
         <Button
           variant={paletteOpen ? 'secondary' : 'outline'}
