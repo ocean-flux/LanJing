@@ -14,29 +14,32 @@ use tauri::Manager;
 macro_rules! lanjing_commands {
     ($consumer:ident) => {
         $consumer! {
-            fetch_import_src => commands::import_install::fetch_import_src,
-            prepare_install => commands::import_install::prepare_install,
-            install => commands::import_install::install,
-            execute => commands::execution::execute,
-            cancel_execution => commands::execution::cancel_execution,
-            catch_up_execution => commands::execution::catch_up_execution,
-            list_installed_sources => commands::query::list_installed_sources,
-            get_library_projection => commands::query::get_library_projection,
-            update_library_entry => commands::query::update_library_entry,
-            get_media_item => commands::query::get_media_item,
-            get_media_items => commands::query::get_media_items,
-            list_media_units => commands::query::list_media_units,
-            list_media_assets => commands::query::list_media_assets,
-            create_native_rule_document => commands::document::create_native_rule_document,
-            save_native_rule_document => commands::document::save_native_rule_document,
-            validate_native_rule_document => commands::document::validate_native_rule_document,
-            prepare_native_rule_document => commands::document::prepare_native_rule_document,
-            list_native_rule_documents => commands::document::list_native_rule_documents,
-            get_native_rule_document => commands::document::get_native_rule_document,
-            rename_native_rule_document => commands::document::rename_native_rule_document,
-            delete_native_rule_document => commands::document::delete_native_rule_document,
-            get_native_rule_provenance => commands::document::get_native_rule_provenance,
-        }
+                fetch_import_src => commands::import_install::fetch_import_src,
+                prepare_install => commands::import_install::prepare_install,
+                prepare_source_rollback => commands::import_install::prepare_source_rollback,
+                install => commands::import_install::install,
+                execute => commands::execution::execute,
+                cancel_execution => commands::execution::cancel_execution,
+                catch_up_execution => commands::execution::catch_up_execution,
+                list_installed_sources => commands::query::list_installed_sources,
+                list_source_revisions => commands::query::list_source_revisions,
+                get_library_projection => commands::query::get_library_projection,
+                update_library_entry => commands::query::update_library_entry,
+                get_media_item => commands::query::get_media_item,
+                get_media_items => commands::query::get_media_items,
+                list_media_units => commands::query::list_media_units,
+                list_media_assets => commands::query::list_media_assets,
+        create_native_rule_document => commands::document::create_native_rule_document,
+        save_native_rule_document => commands::document::save_native_rule_document,
+        validate_native_rule_document => commands::document::validate_native_rule_document,
+        list_native_rule_documents => commands::document::list_native_rule_documents,
+                list_native_rule_revision_history => commands::document::list_native_rule_revision_history,
+                restore_native_rule_revision => commands::document::restore_native_rule_revision,
+                get_native_rule_document => commands::document::get_native_rule_document,
+                rename_native_rule_document => commands::document::rename_native_rule_document,
+                delete_native_rule_document => commands::document::delete_native_rule_document,
+                get_native_rule_provenance => commands::document::get_native_rule_provenance,
+            }
     };
 }
 
@@ -122,11 +125,13 @@ mod tests {
         const EXPECTED: &[&str] = &[
             "fetch_import_src",
             "prepare_install",
+            "prepare_source_rollback",
             "install",
             "execute",
             "cancel_execution",
             "catch_up_execution",
             "list_installed_sources",
+            "list_source_revisions",
             "get_library_projection",
             "update_library_entry",
             "get_media_item",
@@ -136,8 +141,9 @@ mod tests {
             "create_native_rule_document",
             "save_native_rule_document",
             "validate_native_rule_document",
-            "prepare_native_rule_document",
             "list_native_rule_documents",
+            "list_native_rule_revision_history",
+            "restore_native_rule_revision",
             "get_native_rule_document",
             "rename_native_rule_document",
             "delete_native_rule_document",
@@ -153,7 +159,7 @@ mod tests {
             EXPECTED.len(),
             "Tauri command 注册不得重复"
         );
-        assert_eq!(EXPECTED.len(), 22, "facade 命令注册必须恰为 22 项");
+        assert_eq!(EXPECTED.len(), 25, "facade 命令注册必须恰为 25 项");
         assert!(
             REGISTERED_COMMAND_NAMES
                 .iter()

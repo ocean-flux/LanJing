@@ -66,9 +66,15 @@ pub enum StorageError {
     /// 来源尚未安装。
     #[error("来源尚未安装")]
     SourceMissing,
+    /// 请求的历史 source revision 不存在。
+    #[error("source revision 不存在")]
+    SourceRevisionMissing,
     /// 原生规则文档不存在。
     #[error("原生规则文档不存在")]
     DocumentMissing,
+    /// 请求的规则 Effective 历史 revision 不存在。
+    #[error("规则历史 revision 不存在")]
+    RuleRevisionMissing,
     /// execution 尚未建立。
     #[error("execution 尚未建立")]
     ExecutionMissing,

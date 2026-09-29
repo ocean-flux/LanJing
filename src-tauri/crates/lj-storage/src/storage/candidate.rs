@@ -5,10 +5,11 @@ use uuid::Uuid;
 use super::EventProjectionStorage;
 use crate::candidate_install::{
     get_candidate_summary, get_installed_source_sync, list_installed_sources_sync,
+    list_source_revisions_sync,
 };
 use crate::types::{
     CandidateDraft, CandidateSummary, InstallCandidateRequest, InstalledSource,
-    InstalledSourceRecord, StorageError,
+    InstalledSourceRecord, SourceRevisionRecord, SourceRollbackRequest, StorageError,
 };
 use crate::writer::WriterCommand;
 
@@ -82,6 +83,35 @@ impl EventProjectionStorage {
     /// SQLite、投影 JSON 或 ownership 损坏时返回 `StorageError`。
     pub async fn list_installed_sources(&self) -> Result<Vec<InstalledSourceRecord>, StorageError> {
         self.read(move |conn, _| Box::pin(async move { list_installed_sources_sync(conn).await }))
+            .await
+    }
+
+    /// 按 source identity 读取不可变 revision 的安全摘要。
+    ///
+    /// # Errors
+    ///
+    /// `SQLite` 或历史来源资料损坏时返回 `StorageError`。
+    pub async fn list_source_revisions(
+        &self,
+        source_identity: impl Into<String>,
+    ) -> Result<Vec<SourceRevisionRecord>, StorageError> {
+        let source_identity = source_identity.into();
+        self.read(move |conn, _| {
+            Box::pin(async move { list_source_revisions_sync(conn, &source_identity).await })
+        })
+        .await
+    }
+
+    /// 从不可变历史 source revision 准备新的 opaque candidate。
+    ///
+    /// # Errors
+    ///
+    /// 历史 revision、artifact、credential 或 current source 状态不可用时返回 `StorageError`。
+    pub async fn stage_source_rollback(
+        &self,
+        request: SourceRollbackRequest,
+    ) -> Result<CandidateSummary, StorageError> {
+        self.dispatch(|reply| WriterCommand::StageSourceRollback { request, reply })
             .await
     }
 }

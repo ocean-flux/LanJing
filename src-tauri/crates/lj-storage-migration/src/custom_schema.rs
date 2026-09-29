@@ -33,7 +33,7 @@ const INDEXES: &[&str] = &[
 const CHECKS: &[(&str, &str)] = &[
     (
         "storage_schema_metadata",
-        "NEW.id <> 1 OR NEW.schema_name <> 'lanjing_current' OR NEW.schema_version <> 1",
+        "NEW.id <> 1 OR NEW.schema_name <> 'lanjing_current' OR NEW.schema_version NOT IN (1, 2, 3)",
     ),
     ("event_counters", "NEW.id <> 1 OR NEW.next_global_seq < 0"),
     (
@@ -133,6 +133,7 @@ where
     C: ConnectionTrait,
 {
     for table in [
+        "rule_document_effective_semantic_history",
         "rule_document_provenances",
         "rule_document_semantics",
         "rule_document_layouts",

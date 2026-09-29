@@ -603,6 +603,96 @@ async fn candidate_install_revalidates_event_metadata_after_restart() {
 }
 
 #[tokio::test]
+async fn source_revision_history_and_rollback_require_a_new_reviewed_candidate() {
+    init_mock_keyring();
+    let temp = TempRuleSystem::new("source-history-rollback");
+    let system = temp.open(Duration::from_mins(1)).await;
+
+    let first_candidate = system
+        .prepare_install(maccms_json_input("https://fixture.example"))
+        .await
+        .expect("first source candidate");
+    let first = system
+        .install(first_candidate.id.clone(), CapabilityGrant::network_only())
+        .await
+        .expect("first source install");
+    let second_candidate = system
+        .prepare_install(maccms_json_input("https://fixture.example"))
+        .await
+        .expect("source update candidate");
+    let second = system
+        .install(second_candidate.id, CapabilityGrant::network_only())
+        .await
+        .expect("source update install");
+
+    let history = system
+        .list_source_revisions(first.source_id.clone())
+        .await
+        .expect("source revision history");
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[0].revision, second.revision);
+    assert_eq!(history[1].revision, first.revision);
+    assert_eq!(history[1].version, first.version);
+    assert_eq!(history[1].definition_hash, first_candidate.definition_hash);
+    assert_eq!(history[1].plan_hash, first_candidate.plan_hash);
+    assert!(history[0].installed_at_ms >= history[1].installed_at_ms);
+
+    let rollback = system
+        .prepare_source_rollback(first.source_id.clone(), first.revision)
+        .await
+        .expect("rollback candidate");
+    assert_eq!(rollback.expected_installed_revision, second.revision);
+    assert_eq!(rollback.profile.version, first.profile.version);
+    assert_eq!(rollback.definition_hash, first_candidate.definition_hash);
+    assert_ne!(rollback.id, first_candidate.id);
+    let denied_rollback = system
+        .install(rollback.id.clone(), CapabilityGrant::none())
+        .await
+        .expect_err("回退 candidate 仍必须重新获得 network grant");
+    assert_eq!(denied_rollback.stage, RuleErrorStage::Capability);
+    let restored = system
+        .install(rollback.id, CapabilityGrant::network_only())
+        .await
+        .expect("reviewed rollback install");
+    assert!(restored.revision > second.revision);
+    assert_eq!(restored.version, first.version);
+
+    let stale_rollback = system
+        .prepare_source_rollback(first.source_id.clone(), first.revision)
+        .await
+        .expect("stale rollback candidate");
+    let update_after_rollback = system
+        .prepare_install(maccms_json_input("https://fixture.example"))
+        .await
+        .expect("candidate after rollback");
+    system
+        .install(update_after_rollback.id, CapabilityGrant::network_only())
+        .await
+        .expect("install after rollback");
+    let stale = system
+        .install(stale_rollback.id, CapabilityGrant::network_only())
+        .await
+        .expect_err("stale rollback must not overwrite current source");
+    assert_eq!(stale.code, "candidate_stale");
+
+    let final_history = system
+        .list_source_revisions(first.source_id)
+        .await
+        .expect("final source revision history");
+    assert_eq!(final_history.len(), 4);
+    assert!(
+        final_history
+            .windows(2)
+            .all(|revisions| revisions[0].revision > revisions[1].revision)
+    );
+    assert!(
+        final_history
+            .windows(2)
+            .all(|revisions| { revisions[0].installed_at_ms >= revisions[1].installed_at_ms })
+    );
+}
+
+#[tokio::test]
 async fn maccms_json_four_intents_live_and_replay_use_only_rule_system() {
     init_mock_keyring();
     let temp = TempRuleSystem::new("maccms-live-replay");
@@ -837,9 +927,18 @@ async fn stream_drop_does_not_cancel_and_cancel_and_catch_up_are_idempotent_and_
 }
 
 fn library_update(resource_id: String, expected_version: u64, pinned: bool) -> LibraryEntryUpdate {
+    library_update_with_ownership(resource_id, expected_version, true, pinned)
+}
+
+fn library_update_with_ownership(
+    resource_id: String,
+    expected_version: u64,
+    favorite: bool,
+    pinned: bool,
+) -> LibraryEntryUpdate {
     LibraryEntryUpdate {
         resource_id,
-        favorite: true,
+        favorite,
         pinned,
         last_opened_at: Some("2026-07-18T00:00:00Z".to_string()),
         progress: Some(LibraryProgress {
@@ -849,6 +948,99 @@ fn library_update(resource_id: String, expected_version: u64, pinned: bool) -> L
         }),
         expected_version,
     }
+}
+
+#[tokio::test]
+async fn library_entry_normalizes_pinned_and_favorite_ownership() {
+    init_mock_keyring();
+    let temp = TempRuleSystem::new("library-entry-ownership");
+    let system = temp.open(Duration::from_mins(1)).await;
+    let resource_id = "item:library:ownership".to_string();
+
+    let pinned = system
+        .update_library_entry(library_update_with_ownership(
+            resource_id.clone(),
+            0,
+            false,
+            true,
+        ))
+        .await
+        .expect("置顶必须自动收藏");
+    let projection = system
+        .get_library_projection()
+        .await
+        .expect("读取归一化后的资料库条目");
+    assert_eq!(projection.entries.len(), 1);
+    assert!(projection.entries[0].pinned);
+    assert!(projection.entries[0].favorite);
+
+    system
+        .update_library_entry(library_update_with_ownership(
+            resource_id,
+            pinned.revision,
+            false,
+            false,
+        ))
+        .await
+        .expect("取消收藏必须同时取消置顶");
+    let projection = system
+        .get_library_projection()
+        .await
+        .expect("读取取消收藏后的资料库条目");
+    assert!(!projection.entries[0].pinned);
+    assert!(!projection.entries[0].favorite);
+}
+
+#[tokio::test]
+async fn library_projection_orders_pinned_favorite_recent_and_id() {
+    init_mock_keyring();
+    let temp = TempRuleSystem::new("library-ordering");
+    let system = temp.open(Duration::from_mins(1)).await;
+    let entries = [
+        ("item:library:id-b", false, false, None),
+        ("item:library:favorite", true, false, None),
+        ("item:library:pinned", false, true, None),
+        (
+            "item:library:recent",
+            false,
+            false,
+            Some("2026-08-16T00:00:00Z"),
+        ),
+        (
+            "item:library:id-a",
+            false,
+            false,
+            Some("2026-08-15T00:00:00Z"),
+        ),
+    ];
+    for (resource_id, favorite, pinned, last_opened_at) in entries {
+        let mut request =
+            library_update_with_ownership(resource_id.to_string(), 0, favorite, pinned);
+        request.last_opened_at = last_opened_at.map(str::to_string);
+        system
+            .update_library_entry(request)
+            .await
+            .expect("资料库条目应可写入");
+    }
+
+    let projection = system
+        .get_library_projection()
+        .await
+        .expect("读取资料库排序");
+    assert_eq!(
+        projection
+            .entries
+            .iter()
+            .map(|entry| entry.resource_id.as_str())
+            .collect::<Vec<_>>(),
+        vec![
+            "item:library:pinned",
+            "item:library:favorite",
+            "item:library:recent",
+            "item:library:id-a",
+            "item:library:id-b",
+        ]
+    );
 }
 
 #[tokio::test]

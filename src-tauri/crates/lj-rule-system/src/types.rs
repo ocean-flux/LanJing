@@ -8,6 +8,7 @@ mod query;
 
 pub use candidate::{
     CandidateId, CapabilityGrant, InstallCandidate, InstalledSource, RuleInput, SourceId,
+    SourceRevisionSummary,
 };
 pub use config::RuleSystemConfig;
 pub use document::{
@@ -15,8 +16,9 @@ pub use document::{
     CredentialMutationRequest, DeleteNativeRuleDocumentRequest, DomainOutcome, ExpectedDataType,
     GetNativeRuleDocumentRequest, GetNativeRuleProvenanceRequest, LayoutSave,
     NativeRuleDocumentDetail, NativeRuleDocumentSummary, NativeRuleProvenanceView,
-    PrepareNativeRuleDocumentRequest, ProvenanceSummaryView, RenameNativeRuleDocumentRequest,
-    RevisionConflict, SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest, SemanticSave,
+    NativeRuleRevisionSummary, ProvenanceSummaryView, RenameNativeRuleDocumentRequest,
+    RestoreNativeRuleRevisionOutcome, RestoreNativeRuleRevisionRequest, RevisionConflict,
+    SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest, SemanticActivation, SemanticSave,
     ValidateNativeRuleDocumentPreview, ValidateNativeRuleDocumentRequest,
 };
 pub use execution::{

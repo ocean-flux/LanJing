@@ -12,13 +12,11 @@ use uuid::Uuid;
 
 use crate::artifact::ArtifactStore;
 use crate::types::{
-    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt,
-    ClearDocumentCredentialSecretRequest, CommitReceipt, CreateDocumentRequest,
-    DeleteDocumentRequest, DeltaCommit, DocumentSummary, ExecutionFinish, ExecutionPin,
-    ExecutionRecord, ExecutionStartReceipt, GcReport, InstallCandidateRequest, LibraryUpdate,
-    OrphanRecovery, RenameDocumentRequest, ReplayExecutionStart, RetentionPolicy,
-    SaveDocumentOutcome, SaveDocumentRequest, SecretArtifactId, StorageError,
-    WriteDocumentCredentialSecretRequest,
+    AppendRequest, CandidateDraft, CandidateSummary, CheckpointReceipt, CommitReceipt,
+    CreateDocumentRequest, DeleteDocumentRequest, DeltaCommit, DocumentSummary, ExecutionFinish,
+    ExecutionPin, ExecutionRecord, ExecutionStartReceipt, GcReport, InstallCandidateRequest,
+    LibraryUpdate, OrphanRecovery, RenameDocumentRequest, ReplayExecutionStart, RetentionPolicy,
+    SaveDocumentOutcome, SaveDocumentRequest, SourceRollbackRequest, StorageError,
 };
 
 const WRITER_BATCH_LIMIT: usize = 32;
@@ -31,6 +29,10 @@ pub(crate) enum WriterCommand {
     },
     StageCandidate {
         draft: Box<CandidateDraft>,
+        reply: oneshot::Sender<Result<CandidateSummary, StorageError>>,
+    },
+    StageSourceRollback {
+        request: SourceRollbackRequest,
         reply: oneshot::Sender<Result<CandidateSummary, StorageError>>,
     },
     InstallCandidate {
@@ -97,20 +99,16 @@ pub(crate) enum WriterCommand {
         request: SaveDocumentRequest,
         reply: oneshot::Sender<Result<SaveDocumentOutcome, StorageError>>,
     },
+    RestoreNativeDocument {
+        request: crate::types::RestoreDocumentRevisionRequest,
+        reply: oneshot::Sender<Result<crate::types::RestoreDocumentRevisionOutcome, StorageError>>,
+    },
     RenameNativeDocument {
         request: RenameDocumentRequest,
         reply: oneshot::Sender<Result<DocumentSummary, StorageError>>,
     },
     DeleteNativeDocument {
         request: DeleteDocumentRequest,
-        reply: oneshot::Sender<Result<(), StorageError>>,
-    },
-    WriteDocumentCredentialSecret {
-        request: WriteDocumentCredentialSecretRequest,
-        reply: oneshot::Sender<Result<SecretArtifactId, StorageError>>,
-    },
-    ClearDocumentCredentialSecret {
-        request: ClearDocumentCredentialSecretRequest,
         reply: oneshot::Sender<Result<(), StorageError>>,
     },
     RecoverOrphans(oneshot::Sender<Result<OrphanRecovery, StorageError>>),
@@ -160,6 +158,12 @@ async fn handle_writer_command(
         }
         WriterCommand::StageCandidate { draft, reply } => {
             let _ = reply.send(crate::transaction::candidate::stage(conn, artifacts, *draft).await);
+        }
+        WriterCommand::StageSourceRollback { request, reply } => {
+            let _ = reply.send(
+                crate::transaction::candidate::stage_source_rollback(conn, artifacts, request)
+                    .await,
+            );
         }
         WriterCommand::InstallCandidate { request, reply } => {
             let _ =
@@ -251,23 +255,19 @@ async fn handle_writer_command(
                 reply.send(crate::transaction::document::create(conn, artifacts, request).await);
         }
         WriterCommand::SaveNativeDocument { request, reply } => {
-            let _ = reply.send(crate::transaction::document::save(conn, request).await);
+            let _ = reply.send(crate::transaction::document::save(conn, artifacts, request).await);
+        }
+        WriterCommand::RestoreNativeDocument { request, reply } => {
+            let _ = reply.send(
+                crate::transaction::document::restore_native_revision(conn, artifacts, request)
+                    .await,
+            );
         }
         WriterCommand::RenameNativeDocument { request, reply } => {
             let _ = reply.send(crate::transaction::document::rename(conn, request).await);
         }
         WriterCommand::DeleteNativeDocument { request, reply } => {
             let _ = reply.send(crate::transaction::document::delete(conn, request).await);
-        }
-        WriterCommand::WriteDocumentCredentialSecret { request, reply } => {
-            let _ = reply.send(
-                crate::transaction::document::write_credential_secret(conn, artifacts, request)
-                    .await,
-            );
-        }
-        WriterCommand::ClearDocumentCredentialSecret { request, reply } => {
-            let _ = reply
-                .send(crate::transaction::document::clear_credential_secret(conn, request).await);
         }
         WriterCommand::Shutdown(reply) => return Some(reply),
     }

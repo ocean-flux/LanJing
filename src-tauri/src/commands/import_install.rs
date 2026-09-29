@@ -2,7 +2,7 @@
 
 use lj_rule_system::{
     CandidateId, CapabilityGrant, InstallCandidate, InstalledSource, RuleError, RuleInput,
-    RuleSystem,
+    RuleSystem, SourceId,
 };
 use serde::Deserialize;
 use tauri::State;
@@ -19,6 +19,13 @@ pub(crate) struct FetchImportSrcRequest {
 pub(crate) struct InstallRequest {
     pub candidate_id: CandidateId,
     pub grant: CapabilityGrantPreset,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SourceRollbackRequest {
+    pub source_id: SourceId,
+    pub revision: u64,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -48,6 +55,17 @@ pub(crate) async fn prepare_install(
     request: RuleInput,
 ) -> Result<InstallCandidate, RuleError> {
     state.system.prepare_install(request).await
+}
+
+#[tauri::command]
+pub(crate) async fn prepare_source_rollback(
+    state: State<'_, AppState>,
+    request: SourceRollbackRequest,
+) -> Result<InstallCandidate, RuleError> {
+    state
+        .system
+        .prepare_source_rollback(request.source_id, request.revision)
+        .await
 }
 
 #[tauri::command]

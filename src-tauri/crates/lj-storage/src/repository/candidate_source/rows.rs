@@ -63,3 +63,20 @@ struct InstalledSourceVersionRow {
     plan_artifact_hash: String,
 }
 
+#[derive(FromQueryResult)]
+pub(crate) struct SourceRevisionRow {
+    pub(crate) source_identity: String,
+    pub(crate) source_revision: i64,
+    pub(crate) version: String,
+    pub(crate) profile_json: String,
+    pub(crate) grant_json: String,
+    pub(crate) base_url: String,
+    pub(crate) package_artifact_hash: String,
+    pub(crate) plan_artifact_hash: String,
+    pub(crate) definition_hash: String,
+    pub(crate) plan_hash: String,
+    pub(crate) cookie_namespace: String,
+    pub(crate) runtime_credential_secret_id: Option<String>,
+    pub(crate) schema_version: i64,
+    pub(crate) installed_at_ms: i64,
+}

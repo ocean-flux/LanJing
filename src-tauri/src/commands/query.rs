@@ -2,7 +2,7 @@
 
 use lj_rule_system::{
     InstalledSource, LibraryEntryUpdate, LibraryProjection, LibraryUpdateReceipt, MediaAssetPage,
-    MediaItem, MediaUnitPage, RuleError,
+    MediaItem, MediaUnitPage, RuleError, SourceId, SourceRevisionSummary,
 };
 use serde::Deserialize;
 use tauri::State;
@@ -14,6 +14,20 @@ pub(crate) async fn list_installed_sources(
     state: State<'_, AppState>,
 ) -> Result<Vec<InstalledSource>, RuleError> {
     state.system.list_installed_sources().await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ListSourceRevisionsRequest {
+    pub source_id: SourceId,
+}
+
+#[tauri::command]
+pub(crate) async fn list_source_revisions(
+    state: State<'_, AppState>,
+    request: ListSourceRevisionsRequest,
+) -> Result<Vec<SourceRevisionSummary>, RuleError> {
+    state.system.list_source_revisions(request.source_id).await
 }
 
 #[tauri::command]

@@ -5,11 +5,11 @@
 
 use lj_rule_system::{
     CreateNativeRuleDocumentRequest, DeleteNativeRuleDocumentRequest, GetNativeRuleDocumentRequest,
-    GetNativeRuleProvenanceRequest, InstallCandidate, NativeRuleDocumentDetail,
-    NativeRuleDocumentSummary, NativeRuleProvenanceView, PrepareNativeRuleDocumentRequest,
-    RenameNativeRuleDocumentRequest, RuleError, SaveNativeRuleDocumentOutcome,
-    SaveNativeRuleDocumentRequest, ValidateNativeRuleDocumentPreview,
-    ValidateNativeRuleDocumentRequest,
+    GetNativeRuleProvenanceRequest, NativeRuleDocumentDetail, NativeRuleDocumentSummary,
+    NativeRuleProvenanceView, NativeRuleRevisionSummary, RenameNativeRuleDocumentRequest,
+    RestoreNativeRuleRevisionOutcome, RestoreNativeRuleRevisionRequest, RuleError,
+    SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest,
+    ValidateNativeRuleDocumentPreview, ValidateNativeRuleDocumentRequest,
 };
 use tauri::State;
 
@@ -42,21 +42,33 @@ pub(crate) async fn validate_native_rule_document(
     state.system.validate_native_rule_document(request).await
 }
 
-/// 把已保存语义快照 stage 为可安装 candidate。
-#[tauri::command]
-pub(crate) async fn prepare_native_rule_document(
-    state: State<'_, AppState>,
-    request: PrepareNativeRuleDocumentRequest,
-) -> Result<InstallCandidate, RuleError> {
-    state.system.prepare_native_rule_document(request).await
-}
-
 /// 列出全部 native rule documents。
 #[tauri::command]
 pub(crate) async fn list_native_rule_documents(
     state: State<'_, AppState>,
 ) -> Result<Vec<NativeRuleDocumentSummary>, RuleError> {
     state.system.list_native_rule_documents().await
+}
+
+/// 列出 native rule document 的 Effective 历史安全摘要。
+#[tauri::command]
+pub(crate) async fn list_native_rule_revision_history(
+    state: State<'_, AppState>,
+    request: GetNativeRuleDocumentRequest,
+) -> Result<Vec<NativeRuleRevisionSummary>, RuleError> {
+    state
+        .system
+        .list_native_rule_revision_history(request)
+        .await
+}
+
+/// 从 Effective 历史创建新的 Draft Rule Revision。
+#[tauri::command]
+pub(crate) async fn restore_native_rule_revision(
+    state: State<'_, AppState>,
+    request: RestoreNativeRuleRevisionRequest,
+) -> Result<RestoreNativeRuleRevisionOutcome, RuleError> {
+    state.system.restore_native_rule_revision(request).await
 }
 
 /// 获取单个 native rule document 详情。
@@ -125,10 +137,6 @@ mod tests {
             serde_json::from_str(r#"{"document_id": "d1", "revision": 3}"#)
                 .expect("validate 请求解析");
         assert_eq!(validate.revision, 3);
-        let prepare: PrepareNativeRuleDocumentRequest =
-            serde_json::from_str(r#"{"document_id": "d1", "revision": 3}"#)
-                .expect("prepare 请求解析");
-        assert_eq!(prepare.document_id, "d1");
         let rename: RenameNativeRuleDocumentRequest = serde_json::from_str(
             r#"{"document_id": "d1", "title": "新标题", "expected_revision": 3}"#,
         )

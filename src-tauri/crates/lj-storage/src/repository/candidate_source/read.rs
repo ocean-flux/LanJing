@@ -94,6 +94,41 @@ pub(crate) async fn list_installed_sources_sync(
     .collect()
 }
 
+/// 按新到旧读取 source revision 安全摘要。
+pub(crate) async fn list_source_revisions_sync(
+    conn: &mut DatabaseSession,
+    source_identity: &str,
+) -> Result<Vec<SourceRevisionRecord>, StorageError> {
+    let rows = statement(
+        "SELECT source_identity, source_revision, version, profile_json, grant_json, base_url, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, schema_version, installed_at_ms FROM source_versions WHERE source_identity = ? ORDER BY installed_at_ms DESC, source_revision DESC",
+    )
+    .bind(source_identity)
+    .load::<SourceRevisionRow>(conn)
+    .await
+    .map_err(database_error)?;
+    rows.into_iter().map(source_revision_from_row).collect()
+}
+
+fn source_revision_from_row(row: SourceRevisionRow) -> Result<SourceRevisionRecord, StorageError> {
+    let profile = deserialize::<SourceProfile>(row.profile_json.as_bytes())?;
+    if profile.id.0 != row.source_identity || profile.version.as_deref() != Some(row.version.as_str())
+    {
+        return Err(StorageError::InvalidInput(
+            "source revision profile identity 或 version 不一致".to_string(),
+        ));
+    }
+    Ok(SourceRevisionRecord {
+        source_identity: row.source_identity,
+        source_revision: from_i64(row.source_revision, "source revision")?,
+        version: row.version,
+        profile,
+        grant: deserialize::<PolicyCapabilities>(row.grant_json.as_bytes())?,
+        definition_hash: row.definition_hash,
+        plan_hash: row.plan_hash,
+        installed_at_ms: row.installed_at_ms,
+    })
+}
+
 fn installed_source_record_from_row(
     row: InstalledSourceRecordRow,
 ) -> Result<InstalledSourceRecord, StorageError> {

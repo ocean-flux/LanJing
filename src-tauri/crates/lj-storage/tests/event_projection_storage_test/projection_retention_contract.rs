@@ -185,7 +185,7 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
             .iter()
             .map(|entry| entry.resource_id.0.as_str())
             .collect::<Vec<_>>(),
-        vec!["item:library:alpha", "item:library:beta"]
+        vec!["item:library:beta", "item:library:alpha"]
     );
     assert_eq!(library.entries[0].revision, 1);
     assert_eq!(library.entries[1].revision, 1);
@@ -195,8 +195,9 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
             .iter()
             .all(|entry| entry.updated_global_seq <= library.global_seq)
     );
+    let alpha_entry = library_entry(&library.entries, "item:library:alpha");
     assert_eq!(
-        library.entries[0]
+        alpha_entry
             .progress
             .as_ref()
             .and_then(|progress| progress.unit_id.as_ref())
@@ -207,7 +208,7 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
     storage
         .update_library(LibraryUpdate {
             entry: LibraryEntry {
-                resource_id: library.entries[0].resource_id.clone(),
+                resource_id: alpha_entry.resource_id.clone(),
                 favorite: false,
                 pinned: true,
                 last_opened_at: Some("2026-07-18T02:00:00Z".to_string()),
@@ -217,7 +218,7 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
                     total: Some(10),
                 }),
             },
-            expected_version: library.entries[0].revision,
+            expected_version: alpha_entry.revision,
             event_id: Uuid::new_v4(),
             occurred_at_ms: now + 6,
             trace_id: "trace-library-alpha-update".to_string(),
@@ -229,12 +230,14 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
         .await
         .expect("read revised library projection");
     assert!(updated_library.global_seq > library.global_seq);
-    assert_eq!(updated_library.entries[0].revision, 2);
-    assert!(!updated_library.entries[0].favorite);
-    assert!(updated_library.entries[0].pinned);
-    assert_eq!(updated_library.entries[1].revision, 1);
+    let updated_alpha = library_entry(&updated_library.entries, "item:library:alpha");
+    let updated_beta = library_entry(&updated_library.entries, "item:library:beta");
+    assert_eq!(updated_alpha.revision, 2);
+    assert!(updated_alpha.favorite);
+    assert!(updated_alpha.pinned);
+    assert_eq!(updated_beta.revision, 1);
     assert_eq!(
-        updated_library.entries[0]
+        updated_alpha
             .progress
             .as_ref()
             .map(|progress| progress.position),

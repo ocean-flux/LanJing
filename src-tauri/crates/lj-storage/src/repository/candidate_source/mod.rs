@@ -31,7 +31,8 @@ use crate::repository::secret::{
 use crate::types::{
     ArtifactKind, CandidateDraft, CandidateSummary, DEFAULT_CANDIDATE_TTL_MS,
     INSTALL_CANDIDATE_SCHEMA_VERSION, InstallCandidateRequest, InstalledSource,
-    InstalledSourceRecord, SecretArtifactId, StorageError,
+    InstalledSourceRecord, RuntimeCredentialMaterial, SecretArtifactId, SourceRevisionRecord,
+    SourceRollbackRequest, StorageError,
 };
 
 include!("staging.rs");

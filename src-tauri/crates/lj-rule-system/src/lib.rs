@@ -18,10 +18,12 @@ pub use types::{
     GetNativeRuleProvenanceRequest, InstallCandidate, InstalledSource, LayoutSave,
     LibraryEntryUpdate, LibraryProgress, LibraryProjection, LibraryProjectionEntry,
     LibraryUpdateReceipt, MediaAssetPage, MediaUnitPage, NativeRuleDocumentDetail,
-    NativeRuleDocumentSummary, NativeRuleProvenanceView, PrepareNativeRuleDocumentRequest,
-    ProvenanceSummaryView, RenameNativeRuleDocumentRequest, RevisionConflict, RuleInput,
-    RuleSystemConfig, SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest, SemanticSave,
-    SourceId, ValidateNativeRuleDocumentPreview, ValidateNativeRuleDocumentRequest,
+    NativeRuleDocumentSummary, NativeRuleProvenanceView, NativeRuleRevisionSummary,
+    ProvenanceSummaryView, RenameNativeRuleDocumentRequest, RestoreNativeRuleRevisionOutcome,
+    RestoreNativeRuleRevisionRequest, RevisionConflict, RuleInput, RuleSystemConfig,
+    SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest, SemanticActivation, SemanticSave,
+    SourceId, SourceRevisionSummary, ValidateNativeRuleDocumentPreview,
+    ValidateNativeRuleDocumentRequest,
 };
 // 标准媒体模型经 façade 再导出，避免根 package 依赖 lj-media path。
 pub use lj_media::{MediaAsset, MediaItem, MediaUnit};

@@ -3,25 +3,33 @@ pub(crate) async fn process_library_update(
     conn: &mut DatabaseSession,
     request: LibraryUpdate,
 ) -> Result<CommitReceipt, StorageError> {
-    let progress_json = request.entry.progress.as_ref().map(serialize).transpose()?;
-    let entry_payload = serialize(&request.entry)?;
+    let LibraryUpdate {
+        mut entry,
+        expected_version,
+        event_id,
+        occurred_at_ms,
+        trace_id,
+    } = request;
+    // 固定条目意味着用户保留它；事件和投影必须写入同一规范状态。
+    entry.favorite |= entry.pinned;
+    let progress_json = entry.progress.as_ref().map(serialize).transpose()?;
+    let entry_payload = serialize(&entry)?;
     let event = EventDraft {
-        stream_id: library_stream_id(&request.entry.resource_id),
-        expected_version: request.expected_version,
-        event_id: request.event_id,
+        stream_id: library_stream_id(&entry.resource_id),
+        expected_version,
+        event_id,
         event_type: EventType::Library,
         schema_version: 1,
         correlation_id: None,
         causation_id: None,
-        trace_id: request.trace_id,
-        occurred_at_ms: request.occurred_at_ms,
+        trace_id,
+        occurred_at_ms,
         payload: serde_json::json!({"kind": "updated", "entry": serde_json::from_str::<serde_json::Value>(&entry_payload).map_err(|_| StorageError::Serialization)?}),
         source_identity: None,
     };
     if let Some(receipt) = idempotent_event(conn, &event).await? {
         return Ok(receipt);
     }
-    let entry = request.entry;
     append_event_transaction(conn, &event, &[], move |conn, global_seq, _revision| Box::pin(async move {
         statement(
             "INSERT INTO library_projection (resource_id, favorite, pinned, last_opened_at, progress_json, updated_global_seq) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(resource_id) DO UPDATE SET favorite = excluded.favorite, pinned = excluded.pinned, last_opened_at = excluded.last_opened_at, progress_json = excluded.progress_json, updated_global_seq = excluded.updated_global_seq",

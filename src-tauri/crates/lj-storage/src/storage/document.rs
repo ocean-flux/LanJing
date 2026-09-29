@@ -1,12 +1,12 @@
-//! 原生规则文档生命周期与文档凭证 secret façade。
+//! 原生规则文档生命周期 façade。
 //!
 //! 写操作经 single writer dispatch；list/get/provenance text 走只读 lane。
 
 use super::EventProjectionStorage;
 use crate::types::{
-    ClearDocumentCredentialSecretRequest, CreateDocumentRequest, DeleteDocumentRequest,
-    DocumentDetail, DocumentSummary, RenameDocumentRequest, SaveDocumentOutcome,
-    SaveDocumentRequest, SecretArtifactId, StorageError, WriteDocumentCredentialSecretRequest,
+    CreateDocumentRequest, DeleteDocumentRequest, DocumentDetail, DocumentSummary,
+    RenameDocumentRequest, RestoreDocumentRevisionOutcome, RestoreDocumentRevisionRequest,
+    RuleRevisionHistoryRecord, SaveDocumentOutcome, SaveDocumentRequest, StorageError,
 };
 use crate::writer::WriterCommand;
 
@@ -36,6 +36,38 @@ impl EventProjectionStorage {
         request: SaveDocumentRequest,
     ) -> Result<SaveDocumentOutcome, StorageError> {
         self.dispatch(|reply| WriterCommand::SaveNativeDocument { request, reply })
+            .await
+    }
+
+    /// 列出文档的 Effective Rule Revision 历史安全摘要。
+    ///
+    /// # Errors
+    ///
+    /// 只读查询失败时返回 `StorageError`。
+    pub async fn list_native_rule_revision_history(
+        &self,
+        document_id: impl Into<String>,
+    ) -> Result<Vec<RuleRevisionHistoryRecord>, StorageError> {
+        let document_id = document_id.into();
+        self.read(move |conn, _| {
+            Box::pin(async move {
+                crate::repository::document::list_effective_history(conn, &document_id).await
+            })
+        })
+        .await
+    }
+
+    /// 从 Effective 历史创建新的 Draft Rule Revision；不会直接替换 Effective。
+    ///
+    /// # Errors
+    ///
+    /// 文档不存在、历史 revision 不存在或 transaction/writer 失败时返回 `StorageError`；
+    /// Draft revision 冲突以 `conflict` 字段返回，不是错误。
+    pub async fn restore_native_rule_revision(
+        &self,
+        request: RestoreDocumentRevisionRequest,
+    ) -> Result<RestoreDocumentRevisionOutcome, StorageError> {
+        self.dispatch(|reply| WriterCommand::RestoreNativeDocument { request, reply })
             .await
     }
 
@@ -114,32 +146,5 @@ impl EventProjectionStorage {
             })
         })
         .await
-    }
-
-    /// 写入（或替换）一个文档凭证槽位 secret；返回随机 secret ID 供 manifest 引用。
-    /// 替换同一槽位时先释放旧 owner 再写新（同一 writer transaction）。
-    ///
-    /// # Errors
-    ///
-    /// 文档不存在、输入不合法或 transaction/writer 失败时返回 `StorageError`。
-    pub async fn write_document_credential_secret(
-        &self,
-        request: WriteDocumentCredentialSecretRequest,
-    ) -> Result<SecretArtifactId, StorageError> {
-        self.dispatch(|reply| WriterCommand::WriteDocumentCredentialSecret { request, reply })
-            .await
-    }
-
-    /// 清除一个文档凭证槽位的 secret owner；不存在视为幂等成功。
-    ///
-    /// # Errors
-    ///
-    /// 文档不存在或 transaction/writer 失败时返回 `StorageError`。
-    pub async fn clear_document_credential_secret(
-        &self,
-        request: ClearDocumentCredentialSecretRequest,
-    ) -> Result<(), StorageError> {
-        self.dispatch(|reply| WriterCommand::ClearDocumentCredentialSecret { request, reply })
-            .await
     }
 }

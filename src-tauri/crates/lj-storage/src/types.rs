@@ -18,17 +18,19 @@ pub(crate) use artifact::ArtifactKind;
 pub use artifact::{ArtifactInput, SecretArtifactId};
 pub use candidate::{
     CandidateDraft, CandidateSummary, INSTALL_CANDIDATE_SCHEMA_VERSION, InstallCandidateRequest,
-    InstalledSource, InstalledSourceRecord, RuntimeCredentialMaterial,
+    InstalledSource, InstalledSourceRecord, RuntimeCredentialMaterial, SourceRevisionRecord,
+    SourceRollbackRequest,
 };
 pub use config::{
     DEFAULT_ARCHIVE_TTL_MS, DEFAULT_CANDIDATE_TTL_MS, StorageConfig, WRITER_CAPACITY,
 };
 pub use document::{
-    ClearDocumentCredentialSecretRequest, CreateDocumentRequest, DeleteDocumentRequest,
-    DocumentDetail, DocumentInitial, DocumentSummary, DomainSaveOutcome, LayoutSaveInput,
-    LayoutSnapshot, ProvenanceCreateInput, ProvenanceSummary, RenameDocumentRequest,
-    RevisionConflict, SaveDocumentOutcome, SaveDocumentRequest, SemanticSaveInput,
-    SemanticSnapshot, WriteDocumentCredentialSecretRequest,
+    CreateDocumentRequest, DeleteDocumentRequest, DocumentCredentialMutation,
+    DocumentCredentialMutationAction, DocumentDetail, DocumentInitial, DocumentSummary,
+    DomainSaveOutcome, LayoutSaveInput, LayoutSnapshot, ProvenanceCreateInput, ProvenanceSummary,
+    RenameDocumentRequest, RestoreDocumentRevisionOutcome, RestoreDocumentRevisionRequest,
+    RevisionConflict, RuleRevisionHistoryRecord, SaveDocumentOutcome, SaveDocumentRequest,
+    SemanticActivation, SemanticSaveInput, SemanticSnapshot,
 };
 pub use error::StorageError;
 pub use event::{AppendRequest, CommitReceipt, StoredEvent};

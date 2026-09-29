@@ -5,4 +5,5 @@
 
 pub(crate) use crate::repository::candidate_source::{
     get_candidate_summary, get_installed_source_sync, list_installed_sources_sync,
+    list_source_revisions_sync,
 };

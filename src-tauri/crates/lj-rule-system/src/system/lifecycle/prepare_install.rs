@@ -9,7 +9,7 @@ use lj_node_http::ImportFetchError;
 use lj_rule_model::{Diagnostic, RulePackage, SourceSpan};
 use lj_storage::{
     CandidateDraft, CandidateSummary, InstallCandidateRequest,
-    InstalledSource as StorageInstalledSource, RuntimeCredentialMaterial,
+    InstalledSource as StorageInstalledSource, RuntimeCredentialMaterial, SourceRollbackRequest,
 };
 use uuid::Uuid;
 
@@ -235,6 +235,58 @@ impl RuleSystem {
         Ok(candidate_from_summary(summary))
     }
 
+    /// 从历史 source revision 准备需要重新审阅的 rollback candidate。
+    ///
+    /// # Errors
+    ///
+    /// 来源、历史 revision、artifact、凭证或 candidate staging 失败时返回 `RuleError`。
+    pub async fn prepare_source_rollback(
+        &self,
+        source_id: SourceId,
+        source_revision: u64,
+    ) -> Result<InstallCandidate, RuleError> {
+        let trace_id = super::super::trace_id();
+        let source_identity = source_id.as_identity().to_string();
+        if source_identity.trim().is_empty() || source_revision == 0 {
+            return Err(RuleError::new(
+                RuleErrorStage::Validation,
+                "source_revision_invalid",
+                "来源 revision 无效",
+                trace_id,
+                false,
+                Vec::new(),
+            ));
+        }
+        let created_at_ms = now_millis(&trace_id)?;
+        let expires_at_ms = created_at_ms
+            .checked_add(self.state.candidate_ttl_ms)
+            .ok_or_else(|| {
+                RuleError::new(
+                    RuleErrorStage::Candidate,
+                    "candidate_ttl_overflow",
+                    "candidate 到期时长超出支持范围",
+                    trace_id.clone(),
+                    false,
+                    Vec::new(),
+                )
+            })?;
+        let summary = self
+            .state
+            .storage
+            .stage_source_rollback(SourceRollbackRequest {
+                candidate_id: Uuid::new_v4(),
+                source_identity,
+                source_revision,
+                expires_at_ms: Some(expires_at_ms),
+                trace_id: trace_id.clone(),
+                correlation_id: None,
+                created_at_ms,
+            })
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Candidate, &trace_id))?;
+        Ok(candidate_from_summary(summary))
+    }
+
     /// 原子消费 candidate。
     ///
     /// # Errors
@@ -281,6 +333,7 @@ fn installed_source_from_storage(source: StorageInstalledSource) -> InstalledSou
         source_id: SourceId::from_identity(source.source_identity),
         version: source.version,
         profile: source.profile,
+        grant: CapabilityGrant::from_policy(source.grant),
         revision: source.source_revision,
     }
 }

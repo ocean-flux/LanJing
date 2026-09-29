@@ -127,6 +127,104 @@ pub(crate) async fn process_stage_candidate(
     Ok(summary)
 }
 
+/// 从不可变 source revision 构造新的 candidate；只复制受控 artifact 与 secret 内容。
+pub(crate) async fn process_stage_source_rollback(
+    conn: &mut DatabaseSession,
+    artifacts: &ArtifactStore,
+    request: SourceRollbackRequest,
+) -> Result<CandidateSummary, StorageError> {
+    if request.source_identity.trim().is_empty() || request.source_revision == 0 {
+        return Err(StorageError::InvalidInput(
+            "source rollback identity 或 revision 无效".to_string(),
+        ));
+    }
+    let current = get_source_row(conn, &request.source_identity)
+        .await?
+        .ok_or(StorageError::SourceMissing)?;
+    let expected_installed_revision = from_i64(current.revision, "source revision")?;
+    let historical = statement(
+        "SELECT source_identity, source_revision, version, profile_json, grant_json, base_url, package_artifact_hash, plan_artifact_hash, definition_hash, plan_hash, cookie_namespace, runtime_credential_secret_id, schema_version, installed_at_ms FROM source_versions WHERE source_identity = ? AND source_revision = ?",
+    )
+    .bind(&request.source_identity)
+    .bind(to_i64(request.source_revision)?)
+    .get_result::<SourceRevisionRow>(conn)
+    .await
+    .optional()
+    .map_err(database_error)?
+    .ok_or(StorageError::SourceRevisionMissing)?;
+
+    let package_bytes = read_body_by_hash(conn, artifacts, &historical.package_artifact_hash)
+        .await
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let plan_bytes = read_body_by_hash(conn, artifacts, &historical.plan_artifact_hash)
+        .await
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let package = read_rule_package_artifact(&package_bytes).map_err(candidate_contract_artifact_error)?;
+    let plan = read_execution_plan_artifact(&plan_bytes).map_err(candidate_contract_artifact_error)?;
+    validate_candidate_package_and_plan(&package, &plan)
+        .map_err(candidate_contract_artifact_error)?;
+    let profile = deserialize::<SourceProfile>(historical.profile_json.as_bytes())
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let required_grant = deserialize::<PolicyCapabilities>(historical.grant_json.as_bytes())
+        .map_err(|_| StorageError::CandidateTampered)?;
+    let source_identity = package.source_identity().id.as_str();
+    if source_identity != request.source_identity
+        || historical.source_identity != request.source_identity
+        || historical.source_revision != to_i64(request.source_revision)?
+        || historical.version != package.version()
+        || historical.definition_hash != plan.definition_hash()
+        || historical.plan_hash != plan.plan_hash()
+        || historical.base_url != package.definition().base_url()
+        || historical.cookie_namespace != source_cookie_namespace(source_identity)
+        || historical.schema_version
+            != i64::from(INSTALL_CANDIDATE_SCHEMA_VERSION)
+        || profile.id.0 != request.source_identity
+        || profile.version.as_deref() != Some(package.version())
+        || required_grant != package.definition().capability_manifest().required
+    {
+        return Err(StorageError::CandidateTampered);
+    }
+
+    let runtime_credentials = match historical.runtime_credential_secret_id {
+        Some(secret_id) => Some(RuntimeCredentialMaterial::new(
+            read_owned_secret(
+                conn,
+                artifacts,
+                SecretArtifactId::from_str(&secret_id)?,
+                "source_version_runtime",
+                &source_version_owner_id(&request.source_identity, request.source_revision),
+            )
+            .await
+            .map_err(|error| match error {
+                StorageError::KeyringLocked
+                | StorageError::KeyringUnavailable
+                | StorageError::KeyLost => error,
+                _ => StorageError::SourceCredentialUnavailable,
+            })?,
+        )),
+        None => None,
+    };
+    process_stage_candidate(
+        conn,
+        artifacts,
+        CandidateDraft {
+            candidate_id: request.candidate_id,
+            package,
+            plan,
+            profile,
+            required_grant,
+            diagnostics: Vec::new(),
+            runtime_credentials,
+            expected_installed_revision,
+            expires_at_ms: request.expires_at_ms,
+            trace_id: request.trace_id,
+            correlation_id: request.correlation_id,
+            created_at_ms: request.created_at_ms,
+        },
+    )
+    .await
+}
+
 fn validate_candidate_draft(draft: &CandidateDraft) -> Result<i64, StorageError> {
     validate_candidate_package_and_plan(&draft.package, &draft.plan)?;
     validate_candidate_identity(draft)?;

@@ -30,8 +30,8 @@ use lj_runtime::{
 use lj_storage::{
     AppendRequest, ArtifactInput, CandidateDraft, DEFAULT_CANDIDATE_TTL_MS, DeltaCommit,
     EventProjectionStorage, ExecutionFinish, ExecutionPin, ExecutionStart, ExecutionStatus,
-    GcState, InstallCandidateRequest, LibraryEntry, LibraryProgress, LibraryUpdate,
-    ProjectionDelta, ProjectionTombstones, ReplayExecutionStart, RetentionPolicy,
+    GcState, InstallCandidateRequest, LibraryEntry, LibraryProgress, LibraryProjectionEntry,
+    LibraryUpdate, ProjectionDelta, ProjectionTombstones, ReplayExecutionStart, RetentionPolicy,
     RuntimeCredentialMaterial, StorageConfig, StorageError, WRITER_CAPACITY,
 };
 use sea_orm::{
@@ -43,6 +43,16 @@ use uuid::Uuid;
 struct TestStatement {
     sql: String,
     values: Vec<Value>,
+}
+
+fn library_entry<'a>(
+    entries: &'a [LibraryProjectionEntry],
+    resource_id: &str,
+) -> &'a LibraryProjectionEntry {
+    entries
+        .iter()
+        .find(|entry| entry.resource_id.0 == resource_id)
+        .expect("library entry exists")
 }
 
 fn test_statement(sql: impl Into<String>) -> TestStatement {

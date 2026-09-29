@@ -1,11 +1,13 @@
+use crate::MigrationError;
 use sea_orm::{ConnectionTrait, DatabaseBackend, FromQueryResult, Statement, Value};
 use sea_orm_migration::prelude::DbErr;
 
-use crate::MigrationError;
-
 pub const CURRENT_SCHEMA_NAME: &str = "lanjing_current";
-pub const CURRENT_SCHEMA_VERSION: i64 = 1;
+pub const CURRENT_SCHEMA_VERSION: i64 = 3;
 const BASELINE_NAME: &str = "m20260729_000001_current_schema";
+const EFFECTIVE_SEMANTIC_NAME: &str = "m20260826_000002_rule_document_effective_semantics";
+const EFFECTIVE_HISTORY_NAME: &str = "m20260830_000003_rule_document_effective_history";
+const V1_SCHEMA_VERSION: i64 = 1;
 
 pub(crate) enum SchemaState {
     Empty,
@@ -106,35 +108,116 @@ where
     .await
 }
 
+/// 仅允许完整、未篡改的旧 current schema 进入加法 migration。
+pub(crate) async fn validate_upgrade_path<C>(connection: &C) -> Result<(), MigrationError>
+where
+    C: ConnectionTrait,
+{
+    let marker = marker(connection).await?;
+    if marker.name != CURRENT_SCHEMA_NAME {
+        return Err(MigrationError::CurrentSchemaRequired);
+    }
+    match marker.version {
+        CURRENT_SCHEMA_VERSION | 2 => {
+            if marker.version == 2 {
+                validate_migrations(connection, &[BASELINE_NAME, EFFECTIVE_SEMANTIC_NAME]).await?;
+                if marker.fingerprint != fingerprint(connection).await? {
+                    return Err(MigrationError::SchemaCorrupt(
+                        "schema fingerprint mismatch".to_string(),
+                    ));
+                }
+            }
+            Ok(())
+        }
+        V1_SCHEMA_VERSION => {
+            validate_migrations(connection, &[BASELINE_NAME]).await?;
+            if marker.fingerprint != fingerprint(connection).await? {
+                return Err(MigrationError::SchemaCorrupt(
+                    "schema fingerprint mismatch".to_string(),
+                ));
+            }
+            Ok(())
+        }
+        _ => Err(MigrationError::CurrentSchemaRequired),
+    }
+}
+
+/// migration 成功后才更新 marker；当前版本重开不会调用它。
+pub(crate) async fn refresh_to_version<C>(connection: &C, version: i64) -> Result<(), DbErr>
+where
+    C: ConnectionTrait,
+{
+    let fingerprint = fingerprint(connection).await?;
+    execute(
+        connection,
+        "UPDATE storage_schema_metadata SET schema_version = ?, schema_fingerprint = ? WHERE id = 1",
+        vec![version.into(), fingerprint.into()],
+    )
+    .await
+}
+
+#[cfg(test)]
+pub(crate) async fn set_version_for_test<C>(connection: &C, version: i64) -> Result<(), DbErr>
+where
+    C: ConnectionTrait,
+{
+    refresh_to_version(connection, version).await
+}
+
 pub(crate) async fn validate<C>(connection: &C) -> Result<(), MigrationError>
 where
     C: ConnectionTrait,
 {
-    let marker = query_one::<MarkerRow, _>(
+    let marker = marker(connection).await?;
+    if marker.name != CURRENT_SCHEMA_NAME || marker.version != CURRENT_SCHEMA_VERSION {
+        return Err(MigrationError::CurrentSchemaRequired);
+    }
+    validate_migrations(
+        connection,
+        &[
+            BASELINE_NAME,
+            EFFECTIVE_SEMANTIC_NAME,
+            EFFECTIVE_HISTORY_NAME,
+        ],
+    )
+    .await?;
+    if marker.fingerprint != fingerprint(connection).await? {
+        return Err(MigrationError::SchemaCorrupt(
+            "schema fingerprint mismatch".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+async fn marker<C>(connection: &C) -> Result<MarkerRow, MigrationError>
+where
+    C: ConnectionTrait,
+{
+    query_one::<MarkerRow, _>(
         connection,
         "SELECT schema_name AS name, schema_version AS version, schema_fingerprint AS fingerprint FROM storage_schema_metadata WHERE id = 1",
         Vec::new(),
     )
     .await?
-    .ok_or(MigrationError::CurrentSchemaRequired)?;
-    if marker.name != CURRENT_SCHEMA_NAME || marker.version != CURRENT_SCHEMA_VERSION {
-        return Err(MigrationError::CurrentSchemaRequired);
-    }
+    .ok_or(MigrationError::CurrentSchemaRequired)
+}
+
+async fn validate_migrations<C>(connection: &C, expected: &[&str]) -> Result<(), MigrationError>
+where
+    C: ConnectionTrait,
+{
     let migrations = query_all::<MigrationRow, _>(
         connection,
         "SELECT version, applied_at FROM seaql_migrations ORDER BY version",
     )
     .await?;
-    if migrations.len() != 1
-        || migrations[0].version != BASELINE_NAME
-        || migrations[0].applied_at <= 0
+    if migrations.len() != expected.len()
+        || migrations
+            .iter()
+            .zip(expected)
+            .any(|(migration, name)| migration.version != *name || migration.applied_at <= 0)
     {
         return Err(MigrationError::CurrentSchemaRequired);
-    }
-    if marker.fingerprint != fingerprint(connection).await? {
-        return Err(MigrationError::SchemaCorrupt(
-            "schema fingerprint mismatch".to_string(),
-        ));
     }
     Ok(())
 }

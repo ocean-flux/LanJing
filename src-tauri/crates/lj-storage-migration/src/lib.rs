@@ -2,6 +2,8 @@
 
 mod custom_schema;
 mod m20260729_000001_current_schema;
+mod m20260826_000002_rule_document_effective_semantics;
+mod m20260830_000003_rule_document_effective_history;
 mod schema_metadata;
 
 use sea_orm::{ConnectionTrait, DatabaseConnection};
@@ -15,7 +17,11 @@ pub struct Migrator;
 #[async_trait::async_trait]
 impl MigratorTrait for Migrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(m20260729_000001_current_schema::Migration)]
+        vec![
+            Box::new(m20260729_000001_current_schema::Migration),
+            Box::new(m20260826_000002_rule_document_effective_semantics::Migration),
+            Box::new(m20260830_000003_rule_document_effective_history::Migration),
+        ]
     }
 }
 
@@ -29,18 +35,21 @@ pub enum MigrationError {
     Database(#[from] DbErr),
 }
 
-/// 仅空数据库执行唯一 baseline；current 数据库只校验，不演进。
+/// 初始化 current schema；空数据库建立 baseline，受验证的旧版本执行加法升级。
 ///
 /// # Errors
 ///
-/// 数据库不是 current schema、schema 被篡改或底层数据库操作失败时返回错误。
+/// 数据库不是受支持 schema、schema 被篡改或底层数据库操作失败时返回错误。
 pub async fn bootstrap_current_schema(
     connection: &DatabaseConnection,
 ) -> Result<(), MigrationError> {
     let state = schema_metadata::classify(connection).await?;
     match state {
         schema_metadata::SchemaState::Empty => Migrator::up(connection, None).await?,
-        schema_metadata::SchemaState::Current => {}
+        schema_metadata::SchemaState::Current => {
+            schema_metadata::validate_upgrade_path(connection).await?;
+            Migrator::up(connection, None).await?;
+        }
         schema_metadata::SchemaState::Unknown => {
             return Err(MigrationError::CurrentSchemaRequired);
         }
@@ -58,14 +67,80 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use lj_capability::{IntentExport, StandardIntent};
+    use lj_compiler::validate;
+    use lj_rule_model::{
+        CapabilityManifest, ControlledMapper, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
+        FlowPortRef, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
+        MapperOutputKind, PolicyCapabilities, RuleDefinition, SourceIdentity, SystemCapabilities,
+    };
     use sea_orm::{ConnectionTrait, Database, DatabaseBackend, FromQueryResult, Statement};
     use sea_orm_migration::MigratorTrait;
+    use uuid::Uuid;
 
-    use super::{MigrationError, Migrator, bootstrap_current_schema};
+    use super::{MigrationError, Migrator, bootstrap_current_schema, schema_metadata};
 
     #[derive(FromQueryResult)]
     struct CountRow {
         count: i64,
+    }
+
+    #[derive(FromQueryResult)]
+    struct EffectiveSemanticRow {
+        revision: i64,
+        definition_hash: String,
+        definition_json: String,
+        manifest_json: String,
+        updated_at_ms: i64,
+    }
+
+    fn valid_definition_json() -> String {
+        let entry = Uuid::from_u128(1);
+        let mapper = Uuid::from_u128(2);
+        let definition = RuleDefinition::new(
+            SourceIdentity {
+                id: "native:source".to_string(),
+            },
+            "https://example.invalid",
+            BTreeMap::from([(StandardIntent::Search, IntentExport::new(entry, mapper))]),
+            FlowGraph {
+                nodes: vec![
+                    FlowNode::new(
+                        entry,
+                        FlowNodeConfig::Js(JsConfig {
+                            code: "[]".to_string(),
+                            output: JsOutputKind::Json,
+                        }),
+                    ),
+                    FlowNode::new(
+                        mapper,
+                        FlowNodeConfig::Mapper(ControlledMapper {
+                            output: MapperOutputKind::Items,
+                            identity_fields: vec!["url".to_string()],
+                        }),
+                    ),
+                ],
+                edges: vec![FlowEdge::new(
+                    FlowPortRef::new(entry, LINEAR_OUTPUT_HANDLE),
+                    FlowPortRef::new(mapper, LINEAR_INPUT_HANDLE),
+                )],
+            },
+            CapabilityManifest {
+                required: PolicyCapabilities {
+                    network: true,
+                    system: SystemCapabilities::default(),
+                },
+            },
+            vec!["url".to_string()],
+        );
+        let diagnostics = validate(&definition);
+        assert!(
+            diagnostics.is_empty(),
+            "fixture must be valid: {diagnostics:?}"
+        );
+        serde_json::to_string(&definition).expect("serialize valid definition")
     }
 
     async fn memory_database() -> sea_orm::DatabaseConnection {
@@ -87,17 +162,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn fresh_baseline_builds_31_tables_and_reopens() {
+    async fn fresh_baseline_builds_33_tables_and_reopens() {
         let connection = memory_database().await;
         bootstrap_current_schema(&connection)
             .await
             .expect("bootstrap current schema");
-        assert_eq!(application_table_count(&connection).await, 31);
+        assert_eq!(application_table_count(&connection).await, 33);
 
         bootstrap_current_schema(&connection)
             .await
             .expect("reopen current schema");
-        assert_eq!(application_table_count(&connection).await, 31);
+        assert_eq!(application_table_count(&connection).await, 33);
     }
 
     #[tokio::test]
@@ -113,11 +188,93 @@ mod tests {
 
         Migrator::up(&connection, None)
             .await
-            .expect("reapply baseline");
+            .expect("reapply current schema");
+        assert_eq!(application_table_count(&connection).await, 33);
+    }
+
+    #[tokio::test]
+    async fn v1_semantic_snapshot_migrates_to_effective_snapshot() {
+        let connection = memory_database().await;
         bootstrap_current_schema(&connection)
             .await
-            .expect("validate rebuilt schema");
-        assert_eq!(application_table_count(&connection).await, 31);
+            .expect("bootstrap current schema");
+        connection
+            .execute_unprepared("DROP TABLE rule_document_effective_semantics")
+            .await
+            .expect("remove v2 table");
+        connection
+            .execute_unprepared("DROP TABLE rule_document_effective_semantic_history")
+            .await
+            .expect("remove v3 table");
+        connection
+            .execute_unprepared(
+                "DELETE FROM seaql_migrations WHERE version = 'm20260826_000002_rule_document_effective_semantics'",
+            )
+            .await
+            .expect("remove v2 migration marker");
+        connection
+            .execute_unprepared(
+                "DELETE FROM seaql_migrations WHERE version = 'm20260830_000003_rule_document_effective_history'",
+            )
+            .await
+            .expect("remove v3 migration marker");
+        schema_metadata::set_version_for_test(&connection, 1)
+            .await
+            .expect("mark v1 schema");
+        let valid_definition = valid_definition_json().replace('\'', "''");
+        connection
+            .execute_unprepared(
+                "INSERT INTO rule_documents (document_id, format, title, source_identity, state, semantic_revision, layout_revision, link_revision, created_at_ms, updated_at_ms) VALUES ('effective-document', 'native_rule', 'Title', 'native:source', 'draft', 7, 0, 0, 100, 200)",
+            )
+            .await
+            .expect("seed v1 document");
+        connection
+            .execute_unprepared(&format!(
+                "INSERT INTO rule_document_semantics (document_id, revision, definition_hash, definition_json, manifest_json, updated_at_ms) VALUES ('effective-document', 7, 'definition-hash', '{valid_definition}', '{{\"schema_version\":1,\"slots\":[]}}', 200)",
+            ))
+            .await
+            .expect("seed v1 semantic snapshot");
+        connection
+            .execute_unprepared(
+                "INSERT INTO rule_documents (document_id, format, title, source_identity, state, semantic_revision, layout_revision, link_revision, created_at_ms, updated_at_ms) VALUES ('draft-document', 'native_rule', 'Invalid', 'native:draft', 'draft', 3, 0, 0, 100, 200)",
+            )
+            .await
+            .expect("seed invalid v1 document");
+        connection
+            .execute_unprepared(
+                "INSERT INTO rule_document_semantics (document_id, revision, definition_hash, definition_json, manifest_json, updated_at_ms) VALUES ('draft-document', 3, 'invalid-hash', '{\"contract\":\"rule_definition\"}', '{\"schema_version\":1,\"slots\":[]}', 200)",
+            )
+            .await
+            .expect("seed invalid v1 semantic snapshot");
+
+        bootstrap_current_schema(&connection)
+            .await
+            .expect("upgrade v1 schema");
+
+        let row = connection
+            .query_one_raw(Statement::from_string(
+                DatabaseBackend::Sqlite,
+                "SELECT revision, definition_hash, definition_json, manifest_json, updated_at_ms FROM rule_document_effective_semantics WHERE document_id = 'effective-document'",
+            ))
+            .await
+            .expect("read effective snapshot")
+            .map(|row| EffectiveSemanticRow::from_query_result(&row, "").expect("decode row"))
+            .expect("effective snapshot");
+        assert_eq!(row.revision, 7);
+        assert_eq!(row.definition_hash, "definition-hash");
+        assert_eq!(row.definition_json, valid_definition_json());
+        assert_eq!(row.manifest_json, r#"{"schema_version":1,"slots":[]}"#);
+        assert_eq!(row.updated_at_ms, 200);
+        let invalid_count = connection
+            .query_one_raw(Statement::from_string(
+                DatabaseBackend::Sqlite,
+                "SELECT COUNT(*) AS count FROM rule_document_effective_semantics WHERE document_id = 'draft-document'",
+            ))
+            .await
+            .expect("count invalid effective snapshot")
+            .map(|row| CountRow::from_query_result(&row, "").expect("decode count").count)
+            .expect("invalid count row");
+        assert_eq!(invalid_count, 0);
     }
 
     #[tokio::test]

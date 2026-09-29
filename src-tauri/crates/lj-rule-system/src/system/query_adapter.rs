@@ -12,6 +12,7 @@ use lj_storage::{
     InstalledSourceRecord as StorageInstalledSourceRecord, LibraryEntry as StorageLibraryEntry,
     LibraryProgress as StorageLibraryProgress, LibraryProjection as StorageLibraryProjection,
     LibraryProjectionEntry as StorageLibraryProjectionEntry, LibraryUpdate as StorageLibraryUpdate,
+    SourceRevisionRecord as StorageSourceRevisionRecord,
 };
 use uuid::Uuid;
 
@@ -21,7 +22,7 @@ use super::{RuleSystem, now_millis};
 use crate::{
     ExecutionEvent, ExecutionId, InstalledSource, LibraryEntryUpdate, LibraryProgress,
     LibraryProjection, LibraryProjectionEntry, LibraryUpdateReceipt, MediaAssetPage, MediaUnitPage,
-    RuleError, RuleErrorStage,
+    RuleError, RuleErrorStage, SourceId, SourceRevisionSummary,
 };
 
 /// 产品面分页默认页大小。
@@ -48,6 +49,39 @@ impl RuleSystem {
         Ok(sources
             .into_iter()
             .map(installed_source_from_record)
+            .collect())
+    }
+
+    /// 按新到旧读取来源的不可变 revision 安全摘要。
+    ///
+    /// # Errors
+    ///
+    /// 来源 ID 为空、历史来源不存在或 C2 读取失败时返回 [`RuleError`]。
+    pub async fn list_source_revisions(
+        &self,
+        source_id: SourceId,
+    ) -> Result<Vec<SourceRevisionSummary>, RuleError> {
+        let trace_id = super::trace_id();
+        let source_identity = source_id.as_identity().to_string();
+        if source_identity.trim().is_empty() {
+            return Err(RuleError::new(
+                RuleErrorStage::Validation,
+                "source_id_invalid",
+                "来源 ID 不能为空",
+                trace_id,
+                false,
+                Vec::new(),
+            ));
+        }
+        let revisions = self
+            .state
+            .storage
+            .list_source_revisions(source_identity)
+            .await
+            .map_err(|error| storage_error(&error, RuleErrorStage::Persistence, &trace_id))?;
+        Ok(revisions
+            .into_iter()
+            .map(source_revision_from_storage)
             .collect())
     }
 
@@ -346,7 +380,21 @@ fn installed_source_from_record(source: StorageInstalledSourceRecord) -> Install
         source_id: crate::SourceId::from_identity(source.source_identity),
         version: source.version,
         profile: source.profile,
+        grant: crate::CapabilityGrant::from_policy(source.grant),
         revision: source.source_revision,
+    }
+}
+
+fn source_revision_from_storage(record: StorageSourceRevisionRecord) -> SourceRevisionSummary {
+    SourceRevisionSummary {
+        source_id: SourceId::from_identity(record.source_identity),
+        revision: record.source_revision,
+        version: record.version,
+        profile: record.profile,
+        grant: crate::CapabilityGrant::from_policy(record.grant),
+        definition_hash: record.definition_hash,
+        plan_hash: record.plan_hash,
+        installed_at_ms: record.installed_at_ms,
     }
 }
 

@@ -180,11 +180,18 @@ pub(super) fn storage_error(
         | StorageError::CandidateUnavailable
         | StorageError::CandidateTampered
         | StorageError::CandidateStale
-        | StorageError::CandidateSchemaMismatch => candidate_storage_contract(error),
+        | StorageError::CandidateSchemaMismatch
+        | StorageError::SourceRevisionMissing => candidate_storage_contract(error),
         StorageError::DocumentMissing => (
             RuleErrorStage::Persistence,
             "document_not_found",
             "文档不存在",
+            false,
+        ),
+        StorageError::RuleRevisionMissing => (
+            RuleErrorStage::Persistence,
+            "rule_revision_not_found",
+            "请求的规则历史 revision 不存在",
             false,
         ),
         StorageError::ContractSchemaUnsupported { .. }
@@ -232,6 +239,10 @@ fn candidate_storage_contract(
         StorageError::CandidateSchemaMismatch => (
             "candidate_schema_mismatch",
             "candidate schema 已不受当前版本支持",
+        ),
+        StorageError::SourceRevisionMissing => (
+            "source_revision_not_found",
+            "请求的来源历史 revision 不存在",
         ),
         _ => unreachable!("candidate storage error category is exhaustive"),
     };

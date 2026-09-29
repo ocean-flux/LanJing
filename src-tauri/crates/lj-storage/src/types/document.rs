@@ -5,7 +5,6 @@
 //! 立即写入 secret artifact 后即丢弃，绝不进入任何持久化 JSON 或日志 DTO。
 
 use serde::{Deserialize, Serialize};
-
 /// 创建原生规则文档的请求。
 ///
 /// `initial` 携带可选的初始 semantic/layout 快照；`provenance` 可选，供第三方导入
@@ -33,8 +32,10 @@ pub struct CreateDocumentRequest {
 /// 创建时的初始内容快照。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DocumentInitial {
-    /// 初始 semantic 快照；不提供则 `semantic_revision` 从 0 开始。
+    /// 初始草稿 semantic 快照；不提供则 `semantic_revision` 从 0 开始。
     pub semantic: Option<SemanticSnapshot>,
+    /// 初始 Effective Rule Revision；必须与初始草稿 semantic 相同。
+    pub effective_semantic: Option<SemanticSnapshot>,
     /// 初始 layout 快照；不提供则 `layout_revision` 从 0 开始。
     pub layout: Option<LayoutSnapshot>,
 }
@@ -79,7 +80,10 @@ pub struct ProvenanceCreateInput {
 }
 
 /// 保存文档内容（semantic/layout 分域乐观并发）的请求。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// semantic 保存可携带一次性凭证明文，所以该请求仅在 Rust writer 内部传递，不能序列化或
+/// 自动格式化到日志。
+#[derive(Clone, PartialEq, Eq)]
 pub struct SaveDocumentRequest {
     /// 目标文档 ID。
     pub document_id: String,
@@ -93,8 +97,44 @@ pub struct SaveDocumentRequest {
     pub occurred_at_ms: i64,
 }
 
+/// semantic 保存后的持久化状态。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SemanticActivation {
+    /// 保存为 Rule Draft Revision，不替换现有 Effective Rule Revision。
+    Draft,
+    /// 保存后替换 Effective Rule Revision。
+    Effective,
+}
+
+/// 文档语义保存时一次性传入的凭证变更类型。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DocumentCredentialMutationAction {
+    /// 用一次性明文写入新的 secret artifact。
+    Replace,
+    /// 移除当前 Draft Revision 中的槽位。
+    Clear,
+}
+
+/// 文档语义保存时的一次性凭证变更。
+///
+/// `value` 只在 writer transaction 内加密，故意不实现 `Debug` 或 serde，避免它进入日志、
+/// IPC 或持久化 DTO。
+#[derive(Clone, PartialEq, Eq)]
+pub struct DocumentCredentialMutation {
+    /// 凭证所在 Flow 节点 ID。
+    pub node_id: String,
+    /// 节点配置内指向 secret-capable 字段的 JSON pointer。
+    pub json_pointer: String,
+    /// 凭证逻辑名（敏感名称策略由 `RuleSystem` 层负责）。
+    pub logical_name: String,
+    /// 变更类型。
+    pub action: DocumentCredentialMutationAction,
+    /// replace 的一次性明文值；clear 必须为空。
+    pub value: Option<String>,
+}
+
 /// semantic 域保存输入。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct SemanticSaveInput {
     /// 客户端所知的已保存 revision；等于当前 revision 才接受并写 current+1。
     pub expected_revision: i64,
@@ -102,8 +142,10 @@ pub struct SemanticSaveInput {
     pub definition_json: String,
     /// definition 的 BLAKE3 hash。
     pub definition_hash: String,
-    /// credential manifest JSON 文本。
-    pub manifest_json: String,
+    /// 一次性凭证变更；由同一 writer transaction 与 semantic snapshot 一起提交。
+    pub credential_mutations: Vec<DocumentCredentialMutation>,
+    /// 成功保存后是否替换 Effective Rule Revision。
+    pub activation: SemanticActivation,
 }
 
 /// layout 域保存输入。
@@ -126,13 +168,52 @@ pub struct SaveDocumentOutcome {
     pub layout: Option<DomainSaveOutcome>,
 }
 
-/// 单个域的保存结果：成功返回新 revision；冲突返回当前 revision 与冲突详情。
+/// Effective Rule Revision 的只读安全摘要。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuleRevisionHistoryRecord {
+    /// Effective Rule Revision 编号。
+    pub revision: i64,
+    /// canonical Definition BLAKE3。
+    pub definition_hash: String,
+    /// 该版本成为 Effective 的时刻（UTC epoch milliseconds）。
+    pub effective_at_ms: i64,
+}
+
+/// 从历史 Effective Rule Revision 创建新 Draft 的请求。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RestoreDocumentRevisionRequest {
+    /// 目标文档 ID。
+    pub document_id: String,
+    /// 要恢复的历史 Effective Rule Revision。
+    pub revision: i64,
+    /// 客户端已知的当前 Draft Revision。
+    pub expected_revision: i64,
+    /// 安全 trace 标识。
+    pub trace_id: String,
+    /// 发生时刻（UTC epoch milliseconds）。
+    pub occurred_at_ms: i64,
+}
+
+/// 历史恢复结果；恢复只产生 Draft，不会直接替换 Effective。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RestoreDocumentRevisionOutcome {
+    /// 目标文档 ID。
+    pub document_id: String,
+    /// 成功创建的 Draft Revision；冲突时为当前 revision。
+    pub revision: i64,
+    /// 当前 Draft Revision 冲突。
+    pub conflict: Option<RevisionConflict>,
+}
+
+/// 单个域的保存结果：成功返回新 revision；冲突返回当前已保存 revision。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DomainSaveOutcome {
     /// 成功时为写入后的 revision，冲突时为当前已保存 revision。
     pub revision: i64,
     /// 乐观并发冲突；`None` 表示该域已成功写入。
     pub conflict: Option<RevisionConflict>,
+    /// semantic 域成功写入后的状态；布局域和冲突时为空。
+    pub activation: Option<SemanticActivation>,
 }
 
 /// 单域乐观并发冲突详情。
@@ -169,13 +250,17 @@ pub struct DocumentSummary {
     pub updated_at_ms: i64,
 }
 
-/// 文档详情；summary 与当前各域快照在同一只读 transaction 取得。
+/// 文档详情；summary 与当前各域快照在同一只读 transaction 内取得。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DocumentDetail {
     /// 文档摘要。
     pub summary: DocumentSummary,
-    /// 当前 semantic 快照；未保存过则为 `None`。
+    /// 当前草稿 semantic 快照；未保存过则为 `None`。
     pub semantic: Option<SemanticSnapshot>,
+    /// 最近一次有效 semantic 快照；从未生效则为 `None`。
+    pub effective_semantic: Option<SemanticSnapshot>,
+    /// 当前 Effective Rule Revision 的只读摘要。
+    pub effective_summary: Option<RuleRevisionHistoryRecord>,
     /// 当前 layout 快照；未保存过则为 `None`。
     pub layout: Option<LayoutSnapshot>,
     /// 导入 provenance 摘要；原生创建（无导入）为 `None`。
@@ -222,43 +307,6 @@ pub struct DeleteDocumentRequest {
     pub document_id: String,
     /// 文档处于 `linked` 状态时要求显式确认；`false` 触发守卫错误。
     pub confirm_linked: bool,
-    /// 安全 trace 标识。
-    pub trace_id: String,
-    /// 发生时刻（UTC epoch milliseconds）。
-    pub occurred_at_ms: i64,
-}
-
-/// 写文档凭证槽位 secret 的请求。
-///
-/// `value` 为一次性明文，立即加密为 secret artifact 后丢弃；本类型刻意不实现
-/// `Debug`，避免明文被整值记录。
-#[derive(Clone, PartialEq, Eq)]
-pub struct WriteDocumentCredentialSecretRequest {
-    /// 目标文档 ID。
-    pub document_id: String,
-    /// 凭证所在 Flow 节点 ID。
-    pub node_id: String,
-    /// 节点配置内指向 secret-capable 字段的 JSON pointer。
-    pub json_pointer: String,
-    /// 凭证逻辑名（`SensitiveNamePolicy` 校验由 `RuleSystem` 层负责）。
-    pub logical_name: String,
-    /// 一次性明文凭证值。
-    pub value: String,
-    /// 安全 trace 标识。
-    pub trace_id: String,
-    /// 发生时刻（UTC epoch milliseconds）。
-    pub occurred_at_ms: i64,
-}
-
-/// 清除文档凭证槽位 secret owner 的请求；不存在视为幂等成功。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ClearDocumentCredentialSecretRequest {
-    /// 目标文档 ID。
-    pub document_id: String,
-    /// 凭证所在 Flow 节点 ID。
-    pub node_id: String,
-    /// 节点配置内指向 secret-capable 字段的 JSON pointer。
-    pub json_pointer: String,
     /// 安全 trace 标识。
     pub trace_id: String,
     /// 发生时刻（UTC epoch milliseconds）。

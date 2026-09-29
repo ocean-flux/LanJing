@@ -140,3 +140,43 @@ pub struct InstalledSourceRecord {
     /// 当前权威 source revision。
     pub source_revision: u64,
 }
+
+/// 已安装来源的不可变 revision 安全摘要。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceRevisionRecord {
+    /// 稳定来源身份。
+    pub source_identity: String,
+    /// source stream revision。
+    pub source_revision: u64,
+    /// Definition/package version。
+    pub version: String,
+    /// 来源展示资料。
+    pub profile: SourceProfile,
+    /// 该 revision 安装时批准的 capability。
+    pub grant: PolicyCapabilities,
+    /// canonical Definition BLAKE3。
+    pub definition_hash: String,
+    /// immutable Plan BLAKE3。
+    pub plan_hash: String,
+    /// 安装时刻。
+    pub installed_at_ms: i64,
+}
+
+/// 从历史 source revision 准备新 candidate 的请求。
+#[derive(Debug, Clone)]
+pub struct SourceRollbackRequest {
+    /// 新 candidate 的 opaque ID。
+    pub candidate_id: Uuid,
+    /// 稳定来源身份。
+    pub source_identity: String,
+    /// 要恢复的历史 revision。
+    pub source_revision: u64,
+    /// 可选 candidate 到期时刻。
+    pub expires_at_ms: Option<i64>,
+    /// 安全 trace 标识。
+    pub trace_id: String,
+    /// 可选关联 ID。
+    pub correlation_id: Option<Uuid>,
+    /// candidate 创建时刻。
+    pub created_at_ms: i64,
+}

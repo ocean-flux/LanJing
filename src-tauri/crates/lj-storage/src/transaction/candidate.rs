@@ -3,7 +3,8 @@
 use crate::artifact::ArtifactStore;
 use crate::database::DatabaseSession;
 use crate::types::{
-    CandidateDraft, CandidateSummary, InstallCandidateRequest, InstalledSource, StorageError,
+    CandidateDraft, CandidateSummary, InstallCandidateRequest, InstalledSource,
+    SourceRollbackRequest, StorageError,
 };
 
 pub(crate) async fn stage(
@@ -18,6 +19,25 @@ pub(crate) async fn stage(
                 transaction,
                 &artifacts,
                 draft,
+            )
+            .await
+        })
+    })
+    .await
+}
+
+pub(crate) async fn stage_source_rollback(
+    connection: &DatabaseSession,
+    artifacts: &ArtifactStore,
+    request: SourceRollbackRequest,
+) -> Result<CandidateSummary, StorageError> {
+    let artifacts = artifacts.clone();
+    super::run(connection, move |transaction| {
+        Box::pin(async move {
+            crate::repository::candidate_source::process_stage_source_rollback(
+                transaction,
+                &artifacts,
+                request,
             )
             .await
         })

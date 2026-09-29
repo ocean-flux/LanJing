@@ -13,7 +13,7 @@ use crate::repository::event::database_error;
 use crate::repository::secret::read_owned_secret;
 use crate::types::{
     CreateDocumentRequest, DocumentDetail, DocumentSummary, LayoutSnapshot, ProvenanceCreateInput,
-    ProvenanceSummary, SecretArtifactId, SemanticSnapshot, StorageError,
+    ProvenanceSummary, RuleRevisionHistoryRecord, SecretArtifactId, SemanticSnapshot, StorageError,
 };
 
 /// provenance 原文 secret 的 owner kind。
@@ -43,6 +43,22 @@ pub(crate) struct SemanticRow {
     pub(crate) definition_hash: String,
     pub(crate) definition_json: String,
     pub(crate) manifest_json: String,
+    pub(crate) updated_at_ms: i64,
+}
+
+#[derive(FromQueryResult)]
+pub(crate) struct EffectiveHistoryRow {
+    pub(crate) revision: i64,
+    pub(crate) definition_hash: String,
+    pub(crate) definition_json: String,
+    pub(crate) manifest_json: String,
+}
+
+#[derive(FromQueryResult)]
+struct EffectiveHistorySummaryRow {
+    revision: i64,
+    definition_hash: String,
+    effective_at_ms: i64,
 }
 
 #[derive(FromQueryResult)]
@@ -117,6 +133,20 @@ pub(crate) async fn document_detail(
             definition_hash: value.definition_hash,
             manifest_json: value.manifest_json,
         });
+    let effective_row = effective_semantic_row(conn, document_id).await?;
+    let effective_summary = effective_row
+        .as_ref()
+        .map(|value| RuleRevisionHistoryRecord {
+            revision: value.revision,
+            definition_hash: value.definition_hash.clone(),
+            effective_at_ms: value.updated_at_ms,
+        });
+    let effective_semantic = effective_row.map(|value| SemanticSnapshot {
+        revision: value.revision,
+        definition_json: value.definition_json,
+        definition_hash: value.definition_hash,
+        manifest_json: value.manifest_json,
+    });
     let layout = layout_row(conn, document_id)
         .await?
         .map(|value| LayoutSnapshot {
@@ -135,6 +165,8 @@ pub(crate) async fn document_detail(
     Ok(Some(DocumentDetail {
         summary: summary_from_row(row),
         semantic,
+        effective_semantic,
+        effective_summary,
         layout,
         provenance,
     }))
@@ -145,7 +177,7 @@ pub(crate) async fn semantic_row(
     document_id: &str,
 ) -> Result<Option<SemanticRow>, StorageError> {
     statement(
-        "SELECT revision, definition_hash, definition_json, manifest_json FROM rule_document_semantics WHERE document_id = ?",
+        "SELECT revision, definition_hash, definition_json, manifest_json, updated_at_ms FROM rule_document_semantics WHERE document_id = ?",
     )
     .bind(document_id)
     .get_result::<SemanticRow>(conn)
@@ -154,6 +186,59 @@ pub(crate) async fn semantic_row(
     .map_err(database_error)
 }
 
+/// 读取最近一次有效 semantic 快照。
+pub(crate) async fn effective_semantic_row(
+    conn: &mut DatabaseSession,
+    document_id: &str,
+) -> Result<Option<SemanticRow>, StorageError> {
+    statement(
+        "SELECT revision, definition_hash, definition_json, manifest_json, updated_at_ms FROM rule_document_effective_semantics WHERE document_id = ?",
+    )
+    .bind(document_id)
+    .get_result::<SemanticRow>(conn)
+    .await
+    .optional()
+    .map_err(database_error)
+}
+
+/// 按最新 effective 时间读取规则历史安全摘要。
+pub(crate) async fn list_effective_history(
+    conn: &mut DatabaseSession,
+    document_id: &str,
+) -> Result<Vec<RuleRevisionHistoryRecord>, StorageError> {
+    let rows = statement(
+        "SELECT revision, definition_hash, updated_at_ms AS effective_at_ms FROM rule_document_effective_semantic_history WHERE document_id = ? ORDER BY effective_at_ms DESC, revision DESC",
+    )
+    .bind(document_id)
+    .load::<EffectiveHistorySummaryRow>(conn)
+    .await
+    .map_err(database_error)?;
+    Ok(rows
+        .into_iter()
+        .map(|row| RuleRevisionHistoryRecord {
+            revision: row.revision,
+            definition_hash: row.definition_hash,
+            effective_at_ms: row.effective_at_ms,
+        })
+        .collect())
+}
+
+/// 读取指定 effective 历史的完整内部快照；完整 Definition 不直接暴露给读 API。
+pub(crate) async fn effective_history_row(
+    conn: &mut DatabaseSession,
+    document_id: &str,
+    revision: i64,
+) -> Result<Option<EffectiveHistoryRow>, StorageError> {
+    statement(
+        "SELECT revision, definition_hash, definition_json, manifest_json FROM rule_document_effective_semantic_history WHERE document_id = ? AND revision = ?",
+    )
+    .bind(document_id)
+    .bind(revision)
+    .get_result::<EffectiveHistoryRow>(conn)
+    .await
+    .optional()
+    .map_err(database_error)
+}
 pub(crate) async fn layout_row(
     conn: &mut DatabaseSession,
     document_id: &str,
@@ -256,6 +341,49 @@ pub(crate) async fn insert_semantic(
     Ok(())
 }
 
+/// 在 writer transaction 内替换最近一次 Effective Rule Revision。
+pub(crate) async fn upsert_effective_semantic(
+    conn: &mut DatabaseSession,
+    document_id: &str,
+    snapshot: &SemanticSnapshot,
+    updated_at_ms: i64,
+) -> Result<(), StorageError> {
+    statement(
+        "INSERT INTO rule_document_effective_semantics (document_id, revision, definition_hash, definition_json, manifest_json, updated_at_ms) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(document_id) DO UPDATE SET revision = excluded.revision, definition_hash = excluded.definition_hash, definition_json = excluded.definition_json, manifest_json = excluded.manifest_json, updated_at_ms = excluded.updated_at_ms",
+    )
+    .bind(document_id)
+    .bind(snapshot.revision)
+    .bind(&snapshot.definition_hash)
+    .bind(&snapshot.definition_json)
+    .bind(&snapshot.manifest_json)
+    .bind(updated_at_ms)
+    .execute(conn)
+    .await
+    .map_err(database_error)?;
+    Ok(())
+}
+
+/// 在 writer transaction 内追加一个不可变 Effective Rule Revision 历史行。
+pub(crate) async fn insert_effective_history(
+    conn: &mut DatabaseSession,
+    document_id: &str,
+    snapshot: &SemanticSnapshot,
+    effective_at_ms: i64,
+) -> Result<(), StorageError> {
+    statement(
+        "INSERT INTO rule_document_effective_semantic_history (document_id, revision, definition_hash, definition_json, manifest_json, updated_at_ms) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(document_id)
+    .bind(snapshot.revision)
+    .bind(&snapshot.definition_hash)
+    .bind(&snapshot.definition_json)
+    .bind(&snapshot.manifest_json)
+    .bind(effective_at_ms)
+    .execute(conn)
+    .await
+    .map_err(database_error)?;
+    Ok(())
+}
 /// 在 writer transaction 内插入 layout 快照行。
 pub(crate) async fn insert_layout(
     conn: &mut DatabaseSession,
@@ -416,10 +544,10 @@ pub(crate) async fn rename_row(
         .ok_or(StorageError::DocumentMissing)
 }
 
-/// 释放文档的全部 secret owner：provenance 原文 owner + 各凭证槽位 owner。
+/// 释放文档的全部 secret owner：provenance 原文 owner + 各 revision 的凭证槽位 owner。
 ///
-/// 凭证槽位 `owner_id` 编码为 `{document_id}::{node_id}::{json_pointer}`；文档 ID 恒为
-/// `native:<uuid>`（不含 `::`），前缀匹配不会跨文档误删。
+/// 凭证槽位 `owner_id` 以 document ID 为前缀；文档 ID 恒为 `native:<uuid>`（不含 `::`），
+/// 前缀匹配不会跨文档误删。
 pub(crate) async fn release_document_secret_owners(
     conn: &mut DatabaseSession,
     document_id: &str,
@@ -460,9 +588,37 @@ pub(crate) async fn delete_document_rows(
     Ok(())
 }
 
-/// 构造凭证槽位 `owner_id`；与 `release_document_secret_owners` 的编码一致。
-pub(crate) fn credential_owner_id(document_id: &str, node_id: &str, json_pointer: &str) -> String {
-    format!("{document_id}::{node_id}::{json_pointer}")
+/// 构造 revision-scoped 凭证槽位 `owner_id`；与文档删除时的前缀释放编码一致。
+pub(crate) fn credential_owner_id(
+    document_id: &str,
+    scope: &str,
+    revision: i64,
+    node_id: &str,
+    json_pointer: &str,
+) -> String {
+    format!("{document_id}::{scope}::{revision}::{node_id}::{json_pointer}")
+}
+
+/// 释放某个 Draft/Effective Rule Revision 持有的全部凭证 owner。
+pub(crate) async fn release_document_revision_secret_owners(
+    conn: &mut DatabaseSession,
+    document_id: &str,
+    scope: &str,
+    revision: i64,
+) -> Result<(), StorageError> {
+    let rows = statement(
+        "SELECT owner_id FROM secret_artifact_owners WHERE owner_kind = ? AND owner_id LIKE ?",
+    )
+    .bind(CREDENTIAL_OWNER_KIND)
+    .bind(format!("{document_id}::{scope}::{revision}::%"))
+    .load::<OwnerIdRow>(conn)
+    .await
+    .map_err(database_error)?;
+    for row in rows {
+        crate::repository::secret::release_secret_owner(conn, CREDENTIAL_OWNER_KIND, &row.owner_id)
+            .await?;
+    }
+    Ok(())
 }
 
 pub(crate) fn summary_from_row(row: DocumentRow) -> DocumentSummary {

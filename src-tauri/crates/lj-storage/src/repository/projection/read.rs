@@ -1,4 +1,4 @@
-/// 在同一只读 transaction 取得 library global sequence 和按稳定 ID 排序的 entries。
+/// 在同一只读 transaction 取得 library global sequence 和按用户状态稳定排序的 entries。
 pub(crate) async fn library_projection_sync(
     conn: &mut DatabaseSession,
 ) -> Result<LibraryProjection, StorageError> {
@@ -14,7 +14,7 @@ async fn list_library_projection_entries_sync(
     conn: &mut DatabaseSession,
 ) -> Result<Vec<LibraryProjectionEntry>, StorageError> {
     let rows = statement(
-        "SELECT library_projection.resource_id, library_projection.favorite, library_projection.pinned, library_projection.last_opened_at, library_projection.progress_json, library_projection.updated_global_seq, COALESCE(event_streams.version, -1) AS revision FROM library_projection LEFT JOIN event_streams ON event_streams.stream_id = 'library/' || library_projection.resource_id ORDER BY library_projection.resource_id ASC",
+        "SELECT library_projection.resource_id, library_projection.favorite, library_projection.pinned, library_projection.last_opened_at, library_projection.progress_json, library_projection.updated_global_seq, COALESCE(event_streams.version, -1) AS revision FROM library_projection LEFT JOIN event_streams ON event_streams.stream_id = 'library/' || library_projection.resource_id ORDER BY library_projection.pinned DESC, library_projection.favorite DESC, library_projection.last_opened_at IS NULL ASC, library_projection.last_opened_at DESC, library_projection.resource_id ASC",
     )
     .load::<LibraryProjectionRow>(conn).await
     .map_err(database_error)?;

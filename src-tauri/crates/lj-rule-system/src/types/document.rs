@@ -133,6 +133,16 @@ pub struct RevisionConflict {
     pub current: i64,
 }
 
+/// 语义保存后的用户可见状态。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SemanticActivation {
+    /// 当前 semantic snapshot 仅是可继续编辑的草稿。
+    Draft,
+    /// 当前 semantic snapshot 已成为 Effective Rule Revision。
+    Effective,
+}
+
 /// 单域保存结果。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DomainOutcome {
@@ -141,6 +151,9 @@ pub struct DomainOutcome {
     /// revision 冲突描述；仅当该域写入被拒绝时存在。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub conflict: Option<RevisionConflict>,
+    /// semantic 域成功保存后的激活状态；布局域和冲突时为空。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub activation: Option<SemanticActivation>,
 }
 
 /// 保存结果。
@@ -152,6 +165,41 @@ pub struct SaveNativeRuleDocumentOutcome {
     pub semantic: Option<DomainOutcome>,
     /// 布局域结果。
     pub layout: Option<DomainOutcome>,
+}
+
+/// Effective Rule Revision 的只读安全摘要。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NativeRuleRevisionSummary {
+    /// Effective Rule Revision 编号。
+    pub revision: i64,
+    /// canonical Definition BLAKE3。
+    pub definition_hash: String,
+    /// 该版本成为 Effective 的时刻（UTC epoch milliseconds）。
+    pub effective_at_ms: i64,
+}
+
+/// 从 Effective 历史创建新 Draft 的请求。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RestoreNativeRuleRevisionRequest {
+    /// 目标文档 ID。
+    pub document_id: String,
+    /// 要恢复的历史 Effective Rule Revision。
+    pub revision: i64,
+    /// 客户端已知的当前 Draft Revision。
+    pub expected_revision: i64,
+}
+
+/// 历史恢复结果；恢复只产生 Draft，不会直接替换 Effective。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RestoreNativeRuleRevisionOutcome {
+    /// 目标文档 ID。
+    pub document_id: String,
+    /// 写入后的 Draft Revision；冲突时保持当前 revision。
+    pub revision: i64,
+    /// Draft revision 冲突。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub conflict: Option<RevisionConflict>,
 }
 
 /// 校验 native rule document 请求。
@@ -181,16 +229,6 @@ pub struct ValidateNativeRuleDocumentPreview {
     pub profile: Option<lj_media::SourceProfile>,
     /// 所需最小能力。
     pub capability: lj_rule_model::PolicyCapabilities,
-}
-
-/// prepare native rule document 请求。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PrepareNativeRuleDocumentRequest {
-    /// 文档 ID。
-    pub document_id: String,
-    /// 客户端已知的语义 revision。
-    pub revision: i64,
 }
 
 /// native rule document 摘要（镜像 storage `DocumentSummary`）。
@@ -231,11 +269,15 @@ pub struct GetNativeRuleDocumentRequest {
 pub struct NativeRuleDocumentDetail {
     /// 文档摘要。
     pub summary: NativeRuleDocumentSummary,
-    /// 已保存语义 revision（与摘要冗余，便于无摘要时区分）。
+    /// 已保存草稿语义 revision（与摘要冗余，便于无摘要时区分）。
     pub semantic_revision: i64,
+    /// 最近一次有效语义的 revision；没有通过校验的版本时为空。
+    pub effective_semantic_revision: Option<i64>,
+    /// 当前 Effective Rule Revision 的只读摘要。
+    pub effective_summary: Option<NativeRuleRevisionSummary>,
     /// 已保存布局 revision。
     pub layout_revision: i64,
-    /// 当前已保存的脱敏 Definition；凭证值不在 Definition 中。
+    /// 当前已保存的脱敏草稿 Definition；凭证值不在 Definition 中。
     pub definition: Option<RuleDefinition>,
     /// 当前已保存的作者布局 JSON；布局不进入语义 hash。
     pub layout_json: Option<String>,

@@ -134,6 +134,29 @@ pub struct InstalledSource {
     pub version: String,
     /// 来源资料。
     pub profile: SourceProfile,
+    /// 当前 source revision 已批准的 capability。
+    pub grant: CapabilityGrant,
     /// source stream revision。
     pub revision: u64,
+}
+
+/// 已安装来源的不可变 revision 安全摘要。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceRevisionSummary {
+    /// 稳定来源 ID。
+    pub source_id: SourceId,
+    /// source stream revision。
+    pub revision: u64,
+    /// Definition/package version。
+    pub version: String,
+    /// 来源展示资料。
+    pub profile: SourceProfile,
+    /// 该 revision 安装时批准的 capability。
+    pub grant: CapabilityGrant,
+    /// canonical Definition BLAKE3。
+    pub definition_hash: String,
+    /// immutable Plan BLAKE3。
+    pub plan_hash: String,
+    /// 安装时刻。
+    pub installed_at_ms: i64,
 }

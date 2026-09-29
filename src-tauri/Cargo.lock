@@ -3583,11 +3583,16 @@ name = "lj-storage-migration"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "lj-capability",
+ "lj-compiler",
+ "lj-rule-model",
  "lj-storage-entity",
  "sea-orm",
  "sea-orm-migration",
+ "serde_json",
  "thiserror 2.0.19",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
