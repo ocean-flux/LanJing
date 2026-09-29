@@ -40,6 +40,8 @@ import {
   type InstallCandidate,
   type InstalledSource,
 } from '@/shared/tauri/sources';
+import { SourceInstallDialog } from './SourceInstallDialog';
+import { SourceInspector } from './SourceInspector';
 
 type ImportPhase =
   | 'idle'
@@ -70,6 +72,9 @@ export function SourcesHome() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [prepared, setPrepared] = useState<PreparedSource[]>([]);
   const [allowNetwork, setAllowNetwork] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
+  const [inspectedSource, setInspectedSource] = useState<InstalledSource>();
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const highlightedSourceId = searchParams.get('highlight');
   const pendingImport = searchParams.get('import');
 
@@ -216,16 +221,22 @@ export function SourcesHome() {
       <PageToolbar
         meta={m.sources_group_count({ count: sources.length })}
         actions={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={m.sources_refresh()}
-            title={m.sources_refresh()}
-            disabled={status === 'loading'}
-            onClick={() => void load()}
-          >
-            <Icon name="arrow-clockwise" className="text-base" />
-          </Button>
+          <>
+            <Button variant="outline" size="sm" onClick={() => setInstallOpen(true)}>
+              <Icon name="plus" />
+              {m.sources_import_open()}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={m.sources_refresh()}
+              title={m.sources_refresh()}
+              disabled={status === 'loading'}
+              onClick={() => void load()}
+            >
+              <Icon name="arrow-clockwise" className="text-base" />
+            </Button>
+          </>
         }
       />
 
@@ -268,34 +279,44 @@ export function SourcesHome() {
           <ul className="divide-y divide-hairline border-y border-hairline">
             {sources.map((source) => (
               <li key={source.source_id}>
-                <Item
-                  size="xs"
-                  className={
-                    highlightedSourceId === source.source_id
-                      ? 'bg-lantern-soft ring-1 ring-lantern-strong/40'
-                      : undefined
-                  }
+                <button
+                  type="button"
+                  aria-label={source.profile.title}
+                  className="block w-full text-left focus-visible:outline-1 focus-visible:outline-ring"
+                  onClick={() => {
+                    setInspectedSource(source);
+                    setInspectorOpen(true);
+                  }}
                 >
-                  <ItemMedia variant="icon">
-                    <Icon name="check-circle" className="text-base text-positive" />
-                  </ItemMedia>
-                  <ItemContent className="min-w-0">
-                    <ItemTitle className="truncate">{source.profile.title}</ItemTitle>
-                  </ItemContent>
-                  <span className="hidden min-w-0 flex-1 truncate font-mono text-ui-sm text-ink-subtle sm:block">
-                    {source.source_id}
-                  </span>
-                  <span className="hidden shrink-0 gap-1 md:flex">
-                    {source.profile.supported_intents.map((intent) => (
-                      <Badge key={intent} variant="outline">
-                        {intent}
-                      </Badge>
-                    ))}
-                  </span>
-                  <span className="shrink-0 font-mono text-ui-sm text-ink-muted">
-                    {source.version}
-                  </span>
-                </Item>
+                  <Item
+                    size="xs"
+                    className={
+                      highlightedSourceId === source.source_id
+                        ? 'bg-lantern-soft ring-1 ring-lantern-strong/40'
+                        : undefined
+                    }
+                  >
+                    <ItemMedia variant="icon">
+                      <Icon name="check-circle" className="text-base text-positive" />
+                    </ItemMedia>
+                    <ItemContent className="min-w-0">
+                      <ItemTitle className="truncate">{source.profile.title}</ItemTitle>
+                    </ItemContent>
+                    <span className="hidden min-w-0 flex-1 truncate font-mono text-ui-sm text-ink-subtle sm:block">
+                      {source.source_id}
+                    </span>
+                    <span className="hidden shrink-0 gap-1 md:flex">
+                      {source.profile.supported_intents.map((intent) => (
+                        <Badge key={intent} variant="outline">
+                          {intent}
+                        </Badge>
+                      ))}
+                    </span>
+                    <span className="shrink-0 font-mono text-ui-sm text-ink-muted">
+                      {source.version}
+                    </span>
+                  </Item>
+                </button>
               </li>
             ))}
           </ul>
@@ -442,6 +463,21 @@ export function SourcesHome() {
           ) : null}
         </DialogContent>
       </Dialog>
+      <SourceInstallDialog
+        open={installOpen}
+        onOpenChange={setInstallOpen}
+        onInstalled={() => void load()}
+      />
+      <SourceInspector
+        open={inspectorOpen}
+        source={inspectedSource}
+        onOpenChange={setInspectorOpen}
+        onRequestUpdate={() => {
+          setInspectorOpen(false);
+          setInstallOpen(true);
+        }}
+        onInstalled={() => void load()}
+      />
     </>
   );
 }
