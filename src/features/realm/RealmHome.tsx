@@ -144,7 +144,12 @@ export function RealmHome() {
                 <EmptyTitle>{m.realm_continue_empty()}</EmptyTitle>
                 <EmptyDescription>{m.realm_continue_empty_hint()}</EmptyDescription>
               </EmptyHeader>
-              <Button variant="outline" size="sm" render={<Link to="/library" />}>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link to="/library" />}
+              >
                 {m.realm_open_library()}
               </Button>
             </Empty>
@@ -205,15 +210,30 @@ export function RealmHome() {
               {m.realm_quick_actions()}
             </h2>
             <ButtonGroup className="w-full">
-              <Button variant="outline" size="sm" render={<Link to="/sources" />}>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link to="/sources" />}
+              >
                 <Icon name="download-simple" className="text-base" />
                 {m.realm_action_import_source()}
               </Button>
-              <Button variant="outline" size="sm" render={<Link to="/sources/rules" />}>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link to="/sources/rules" />}
+              >
                 <Icon name="tree-structure" className="text-base" />
                 {m.realm_action_new_rule()}
               </Button>
-              <Button variant="outline" size="sm" render={<Link to="/settings" />}>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={<Link to="/settings" />}
+              >
                 <Icon name="gear-six" className="text-base" />
                 {m.realm_action_settings()}
               </Button>
