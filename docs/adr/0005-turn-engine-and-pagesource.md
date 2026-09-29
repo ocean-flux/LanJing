@@ -24,7 +24,7 @@ reading（文本）与 gallery（图漫）都需要翻页：输入处理（指�
    页索引与阅读锚点互转、声明支持的转场。转场器只向 `snapshotFor()` 要位图，
    不关心内容来源。
 4. 翻页模式是 `layout × navigation × transition` 三元的**策展组合**（当前 7 种，
-   见 `.scratch/reader/issues/06-turn-modes.md`），不是独立实现；
+   见 GitHub issue #31），不是独立实现；
    加一种模式通常只是加一个转场器或一行组合。
 5. 引擎边界：不持色值 / 间距 / 时长字面量（走 token）；不认识 MediaKind；
    不回写进度（只抛页索引 + 页内偏移，由应用面换算锚点落库）；

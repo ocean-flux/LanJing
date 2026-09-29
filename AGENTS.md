@@ -45,7 +45,7 @@ UI 单测只在用户可观察合同无法由逻辑或公共集成边界证明�
 
 ### Issue tracker
 
-事项记录在本地 `.scratch/<feature>/`，不使用远端 issue tracker。见 `docs/agents/issue-tracker.md`。
+事项与规格记录在 GitHub Issues（`ocean-flux/LanJing`），用 `gh` 操作。见 `docs/agents/issue-tracker.md`。
 
 ### Triage labels
 
