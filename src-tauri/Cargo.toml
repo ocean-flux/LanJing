@@ -46,8 +46,8 @@ tauri-plugin-mcp-bridge = "0.12"
 # 第三方依赖统一在 workspace.dependencies 钉版本；子 crate 仅 { workspace = true }
 # tauri 系用主版本轨解析最新兼容版。
 # keyring v4 生态：生产用 keyring-core + 平台 store；测试用 keyring-core::mock。
-sea-orm = { version = "=2.0.0", default-features = false, features = ["macros", "runtime-tokio", "sqlx-sqlite", "with-json", "with-uuid", "schema-sync"] }
-sea-orm-migration = { version = "=2.0.0", default-features = false, features = ["runtime-tokio", "sqlx-sqlite"] }
+sea-orm = { version = "2", default-features = false, features = ["macros", "runtime-tokio", "sqlx-sqlite", "with-json", "with-uuid", "schema-sync"] }
+sea-orm-migration = { version = "2", default-features = false, features = ["runtime-tokio", "sqlx-sqlite"] }
 reqwest = { version = "0.13.4", features = ["cookies", "gzip", "brotli"] }
 rquickjs = "0.12.1"
 blake3 = "1.8.5"
