@@ -17,7 +17,6 @@ import {
 import type {
   FlowEdge,
   FlowNodeKind,
-  InstallCandidate,
   NativeRuleDocumentDetail,
   NativeRuleDocumentSummary,
   RuleDefinition,
@@ -60,6 +59,7 @@ function mockDetail(overrides: Partial<NativeRuleDocumentDetail> = {}): NativeRu
   return {
     summary,
     semantic_revision: summary.semantic_revision,
+    effective_semantic_revision: summary.semantic_revision,
     layout_revision: summary.layout_revision,
     definition: mockDefinition(),
     layout_json: null,
@@ -77,27 +77,6 @@ function mockOutcome(
     semantic: { revision: 2, conflict: null },
     layout: { revision: 2, conflict: null },
     ...overrides,
-  };
-}
-
-function mockCandidate(): InstallCandidate {
-  return {
-    id: 'candidate:1',
-    expected_installed_revision: 0,
-    profile: {
-      id: 'source:test',
-      title: '',
-      icon_url: null,
-      version: null,
-      group: null,
-      supported_intents: [],
-      risk_notes: [],
-    },
-    required_grant: { network: false, system: { fs: false, env: false, process: false } },
-    diagnostics: [],
-    definition_hash: 'hash:def',
-    plan_hash: 'hash:plan',
-    expires_at_ms: 1_700_000_000_000,
   };
 }
 
@@ -291,6 +270,25 @@ describe('createRuleEditorSession', () => {
     expect(state().core.dirty.semantic).toBe(false);
   });
 
+  it('save keeps effective revision when semantic result is a draft', async () => {
+    const session = createRuleEditorSession();
+    const state = () => session.getState();
+    invoke.mockResolvedValueOnce(mockDetail({ effective_semantic_revision: 1 }));
+    await state().loadDocument('doc:1');
+    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://invalid.test' });
+
+    invoke.mockClear();
+    invoke.mockResolvedValueOnce(
+      mockOutcome({
+        semantic: { revision: 2, conflict: null, activation: 'draft' },
+        layout: null,
+      }),
+    );
+    await state().save();
+
+    expect(state().effectiveSemanticRevision).toBe(1);
+  });
+
   it('save is idempotent when nothing dirty', async () => {
     const session = createRuleEditorSession();
     const state = () => session.getState();
@@ -446,22 +444,6 @@ describe('createRuleEditorSession', () => {
     expect(state().core.validation.diagnostics).toEqual([]);
   });
 
-  it('prepare refuses after auto-save until current revision validates', async () => {
-    const session = createRuleEditorSession();
-    const state = () => session.getState();
-    invoke.mockResolvedValueOnce(mockDetail());
-    await state().loadDocument('doc:1');
-
-    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://new.test' });
-
-    invoke.mockClear();
-    invoke.mockResolvedValueOnce(mockOutcome());
-
-    await expect(state().prepare()).rejects.toThrow('document_validation_required');
-    expect(invoke).toHaveBeenCalledWith('save_native_rule_document', expect.anything());
-    expect(invoke).not.toHaveBeenCalledWith('prepare_native_rule_document', expect.anything());
-  });
-
   it('validation response becomes stale when semantic edit lands while request is pending', async () => {
     const session = createRuleEditorSession();
     const state = () => session.getState();
@@ -487,67 +469,6 @@ describe('createRuleEditorSession', () => {
     });
     await pending;
     expect(state().core.validation.status).toBe('stale');
-  });
-
-  it('prepare calls wire only after saved revision validates', async () => {
-    const session = createRuleEditorSession();
-    const state = () => session.getState();
-    invoke.mockResolvedValueOnce(mockDetail());
-    await state().loadDocument('doc:1');
-
-    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://new.test' });
-    invoke.mockClear();
-    invoke.mockResolvedValueOnce(mockOutcome());
-    await state().save();
-
-    invoke.mockResolvedValueOnce({
-      valid: true,
-      revision: 2,
-      definition_hash: 'hash:def',
-      plan_hash: 'hash:plan',
-      diagnostics: [],
-      profile: null,
-      capability: { network: false, system: { fs: false, env: false, process: false } },
-    });
-    await state().validate();
-
-    invoke.mockResolvedValueOnce(mockCandidate());
-    const candidate = await state().prepare();
-    expect(candidate.id).toBe('candidate:1');
-    expect(state().core.candidate?.id).toBe('candidate:1');
-    expect(invoke).toHaveBeenCalledWith('prepare_native_rule_document', {
-      request: { document_id: 'doc:1', revision: 2 },
-    });
-  });
-
-  it('prepare continues with validated semantic revision after layout-only conflict', async () => {
-    const session = createRuleEditorSession();
-    const state = () => session.getState();
-    invoke.mockResolvedValueOnce(mockDetail());
-    await state().loadDocument('doc:1');
-
-    state().setValidation({
-      status: 'valid',
-      revision: 1,
-      definitionHash: 'hash:def',
-      planHash: 'hash:plan',
-      diagnostics: [],
-    });
-    state().moveNode('node:missing', { x: 10, y: 20 });
-
-    invoke.mockResolvedValueOnce(
-      mockOutcome({
-        semantic: null,
-        layout: { revision: 1, conflict: { expected: 1, current: 2 } },
-      }),
-    );
-    invoke.mockResolvedValueOnce(mockCandidate());
-
-    const candidate = await state().prepare();
-    expect(candidate.id).toBe('candidate:1');
-    expect(invoke).toHaveBeenCalledWith('prepare_native_rule_document', {
-      request: { document_id: 'doc:1', revision: 1 },
-    });
   });
 
   // -----------------------------------------------------------------------
@@ -679,5 +600,76 @@ describe('createRuleEditorSession', () => {
     expect(state().core.definition.flow.edges).toHaveLength(1);
     state().disconnect(edge);
     expect(state().core.definition.flow.edges).toHaveLength(0);
+  });
+
+  it('revealNode 选择节点，并为重复定位递增请求序号', () => {
+    const session = createRuleEditorSession();
+    const state = () => session.getState();
+
+    state().revealNode('node:http');
+    expect(state().core.selection).toBe('node:http');
+    expect(state().revealRequest).toEqual({ nodeId: 'node:http', sequence: 1 });
+
+    state().revealNode('node:http');
+    expect(state().revealRequest).toEqual({ nodeId: 'node:http', sequence: 2 });
+  });
+
+  it('pasteSubgraph 重排 id、重写边端点并按偏移落位', () => {
+    let seed = 0;
+    const session = createRuleEditorSession({ newNodeId: () => `node:new-${(seed += 1)}` });
+    const state = () => session.getState();
+
+    state().pasteSubgraph(
+      {
+        nodes: [
+          { id: 'node:src-a', config: { kind: 'http', value: {} } },
+          { id: 'node:src-b', config: { kind: 'mapper', value: { fields: [] } } },
+        ],
+        edges: [
+          {
+            from: { node_id: 'node:src-a', handle: 'out' },
+            to: { node_id: 'node:src-b', handle: 'in' },
+          },
+          // 另一端不在来源子图内，粘贴时应被丢掉。
+          {
+            from: { node_id: 'node:src-a', handle: 'out' },
+            to: { node_id: 'node:outside', handle: 'in' },
+          },
+        ],
+        positions: { 'node:src-a': { x: 10, y: 20 }, 'node:src-b': { x: 10, y: 200 } },
+      },
+      { x: 32, y: 32 },
+    );
+
+    const { nodes, edges } = state().core.definition.flow;
+    expect(nodes.map((node) => node.id)).toEqual(['node:new-1', 'node:new-2']);
+    expect(edges).toEqual([
+      {
+        from: { node_id: 'node:new-1', handle: 'out' },
+        to: { node_id: 'node:new-2', handle: 'in' },
+      },
+    ]);
+
+    const projected = selectFlowProjection(state()).nodes;
+    expect(projected.map((node) => node.position)).toEqual([
+      { x: 42, y: 52 },
+      { x: 42, y: 232 },
+    ]);
+    expect(state().core.selection).toBe('node:new-1');
+    expect(state().core.history).toHaveLength(1);
+
+    state().undo();
+    expect(state().core.definition.flow.nodes).toHaveLength(0);
+    expect(state().core.definition.flow.edges).toHaveLength(0);
+
+    state().redo();
+    expect(state().core.definition.flow.nodes.map((node) => node.id)).toEqual([
+      'node:new-1',
+      'node:new-2',
+    ]);
+    expect(selectFlowProjection(state()).nodes.map((node) => node.position)).toEqual([
+      { x: 42, y: 52 },
+      { x: 42, y: 232 },
+    ]);
   });
 });

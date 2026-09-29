@@ -7,7 +7,6 @@
 
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import type {
-  InstallCandidate,
   InstallDiagnostic,
   SourceProfile,
   SourceSpan,
@@ -15,7 +14,6 @@ import type {
 } from '@/shared/tauri/sources';
 
 export type {
-  InstallCandidate,
   InstallDiagnostic,
   SourceProfile,
   SourceSpan,
@@ -160,10 +158,14 @@ export interface SaveNativeRuleDocumentRequest {
   layout?: LayoutSave | null;
 }
 
+/** 语义保存后的生效状态。 */
+export type SemanticActivation = 'draft' | 'effective';
+
 /** 域保存结果（DomainOutcome）。 */
 export interface DomainOutcome {
   revision: number;
   conflict?: RevisionConflict | null;
+  activation?: SemanticActivation | null;
 }
 
 /** 乐观并发冲突（RevisionConflict）。 */
@@ -194,11 +196,6 @@ export interface ValidateNativeRuleDocumentPreview {
   capability: PolicyCapabilities;
 }
 
-export interface PrepareNativeRuleDocumentRequest {
-  document_id: string;
-  revision: number;
-}
-
 export interface GetNativeRuleDocumentRequest {
   document_id: string;
 }
@@ -222,6 +219,13 @@ export interface DeleteNativeRuleDocumentRequest {
   occurred_at_ms: number;
 }
 
+/** 从 Effective 历史创建 Draft 的请求。 */
+export interface RestoreNativeRuleRevisionRequest {
+  document_id: string;
+  revision: number;
+  expected_revision: number;
+}
+
 // ---------------------------------------------------------------------------
 // 响应 DTO
 // ---------------------------------------------------------------------------
@@ -243,6 +247,20 @@ export interface NativeRuleDocumentSummary {
   updated_at_ms: number;
 }
 
+/** Effective Rule Revision 的只读摘要；不含 Definition、Plan 或凭证引用。 */
+export interface NativeRuleRevisionSummary {
+  revision: number;
+  definition_hash: string;
+  effective_at_ms: number;
+}
+
+/** 历史恢复结果；成功时只创建新的 Draft Revision。 */
+export interface RestoreNativeRuleRevisionOutcome {
+  document_id: string;
+  revision: number;
+  conflict?: RevisionConflict | null;
+}
+
 /** 溯源摘要（ProvenanceSummaryView；不含 secret_id）。 */
 export interface ProvenanceSummaryView {
   format: string;
@@ -252,10 +270,11 @@ export interface ProvenanceSummaryView {
   imported_at_ms: number;
 }
 
-/** 文档详情（NativeRuleDocumentDetail）。 */
 export interface NativeRuleDocumentDetail {
   summary: NativeRuleDocumentSummary;
   semantic_revision: number;
+  effective_semantic_revision: number | null;
+  effective_summary?: NativeRuleRevisionSummary | null;
   layout_revision: number;
   /** 后端当前保存的 Definition；缺失时 session 必须返回 document_semantic_missing。 */
   definition: RuleDefinition | null;
@@ -275,7 +294,7 @@ export interface NativeRuleProvenanceView {
 }
 
 // ---------------------------------------------------------------------------
-// Invoke wrapper（9 个，与 Tauri command 名一致；统一 `{ request }` wrapper）
+// Invoke wrapper（11 个，与 Tauri command 名一致；统一 `{ request }` wrapper）
 // ---------------------------------------------------------------------------
 
 /** 新建原生规则文档（blank 或 template 模式）。 */
@@ -299,13 +318,6 @@ export function validateNativeRuleDocument(
   return invoke<ValidateNativeRuleDocumentPreview>('validate_native_rule_document', { request });
 }
 
-/** 将文档暂存为安装候选（复用 InstallCandidate 安全 DTO）。 */
-export function prepareNativeRuleDocument(
-  request: PrepareNativeRuleDocumentRequest,
-): Promise<InstallCandidate> {
-  return invoke<InstallCandidate>('prepare_native_rule_document', { request });
-}
-
 /** 列出全部原生规则文档摘要。 */
 export function listNativeRuleDocuments(): Promise<NativeRuleDocumentSummary[]> {
   // 浏览器里跑 vite dev 时没有 IPC，读路径退化为空集，页面走空状态而不是报错。
@@ -319,6 +331,21 @@ export function getNativeRuleDocument(
 ): Promise<NativeRuleDocumentDetail | null> {
   if (!isTauri()) return Promise.resolve(null);
   return invoke<NativeRuleDocumentDetail | null>('get_native_rule_document', { request });
+}
+
+/** 列出文档的 Effective Rule Revision 历史摘要。 */
+export function listNativeRuleRevisionHistory(
+  request: GetNativeRuleDocumentRequest,
+): Promise<NativeRuleRevisionSummary[]> {
+  if (!isTauri()) return Promise.resolve([]);
+  return invoke<NativeRuleRevisionSummary[]>('list_native_rule_revision_history', { request });
+}
+
+/** 从指定 Effective 历史创建新的 Draft Rule Revision。 */
+export function restoreNativeRuleRevision(
+  request: RestoreNativeRuleRevisionRequest,
+): Promise<RestoreNativeRuleRevisionOutcome> {
+  return invoke<RestoreNativeRuleRevisionOutcome>('restore_native_rule_revision', { request });
 }
 
 /** 重命名文档（展示 metadata；不推进语义 revision、不改 hash）。 */

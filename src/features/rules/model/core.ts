@@ -11,7 +11,6 @@
 //! - semantic 命令标记 domain；undo/redo 只回放 semantic/layout 命令。
 //! - epoch 在 saveRequest 时递增并快照；saveResponse 校验快照仍为当前 epoch 才接受
 //!   （stale response 拒绝），接受后再递增一次（同一响应重复投递同样被拒）。
-//! - semantic action 清 candidate；layout action 不清。
 //! - saveRequest 按当前 dirty 域拍快照；saveResponse 按快照分域 merge
 //!   （编辑中的域保持 dirty，未编辑的域收敛为已保存）。
 
@@ -129,6 +128,14 @@ export type TypedCommand =
     }
   | {
       domain: 'semantic';
+      kind: 'pasteSubgraph';
+      nodes: FlowNode[];
+      edges: FlowEdge[];
+      positions: Record<string, Position>;
+      prevPositions: Record<string, Position | null>;
+    }
+  | {
+      domain: 'semantic';
       kind: 'edgeConnect';
       edge: FlowEdge;
       connected: boolean;
@@ -177,6 +184,35 @@ export interface SaveDomainSnapshot {
   credentialMutations: readonly CredentialMutationRequest[];
 }
 
+/** 冲突恢复中可安全保留的凭证槽引用；绝不携带 secret value。 */
+export interface SafeCredentialReference {
+  nodeId: string;
+  jsonPointer: string;
+  logicalName: string;
+  action: 'replace' | 'clear';
+}
+
+/** 语义域 Recovery Draft；Definition 是脱敏副本，凭证只保留槽引用。 */
+export interface SemanticRecoveryDraft {
+  expectedRevision: number;
+  currentRevision: number;
+  definition: RuleDefinition;
+  credentialReferences: SafeCredentialReference[];
+}
+
+/** 布局域 Recovery Draft；layout 只包含作者布局 JSON。 */
+export interface LayoutRecoveryDraft {
+  expectedRevision: number;
+  currentRevision: number;
+  layout: unknown;
+}
+
+/** 冲突恢复是 session 内状态，不写入文档或应用持久化。 */
+export interface RecoveryDraftState {
+  semantic: SemanticRecoveryDraft | null;
+  layout: LayoutRecoveryDraft | null;
+}
+
 /** 在途保存记录。 */
 export interface InFlightSave {
   epoch: number;
@@ -204,10 +240,10 @@ export interface NativeRuleAuthoringState {
   intentFocus: StandardIntent | null;
   /** 最近一次校验/编译结果及其 semantic revision/hash 身份。 */
   validation: ValidationState;
-  /** 已暂存的安装候选；语义变更后失效。 */
-  candidate: { id: string; expires_at_ms: number } | null;
   /** 分域乐观并发冲突。 */
   conflict: { semantic: RevisionConflict | null; layout: RevisionConflict | null };
+  /** 冲突时保留的本地 Recovery Draft；不含凭证明文。 */
+  recoveryDraft: RecoveryDraftState;
   /** 可回放命令历史（undo 栈；仅 semantic/layout）。 */
   history: TypedCommand[];
   /** 已撤销命令栈（redo；仅 semantic/layout）。 */
@@ -227,6 +263,12 @@ export type AuthoringAction =
   | { kind: 'nodeDelete'; nodeId: string }
   | { kind: 'nodesDelete'; nodeIds: string[] }
   | { kind: 'deleteSelection'; nodeIds: string[]; edgeIds: string[] }
+  | {
+      kind: 'pasteSubgraph';
+      nodes: FlowNode[];
+      edges: FlowEdge[];
+      positions?: Record<string, Position>;
+    }
   | { kind: 'edgeConnect'; edge: FlowEdge; connected: boolean }
   | { kind: 'edgeReconnect'; from: FlowEdge; to: FlowEdge }
   | { kind: 'moveNode'; nodeId: string; position: Position }
@@ -237,7 +279,6 @@ export type AuthoringAction =
   | { kind: 'selection'; nodeId: string | null }
   | { kind: 'intentFocus'; intent: StandardIntent | null }
   | { kind: 'setValidation'; validation: ValidationState }
-  | { kind: 'setCandidate'; candidate: NativeRuleAuthoringState['candidate'] }
   | { kind: 'undo' }
   | { kind: 'redo' }
   | {
@@ -251,6 +292,10 @@ export type AuthoringAction =
   | { kind: 'saveRequest' }
   | { kind: 'saveResponse'; epoch: number; outcome: SaveNativeRuleDocumentOutcome }
   | { kind: 'saveFailure'; epoch: number }
+  | { kind: 'replaceSemanticSnapshot'; definition: RuleDefinition; revision: number }
+  | { kind: 'replaceLayoutSnapshot'; layout: unknown; revision: number }
+  | { kind: 'rebaseSemantic'; revision: number }
+  | { kind: 'rebaseLayout'; revision: number }
   | { kind: 'reset'; state: NativeRuleAuthoringState };
 
 /** 空能力清单（对应 Rust `CapabilityManifest::default()`）。 */
@@ -293,8 +338,8 @@ export function createInitialState(options: {
     selection: null,
     intentFocus: null,
     validation: unknownValidation(),
-    candidate: null,
     conflict: { semantic: null, layout: null },
+    recoveryDraft: { semantic: null, layout: null },
     history: [],
     redo: [],
     pendingCredentialMutations: [],
@@ -455,6 +500,30 @@ function applyCommand(
         },
       };
     }
+    case 'pasteSubgraph': {
+      const nodes = [...state.definition.flow.nodes];
+      for (const node of command.nodes) {
+        if (!nodes.some((current) => current.id === node.id)) nodes.push(cloneJson(node));
+      }
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const layoutNodes = { ...layout.nodes };
+      for (const [nodeId, position] of Object.entries(command.positions)) {
+        const current = layoutNode(layout, nodeId);
+        layoutNodes[nodeId] = { ...current, position: { ...position } };
+      }
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes,
+            edges: command.edges.reduce(addEdge, state.definition.flow.edges),
+          },
+        },
+        layout: { ...layout, nodes: layoutNodes },
+      };
+    }
     case 'edgeConnect': {
       const edges = command.connected
         ? addEdge(state.definition.flow.edges, command.edge)
@@ -602,6 +671,38 @@ function revertCommand(
             edges: command.edges.reduce(addEdge, state.definition.flow.edges),
           },
         },
+      };
+    }
+    case 'pasteSubgraph': {
+      const nodeIds = new Set(command.nodes.map((node) => node.id));
+      const edgeIds = new Set(command.edges.map(edgeIdentity));
+      const layout = readLayout(state.layout) ?? { nodes: {} };
+      const layoutNodes = { ...layout.nodes };
+      for (const node of command.nodes) {
+        const previous = command.prevPositions[node.id];
+        if (previous) {
+          const current = layoutNode(layout, node.id);
+          layoutNodes[node.id] = { ...current, position: { ...previous } };
+        } else {
+          delete layoutNodes[node.id];
+        }
+      }
+      return {
+        ...state,
+        definition: {
+          ...state.definition,
+          flow: {
+            ...state.definition.flow,
+            nodes: state.definition.flow.nodes.filter((node) => !nodeIds.has(node.id)),
+            edges: state.definition.flow.edges.filter(
+              (edge) =>
+                !nodeIds.has(edge.from.node_id) &&
+                !nodeIds.has(edge.to.node_id) &&
+                !edgeIds.has(edgeIdentity(edge)),
+            ),
+          },
+        },
+        layout: { ...layout, nodes: layoutNodes },
       };
     }
     case 'edgeConnect': {
@@ -796,7 +897,7 @@ function reconcileDynamicEdges(
   return output;
 }
 
-/** 语义 action 统一副作用：清 candidate、置 semantic dirty、清 redo。 */
+/** 语义 action 统一副作用：置 semantic dirty、清 redo。 */
 function markSemanticDirty(state: NativeRuleAuthoringState): NativeRuleAuthoringState {
   return {
     ...state,
@@ -805,12 +906,11 @@ function markSemanticDirty(state: NativeRuleAuthoringState): NativeRuleAuthoring
       ...state.validation,
       status: state.validation.revision === null ? 'unknown' : 'stale',
     },
-    candidate: null,
     redo: [],
   };
 }
 
-/** 布局 action 统一副作用：置 layout dirty、清 redo；candidate 保持。 */
+/** 布局 action 统一副作用：置 layout dirty、清 redo。 */
 function markLayoutDirty(state: NativeRuleAuthoringState): NativeRuleAuthoringState {
   return {
     ...state,
@@ -903,6 +1003,17 @@ function pushSemanticCommand(
   return { ...sanitized, history: [...sanitized.history, command] };
 }
 
+/** 粘贴同时改变语义与布局，必须作为一条撤销记录推进两个 dirty 域。 */
+function pushPasteCommand(
+  state: NativeRuleAuthoringState,
+  command: Extract<SemanticCommand, { kind: 'pasteSubgraph' }>,
+): NativeRuleAuthoringState {
+  const applied = applyCommand(state, command);
+  const dirty = markLayoutDirty(markSemanticDirty(applied));
+  const sanitized = sanitizeSelection(dirty, command);
+  return { ...sanitized, history: [...sanitized.history, command] };
+}
+
 /** 布局命令执行入口：应用 + 入 history（layout 连续操作合并为一条历史）。 */
 function pushLayoutCommand(
   state: NativeRuleAuthoringState,
@@ -913,13 +1024,21 @@ function pushLayoutCommand(
   return { ...dirty, history: coalesceLayout(dirty.history, command) };
 }
 
+/** 命令重放后标记变更域；粘贴是唯一同时影响语义与布局的复合命令。 */
+function markCommandDirty(
+  state: NativeRuleAuthoringState,
+  command: TypedCommand,
+): NativeRuleAuthoringState {
+  if (command.kind === 'pasteSubgraph') return markLayoutDirty(markSemanticDirty(state));
+  return command.domain === 'semantic' ? markSemanticDirty(state) : markLayoutDirty(state);
+}
+
 /** Undo：弹出最后一条 semantic/layout 命令并回退；transient/credential 不受影响。 */
 function undo(state: NativeRuleAuthoringState): NativeRuleAuthoringState {
   const command = state.history.at(-1);
   if (!command) return state;
   const reverted = revertCommand(state, command);
-  const dirty =
-    command.domain === 'semantic' ? markSemanticDirty(reverted) : markLayoutDirty(reverted);
+  const dirty = markCommandDirty(reverted, command);
   return {
     ...dirty,
     history: state.history.slice(0, -1),
@@ -932,8 +1051,7 @@ function redo(state: NativeRuleAuthoringState): NativeRuleAuthoringState {
   const command = state.redo.at(-1);
   if (!command) return state;
   const applied = applyCommand(state, command);
-  const dirty =
-    command.domain === 'semantic' ? markSemanticDirty(applied) : markLayoutDirty(applied);
+  const dirty = markCommandDirty(applied, command);
   return {
     ...dirty,
     history: [...state.history, command],
@@ -946,10 +1064,44 @@ function pushCredentialMutation(
   state: NativeRuleAuthoringState,
   mutation: CredentialMutationRequest,
 ): NativeRuleAuthoringState {
+  const recovery = state.recoveryDraft.semantic;
+  const credentialReferences = recovery?.credentialReferences.filter(
+    (reference) =>
+      reference.nodeId !== mutation.node_id ||
+      reference.jsonPointer !== mutation.json_pointer ||
+      reference.logicalName !== mutation.logical_name,
+  );
+  const recoveryDraft =
+    recovery &&
+    credentialReferences &&
+    credentialReferences.length !== recovery.credentialReferences.length
+      ? {
+          ...state.recoveryDraft,
+          semantic: { ...recovery, credentialReferences },
+        }
+      : state.recoveryDraft;
   return markSemanticDirty({
     ...state,
+    recoveryDraft,
     pendingCredentialMutations: [...state.pendingCredentialMutations, mutation],
   });
+}
+
+/** 只把凭证槽位元数据复制到 Recovery Draft，避免 secret value 进入恢复状态。 */
+function safeCredentialReferences(
+  mutations: readonly CredentialMutationRequest[],
+): SafeCredentialReference[] {
+  return mutations.map((mutation) => ({
+    nodeId: mutation.node_id,
+    jsonPointer: mutation.json_pointer,
+    logicalName: mutation.logical_name,
+    action: mutation.action,
+  }));
+}
+
+/** 冲突恢复时清理旧的撤销栈，避免显式丢弃后 undo 重新写回远端前的内容。 */
+function clearUndoHistory(): Pick<NativeRuleAuthoringState, 'history' | 'redo'> {
+  return { history: [], redo: [] };
 }
 
 /** SaveRequest：对每个 dirty 域拍快照，递增并快照 epoch；credential 明文快照后立即清空。 */
@@ -996,12 +1148,20 @@ function saveResponse(
     const snapshot = inFlight.semantic;
     const result = outcome.semantic;
     if (result.conflict) {
-      // 乐观并发冲突：revision 不推进、pending 已在 saveRequest 清空（明文一次性），
-      // 冲突时由 UI 重新输入；candidate 失效。
+      // 乐观并发冲突：revision 不推进；Recovery Draft 只保留脱敏 Definition、
+      // 布局和凭证槽引用，明文已随 saveRequest 从 state 清除。
       next = {
         ...next,
         conflict: { ...next.conflict, semantic: result.conflict },
-        candidate: null,
+        recoveryDraft: {
+          ...next.recoveryDraft,
+          semantic: {
+            expectedRevision: snapshot.revision,
+            currentRevision: result.conflict.current,
+            definition: cloneJson(snapshot.content as RuleDefinition),
+            credentialReferences: safeCredentialReferences(snapshot.credentialMutations),
+          },
+        },
       };
     } else {
       // 成功：pending 已在 saveRequest 清空；当前 pending 均为响应期间新输入，保留。
@@ -1010,11 +1170,11 @@ function saveResponse(
         ...next,
         savedSemanticRevision: result.revision,
         conflict: { ...next.conflict, semantic: null },
+        recoveryDraft: { ...next.recoveryDraft, semantic: null },
         dirty: {
           ...next.dirty,
           semantic: drift || next.pendingCredentialMutations.length > 0,
         },
-        candidate: null,
       };
     }
   }
@@ -1023,13 +1183,25 @@ function saveResponse(
     const snapshot = inFlight.layout;
     const result = outcome.layout;
     if (result.conflict) {
-      next = { ...next, conflict: { ...next.conflict, layout: result.conflict } };
+      next = {
+        ...next,
+        conflict: { ...next.conflict, layout: result.conflict },
+        recoveryDraft: {
+          ...next.recoveryDraft,
+          layout: {
+            expectedRevision: snapshot.revision,
+            currentRevision: result.conflict.current,
+            layout: cloneJson(snapshot.content),
+          },
+        },
+      };
     } else {
       const drift = !deepEqual(next.layout, snapshot.content);
       next = {
         ...next,
         savedLayoutRevision: result.revision,
         conflict: { ...next.conflict, layout: null },
+        recoveryDraft: { ...next.recoveryDraft, layout: null },
         dirty: { ...next.dirty, layout: drift },
       };
     }
@@ -1153,6 +1325,37 @@ export function reduce(
         edges: cloneJson(edges),
       });
     }
+    case 'pasteSubgraph': {
+      // 粘贴的 id 由调用方分配；与现图撞 id 的节点直接丢掉，避免覆盖已有节点。
+      const existing = new Set(state.definition.flow.nodes.map((node) => node.id));
+      const nodes = action.nodes.filter((node) => !existing.has(node.id));
+      const pasted = new Set(nodes.map((node) => node.id));
+      const edges = action.edges.filter(
+        (edge) => pasted.has(edge.from.node_id) && pasted.has(edge.to.node_id),
+      );
+      if (nodes.length === 0) return state;
+      const positions = Object.fromEntries(
+        Object.entries(action.positions ?? {}).filter(
+          ([nodeId, position]) =>
+            pasted.has(nodeId) && Number.isFinite(position.x) && Number.isFinite(position.y),
+        ),
+      );
+      const layout = readLayout(state.layout);
+      const prevPositions = Object.fromEntries(
+        nodes.map((node) => {
+          const previous = layout?.nodes[node.id]?.position;
+          return [node.id, previous ? { ...previous } : null];
+        }),
+      );
+      return pushPasteCommand(state, {
+        domain: 'semantic',
+        kind: 'pasteSubgraph',
+        nodes: cloneJson(nodes),
+        edges: cloneJson(edges),
+        positions: cloneJson(positions),
+        prevPositions: cloneJson(prevPositions),
+      });
+    }
     case 'edgeConnect': {
       const { edges } = state.definition.flow;
       const identity = edgeIdentity(action.edge);
@@ -1251,9 +1454,6 @@ export function reduce(
     case 'setValidation': {
       return { ...state, validation: cloneJson(action.validation) };
     }
-    case 'setCandidate': {
-      return { ...state, candidate: action.candidate ? cloneJson(action.candidate) : null };
-    }
     case 'undo': {
       return undo(state);
     }
@@ -1285,6 +1485,49 @@ export function reduce(
     }
     case 'saveFailure': {
       return saveFailure(state, action.epoch);
+    }
+    case 'replaceSemanticSnapshot': {
+      return {
+        ...state,
+        definition: cloneJson(action.definition),
+        savedSemanticRevision: action.revision,
+        dirty: { ...state.dirty, semantic: false },
+        validation: unknownValidation(),
+        conflict: { ...state.conflict, semantic: null },
+        recoveryDraft: { ...state.recoveryDraft, semantic: null },
+        pendingCredentialMutations: [],
+        ...clearUndoHistory(),
+      };
+    }
+    case 'replaceLayoutSnapshot': {
+      return {
+        ...state,
+        layout: cloneJson(action.layout),
+        savedLayoutRevision: action.revision,
+        dirty: { ...state.dirty, layout: false },
+        conflict: { ...state.conflict, layout: null },
+        recoveryDraft: { ...state.recoveryDraft, layout: null },
+        ...clearUndoHistory(),
+      };
+    }
+    case 'rebaseSemantic': {
+      return {
+        ...state,
+        savedSemanticRevision: action.revision,
+        dirty: { ...state.dirty, semantic: true },
+        validation: unknownValidation(),
+        conflict: { ...state.conflict, semantic: null },
+        recoveryDraft: { ...state.recoveryDraft, semantic: null },
+      };
+    }
+    case 'rebaseLayout': {
+      return {
+        ...state,
+        savedLayoutRevision: action.revision,
+        dirty: { ...state.dirty, layout: true },
+        conflict: { ...state.conflict, layout: null },
+        recoveryDraft: { ...state.recoveryDraft, layout: null },
+      };
     }
     case 'reset': {
       return cloneJson(action.state);

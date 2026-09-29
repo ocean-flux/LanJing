@@ -1,7 +1,7 @@
 //! 原生规则作者核心 reducer 行为测试。
 //!
 //! 覆盖合同列出的不变量：undo/redo、dirty 域分离、epoch stale rejection、
-//! edit-during-save 分域 merge、candidate 失效、credential 不进 history、
+//! edit-during-save 分域 merge、credential 不进 history、
 //! layout coalesce、transient 状态不入历史。
 
 import { describe, expect, it } from 'vitest';
@@ -246,6 +246,98 @@ describe('NativeRuleAuthoringCore dynamic semantic transactions', () => {
     expect(restored.definition.flow.nodes.some((node) => node.id === 'node:http')).toBe(true);
     expect(restored.definition.flow.edges).toEqual([edge]);
   });
+
+  it('pasteSubgraph adds nodes and internal edges in one history entry', () => {
+    const pasted = reduce(initialState(), {
+      kind: 'pasteSubgraph',
+      nodes: [
+        {
+          id: 'node:http-copy',
+          config: { kind: 'http', value: { url_template: 'https://a.test' } },
+        },
+        { id: 'node:mapper-copy', config: { kind: 'mapper', value: { fields: [] } } },
+      ],
+      edges: [
+        {
+          from: { node_id: 'node:http-copy', handle: 'out' },
+          to: { node_id: 'node:mapper-copy', handle: 'in' },
+        },
+      ],
+      positions: {
+        'node:http-copy': { x: 120, y: 64 },
+        'node:mapper-copy': { x: 448, y: 64 },
+      },
+    });
+    expect(pasted.definition.flow.nodes).toHaveLength(4);
+    expect(pasted.definition.flow.edges).toHaveLength(1);
+    expect(pasted.layout).toEqual({
+      nodes: {
+        'node:http-copy': { position: { x: 120, y: 64 }, collapsed: false },
+        'node:mapper-copy': { position: { x: 448, y: 64 }, collapsed: false },
+      },
+    });
+    expect(pasted.history).toHaveLength(1);
+
+    const undone = reduce(pasted, { kind: 'undo' });
+    expect(undone.definition.flow.nodes).toHaveLength(2);
+    expect(undone.definition.flow.edges).toHaveLength(0);
+    expect(undone.layout).toEqual({ nodes: {} });
+
+    const redone = reduce(undone, { kind: 'redo' });
+    expect(redone.definition.flow.nodes).toHaveLength(4);
+    expect(redone.definition.flow.edges).toHaveLength(1);
+    expect(redone.layout).toEqual(pasted.layout);
+  });
+
+  it('pasteSubgraph 经真实保存后撤销或重做时仍标记两个 dirty 域', () => {
+    let state = reduce(initialState(), {
+      kind: 'pasteSubgraph',
+      nodes: [{ id: 'node:http-copy', config: { kind: 'http', value: {} } }],
+      edges: [],
+      positions: { 'node:http-copy': { x: 24, y: 48 } },
+    });
+    state = reduce(state, { kind: 'saveRequest' });
+    state = reduce(state, {
+      kind: 'saveResponse',
+      epoch: 1,
+      outcome: {
+        document_id: 'doc:1',
+        semantic: { revision: 2 },
+        layout: { revision: 2 },
+      },
+    });
+    expect(state.dirty).toEqual({ semantic: false, layout: false });
+
+    state = reduce(state, { kind: 'undo' });
+    expect(state.dirty).toEqual({ semantic: true, layout: true });
+
+    state = reduce(state, { kind: 'saveRequest' });
+    state = reduce(state, {
+      kind: 'saveResponse',
+      epoch: 3,
+      outcome: {
+        document_id: 'doc:1',
+        semantic: { revision: 3 },
+        layout: { revision: 3 },
+      },
+    });
+    expect(state.dirty).toEqual({ semantic: false, layout: false });
+
+    state = reduce(state, { kind: 'redo' });
+    expect(state.dirty).toEqual({ semantic: true, layout: true });
+  });
+
+  it('pasteSubgraph 丢弃与现图撞 id 的节点及其悬空边', () => {
+    const state = reduce(initialState(), {
+      kind: 'pasteSubgraph',
+      nodes: [{ id: 'node:http', config: { kind: 'http', value: {} } }],
+      edges: [edge],
+    });
+    // 唯一一个节点撞了 id，整个 action 不产生命令。
+    expect(state.history).toHaveLength(0);
+    expect(state.definition.flow.nodes).toHaveLength(2);
+    expect(state.definition.flow.edges).toHaveLength(0);
+  });
 });
 
 describe('NativeRuleAuthoringCore dirty 域分离', () => {
@@ -418,36 +510,6 @@ describe('NativeRuleAuthoringCore edit-during-save merge', () => {
   });
 });
 
-describe('NativeRuleAuthoringCore candidate invalidation', () => {
-  const candidate = { id: 'candidate:1', expires_at_ms: 4_000_000_000_000 };
-
-  it('semantic action 清 candidate；layout action 不清', () => {
-    let state: NativeRuleAuthoringState = { ...initialState(), candidate };
-    state = run(state, { kind: 'setField', field: 'base_url', value: 'https://a.test' });
-    expect(state.candidate).toBeNull();
-
-    state = { ...initialState(), candidate };
-    state = run(state, { kind: 'edgeConnect', edge, connected: true });
-    expect(state.candidate).toBeNull();
-
-    state = { ...initialState(), candidate };
-    state = run(state, { kind: 'moveNode', nodeId: 'node:http', position: { x: 3, y: 3 } });
-    expect(state.candidate).toEqual(candidate);
-  });
-
-  it('语义保存成功后 candidate 失效', () => {
-    let state: NativeRuleAuthoringState = { ...initialState(), candidate };
-    state = run(state, { kind: 'setField', field: 'base_url', value: 'https://a.test' });
-    state = run(state, { kind: 'saveRequest' });
-    const saved = reduce(state, {
-      kind: 'saveResponse',
-      epoch: 1,
-      outcome: { document_id: 'doc:1', semantic: { revision: 2 } },
-    });
-    expect(saved.candidate).toBeNull();
-  });
-});
-
 describe('NativeRuleAuthoringCore credential 不变量', () => {
   it('credentialReplace 携带一次性明文；值进 pending 但不进 history，saveRequest 后清空', () => {
     let state = initialState();
@@ -496,9 +558,8 @@ describe('NativeRuleAuthoringCore credential 不变量', () => {
     ]);
   });
 
-  it('credential 操作置 semantic dirty 并清 candidate；clear 不带 value', () => {
-    const candidate = { id: 'candidate:1', expires_at_ms: 4_000_000_000_000 };
-    let state: NativeRuleAuthoringState = { ...initialState(), candidate };
+  it('credential 操作置 semantic dirty；clear 不带 value', () => {
+    let state = initialState();
     state = run(state, {
       kind: 'credentialClear',
       nodeId: 'node:http',
@@ -507,7 +568,6 @@ describe('NativeRuleAuthoringCore credential 不变量', () => {
     });
 
     expect(state.dirty.semantic).toBe(true);
-    expect(state.candidate).toBeNull();
     expect(state.pendingCredentialMutations[0]).toEqual({
       node_id: 'node:http',
       json_pointer: '/headers/authorization',

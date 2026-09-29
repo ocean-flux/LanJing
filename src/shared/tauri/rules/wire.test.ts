@@ -11,7 +11,6 @@ import {
   getNativeRuleDocument,
   getNativeRuleProvenance,
   listNativeRuleDocuments,
-  prepareNativeRuleDocument,
   renameNativeRuleDocument,
   saveNativeRuleDocument,
   validateNativeRuleDocument,
@@ -113,7 +112,7 @@ describe('native rule wire invoke wrappers', () => {
     });
   });
 
-  it('validateNativeRuleDocument / prepareNativeRuleDocument 使用对应 command', async () => {
+  it('validateNativeRuleDocument 使用对应 command', async () => {
     vi.mocked(invoke).mockResolvedValueOnce({
       revision: 1,
       definition_hash: 'hash:def',
@@ -133,12 +132,6 @@ describe('native rule wire invoke wrappers', () => {
 
     await validateNativeRuleDocument({ document_id: 'doc:1', revision: 1 });
     expect(invoke).toHaveBeenCalledWith('validate_native_rule_document', {
-      request: { document_id: 'doc:1', revision: 1 },
-    });
-
-    vi.mocked(invoke).mockResolvedValueOnce(makeCandidate());
-    await prepareNativeRuleDocument({ document_id: 'doc:1', revision: 1 });
-    expect(invoke).toHaveBeenCalledWith('prepare_native_rule_document', {
       request: { document_id: 'doc:1', revision: 1 },
     });
   });
@@ -373,26 +366,5 @@ function makeSummary(): NativeRuleDocumentSummary {
     link_revision: 0,
     created_at_ms: 1_700_000_000_000,
     updated_at_ms: 1_700_000_000_000,
-  };
-}
-
-function makeCandidate() {
-  return {
-    id: 'candidate:1',
-    expected_installed_revision: 0,
-    profile: {
-      id: 'source:test',
-      title: '示例规则',
-      icon_url: null,
-      version: null,
-      group: null,
-      supported_intents: ['Search'],
-      risk_notes: [],
-    },
-    required_grant: { network: false, system: { fs: false, env: false, process: false } },
-    diagnostics: [],
-    definition_hash: 'hash:def',
-    plan_hash: 'hash:plan',
-    expires_at_ms: 1_700_000_000_000,
   };
 }

@@ -35,7 +35,6 @@ import { canonicalConfig } from './node-defaults';
 import {
   createNativeRuleDocument,
   getNativeRuleDocument,
-  prepareNativeRuleDocument,
   saveNativeRuleDocument,
   validateNativeRuleDocument,
   type CreateMode,
@@ -43,7 +42,6 @@ import {
   type FlowEdge,
   type FlowNode,
   type FlowNodeKind,
-  type InstallCandidate,
   type InstallDiagnostic,
   type NativeRuleDocumentDetail,
   type NativeRuleDocumentSummary,
@@ -85,11 +83,51 @@ function stateFromDetail(detail: NativeRuleDocumentDetail): NativeRuleAuthoringS
   });
 }
 
+/** 图内复制的载荷：语义子图 + 各节点当前落点。 */
+export type SubgraphClipboard = {
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  positions: Record<string, Position>;
+};
+
+/** 粘贴落点相对来源的默认偏移；完全重叠会让人以为什么都没发生。 */
+const PASTE_OFFSET: Position = { x: 32, y: 32 };
+
+/**
+ * 从当前投影里切出一段可粘贴的子图。
+ *
+ * 只带两端都在选区内的边：半截边粘过来会指回原节点，语义上不是复制。
+ */
+export function subgraphFromProjection(
+  projection: FlowProjection,
+  nodeIds: readonly string[],
+): SubgraphClipboard | null {
+  const picked = new Set(nodeIds);
+  const source = projection.nodes.filter((node) => picked.has(node.id));
+  if (source.length === 0) return null;
+  const positions: Record<string, Position> = {};
+  for (const node of source) positions[node.id] = { x: node.position.x, y: node.position.y };
+  return {
+    nodes: source.map((node) => ({
+      id: node.id,
+      config: { kind: node.data.kind, value: node.data.config },
+    })),
+    edges: projection.edges
+      .map((edge) => edge.data.edge)
+      .filter((edge) => picked.has(edge.from.node_id) && picked.has(edge.to.node_id)),
+    positions,
+  };
+}
+
 export type SessionState = {
   /** 当前文档摘要（只读 metadata；null = 未打开文档）。 */
   summary: NativeRuleDocumentSummary | null;
+  /** 当前执行使用的 Effective Rule Revision；无有效版本时为 null。 */
+  effectiveSemanticRevision: number | null;
   /** Core 的不可变快照；只整体替换，不就地修改。 */
   core: NativeRuleAuthoringState;
+  /** 仅供画布消费的一次定位请求；不属于文档语义或布局，也不进入撤销历史。 */
+  revealRequest: { nodeId: string; sequence: number } | null;
 };
 
 export type SessionActions = {
@@ -108,7 +146,6 @@ export type SessionActions = {
   }) => Promise<NativeRuleDocumentSummary>;
   save: () => Promise<SaveNativeRuleDocumentOutcome>;
   validate: () => Promise<ValidateNativeRuleDocumentPreview>;
-  prepare: () => Promise<InstallCandidate>;
 
   // 状态变更
   dispatch: (action: AuthoringAction) => void;
@@ -128,6 +165,8 @@ export type SessionActions = {
   selectEdge: (edgeId: string) => void;
   selectPort: (nodeId: string, direction: FlowHandleDirection, handle: string) => void;
   selectLoopRegion: (loopNodeId: string) => void;
+  /** 选中并要求画布带该节点入视野；重复请求也应生效。 */
+  revealNode: (nodeId: string) => void;
   focusIntent: (intent: StandardIntent | null) => void;
   setNodeConfig: (nodeId: string, patch: Record<string, unknown>) => void;
   credentialReplace: (
@@ -142,6 +181,16 @@ export type SessionActions = {
   addNode: (kind: FlowNodeKind, configValue?: Record<string, unknown>) => string;
   deleteNode: (nodeId: string) => void;
   deleteSelection: (nodeIds: string[], edgeIds: string[]) => void;
+  /**
+   * 把一段子图复制进当前文档（粘贴 / 直接复制）。
+   *
+   * id 在这里重新分配并重写边的端点，调用方只给来源子图与落点偏移。
+   * 与 `addNode` + `moveNode` 同构：语义、布局和历史在一次粘贴命令中同时落地，避免
+   * 两次撤销才能恢复粘贴前的图。
+   */
+  pasteSubgraph: (source: SubgraphClipboard, offset?: Position) => void;
+  /** 就地复制若干节点（含其内部边）；落点从当前投影读，相对原位偏移。 */
+  duplicateNodes: (nodeIds: string[], offset?: Position) => void;
 };
 
 export type SessionStore = SessionState & SessionActions;
@@ -166,7 +215,11 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
       const summary = await createNativeRuleDocument({ mode });
       const detail = await getNativeRuleDocument({ document_id: summary.document_id });
       if (!detail) throw new SessionError('document_not_found');
-      set({ summary: detail.summary, core: stateFromDetail(detail) });
+      set({
+        summary: detail.summary,
+        effectiveSemanticRevision: detail.effective_semantic_revision,
+        core: stateFromDetail(detail),
+      });
       return summary;
     };
 
@@ -179,12 +232,18 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
 
     return {
       summary: null,
+      effectiveSemanticRevision: null,
       core: createInitialState({ definition: createBlankDefinition('') }),
+      revealRequest: null,
 
       async loadDocument(documentId) {
         const detail = await getNativeRuleDocument({ document_id: documentId });
         if (!detail) throw new SessionError('document_not_found');
-        set({ summary: detail.summary, core: stateFromDetail(detail) });
+        set({
+          summary: detail.summary,
+          effectiveSemanticRevision: detail.effective_semantic_revision,
+          core: stateFromDetail(detail),
+        });
       },
 
       createBlank: () => openCreated({ kind: 'blank' }),
@@ -237,9 +296,14 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
 
           step({ kind: 'saveResponse', epoch: inFlight.epoch, outcome });
 
-          const { summary } = get();
+          const { summary, effectiveSemanticRevision } = get();
           if (summary) {
+            const nextEffectiveRevision =
+              outcome.semantic?.activation === 'effective'
+                ? outcome.semantic.revision
+                : effectiveSemanticRevision;
             set({
+              effectiveSemanticRevision: nextEffectiveRevision,
               summary: {
                 ...summary,
                 semantic_revision: outcome.semantic?.revision ?? summary.semantic_revision,
@@ -296,35 +360,6 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
         }
       },
 
-      async prepare() {
-        const documentId = requireDocumentId();
-        // 先落盘所有 dirty 域；冲突响应不会被误当作保存成功。
-        if (get().core.dirty.semantic || get().core.dirty.layout) {
-          await get().save();
-        }
-        const { core } = get();
-        const revision = core.savedSemanticRevision;
-        if (
-          revision === null ||
-          core.dirty.semantic ||
-          core.conflict.semantic ||
-          core.validation.status !== 'valid' ||
-          core.validation.revision !== revision ||
-          !core.validation.definitionHash
-        ) {
-          throw new SessionError('document_validation_required');
-        }
-        const candidate = await prepareNativeRuleDocument({
-          document_id: documentId,
-          revision,
-        });
-        step({
-          kind: 'setCandidate',
-          candidate: { id: candidate.id, expires_at_ms: candidate.expires_at_ms },
-        });
-        return candidate;
-      },
-
       dispatch: step,
       dispatchAll(actions) {
         set({ core: actions.reduce(reduce, get().core) });
@@ -347,6 +382,16 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
         step({ kind: 'selection', nodeId: portSelectionToken(nodeId, direction, handle) }),
       selectLoopRegion: (loopNodeId) =>
         step({ kind: 'selection', nodeId: loopRegionSelectionToken(loopNodeId) }),
+      revealNode: (nodeId) => {
+        step({ kind: 'selection', nodeId });
+        const previous = get().revealRequest;
+        set({
+          revealRequest: {
+            nodeId,
+            sequence: previous ? previous.sequence + 1 : 1,
+          },
+        });
+      },
       focusIntent: (intent) => step({ kind: 'intentFocus', intent }),
 
       setNodeConfig: (nodeId, patch) => step({ kind: 'setNodeConfig', nodeId, patch }),
@@ -389,6 +434,37 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
         if (core.selection && !core.definition.flow.nodes.some((n) => n.id === core.selection)) {
           step({ kind: 'selection', nodeId: null });
         }
+      },
+
+      pasteSubgraph(source, offset = PASTE_OFFSET) {
+        if (source.nodes.length === 0) return;
+        const idMap = new Map(source.nodes.map((node) => [node.id, newNodeId()]));
+        const nodes = source.nodes.map((node) => ({
+          ...cloneJson(node),
+          id: idMap.get(node.id) ?? node.id,
+        }));
+        const edges = source.edges.flatMap((edge) => {
+          const from = idMap.get(edge.from.node_id);
+          const to = idMap.get(edge.to.node_id);
+          // 只保留两端都在来源子图内的边；跨界的边粘过来会指回原节点。
+          return from && to
+            ? [{ from: { ...edge.from, node_id: from }, to: { ...edge.to, node_id: to } }]
+            : [];
+        });
+        const positions: Record<string, Position> = {};
+        for (const [sourceId, nextId] of idMap) {
+          const at = source.positions[sourceId] ?? { x: 0, y: 0 };
+          positions[nextId] = { x: at.x + offset.x, y: at.y + offset.y };
+        }
+        get().dispatchAll([
+          { kind: 'pasteSubgraph', nodes, edges, positions },
+          { kind: 'selection', nodeId: nodes[0]?.id ?? null },
+        ]);
+      },
+
+      duplicateNodes(nodeIds, offset = PASTE_OFFSET) {
+        const source = subgraphFromProjection(selectFlowProjection(get()), nodeIds);
+        if (source) get().pasteSubgraph(source, offset);
       },
     };
   });
