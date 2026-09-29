@@ -31,7 +31,6 @@ Human docs: `README.md`, `CONTRIBUTING.md`.
 3. **文案与注释**：文档 / 需求说明 / 注释用中文；英文仅限标识符、命令、技术专名。生成物不手改（如 `src/shared/paraglide/**`）。
 4. **主题与本地化**：色值的唯一来源是 `src/index.css` 里四个 `:root[data-appearance-pack='...']` 块；`src/shared/theme/` 只负责「选了哪套」并把选择写到 `<html>` 的 `class` / `data-appearance-pack` / `color-scheme` 上，不得在 JS 里再存一份调色板。业务代码用 `@theme inline` 暴露的语义色（`bg-surface-1` / `text-ink-muted` / `border-hairline`），不写字面量 `z-50` / `rounded-md`。前端文案必须通过 `src/shared/i18n` / Paraglide message functions，生成物 `src/shared/paraglide/**` 不手改。
 5. **状态**：跨组件状态用 zustand；需要跨窗口同步或持久化到应用数据目录的偏好，用 `@tauri-store/zustand`（Rust 侧 `tauri-plugin-zustand`）。凭证明文永远不进 `tauri-store`。
-6. **本地 AI 产物**：research、任务/会话记录等只留本机，不进 Git；用户删除的内容不得恢复。
 
 命令与质量门禁：`README.md`、`CONTRIBUTING.md`。
 
