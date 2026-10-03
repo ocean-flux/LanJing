@@ -76,3 +76,6 @@ app.*.map.json
 # Lefthook local overrides (PATH / machine-specific)
 lefthook-local.yml
 .lefthookrc
+
+# Agent Directory
+.pi
