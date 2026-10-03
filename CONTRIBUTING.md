@@ -50,13 +50,10 @@ src/
 ├── index.css            # 主题 token 层与 appearance pack 色值
 ├── App.tsx              # BrowserRouter 和页面路线
 └── main.tsx             # React 19 StrictMode 入口
-src-legacy/              # 一次性 Svelte 迁移归档，不得被新代码导入
 src-tauri/               # Rust workspace、IPC 和 Tauri 配置
 messages/                # en 与 zh-CN 翻译源，按命名空间分文件
 project.inlang/          # Paraglide 项目配置
 ```
-
-`src-legacy/` 必须保持为迁移归档。新 React 代码不得导入其中的 Svelte 组件或旧 store；纯 TypeScript 领域算法如需迁移，应复制到新的共享边界并保持契约，不要改动 Rust IPC。
 
 ## 本地化
 
@@ -84,7 +81,7 @@ project.inlang/          # Paraglide 项目配置
 <type>(<scope>): <subject>
 ```
 
-类型包括 `feat`、`fix`、`refactor`、`docs`、`style`、`test`、`chore` 和 `perf`。提交前运行 `pnpm check`，并确保没有将 `src-legacy/` 中的归档内容作为新代码依赖。
+类型包括 `feat`、`fix`、`refactor`、`docs`、`style`、`test`、`chore` 和 `perf`。提交前运行 `pnpm check`。
 
 ## 文档规则
 

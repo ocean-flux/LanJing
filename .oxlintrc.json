@@ -29,7 +29,6 @@
     "node": true
   },
   "ignorePatterns": [
-    "src-legacy/**",
     "src-tauri/**",
     "build/**",
     "node_modules/**",

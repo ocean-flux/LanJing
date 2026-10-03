@@ -77,12 +77,9 @@ src/
 ├── index.css            # 主题 token 层与四套 appearance pack 色值
 ├── App.tsx              # BrowserRouter 路由与全局启动
 └── main.tsx             # React 19 createRoot 入口
-src-legacy/              # 一次性 Svelte 迁移归档
 src-tauri/               # Rust 后端和 Tauri 配置
 messages/                # Paraglide 翻译源文件
 ```
-
-`src-legacy/` 保留迁移前文件内容和用户改动，仅供追溯与后续迁移参考。新代码不得从该目录导入；规则领域算法和 Rust IPC 契约也不得因前端切换而重写。
 
 ## 许可证
 

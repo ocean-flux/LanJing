@@ -2,7 +2,7 @@
 
 Local-first cross-media discovery & reading workbench.
 Stack: **Tauri 2 + React 19 / React Router 7 + Vite 8 + Tailwind 4 + Base UI + Paraglide JS + Rust workspace**。
-当前 React 源码位于 `src/`；历史 SvelteKit/Svelte 实现只读保留在 `src-legacy/`，不得重新接入构建。
+当前 React 源码位于 `src/`。
 
 UI primitive 是 **Base UI**（`@base-ui/react`），不使用 `radix-ui` / `@radix-ui/*`。Base UI 用 `render` prop 承担 Radix `asChild` 的职责。
 组件母版是 shadcn **`base-lyra`** registry（`components.json` 的 `style: "base-lyra"`，直角 / `text-xs` 基线 / `ring-1` / 控件 32px）。
