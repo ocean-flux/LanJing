@@ -1,0 +1,176 @@
+{
+  "contract": "rule_package",
+  "schema_version": 1,
+  "source_identity": {
+    "id": "source:core-out-rule-package"
+  },
+  "version": "accb44ed888efe9ce0c2de746edf01b987b1c0a063bffe8fb7cc1735efbfb1f6",
+  "definition": {
+    "contract": "rule_definition",
+    "schema_version": 1,
+    "source_identity": {
+      "id": "source:core-out-rule-package"
+    },
+    "base_url": "http://rule-package.invalid",
+    "intent_exports": {
+      "Search": {
+        "flow_entry": "00000000-0000-0000-0000-000000000001",
+        "mapper_output": "00000000-0000-0000-0000-000000000004"
+      },
+      "Discover": {
+        "flow_entry": "00000000-0000-0000-0000-000000000003",
+        "mapper_output": "00000000-0000-0000-0000-000000000005"
+      }
+    },
+    "flow": {
+      "nodes": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "config": {
+            "kind": "http",
+            "value": {
+              "method": "Get",
+              "url": "/api/v1/search?key={{key}}",
+              "headers": {},
+              "body": null,
+              "charset": null,
+              "expected_type": "Json"
+            }
+          }
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "config": {
+            "kind": "extract",
+            "value": {
+              "rules": [
+                {
+                  "JsonPath": {
+                    "path": "$.list[*]",
+                    "extract_type": "Text",
+                    "regex_clean": null
+                  }
+                }
+              ],
+              "field_rules": {
+                "cover": [
+                  {
+                    "JsonPath": {
+                      "path": "$.cover",
+                      "extract_type": "Text",
+                      "regex_clean": null
+                    }
+                  }
+                ],
+                "vodId": [
+                  {
+                    "JsonPath": {
+                      "path": "$.detail_id",
+                      "extract_type": "Text",
+                      "regex_clean": null
+                    }
+                  }
+                ],
+                "name": [
+                  {
+                    "JsonPath": {
+                      "path": "$.name",
+                      "extract_type": "Text",
+                      "regex_clean": null
+                    }
+                  }
+                ]
+              },
+              "expected_type": "Json",
+              "output_target": "Media"
+            }
+          }
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "config": {
+            "kind": "js",
+            "value": {
+              "code": "JSON.stringify([{ title: '{{key}}', url: '/browse/' + '{{key}}' }])",
+              "output": "json",
+              "budgets": {
+                "timeout_ms": 5000,
+                "memory_bytes": 16777216,
+                "output_bytes": 1048576
+              }
+            }
+          }
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000004",
+          "config": {
+            "kind": "mapper",
+            "value": {
+              "output": "items",
+              "identity_fields": [
+                "source_item_id"
+              ]
+            }
+          }
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000005",
+          "config": {
+            "kind": "mapper",
+            "value": {
+              "output": "discovery",
+              "identity_fields": [
+                "title"
+              ]
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": {
+            "node_id": "00000000-0000-0000-0000-000000000001",
+            "handle": "output"
+          },
+          "to": {
+            "node_id": "00000000-0000-0000-0000-000000000002",
+            "handle": "input"
+          }
+        },
+        {
+          "from": {
+            "node_id": "00000000-0000-0000-0000-000000000002",
+            "handle": "output"
+          },
+          "to": {
+            "node_id": "00000000-0000-0000-0000-000000000004",
+            "handle": "input"
+          }
+        },
+        {
+          "from": {
+            "node_id": "00000000-0000-0000-0000-000000000003",
+            "handle": "output"
+          },
+          "to": {
+            "node_id": "00000000-0000-0000-0000-000000000005",
+            "handle": "input"
+          }
+        }
+      ]
+    },
+    "capability_manifest": {
+      "required": {
+        "network": true,
+        "system": {
+          "fs": false,
+          "env": false,
+          "process": false
+        }
+      }
+    },
+    "source_id_rules": [
+      "source_item_id"
+    ]
+  }
+}
