@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:76dff07ce2d4d4cbfadd071e42e1c871698ea2651fc2d4c732d3b2ea04b715d4",
+  "pageVersion": "sha256:c8a7826cb41f46a3ad17bb438b2851c8789bad939d3181a2d79570b0a86c3ac3",
   "claims": [
     {
       "id": "claim_08679c74f65340eb995813ca9e6e26fc",
@@ -14,7 +14,7 @@
     },
     {
       "id": "claim_5c8e8dbb92154faca6ce92e9ea1ff7fb",
-      "statement": "契约层由四个分工不重叠的 crate 组成: lj-capability 只拥有 6 个 StandardIntent / IntentExport / 7 种 IntentInput 且不携带来源端点与展示语义; lj-plugin-contract 只拥有 namespaced 身份、版本词汇、PluginManifest 声明与 HOST_CONTRACT_VERSION; lj-media 拥有标准媒体模型与 MediaGraphDelta; lj-rule-model 拥有作者合同与 Plan IR。",
+      "statement": "契约层由三个分工不重叠的 crate 组成: lj-capability 只拥有 6 个 StandardIntent / IntentExport / 7 种 IntentInput 且不携带来源端点与展示语义; lj-media 拥有标准媒体模型与 MediaGraphDelta; lj-rule-model 拥有作者合同与 Plan IR。",
       "evidence": [
         {
           "resource": "repo://src-tauri/crates/lj-capability/src/lib.rs#L11-L64",
@@ -25,8 +25,8 @@
           "version": "repo-lines-v1:sha256:136d793f41c6294844da21940adc4c4ec424bd75e853e80b3101ce3b44dc4220:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzcxZjMyZTFjNWVmZTBjNTY0MWFmMGVmMDk1OWRhMzA4NTdjZjhjZWM4M2Q3Y2JjZmE0YmZhYzA2NzhlMjU3MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTI4Y2JjNzIyY2VhMWZmYzdhNmI5OTc3N2M4NGU1YzFhNWZlYTVlN2QxMjllMDM4Y2I3Y2Y3OGY0OWRmYWQ5YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmUyZmI1NmM5N2VlMjExZGJmNmU3YWY5NmY0ZGJhYWQ1ZTgwY2I1Nzc2NWNhMWUzODI5ZDFiMGI2ZDFhODFkYyJ9"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-plugin-contract/src/lib.rs#L1-L18",
-          "version": "repo-lines-v1:sha256:e61be2ff8fde9b77a9ab2739c19e689322ad9c0108339cb4de177f241ed00995:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlNjRkNWE5ZmIzOTczNDM0NjZjZDgxMGNjZGUzMGU5NzYwZmE1NzA1YTVkYjBhY2I1NDlkOGY4OThmZDZlODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4NzhlMTk1MDAxNmFjZWJlMTU5MzdkYTFhMjQyZDAzMGFlNTllNDkyNDJmNTBmMTVhNzcyOWUyMDVjZDU0YzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/lib.rs#L1-L4",
+          "version": "repo-lines-v1:sha256:afd4c8d91e40a32707b063a4ba989f7061c715d81160b4db3848c2fad6c4a496:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjZjOTc3Y2NlZmZjMzM0NmRiZmUwYWYyODhkYjYwMjRiOTI5NTVhODljMzg3MGU4MGM1YjgyNGNmODQ0ZDEzNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmE5NGIwYTVkZWY4MTY5MDljODg5ZjY3YmY2ZDE5MmNiZDkwZTcxZmM3MzBlYjZhODVkYzEyOWU2N2I4MGExMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjMxOTUwYWZkNmZkYWNhMjc1OTc3ZTAzY2FmMDVlMWM5OWFlNDM0MTAwOTlmNmZhM2VjZTM2NzI4MjhlMDA1YiJ9"
         }
       ]
     },
@@ -185,34 +185,6 @@
       ]
     },
     {
-      "id": "claim_95f28a93571647c3ae497e4010cda9da",
-      "statement": "PluginId 与 OperationId 都是 <namespace>.<name> 的 namespaced identity(仅小写字母/数字/-/_/.), 大写与空白被拒绝以保证同一身份只有一种拼写; OperationId 作为 registry lookup key 不依赖闭集 enum 变体、类型布局或注册顺序; PluginManifest 只承载 plugin_id/plugin_version/contract_version/provided 的声明与查询。",
-      "evidence": [
-        {
-          "resource": "repo://src-tauri/crates/lj-plugin-contract/src/identity.rs#L41-L46",
-          "version": "repo-lines-v1:sha256:aeadaa5522304fbff3b82f594753e1e861305b1c4a636b5c4db2c3ec3d111616:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGM3MzRmNGRkZjJkOTdiYWEwZWU2MmIwMzZmMTZlNGNmZGQ5NzkyZWNhYWM5MWFlNTNiMzA2NjU3YTY3YWZkNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWY1OTU3ODU2YjYzMTMxMTAzODM2YWNjNWE5M2RmY2UwYjM0MmU3YjlkZGY4YzA1NWM4ZDM3YzgzZTZlMzcwNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTliYTRkODY2Mjk5NWFlYTdjYWJmNTFmZmU2Y2M3MWMzMzVkZWNmZjhkOTBiNTNlOWEyZDRjMGE4ODMyODVhYyJ9"
-        },
-        {
-          "resource": "repo://src-tauri/crates/lj-plugin-contract/src/identity.rs#L7-L13",
-          "version": "repo-lines-v1:sha256:872807bcb12c62fc7649bd5d11939c4245300c694f706619d5d49cc3ca46a6ad:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzcwNDk4ZmExMTMwOTI4YTMxMzE3ZTc3MThjMTJhMGQxYTg5MjBhMzJkYjI4NWM3NWU2MTk4Y2Q0MWRhMzk2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTRmMThkOWJjMzYxMWNkOTE3NjE1NDJhOWE0MDM5ZmRkYWM3MzRhZWY2NjRiMDg0ZjkwMDNlNWZmM2Q2ODIyMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTQ1ZGY1NDExMjIxMzAwZTU1ZGM2YTJlMDVjYzJkZWY4ZjRmNjM0NTM0Mzc4MzMxODRhZmI5ZWYzYTEzYTc5YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmNiZjhkOTg4NmIzYjExMjBhZjg1YWQ0ZDRhY2FjMTBjY2UzM2UzM2M5NzU0M2MwMWU0OWRlYjRiYzEwNmZiMCJ9"
-        },
-        {
-          "resource": "repo://src-tauri/crates/lj-plugin-contract/src/manifest.rs#L5-L63",
-          "version": "repo-lines-v1:sha256:62b4fe2e575164c687442481c86ab2c9d792aa75d81c6712f8fc26593044f825:eyJzZWxlY3RlZExpbmVDb3VudCI6NTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIwNzgxNGViM2E0M2I2Y2YxODdkYzgzYjMzZDQzNDM2ZDY4NmNlOWVlMWUxYzQ1ODQ1MDgxNDVjM2FlOGYwNjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkYjQ3NmYyMjYwNTVlMjU4ZjRjNzI0ZjZlN2Q3YTU2MTA4YWEzYTI2OWRlODliNDYxN2ZhNjI3MWIwY2NmY2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_9e220d56bdbd471b8d261d31c346594f",
-      "statement": "manifest 校验、依赖解析、生命周期与 handler 类型都不在 lj-plugin-contract(注释指向 issue #36 与 #40/#41), 因此 HOST_CONTRACT_VERSION = \"1\" 当前是被声明但尚未强制比对的版本号, 属已决定未实现。",
-      "evidence": [
-        {
-          "resource": "repo://src-tauri/crates/lj-plugin-contract/src/lib.rs#L1-L18",
-          "version": "repo-lines-v1:sha256:e61be2ff8fde9b77a9ab2739c19e689322ad9c0108339cb4de177f241ed00995:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlNjRkNWE5ZmIzOTczNDM0NjZjZDgxMGNjZGUzMGU5NzYwZmE1NzA1YTVkYjBhY2I1NDlkOGY4OThmZDZlODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4NzhlMTk1MDAxNmFjZWJlMTU5MzdkYTFhMjQyZDAzMGFlNTllNDkyNDJmNTBmMTVhNzcyOWUyMDVjZDU0YzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
-        }
-      ]
-    },
-    {
       "id": "claim_1757e55bc1934a39bb3b5dc458d11b88",
       "statement": "rule-model 这一层没有 Revision 类型: 「草稿 / 生效 revision」的概念只存在于 lj-rule-system 的文档 DTO 与存储侧, 不在规则合同里。",
       "evidence": [
@@ -221,10 +193,64 @@
           "version": "repo-lines-v1:sha256:7ca43f9a4a1cd46600e2c8bf2b0c2b80e5a27259cf148c8c8622d4f6061873f5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImViYzYyODliMDJjZmNjMDBiMDk3ZTY5NzEyMDI4M2ZlNzk4MzNkMzliNjhlNDkwODk0YWRhN2NmNzI2ODA5OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4NDU3NDJkYWE1MzEzYTA0OGNiNzI1NTJmMWU4N2I5Nzg1ZmExYzIwNDBjYTNjNzQxYmEwMzZiZTEzZTQ5MjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4MjU0ZmRmYTAwMTNhYTRjOTIyMzIwOTJjNmE4Y2M3YWQ5NWY3MjBlZTQ2NzJlNDhiYjViYjZjMjkzZTdmZDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
+    },
+    {
+      "id": "claim_40c4e72309be4484901511fd63743f5b",
+      "statement": "ADR 0004(规则优先的来源扩展架构)已采纳并取代 ADR 0003: 一期扩展边界是用户规则与可导入的 Rule Package 而不是通用 executable plugin package, 受控 JS 只是处理当前节点输入的变换节点而不是通用 plugin runtime, 前端一期只实现规则工作流而不实现插件管理。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L1-L5",
+          "version": "repo-lines-v1:sha256:8bac139fc52eec555c320e52ec51a2a2b973ce10a761842076db729269912c7a:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjQxZTExNjc3MzA3NTNhMWE1NjBmNWNiZDMwMTQwYjZlZGEyMWQ2Mjg1OTJmZjJmODQzNzVjMDM5ZTg0ZmQ0ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGEwZGNlZTRkMDgyZTQwYzBlNDU2NzJjNDY4Mzg2MmI2MDMwN2JiMjMwZDcxYTJjMGQxZjhjMDUwMzllNzc2MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2YxZDJlZDE2M2RkYzA2MDE3MzdhYTcyYmMwMTEwYjM5MzIzMzM4OTk0ZmE0YWYxN2M2YWQ4NWJkODYxZTFjMSJ9"
+        },
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L17-L30",
+          "version": "repo-lines-v1:sha256:327f787fc91409a8d58a6d7f8c6b1a2aba9bb3a1d41d8a5301f8ea82c93937e9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyZDIwZTRlOGE5NjQ1ZTYwZjRjMzY4ZWRiMmIyNjAyZGFhNzllYWExMDY5ZmFlMGMxMzZlMGMzNWVlZmUyMjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2NDY2MjI3MWIxZTU5ODliZmU5YzI3ZjA4ZjQ2NTkzYTU0MWRkNWRhOGE5M2ZmNTAzOWQzNzYyZjM5MzFkZGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBkNTg4NGQyMjg1NTU2NDRlZWMxZWY4MTBkZGU2ZjE2ZDg5OWRkNjBlNTEzYzc1MjUyODYyY2M4NzBiZmQyMmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVmMzVkM2RhOWQzMDM4ZTZhMzBkNDViYjg2Y2NjNzlhY2YxMGIyM2Q5YWYyMTUyYTMzN2I0YTMyYmY5Nzg0ZDMifQ"
+        },
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L68-L77",
+          "version": "repo-lines-v1:sha256:56d3b6969aa3efc98b80d964fc766817abad3a25cc3aa2b4b5b5de750e04b96e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0NzkzYWU3ZjRlNWNiNDE1MTA5ZjM3ZDQxZTk4Y2VlNTI0ZWVkZTFlMmQ1NTgyMDhiM2EzMmVjM2I5NjE2ODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI3NWRkOWIzOGQyYmRjMGFkNDBjNWZhYmZjZDlkNjk4MzcyYTMyYjIzYTFkMTQ3ZTUyMWVkNWQ2YjEzMjg0NTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmYTQzOWYzMWU2ZjdiZDM3MzFhZTRhYzc4N2E4YjUwY2MyNmNjODIyYzIwMWYyOWM2ZTRjYjYzZTc2NTdkOTIifQ"
+        },
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L78-L89",
+          "version": "repo-lines-v1:sha256:de067b53ceef2ffa9f8ecaa3c588d37d37274999920d7d7df9b0d93af3c0b761:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkOGYyNTRkMDYwMmJhMzg2ZDU5MWU1Y2Y3NDBkMTM3YTc4MGE0NmVmNzljZjRhZmE4NDUyZjdkNDNiMDY4MTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjNDJmZWNhMmU0MWM3MTEyNWQwNGVkMDEwNmYyMjZlMmRlNDVjY2NhZDAyMWQ5MjJkMGY4MTEyMzRhNjcyNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNhYmI5ZTYyOGM4OTFjY2IwMzdmMjlhNWUwNjNkYjkwMmY4NmMwOGU4MDYyYmI1ODMzOWE4MzQ1ZGFkMjE3N2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3NTdiMGYwMDhhYzg0ZWRmOGE0YmYyNTZmMTY2MDlkNzk3Y2JlZWMwYmY0NzU4MDM0ZGJmMzhkNjc0NGY5YTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_95bff1ae41674d389073fa37bb0c3d5a",
+      "statement": "内置 effect 注册与查找的唯一键是 Rule Contract 的 EffectKind: 原第四个契约 crate lj-plugin-contract 与 lj-runtime 里的 PluginHost / FrozenRegistry 已删除, 通用 plugin system 按 ADR 0004 第 7 节属一期明确不建设; 批量注册的原子性(重复 kind 在写入任何 handler 之前失败)与冻结后不再变化的不变量保留。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114",
+          "version": "repo-lines-v1:sha256:02f932ba84acfd1c166e524c753a91ce054aafb85ec534177ff7306437dc675e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4YTg3OGJmYWM5NDZkZTZhZjFjNmQ2NjVlNzQ5M2E3MGYwZTMzYjQ0NDVmYTljOTNhMjMzY2ZmNTYwMGVkN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNGQ1ODc1OWVjZjkzNGE2ZTEyOTY3ZDM3MzI2ZWVjODBjMGIwMGZmNzYwNTk0ZmY0NzhiOGZhZTAxOTJlNzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMWY1ZTQ2NmMzMjg2NzYyNTE3YjBjMGIxM2NiZDczYWRiMDJiYWQzYTQ0NzcxYzQwNTgzYTRjOTMwZDIxMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzYTZhNDAwNmJjMjUyNTFhMDc5OWNiYWM4ZmJhZmY2ZmRiZTA0NmYxMjdmMTJlOGQ1NWZiMTkxMDdjMGFmZTcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:891bea5d2a131533378edbc36f034a8684d1b2da860f8ddc18f0a75415f75c55:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODIxMDk0MjNlZjYxNGUwODZhMTFjMWQwYWU4Y2Q2YWUxMjc5NjNjNzc2ODRjMDM5YzVkODc5NzY2MGNkOTA3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJlOGFjZDEwN2IyNTM1YTBkMDExYTQ5MDk2OTU0OGI5YzMxYTE2MjIwNzM3ZDFjNzZiYWEyM2NkOWM4Yjg5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRmZmM3ZjViYWRkOTAyODYyYzkwYTJjODQzYmI3N2RjMjMyMTVmY2EwOTVmZGQwZDA0Y2ZjMTc5NGQ4MzE4NSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L61-L83",
+          "version": "repo-lines-v1:sha256:eefa7a039463814c4d3d5713f8ad509db3b2df50fcb6373711fda44e019edb2a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljMGRmNmZkMzY5YzllZjc3ODg2MjljM2IwN2UzN2E2OTQ5NTdjYmMwNTNlMTQ3MzAyYjQ2ODgxMDRiOTgwNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5M2JjNjcyMzE2YWNhOWNmNDk2NjUwMGFjMDQ4MmZhNGY4NjBmMjc1ZGNmZWRkMGIwMWI4YTIxNGY0MmJlZTMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2e3d5683909a49329fef8a4ed04c6877",
+      "statement": "EffectKind 是 effect registry 的 BTreeMap 键, 因此除 Clone/PartialEq/Eq 外还 derive PartialOrd/Ord; 它只决定键序, 不改变 serde 表示。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/types.rs#L124-L133",
+          "version": "repo-lines-v1:sha256:4118265e524490ffc1c41ab440c776a2cc2beb030dde11193677d3d9cf9a8463:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5MTZmMjYxNWU0ZDlhYWEzMzNjMWZiZDgwNjM3NmY4ZTBlY2Y0OTc1OGQ5MzY3ZTk2MjVjNDI2NTk5NmM5OTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVlZDdiNDgwY2E0N2VkOWU2NTA0NmRkYjU3YjYwMDBjY2NlOTY0MTZiMGM1MzQxZjBlNzQ2Y2FiODJlNTlmMWUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L98-L107",
+          "version": "repo-lines-v1:sha256:e2df80700e308bb2090a3efdb6347ad5047a2307e02c6350dcdc700b7a17e963:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkNzM5YWJiMTlmMmZlMWNhOTk5NGU2YmMzNjc5MTI5MTk4ZjY0ZTM5NTI3NzIyY2Q2NjliNjc2OTlhYWU2NDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmMThmYTBmMzBjYmNlZGRjODk3Njg3NzY5OTNjNjE2MThhMDZkNGIzNGU4ZGMxN2I5NTE1M2YwNDliODkxMGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-04T13:54:24.186Z"
   }
 }

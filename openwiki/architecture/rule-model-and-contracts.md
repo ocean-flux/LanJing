@@ -4,18 +4,14 @@ title: "Rule model and contracts"
 openwiki_generated: true
 verified:
   - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
+    at: 2026-10-04T13:54:24.186Z
 sources:
+  - id: openwiki-source-f70faf819fb2edbb8e236f45
+    resource: repo://docs/adr/0004-rule-first-open-extension-architecture.md
   - id: openwiki-source-88eb5697f2554e4827380829
     resource: repo://src-tauri/crates/lj-capability/src/lib.rs
   - id: openwiki-source-f37a0f7edcf7d757acfa95d3
     resource: repo://src-tauri/crates/lj-media/src/lib.rs
-  - id: openwiki-source-04a7b740da64332417398525
-    resource: repo://src-tauri/crates/lj-plugin-contract/src/identity.rs
-  - id: openwiki-source-22a9a9a1528dbc78fa579867
-    resource: repo://src-tauri/crates/lj-plugin-contract/src/lib.rs
-  - id: openwiki-source-aae4982be54eb4fa373e8980
-    resource: repo://src-tauri/crates/lj-plugin-contract/src/manifest.rs
   - id: openwiki-source-b84a408efd38365db5465652
     resource: repo://src-tauri/crates/lj-rule-model/src/definition/contract.rs
   - id: openwiki-source-a7f973b529835a5d2bbe2a82
@@ -32,7 +28,9 @@ sources:
     resource: repo://src-tauri/crates/lj-rule-model/src/policy.rs
   - id: openwiki-source-8c969793b07c46132d5a3d59
     resource: repo://src-tauri/crates/lj-rule-model/src/sensitive.rs
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+  - id: openwiki-source-8ece8d8ea6055cf2f800dcb4
+    resource: repo://src-tauri/crates/lj-runtime/src/effect_registry.rs
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
 ---
 
 
@@ -40,16 +38,17 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 
 `lj-rule-model` 只承载可序列化合同: `Definition`、`Plan`、`EventEnvelope`、`Diagnostic`、`Policy` DTO 与节点配置 IR; 它**刻意不引入** ORM、Tokio、Tauri、HTTP 或 QuickJS 实现(`src-tauri/crates/lj-rule-model/src/lib.rs#L1-L4`)。这使它可以被 compiler、runtime、storage、importer 与前端 wire 层共同依赖, 而不把任何一方的运行时假设带进合同。
 
-同一层里还有另外三个更窄的契约 crate, 分工不重叠:
+同一层里还有另外两个更窄的契约 crate, 分工不重叠:
 
 | crate | 拥有什么 | 不拥有什么 |
 | --- | --- | --- |
 | `lj-capability` | 6 个 `StandardIntent`、`IntentExport`、7 种 `IntentInput`(`src-tauri/crates/lj-capability/src/lib.rs#L11-L64`) | 来源端点与展示语义 |
-| `lj-plugin-contract` | `PluginId` / `OperationId` namespaced 身份、`Version`、`PluginManifest` 声明、`HOST_CONTRACT_VERSION`(`src-tauri/crates/lj-plugin-contract/src/lib.rs#L1-L18`) | manifest 校验、依赖解析、生命周期、handler 类型 |
 | `lj-media` | 标准媒体模型与资源图增量 `MediaGraphDelta`(`src-tauri/crates/lj-media/src/lib.rs#L1-L291`) | 来源专有的抓取与展示布局 |
 | `lj-rule-model` | 作者合同与执行计划 IR、hash、策略 DTO | 任何解析、执行或持久化 |
 
-依赖方向是单向的: `lj-capability` 无内部依赖, `lj-media` 与 `lj-rule-model` 依赖它, `lj-plugin-contract` 独立。反向依赖(规则模型依赖运行时或媒体结果)不成立。
+曾经的第四个契约 crate `lj-plugin-contract`(`PluginId` / `OperationId` / `PluginManifest` / `HOST_CONTRACT_VERSION`)及其在 `lj-runtime` 里的 `PluginHost` / `FrozenRegistry` 已**删除**: 通用 plugin system 按 ADR 0004 第 7 节属一期明确不建设, 内置能力改用同一 Rule Contract 的 `EffectKind` 注册(`src-tauri/crates/lj-runtime/src/effect_registry.rs#L1-L5`, `docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114`)。
+
+依赖方向是单向的: `lj-capability` 无内部依赖, `lj-media` 与 `lj-rule-model` 依赖它。反向依赖(规则模型依赖运行时或媒体结果)不成立。
 
 ## RuleDefinition: 作者合同
 
@@ -89,6 +88,8 @@ Plan 的读取同样是唯一 current wire: `read_execution_plan` 只认当前 s
 
 Plan IR 的值类型是闭集: `EffectKind` 只有 `Http` / `QuickJs` / `Extract`; 端口值类型只有 `PortValueType::{Kind, Union}`; 固定 handle 常量(`LINEAR_INPUT_HANDLE`、`CONDITION_INPUT_HANDLE`、`MERGE_OUTPUT_HANDLE`、`LOOP_*`)在这一层定义, 编译器的端口矩阵引用它们(`src-tauri/crates/lj-rule-model/src/plan/types.rs#L17-L31`)。
 
+`EffectKind` 还是运行时 effect registry 的注册与查找键(registry 内部是 `BTreeMap<EffectKind, EffectHandler>`), 因此它在 `Clone` / `PartialEq` / `Eq` 之外还 derive 了 `PartialOrd` / `Ord`; 这只决定键序, 不改变 serde 表示(`src-tauri/crates/lj-rule-model/src/plan/types.rs#L124-L133`, `src-tauri/crates/lj-runtime/src/effect_registry.rs#L98-L107`)。
+
 ## 敏感名策略: 唯一 owner
 
 `SensitiveNamePolicy` 是跨来源共享的**唯一**敏感名称表, 注释明确要求 Legado/Maccms/HTTP witness 都调用它, 来源 adapter 不得复制 `Authorization`/`Cookie`/token 名称表(`src-tauri/crates/lj-rule-model/src/sensitive.rs#L1-L5`)。
@@ -124,12 +125,6 @@ Plan IR 的值类型是闭集: `EffectKind` 只有 `Http` / `QuickJs` / `Extract
 模型集合是一套标准媒体词汇: `MediaResourceId`、`MediaKind`、`ResourceCompleteness`、`SourceProfile`、`MediaItem`、`MediaCollection`、`MediaUnit`、`MediaAsset`(含 `MediaAssetKind` 与 `MediaAssetLocator`)、`MediaRelation`、`MediaAction`、`PresentationHint`(`#L7-L258`)。`PresentationHint` 是「规则只出标准模型 + 展示提示、不定义 UI 布局」这条产品硬边界在类型层的位置: 它携带 `card_density`、`cover_ratio`、`dominant_color`、`preferred_template` 之类的线索(`#L240-L245`)。
 
 发现的产物用增量表达: `MediaGraphDelta` 按 `sources/items/collections/units/assets/relations/actions/hints` 分组, `merge` 的语义是「同 ID 后到覆盖」, 只有 `relations` 走去重追加(`#L249-L278`)。这让一次执行可以只投递变化的部分, 而合并顺序无关最终状态(除 relations 的集合语义外)。
-
-## plugin contract: 身份先于能力
-
-`PluginId` 与 `OperationId` 都是 `<namespace>.<name>` 形式, 只允许小写 ASCII 字母、数字、`-`、`_` 与作为分隔符的 `.`, 且至少两段; 大写与空白被拒绝(`src-tauri/crates/lj-plugin-contract/src/identity.rs#L7-L13`)。注释把动机写得很直接: 同一身份只能有一种拼写, 注册顺序或大小写差异不能制造两个 identity。`OperationId` 是 registry 的 lookup key, 明确不依赖闭集 enum 变体、Rust 类型布局或注册顺序(`#L41-L46`)。
-
-`PluginManifest` 只承载声明与查询: `plugin_id`、`plugin_version`、`contract_version`、`provided`(`src-tauri/crates/lj-plugin-contract/src/manifest.rs#L5-L63`)。校验、依赖解析、平台/冲突/资源限制检查与 frozen plugin lock 的生成**不在这个 crate**; 注释指出它们属于 issue #36, 而 plugin-facing handler contract 要等 #40/#41 定形后才迁入(`lib.rs#L1-L18`)。因此当前 `HOST_CONTRACT_VERSION = "1"` 是一个只被声明、尚未被强制比对的版本号——已决定但未实现的部分要按这个口径理解。
 
 ## 边界与遗留
 

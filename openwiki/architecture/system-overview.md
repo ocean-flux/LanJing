@@ -2,9 +2,6 @@
 type: "参考"
 title: "System overview"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-6ae244f79c5e27a2b1f08014
     resource: repo://components.json
@@ -14,10 +11,10 @@ sources:
     resource: repo://docs/adr/0001-base-ui-and-base-lyra.md
   - id: openwiki-source-9faf227efd814ea6139f8535
     resource: repo://docs/adr/0002-versioned-source-and-rule-lifecycle.md
-  - id: openwiki-source-794ce030fb442c8e36173c3b
-    resource: repo://docs/adr/0003-rust-first-rule-plugin-architecture.md
   - id: openwiki-source-415c14fc16b9bb2d14d082c5
     resource: repo://docs/adr/0004-app-surfaces-and-workbench-layers.md
+  - id: openwiki-source-f70faf819fb2edbb8e236f45
+    resource: repo://docs/adr/0004-rule-first-open-extension-architecture.md
   - id: openwiki-source-05b14d59724ec4fa57d1c0cc
     resource: repo://docs/adr/0005-turn-engine-and-pagesource.md
   - id: openwiki-source-ca67060e890937010b96de80
@@ -30,8 +27,6 @@ sources:
     resource: repo://src-tauri/crates/lj-importer/src/maccms/mod.rs
   - id: openwiki-source-06153a1cffee823fcf0f4b22
     resource: repo://src-tauri/crates/lj-importer/tests/legado_test.rs
-  - id: openwiki-source-22a9a9a1528dbc78fa579867
-    resource: repo://src-tauri/crates/lj-plugin-contract/src/lib.rs
   - id: openwiki-source-a7f973b529835a5d2bbe2a82
     resource: repo://src-tauri/crates/lj-rule-model/src/hash.rs
   - id: openwiki-source-18e2cd19f7a3c23ecb7a2d80
@@ -52,17 +47,22 @@ sources:
     resource: repo://src-tauri/crates/lj-rule-system/src/system/session_delivery.rs
   - id: openwiki-source-66845dd8b3f72696149d5d09
     resource: repo://src-tauri/crates/lj-rule-system/src/types/document.rs
-  - id: openwiki-source-4c3b6fba913fb883ef519a2f
-    resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/api.rs
+  - id: openwiki-source-8ece8d8ea6055cf2f800dcb4
+    resource: repo://src-tauri/crates/lj-runtime/src/effect_registry.rs
+  - id: openwiki-source-424726f325963a46b4c3301e
+    resource: repo://src-tauri/crates/lj-runtime/src/effect/archive.rs
+  - id: openwiki-source-60db92730bd8b30a2a14ff4f
+    resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs
   - id: openwiki-source-34d489227f93cd0425da2fa7
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/live_capture.rs
-  - id: openwiki-source-7fd66b51bf216e523c5d9807
-    resource: repo://src-tauri/crates/lj-runtime/src/plugin.rs
   - id: openwiki-source-c33d51acf739e25ca33c8b1d
     resource: repo://src-tauri/crates/lj-storage-migration/src/lib.rs
   - id: openwiki-source-b3eeee8972a1c1a0ed428993
     resource: repo://src/features/apps/AppsHome.tsx
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-04T13:54:24.186Z
 ---
 
 
@@ -79,7 +79,7 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 
 ```text
 src/                 React 工作台外壳(features/{realm,apps,sources,rules,library,settings})
-src-tauri/           Tauri 壳 + Rust workspace(15 个 crate)
+src-tauri/           Tauri 壳 + Rust workspace(14 个 crate)
   src/               main.rs / lib.rs / commands/ / deeplink/
   crates/lj-*        领域 crate, 见下表
 messages/            Paraglide 翻译源(en / zh-CN)
@@ -93,11 +93,10 @@ Tauri 根 package 只依赖 `lj-rule-system` 与 Tauri 插件, 不直接依赖 s
 | crate | 依赖 | 说明 |
 | --- | --- | --- |
 | `lj-capability` | 无内部依赖 | 标准意图契约, 最底层 |
-| `lj-plugin-contract` | 无内部依赖 | 身份与 manifest 声明 |
 | `lj-rule-model` | `lj-capability` | 定义/计划/策略 DTO, 刻意不引入 ORM/Tokio/Tauri |
 | `lj-media` | `lj-capability` | 标准媒体模型 |
 | `lj-compiler` | `lj-rule-model` | 校验与降低 |
-| `lj-runtime` | `lj-rule-model`, `lj-capability`, `lj-media`, `lj-plugin-contract` | 执行引擎, **不依赖 storage** |
+| `lj-runtime` | `lj-rule-model`, `lj-capability`, `lj-media` | 执行引擎, **不依赖 storage** |
 | `lj-node-http` / `lj-node-js` / `lj-node-extract` | `lj-runtime` (+ `lj-rule-model`) | effect 适配层, 位于 runtime 之上 |
 | `lj-importer` | `lj-rule-model`, `lj-capability` | 来源格式解析与翻译 |
 | `lj-storage-entity` | 无内部依赖 | 关系模型 |
@@ -108,30 +107,27 @@ Tauri 根 package 只依赖 `lj-rule-system` 与 Tauri 插件, 不直接依赖 s
 两条被刻意维持的「不依赖」值得单独指出:
 
 1. `lj-rule-model` 不依赖 compiler/runtime/storage, 因此规则合同可以被任何一层引用而不引入运行时假设。
-2. `lj-runtime` 不依赖任何存储 crate: 它只要求一个 `EffectArchive` trait(`src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L371-L384`), 由门面层在调用时注入。这把「执行需要持久化」从编译期依赖降级为运行期参数, 使 runtime 可以在测试里用内存 archive 跑。
+2. `lj-runtime` 不依赖任何存储 crate: 它只要求一个 `EffectArchive` trait(`src-tauri/crates/lj-runtime/src/effect/archive.rs#L336-L352`), 由门面层在调用时注入。这把「执行需要持久化」从编译期依赖降级为运行期参数, 使 runtime 可以在测试里用内存 archive 跑。
 
 ## 所有权分层
 
-ADR 0003 把规则扩展划分为四层并固定各自的所有权(`docs/adr/0003-rust-first-rule-plugin-architecture.md#L38-L45`):
+ADR 0004(规则优先的来源扩展架构, 已采纳并取代 ADR 0003)保留了 Kernel / Runtime 的所有权边界: 后续可以新增规则节点、选择器、来源输入适配器、受控 host capability 与 editor field, 但「必须保持 Rule Contract 和 Kernel/Runtime 所有权边界」(`docs/adr/0004-rule-first-open-extension-architecture.md#L129-L131`)。今天实际存在的所有权是三层:
 
 ```text
-Plugin Contract        身份、manifest 声明、host contract 版本
-      ↓
-Plugin Host            注册、冻结; (规划中) 依赖解析 / 生命周期 / 权限 broker
+Effect Registry        内置 effect handler 的注册与冻结(键是 Rule Contract 的 EffectKind)
       ↓
 Rule Kernel            Definition、Draft/Effective Revision、credential ownership、校验不变量、编译编排
       ↓
 Rule Runtime           immutable Plan 的执行、调度、取消、execution event、durable capture、replay
 ```
 
-同处规定「插件永远不能直接修改 revision、credential owner、capability grant、event sequence、archive 或 storage transaction」。当前落地的部分与规划部分的边界:
+原来的 Plugin Contract / Plugin Host 两层已随 ADR 0003 一起废弃: 通用 plugin system 属一期明确不建设, `lj-plugin-contract` 与 `PluginHost` / `FrozenRegistry` 已删除, 内置能力改用同一 Rule Contract 注册(见「规则模型与合同」与「规则运行时」页)。
 
-| 层 | 已实现 | 已决定未实现 |
-| --- | --- | --- |
-| Plugin Contract | `PluginId` / `OperationId` 规范身份、`PluginManifest` 声明、`HOST_CONTRACT_VERSION`(`src-tauri/crates/lj-plugin-contract/src/lib.rs#L1-L18`) | handler contract 迁入本 crate(注释指向 issue #40/#41) |
-| Plugin Host | `PluginHost::register_plugin` 原子注册 + `freeze()` + `FrozenRegistry` 按 operation 解析(`src-tauri/crates/lj-runtime/src/plugin.rs#L44-L103`) | manifest 校验、依赖图、plugin lock(#36)、registration lease / activation 回滚 / drain(#37/#38) |
-| Rule Kernel | Definition/校验/编译/凭证 owner 与分域 revision(`lj-rule-model` + `lj-compiler` + `lj-rule-system`) | 用 descriptor envelope 替代闭集 enum、NodeCompiler/SourceAdapter 等分域 registry(ADR 0003 第 4/5/8 节) |
-| Rule Runtime | 调度、取消、capture、replay 全部在跑(`lj-runtime`) | 按 operation identity 而非内置节点类型调度、完整 host-effect trace |
+| 层 | 状态与证据 |
+| --- | --- |
+| Effect Registry | 按 `EffectKind` 原子批量注册、`freeze()` 冻结、未注册 kind 稳定失败(`src-tauri/crates/lj-runtime/src/effect_registry.rs#L61-L107`) |
+| Rule Kernel | Definition/校验/编译/凭证 owner 与分域 revision 全在跑(`lj-rule-model` + `lj-compiler` + `lj-rule-system`) |
+| Rule Runtime | 调度、取消、capture、replay 全部在跑, 且不依赖 storage(`lj-runtime`) |
 
 `RuleSystem` 自身「只作为 application composition facade, 不拥有上述领域语义」。这条声明在代码里体现为: 它不缓存 Definition/Plan, 不自己写 SQLite, 只把请求翻译成 storage/compiler/runtime 的调用。
 
@@ -194,11 +190,13 @@ command: execute
 | --- | --- | --- | --- |
 | 0001 | UI primitive 选 Base UI, 母版选 base-lyra | 已实现 | `components.json` 的 `style: base-lyra`; 业务代码用 `render={<Link/>}` |
 | 0002 | 来源与规则采用版本化审阅式生命周期 | 大部分已实现 | candidate/revision/rollback、Draft/Effective、凭证 owner 均在代码中(见 `lj-rule-system` 与 `lj-storage`) |
-| 0003 | 规则插件 Rust-first + QuickJS host API + 分域扩展契约 | 部分实现 | 已实现身份/Manifest/注册冻结/内置 capability; descriptor envelope、分域 registry、plugin 生命周期与 QuickJS plugin package 未实现 |
-| 0004 | 双层架构(工作台 + 应用面) | 已决定未实现 | `AppsHome` 五个 surface `enabled: false`, 无 `/apps/<surface>` 路由 |
+| 0004(应用面分层) | 双层架构(工作台 + 应用面) | 已决定未实现 | `AppsHome` 五个 surface `enabled: false`, 无 `/apps/<surface>` 路由 |
+| 0004(规则优先扩展) | 规则优先的来源扩展架构(取代已删除的 ADR 0003) | 已采纳, 规则路径已实现 | 编辑器/候选安装/编译/immutable Plan/capture-replay 均在代码中; 通用 plugin system 按第 7 节一期不建设, 原 plugin/effect contract 层已删除(`docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114`) |
 | 0005 | TurnEngine 与 PageSource | 已决定未实现 | 无 `src/features/turn/**`, 全仓检索不到 `PageSource`/`TurnEngine`/`TurnIntent` |
 | 0006 | 仿真卷页空闲帧预渲染纹理缓存 | 已决定未实现 | 依赖 0005, 无 `CurlTransition` 与 `TextPageSource::snapshotFor()` |
 | 0007 | `lanjing://` 资产网关 | 已决定未实现 | Rust 未注册自定义协议, CSP 无 `lanjing:`, 无网关 crate; 但 SSRF 防护已存在于 `lj-node-http/src/ssrf.rs` |
+
+`docs/adr/` 现在有两个编号 `0004` 的文件: `0004-app-surfaces-and-workbench-layers.md`(双层架构)与 `0004-rule-first-open-extension-architecture.md`(规则优先扩展)。引用时看文件名而不是编号。
 
 `docs/reference/reader-architecture.md` 是比 ADR 更早的独立设计文档(Rust 归一化 Book AST + Web Worker 分页 + Mode Dispatcher), 与 ADR 0005 的术语与模式清单尚未收敛; 当前前端没有任何对应实现。
 
@@ -209,5 +207,5 @@ command: execute
 ## 当前边界
 
 - 前端只有工作台层; 应用面、翻页引擎、资产网关均未实现。
-- Rust 侧的 plugin 机制只到「内置 capability 注册与冻结」; ADR 0003 描述的完整插件系统(依赖解析、生命周期状态机、分域 registry、JS plugin package)未实现。
+- Rust 侧不再有 plugin 机制: 通用 plugin system(动态 Rust ABI、通用 PluginHost、plugin catalog、跨插件 service、registration lease、第三方 executable plugin SDK、在线 marketplace)按 ADR 0004 第 7 节属**一期明确不建设**, 原有的 plugin/effect contract 层(`lj-plugin-contract` 与 `PluginHost` / `FrozenRegistry`)已删除(`docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114`)。运行时只注册内置的三种 effect handler, 未注册 kind 由 dispatch 转成稳定失败。
 - Maccms 来源在 importer crate 内没有单元测试(`lj-importer/tests/` 只有 `legado_test.rs` 与 Legado fixture), 它只被跨 crate 集成测试覆盖(`lj-integration-tests/tests/maccms_json_rule_system.rs` 的 8 个用例, 其中 `maccms_json_four_intents_live_and_replay_use_only_rule_system` 走完整门面); 也就是说 importer 的 Maccms 翻译逻辑本身缺细粒度回归, 但线路层不缺口。

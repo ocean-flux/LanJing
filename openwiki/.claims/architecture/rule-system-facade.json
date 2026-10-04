@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:669acd931c760df944e7688d7e5fd79fc47613d686245dc047f8c404b83b2ae8",
+  "pageVersion": "sha256:1d48faa323aaaab8cde6cfc41776a5283d620b6561d9ad779b61f53355d49dec",
   "claims": [
     {
       "id": "claim_9da95b724ea34070bbd4a1183a68c29b",
@@ -18,15 +18,15 @@
     },
     {
       "id": "claim_9ab43557eac1480493257013488a430f",
-      "statement": "RuleSystem::open 先拒绝 candidate_ttl 为零与 session_event_capacity 为零, 再依次打开 EventProjectionStorage、构造 Compiler 并把 compiler.version() 作为 PlanRuntimeConfig.compiler_version、按 local_fixture_http 选择 HTTP adapter、注册内置 plugin 并 freeze; 内置 capability 在接受任何规则请求之前完成注册与冻结。",
+      "statement": "RuleSystem::open 先拒绝 candidate_ttl 为零与 session_event_capacity 为零, 再依次打开 EventProjectionStorage、构造 Compiler 并把 compiler.version() 作为 PlanRuntimeConfig.compiler_version、按 local_fixture_http 选择 HTTP adapter、用 EffectRegistry::register_all 注册内置 effect 并 freeze(注册与查找键是 Rule Contract 的 EffectKind); 内置 capability 在接受任何规则请求之前完成注册与冻结。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system.rs#L50-L60",
-          "version": "repo-lines-v1:sha256:a655d91bd7b15091535ee0f85d66531d54dceadb8200641c6ddb309280a7ea59:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxOThmYzBmYzlkYjY2ZjNkMTg5NTkzNTBmZThkOWM3M2NlMWQxNjRjYTFlNDY5NzkwNzVmYTk4OWFjM2MwMTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyMDg1MWY3OGM4NTA1YTVjZTA5YjU1NDkxYWVjMDVhNDBmYmViNmYwOGJhMjhiMTdmYWNmMDMyMWZjOTc2MDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI1MTcwMWIwOTlkMDhiODk2MTUyODU3ZmI3YTc3MTdhNmFiMmY1YmI0MTg4NDhkNDljOWQ1Mzg4NDQwYmQ5MTAifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system.rs#L73-L95",
+          "version": "repo-lines-v1:sha256:54f0c2b358b58597e73153c422b53d23888279ec8a5dc2373b7cf4e6783420b4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4ZGIzYzIxZTcyYTYxZTRiMDUxNzE3MGU5MWRlZDBiYjY2OWNmNzUyOGU0ZDFmOTkxZTE0OTdlNWM4OTU3NjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc4OGVlZDBjNWI2NDdiZmJhMjljNDIwZTQwYzQ0YmRhN2E5Y2U0OTZkZjNhMDE1MDE4NWVhYzg5ZjMzOWQ0ZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUxMDIyODIwYTU2NWQzMjgzZTVhMjY5MjA5ZjY4MTVmNzFiYWViNGI0YjFhNTdhZjEzZjBhNjI4MTkzMjk4OGUifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system.rs#L75-L128",
-          "version": "repo-lines-v1:sha256:837478aeaa20b89d9756055f28be9d5e07bad15b85014a84b4919d20589d7d01:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3ODVhYTE2ZmE4ZDRiNDI5YTI0Njk1MDZlMjc1MTg5YjRkNTgyYWYzNjY3NmY3MzI2MmYzMzc2M2UzMGNiODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyNjI5NWRkZjBkNTlkM2NjOWY3NDEwZGZmOWYyZWM0ZTA4NzdjOTM4MGIzODkyMmVjMzNjOGQyZDY1ZDQ5NWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxOTI0MDZlZjllNDJjYjVjZGM3ZTUzOTU1ZTlhMzZlZTM1OGE4MDUyZjBhODQ5N2ZmNzgyNTQ5ZDIyZWVhMTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4MmExYjVjZmJiYzUyMWRmNjdhMmUzNjI3OTEzZjYxMTU5YjI3OTcxODE4NjdkOGEyMzJhNmY4ZmNhNDZkODEifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system.rs#L97-L125",
+          "version": "repo-lines-v1:sha256:dc5d7e3323a3ef7d0d18bdbe8c106f75813c17c56871f8e989556bdb4f4a64b5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxMjI2ZDliN2Y2NGU3MTVlNWIzM2VlNzAxZWEzNGYwYWI0N2I0NTI3MDY5ZmJmZmZlYzZiYTgzOWE2ZDYxZTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjYWNiNGVjNTEzNjlhMzE5ZDI3OTgwN2NiZmFjZDY0YmJiMzM0ZWU3MjM5ZjNiNjhjY2EyNDAwYzdhMTgzMjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyNzEzNGU5ZTkyOGNmNzkzNjNkMmU0OTc2NWIyNmJhNTllMzExOTY5NTIxZGYzNzdiZTNiOTA1NzM4M2ZhNzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4MmExYjVjZmJiYzUyMWRmNjdhMmUzNjI3OTEzZjYxMTU5YjI3OTcxODE4NjdkOGEyMzJhNmY4ZmNhNDZkODEifQ"
         }
       ]
     },
@@ -138,15 +138,15 @@
     },
     {
       "id": "claim_c1f7bbb7383943c28f2b3c6a1eb58a79",
-      "statement": "error_mapping 把 compiler/runtime/plugin/storage 的内部错误收敛为脱敏 RuleError, 不变量是任何 message、diagnostic 或 trace 都不得包含 body、cookie、token、完整 URL query、Plan JSON 或 opaque payload; runtime_failure_error 把每个 RuntimeFailureCode 映射为 (stage, code, message) 三元组, storage 一侧按原因区分 candidate/contract/durability 类错误。",
+      "statement": "error_mapping 把 compiler/runtime/effect registry/storage 的内部错误收敛为脱敏 RuleError, 不变量是任何 message、diagnostic 或 trace 都不得包含 body、cookie、token、完整 URL query、Plan JSON 或 opaque payload; runtime_failure_error 把每个 RuntimeFailureCode 映射为 (stage, code, message) 三元组, effect_registry_error 用稳定码 effect_registry_registration_failed 且 message 只含错误码与 effect kind, storage 一侧按原因区分 candidate/contract/durability 类错误。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L1-L11",
-          "version": "repo-lines-v1:sha256:bdcc87451f3ad15ef69e38b0baba0ae805b0c94300fa9e3490abeb12e314d582:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZmZDE0NDJkZTVkYzk5NTQ3ZWQxMWFjZGMzY2NmM2Y1ZjliMzdlMGUxZWM2ZTVkYTVmMWM0ZDgxNWIyN2EzNTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJjMTE1NmM5Mjk0ODhlNGYzZTcxOGYxY2JkMDQ3N2JhNjIzZjc3YjdmYWNmYzRiOWVlZDVjNjI1YzRkYzUwOWUifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:80e52ed9e88e853d63e8bd6490529f29425b4e571531f5e019e88de427fdda42:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZkMTQ0MmRlNWRjOTk1NDdlZDExYWNkYzNjY2YzZjVmOWIzN2UwZTFlYzZlNWRhNWYxYzRkODE1YjI3YTM1MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk3YjFhODNkZWU2MGU2YzUwY2Q4ZmY2NjYxZTIxM2U0MDU4NTkwYTZiM2NiYWI3MzYyZWY5ODI2MTUwYmJkYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjI5YWIyMGI3Y2MxM2M0NTkwOTY2NjA5NmE4ZDViNWQzZmYzZjVmYzVmYzgxOTRmZmU1OTQyZjhiMjhmNzYzZCJ9"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L15-L244",
-          "version": "repo-lines-v1:sha256:9af79ed45e891a729742ed8a5f4dcece4a06623d217898662418a99b49f84be2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1OGQ5YTZiZGFkMjVjZjAwMWE2N2U3ZGY0MzZhZWFkZDJlMjYxYWJhZjg0YWYwOWYwMDBiMDEwYjg0ZDg4NjQ1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyYzExNTZjOTI5NDg4ZTRmM2U3MThmMWNiZDA0NzdiYTYyM2Y3N2I3ZmFjZmM0YjllZWQ1YzYyNWM0ZGM1MDllIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwMTFjMzIwMjI1MmM4YzIxNDlhZDBmNmIwMjg3YWRmOGEzZTQzZGFlYTQ0ZTM2NjZjNTljZmQ1MWUxMmMwODNlIn0"
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L14-L446",
+          "version": "repo-lines-v1:sha256:d850b51776ea3c00988d49fe4e9da72aceb4282f6af1843208b8a090164238d7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1OGQ5YTZiZGFkMjVjZjAwMWE2N2U3ZGY0MzZhZWFkZDJlMjYxYWJhZjg0YWYwOWYwMDBiMDEwYjg0ZDg4NjQ1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyYzExNTZjOTI5NDg4ZTRmM2U3MThmMWNiZDA0NzdiYTYyM2Y3N2I3ZmFjZmM0YjllZWQ1YzYyNWM0ZGM1MDllIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -181,6 +181,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-04T13:54:24.186Z"
   }
 }

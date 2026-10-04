@@ -2,10 +2,9 @@
 type: "参考"
 title: "Trust boundaries"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
+  - id: openwiki-source-f70faf819fb2edbb8e236f45
+    resource: repo://docs/adr/0004-rule-first-open-extension-architecture.md
   - id: openwiki-source-00ff4b2512b6dbfa268cbfa4
     resource: repo://src-tauri/capabilities/default.json
   - id: openwiki-source-ca67060e890937010b96de80
@@ -34,6 +33,8 @@ sources:
     resource: repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs
   - id: openwiki-source-3d616a9839cf698be82f0e92
     resource: repo://src-tauri/crates/lj-runtime/src/capability.rs
+  - id: openwiki-source-8ece8d8ea6055cf2f800dcb4
+    resource: repo://src-tauri/crates/lj-runtime/src/effect_registry.rs
   - id: openwiki-source-ba442c85857684a6872f9ae8
     resource: repo://src-tauri/crates/lj-runtime/src/effect/contracts.rs
   - id: openwiki-source-b5b31452901a813cae4d04db
@@ -52,7 +53,10 @@ sources:
     resource: repo://src-tauri/src/commands/state.rs
   - id: openwiki-source-0abfee918aaf0d7e3ea712fc
     resource: repo://src-tauri/tauri.conf.json
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-04T13:54:24.186Z
 ---
 
 
@@ -146,7 +150,7 @@ SQLite 侧只存随机 `SecretArtifactId`、随机 blob locator、key ID 与 cip
 | HTTP body | 16 MiB(导入 2 MiB) | `request.rs#L25-L26`, `import.rs#L17-L18` | `BodyTooLarge` → 归档为 Failure |
 | redirect 跳数 | 5 | `redirect.rs#L20` | `Redirect` → 归档为 Failure |
 | capability | host ∩ source grant ∩ invocation | `src-tauri/crates/lj-runtime/src/capability.rs#L38`, `plan_runtime/scheduler/dispatch.rs#L152` | `CapabilityDenied`, 且被映射为 `RuleErrorStage::Capability`(`error_mapping.rs#L17-L21`) |
-| 插件 handler | frozen registry, 无回退 | `lj-runtime` 的 `PluginHost`/`FrozenRegistry` | `OperationUnavailable` 而不是静默换一个 handler(`error_mapping.rs#L22-L26`) |
+| effect handler | frozen registry, 无回退 | `lj-runtime` 的 `EffectRegistry` / `FrozenEffectRegistry`(键是 `Rule Contract` 的 `EffectKind`) | `OperationUnavailable` 而不是静默换一个 handler(`error_mapping.rs#L21-L25`) |
 
 非 Send 的 rquickjs 对象只在 `spawn_blocking` 闭包内创建与销毁, watchdog 轮询取消令牌触发中断并 join 后才返回(见运行时页), 这是「沙箱不泄漏线程」的部分。
 
@@ -159,7 +163,7 @@ CSP 是 `default-src 'self'; img-src 'self' data: https:; script-src 'self'; sty
 ## 已决定但尚未实现的边界
 
 - **资产网关**(ADR 0007): 计划成为资产访问的唯一关口并复用 `ssrf.rs`, 当前不存在。设计上它还是防盗链头的注入点, 因此也承担「来源凭据只在这一处使用」的角色。
-- **插件系统边界**(ADR 0003): manifest 校验、依赖图、frozen plugin lock 归 issue #36, 注册租约/激活回滚/drain 归 #37/#38, 面向插件的 handler 契约等 #40/#41。当前 `HOST_CONTRACT_VERSION = "1"` 只是声明, **没有比对或强制**。今天唯一注册的插件是内置的 `lanjing.builtin`。
+- **effect 注册边界**: 今天运行时只注册内置的三种 effect handler(HTTP / QuickJS / Extract), 注册与查找键是 Rule Contract 的 `EffectKind`, 未注册 kind 由 dispatch 转成稳定的 `OperationUnavailable`(`src-tauri/crates/lj-runtime/src/effect_registry.rs#L61-L107`)。通用 plugin system(通用 PluginHost、plugin catalog、跨插件 service、registration lease、动态 Rust ABI、第三方 executable plugin SDK)按 ADR 0004 第 7 节属**一期明确不建设**; 原来的 `lj-plugin-contract` 与 `PluginHost` / `FrozenRegistry`(含只声明不比对的 `HOST_CONTRACT_VERSION`)已**删除**(`docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114`)。
 - **凭据的产品边界**: 「凭证明文永远不进 `tauri-store`」是仓库约定, 但没有测试或类型强制; 它的实际保障来自「前端根本拿不到明文」这条数据流(明文只在 Rust 侧的 artifact 端口与 effect adapter 出现)。
 
 ## 不变量总表

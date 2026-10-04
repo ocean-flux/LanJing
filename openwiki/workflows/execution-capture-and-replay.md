@@ -2,9 +2,6 @@
 type: "参考"
 title: "Execution capture and replay"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-378ef8c9992cfb062d1d9087
     resource: repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs
@@ -16,6 +13,8 @@ sources:
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs
   - id: openwiki-source-150ac7f1387e477217243644
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/control_archive.rs
+  - id: openwiki-source-b98d6cf0b98f80e0aa1f7d56
+    resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs
   - id: openwiki-source-34d489227f93cd0425da2fa7
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/live_capture.rs
   - id: openwiki-source-b47efa6314fbe5388bae632e
@@ -54,7 +53,10 @@ sources:
     resource: repo://src-tauri/src/commands/delivery.rs
   - id: openwiki-source-68e2dde2c84dfbdac9ee9fd2
     resource: repo://src-tauri/src/commands/execution.rs
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-04T13:54:24.186Z
 ---
 
 
@@ -176,7 +178,7 @@ runtime 发出的事件由唯一的 session runner 消费(`src-tauri/crates/lj-r
 
 第 5 步的注释说明了它的强度: 「不只校验 archive 自洽, 还将 witness 重新绑定当前 Plan、exact invocation 与输入; 任何不匹配均为硬失败, **绝不调用 live adapter 补救**」(`replay.rs#L88-L89`)。成功后发 `EffectReplayed`(带 fingerprint/output_hash/witness_hash), 然后与 live 同样的收尾: 已取消则 `Cancelled`, 归档输出若是 failure 则 `EffectFailed`(`#L101-L120`)。
 
-**为什么 replay 不需要 handler**: `load_replay` 是纯读, 所以注册表变化(插件被移除、升级)不会让历史 capture 失效——只有 fingerprint/输出/输入**语义**变化才会失败, 这正好是应该失败的时候。测试 `live_and_replay_preserve_typed_outputs_without_live_fallback` 与三个 tamper 用例(QuickJS 脚本/输入/输出 witness hash、Extract 输入 witness hash)锁定了这一点(`replay_contract.rs#L53`、`#L304`、`#L366`)。
+**为什么 replay 不需要 handler**: `load_replay` 是纯读, 所以 effect registry 的变化(handler 被替换或升级)不会让历史 capture 失效——只有 fingerprint/输出/输入**语义**变化才会失败, 这正好是应该失败的时候。测试 `live_and_replay_preserve_typed_outputs_without_live_fallback` 与三个 tamper 用例(QuickJS 脚本/输入/输出 witness hash、Extract 输入 witness hash)锁定了这一点(`replay_contract.rs#L53`、`#L304`、`#L366`)。
 
 存储侧的 replay pin 也是被验证的: `execution_replay_pin_uses_verified_artifact_and_rejects_tampering`、`replay_start_keeps_historical_source_snapshot_after_source_update`、`replay_pin_survives_restart_and_rejects_tampered_snapshot`(`src-tauri/crates/lj-storage/tests/event_projection_storage_test/replay_contract.rs#L10`、`#L69`、`#L321`)覆盖「源被更新后 replay 仍用历史快照」与「重启后 pin 仍有效」。
 

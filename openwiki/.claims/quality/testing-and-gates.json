@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:59c248b7dae42b3c85a2df021fc0fe514b08c642027041c7a2501c5f02187d21",
+  "pageVersion": "sha256:29a1fb2d03a2cba2170d01c19d2b737d8578c05f893ba63850a5bbb3ead18d12",
   "claims": [
     {
       "id": "claim_8c712ba6c34a4017915407a19c5e33b0",
@@ -25,7 +25,7 @@
           "version": "repo-lines-v1:sha256:3b2e7f88a20e629e2678d6e45a35a0cbe097d1c5b8c074319344012fc00444b6:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2IyZTdmODhhMjBlNjI5ZTI2NzhkNmU0NWEzNWEwY2JlMDk3ZDFjNWI4YzA3NDMxOTM0NDAxMmZjMDA0NDRiNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2IyZTdmODhhMjBlNjI5ZTI2NzhkNmU0NWEzNWEwY2JlMDk3ZDFjNWI4YzA3NDMxOTM0NDAxMmZjMDA0NDRiNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         },
         {
-          "resource": "repo://src-tauri/Cargo.toml#L31-L33",
+          "resource": "repo://src-tauri/Cargo.toml#L30-L32",
           "version": "repo-lines-v1:sha256:32cdc9858eee652da9e08357daf7abe110e95abf5224bc0aab1a47e2a3cea846:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjA1ZmM3NGMyM2ZjN2VjN2JjMDlmOGY5Mzg3YjQ1NzVjYjMzZmVjYmUxMmEwY2M4YzBmMDgwMGMyYmEwYWJiZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjZhNDQ3MWJiZmY0MDM4NjU1MDZiZjc0MGI4YjdmMTg3NzhlMjg2OWZjYmQ2ZGI5ODRjOGZhNmRlZjFiZWUzOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTUyODMxNmMwNDNjMWRlNGQyNTZhMWNmNTk0NjYxMDcyODkzNWUzZTVjM2Y3MzNkN2NiZjQzNWNjZDE2MTAzZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjAyMTNmNmY4NjFmNzlkODkxOGIyYjZjMzAzNTkzZDYxY2E1YTVkM2U4NDc4NjM0ZjM3YjIzMjQ4ZWY5ZmM3MiJ9"
         },
         {
@@ -136,15 +136,11 @@
     },
     {
       "id": "claim_05c4c567a4604eac9d8016bcd6396644",
-      "statement": "Rust 最底层是纯契约测试(lj-rule-model 的 3 个测试文件、lj-compiler 的 plan_compiler_test.rs、lj-plugin-contract 的 plugin_contract_test.rs), 无 IO; 它们断言 hash 归一化、端口/句柄矩阵、诊断路径与排序稳定性、插件身份格式, 不能证明任何持久化或并发行为。",
+      "statement": "Rust 最底层是纯契约测试(lj-rule-model 的 3 个测试文件与 lj-compiler 的 plan_compiler_test.rs), 无 IO; 它们断言 hash 归一化、端口/句柄矩阵、诊断路径与排序稳定性, 不能证明任何持久化或并发行为。",
       "evidence": [
         {
           "resource": "repo://src-tauri/crates/lj-compiler/tests/plan_compiler_test.rs#L1-L10",
           "version": "repo-lines-v1:sha256:8d5627ddaece31dd0c46fc5e459485a5ea6cab2340650a1cd075b63a941d4b34:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhYTUwYzBlMGMxM2M3ODM1MGU0NTdlNDA2ZDkwYzI0YWIxZmUwNjkzODI1YzBjYTkzZTM5MDU0NmMxMTY5YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzNjFlZjQxYmJlYzBhZjcyOTRiOWJiZTRlMTYyMzAwZDUyMmJhNmI3ODQ3M2MwNzdiYTMxZjVkY2Q3MWM5ZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlMzUzZTdiOTFiNmNlZDcyOTU5ZmNlODM3N2Q3MmY3MjYwYTg3NTk0OGRjZDVkY2ViY2UzMTdjOWEzYWZkZWEifQ"
-        },
-        {
-          "resource": "repo://src-tauri/crates/lj-plugin-contract/tests/plugin_contract_test.rs#L1-L5",
-          "version": "repo-lines-v1:sha256:d81acab353bdfc28d3eae909f83359fbd4cbef01c28c32c410ce7afaabd1b6ea:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDE3YjU5ZWQzNWY1ZmZkMjNhNDBmY2ZjYWU3MmVjNGRlOWIzODc5NGE1ZjhiYjMyYWY3ZTgwODczMjMzYzRhMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGY1M2E4YTdhOGZlMGUyMTk5M2JlZDgzNDFhMzVkMjJhYmQ5MWMxODhlYzEyMGNmOWFlYzdlOWExM2M3MTVlOCJ9"
         },
         {
           "resource": "repo://src-tauri/crates/lj-rule-model/tests/model_contract_test.rs#L1-L5",
@@ -172,8 +168,12 @@
     },
     {
       "id": "claim_bceb8007e43b43e5b85456b941f8f9e0",
-      "statement": "runtime 层契约测试按 scheduling(6)/control(8)/replay(10) 与 plugin_host(6) 分组, 断言调度、控制流、replay 与插件注册原子性不变量; 这些用例跑在测试 archive 上, 因此证明不了 archive 是真 SQLite 时的 durable-before-advance。",
+      "statement": "runtime 层契约测试按 scheduling(6)/control(8)/replay(10) 与 effect registry(5) 分组, 断言调度、控制流、replay 与 effect 注册原子性(重复 kind 含同批内重复被拒、失败不留半注册、冻结只解析已注册 kind)的不变量; 这些用例跑在测试 archive 上, 因此证明不了 archive 是真 SQLite 时的 durable-before-advance。",
       "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/effect_registry_test.rs#L73-L174",
+          "version": "repo-lines-v1:sha256:da6cef74b9123df5f8c867f8d51a0e4170600a2ef3267fe62c661cc2cc16660d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMmNkNGRiNDhhMzUwZThmMGI0Nzk0NGM0NmUzZmZkYmJhMTMyZDIyOTBhOTFkNzAxMmI1NmViNDZjOGFiNGY2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI2MTk2MjFhYzdiZjY2ZWE3MjQwN2M4NGFhMDU5M2ZhMmRmOTZkMDU2MzNlNjkxOGQ1OGVmMDFjOTBhNjRiZWJiIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        },
         {
           "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test.rs#L1-L12",
           "version": "repo-lines-v1:sha256:57d1b7ff1874edd774ee73a77c6e280ccdeb2f7cadc616034d98856989e260d0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzYjJmYmIwYzZlOTVhZDMyZDkwZDVkMzVhOGI5N2QxNzBhMDZkODM1ZGExYzhmNGU4YTk0NmZmM2JjMDFjZTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhMzFmMzdmYTNiNTRlMGY2ZTdmZTVlOWVlMjQxOGExM2IzYzdmYzFmNmFiOGU4NTYxODVmNDEyMjFhZTQ2YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJlYWQxNzAxMGZjOGUzYjMxYTc4MTJmNTY3NGQ4YmI0YjU3ZjRjNzJkYWI0YWRmYTZmNTU3NjAzMzM2YWY2NWIifQ"
@@ -181,10 +181,6 @@
         {
           "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/scheduling_contract.rs#L1-L6",
           "version": "repo-lines-v1:sha256:83e45320468fc3037956ae18843737742d046a180cbe65956bc899d7ace35e2d:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzViZDczMzRjNTQ1Mzg0NmQ3MjNiMzNiYzg0NzU0ZTgwNmRjMzA1ZTlhOTJiNGFmOTc1NmUyMjY0NTIzMmU4NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDEyYzYwY2ZiMTMyMTlmZTMzNmU2ODVmNjJkYmYwNTMzNjE3NGRlYjBkMjFkMWRiMWZmYTgzOGEzYWQ4YTNkZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTZhZDY3N2Q0NjA4Y2IyNTUzMjI1YzJjNzA5NTk5MWZkZWYwYjlhMmJhMTc3NzIyZjI0MTQ3NGVhZDEyZjE1OCJ9"
-        },
-        {
-          "resource": "repo://src-tauri/crates/lj-runtime/tests/plugin_host_test.rs#L1-L6",
-          "version": "repo-lines-v1:sha256:77f00670f6b8e8a8bbb96c0fd5641f0689f0afb76dc92215ece8d2faa436de23:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmMyOTZkMWIyNThhMzc5OTU1ZTdmNDQ4MTI1M2Y4ZWFlNDhmNTIxODBjODNhOWVjZTRiMGUyZTEzMjczMDFhMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWMyNTAwNzIxODllZjM3OTVlNzAxYTQ5MTU1Yzk5Y2RiZWVhNTUxOThhY2Y4YmI4OTQzMGYzOWFjOGI1MmExYiJ9"
         }
       ]
     },
@@ -211,7 +207,7 @@
       "statement": "facade 层的内联测试集中在四块: document.rs 19 个(凭据策略、provenance 脱敏、revision 冲突、draft 保留、重命名/删除、wire 字段), error_mapping.rs 2 个(存储 schema 错误映射到稳定码、legacy archive 拒绝保持 replay 安全), query_adapter.rs 4 个(分页 has_more/边界/默认值、非空 ID), lifecycle/tests.rs 1 个端到端控制流 candidate。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L419-L436",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L418-L435",
           "version": "repo-lines-v1:sha256:d420919fa6eb00f0a3ceb9ece47c8eed43c3ebb1e1ff3f2a2f31237932fec1d3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiYjUwZTZmNjg5Zjk0Njc5NmE3YTQ1MmQyYmZlMDUwMTBiOGJhM2M3YTJmN2Y0ZDFhMjMzYmJiOGU0YmVjNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMTBmNDFlNWE4MDIyMjM1ZTE5YjY1NDQ3OWU3MzRjNjMzY2EyMjFmMDMxNGE2YjNjYjZmYzQyNDJmNTg0OWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlZjk3ZTY5MTVjZGIxOWQyZjJkNDE1NjAyZmUwMjJjYTY2ZTQ4MDI5Yzc2YTJjZDlkM2ZhOWZjMDc3NjI4M2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFlNDVjMTk0NTBjNWQyM2Q4ZmYzZGVjODQxYmM2OTY4YTJmZDIwMjI3OTAzMGI3ODI5NTZhOGQzNTkyMmRiMmIifQ"
         },
         {
@@ -341,6 +337,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-04T13:54:24.186Z"
   }
 }

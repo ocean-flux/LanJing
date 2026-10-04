@@ -2,9 +2,6 @@
 type: "参考"
 title: "Rule system facade"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-e63ceb81b531375188f64063
     resource: repo://src-tauri/crates/lj-rule-system/src/error.rs
@@ -32,7 +29,10 @@ sources:
     resource: repo://src-tauri/crates/lj-rule-system/src/types/config.rs
   - id: openwiki-source-66845dd8b3f72696149d5d09
     resource: repo://src-tauri/crates/lj-rule-system/src/types/document.rs
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-04T13:54:24.186Z
 ---
 
 
@@ -47,7 +47,7 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 | `storage: EventProjectionStorage` | 唯一持久化真相来源 |
 | `compiler: Compiler` | 唯一 compiler 实例, 其 version 同时写进 runtime config |
 | `runtime: PlanRuntime` | 执行引擎 |
-| `registry: Arc<FrozenRegistry>` | 装配后冻结的内置 capability |
+| `registry: Arc<FrozenEffectRegistry>` | 装配后冻结的内置 effect handler 集合(键是 `EffectKind`) |
 | `candidate_ttl_ms` | Install Candidate 有效期 |
 | `session_event_capacity` | delivery 有界通道容量 |
 | `executions: Mutex<HashMap<Uuid, CancellationHandle>>` | 只存取消句柄, 终态后必定移除 |
@@ -62,7 +62,7 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 2. 打开 `EventProjectionStorage`(keyring service 从 config 带入)(`#L97-L101`)。
 3. `Compiler::default()`, 并把 `compiler.version()` 作为 `PlanRuntimeConfig.compiler_version`。这一步把「compiler 身份一致」的校验从约定变成装配约束——runtime 的 `compiler_version` 只能来自 compiler 自身(`#L102-L110`)。
 4. 构造 HTTP adapter: `local_fixture_http` 为真时用 `HttpEffectAdapter::new_test()`(关闭环回地址的 SSRF 拒绝), 否则用生产构造器(`#L111-L115`)。
-5. `PluginHost::new()` → `register_plugin(builtin::manifest(), builtin::effects(http, QuickJs, Extract))` → `freeze()`, 并**在接受任何规则请求之前**完成。注释写明 execution 始终绑定这个 snapshot(`#L116-L128`)。
+5. `EffectRegistry::new()` → `register_all(builtin::effects(http, QuickJs, Extract))` → `freeze()`: 注册与查找键是 Rule Contract 的 `EffectKind`, 注册失败经 `effect_registry_error` 映射成稳定码 `effect_registry_registration_failed`; 并**在接受任何规则请求之前**完成。注释写明 execution 始终绑定这个 snapshot(`#L116-L125`)。
 
 `RuleSystemConfig::desktop` 给出默认容量: session event capacity 64、并发 execution 16、全局并发 effect 16、单一来源并发 effect 4、candidate TTL 24 小时、keyring service `lanjing.event-store.master-key`(`src-tauri/crates/lj-rule-system/src/types/config.rs#L20-L35`)。
 
@@ -151,9 +151,9 @@ self.state.runtime.execute(
 
 ## error_mapping: 脱敏收敛
 
-`error_mapping` 把 compiler、runtime、plugin、storage 的内部错误收敛成稳定、脱敏的 `RuleError`。不变量写在模块头: **任何 message、diagnostic 或 trace 都不得包含 body、cookie、token、完整 URL query、Plan JSON 或 opaque payload**(`src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L1-L11`)。
+`error_mapping` 把 compiler、runtime、effect registry、storage 的内部错误收敛成稳定、脱敏的 `RuleError`。不变量写在模块头: **任何 message、diagnostic 或 trace 都不得包含 body、cookie、token、完整 URL query、Plan JSON 或 opaque payload**(`src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L1-L5`)。
 
-四类映射函数各管一段(`#L15-L244`): `runtime_failure_error` 把每个 `RuntimeFailureCode` 映射成 (stage, code, message) 三元组, 例如 `CapabilityDenied → Capability/runtime_capability_denied`、`EffectFailed → Effect/effect_failed`、`ReplayFingerprintMismatch → Replay/replay_fingerprint_mismatch`; `plugin_error`、`compiler_error`、`runtime_error`、`storage_error` 分别收敛其余来源, storage 一侧还按原因进一步区分契约类错误(`candidate_storage_contract` / `contract_storage_contract` / `durability_storage_contract`)。
+五个映射函数各管一段(`#L14-L446`): `runtime_failure_error` 把每个 `RuntimeFailureCode` 映射成 (stage, code, message) 三元组, 例如 `CapabilityDenied → Capability/runtime_capability_denied`、`EffectFailed → Effect/effect_failed`、`ReplayFingerprintMismatch → Replay/replay_fingerprint_mismatch`; `effect_registry_error`(稳定码 `effect_registry_registration_failed`, message 只含错误码与 effect kind, 不含 handler payload)、`compiler_error`、`runtime_error`、`storage_error` 分别收敛其余来源, storage 一侧还按原因进一步区分契约类错误(`candidate_storage_contract` / `contract_storage_contract` / `durability_storage_contract`)。
 
 对外的 `RuleError` 结构固定为 `stage` + `code` + `message` + `trace_id` + `retryable` + `diagnostics`(`src-tauri/crates/lj-rule-system/src/error.rs#L41-L56`)。`retryable` 是显式字段而不是让调用方猜; `trace_id` 让用户可报告的问题能对上本地记录, 同时 message 本身不携带任何载荷。
 

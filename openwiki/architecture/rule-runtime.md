@@ -2,16 +2,19 @@
 type: "参考"
 title: "Rule runtime"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
+  - id: openwiki-source-f70faf819fb2edbb8e236f45
+    resource: repo://docs/adr/0004-rule-first-open-extension-architecture.md
   - id: openwiki-source-8f834099b0a246733c691fa3
     resource: repo://src-tauri/crates/lj-node-extract/src/processor.rs
   - id: openwiki-source-378ef8c9992cfb062d1d9087
     resource: repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs
   - id: openwiki-source-0dcbf0271dec640cfb5161dc
     resource: repo://src-tauri/crates/lj-node-js/src/processor.rs
+  - id: openwiki-source-8ece8d8ea6055cf2f800dcb4
+    resource: repo://src-tauri/crates/lj-runtime/src/effect_registry.rs
+  - id: openwiki-source-434a7d2349c644a4bec2150e
+    resource: repo://src-tauri/crates/lj-runtime/src/effect_registry/builtin.rs
   - id: openwiki-source-1cb35e7f0702e9e046ce0dcd
     resource: repo://src-tauri/crates/lj-runtime/src/effect/cancellation.rs
   - id: openwiki-source-ba442c85857684a6872f9ae8
@@ -38,11 +41,10 @@ sources:
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/routing.rs
   - id: openwiki-source-5dd5df7cae61c75ccead7c81
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/validation.rs
-  - id: openwiki-source-7fd66b51bf216e523c5d9807
-    resource: repo://src-tauri/crates/lj-runtime/src/plugin.rs
-  - id: openwiki-source-a747b47c448877b2eed724d7
-    resource: repo://src-tauri/crates/lj-runtime/src/plugin/builtin.rs
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-04T13:54:24.186Z
 ---
 
 
@@ -50,21 +52,23 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 
 `lj-runtime` 只接收 compiler 产出的 `ExecutionPlan`, 经 typed HTTP/QuickJS/Extract effect seam 执行; 它不解析、迁移或执行历史规则 shape(`src-tauri/crates/lj-runtime/src/lib.rs#L1-L5`)。
 
-唯一入口是 `PlanRuntime::execute(request, registry, archive)`(`src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L371-L427`)。它在同一处完成四件事: 校验 Plan、为该 intent 选路径、拒绝空 `source_id`/`trace_id` 与缺失 Tokio runtime、以及在 replay 模式下**清空静态凭据**(`request.credentials = HttpExecutionCredentials::default()`), 然后 `tokio::spawn` 调度并把有界事件流包装成 `ExecutionSession`(`#L377-L427`)。
+唯一入口是 `PlanRuntime::execute(request, registry, archive)`(`src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L371-L428`)。它在同一处完成四件事: 校验 Plan、为该 intent 选路径、拒绝空 `source_id`/`trace_id` 与缺失 Tokio runtime、以及在 replay 模式下**清空静态凭据**(`request.credentials = HttpExecutionCredentials::default()`), 然后 `tokio::spawn` 调度并把有界事件流包装成 `ExecutionSession`(`#L377-L428`)。
 
 启动后的失败不再变成同步错误: 它们进入 session 的 `ExecutionEventKind::Failed`。这条边界让调用方只有两种失败处理位置——`execute()` 的 `Result` 处理「根本不该开始」的问题, 事件流处理「开始之后」的问题。
 
 `PlanExecutionRequest` 携带 `execution_id`、`source_id`、`trace_id`、`plan`、`intent`、`input`、`mode`、`capabilities`、`base_url` 与 `credentials`; `ExecutionMode` 只有 `Live` 与 `Replay { archived_execution_id }`(`src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L203-L243`)。
 
-## 装配: PluginHost → FrozenRegistry
+## 装配: EffectRegistry → FrozenEffectRegistry
 
-handler 的注册与冻结只发生在 application composition 阶段, 冻结后不再变化, 因此一次 execution 绑定的 handler 集合不会在运行中被替换(`src-tauri/crates/lj-runtime/src/plugin.rs#L27-L35`)。
+handler 的注册与冻结只发生在 application composition 阶段, 冻结后不再变化, 因此一次 execution 绑定的 handler 集合不会在运行中被替换(`src-tauri/crates/lj-runtime/src/effect_registry.rs#L1-L5`)。
 
-`PluginHost::register_plugin(manifest, effects)` 是**原子批量注册**: manifest 未声明的 operation、重复的 plugin identity、重复的 operation identity(含同一批内重复)都在写入任何 handler **之前**失败, 因此失败的注册不会留下半注册的 capability(`src-tauri/crates/lj-runtime/src/plugin.rs#L44-L79`)。`freeze()` 产出 `FrozenRegistry`, 只按 operation identity 解析 handler(`#L81-L103`)。
+注册与查找的**唯一键是 Rule Contract 的 `EffectKind`**, 不再是 namespaced operation identity: `EffectRegistry::register_all(Vec<(EffectKind, EffectHandler)>)` 是原子批量注册, 重复的 effect kind(含同一批内重复)在写入任何 handler **之前**失败, 因此失败的注册不会留下半注册的 capability; 错误类型是 `EffectRegistryError::DuplicateEffectKind`(稳定码 `duplicate_effect_kind`)(`src-tauri/crates/lj-runtime/src/effect_registry.rs#L61-L83`)。`freeze()` 产出 `FrozenEffectRegistry`, 内部是 `BTreeMap<EffectKind, EffectHandler>`(`#L85-L100`)。
 
-内置能力的 identity 是 namespaced 常量: plugin `lanjing.builtin`, operation `lanjing.effect.http` / `lanjing.effect.quickjs` / `lanjing.effect.extract`; plugin 版本取运行时 crate 版本, 因为内置 capability 与 runtime 是同一次构建产出(`src-tauri/crates/lj-runtime/src/plugin/builtin.rs#L17-L56`)。`effect_operation(kind)` 把 Plan 的 `EffectKind` 映射到这三个 identity(`#L87-L95`)。
+内置注册函数 `builtin::effects(http, quickjs, extract)` 直接返回三对 `(EffectKind, EffectHandler)`, 与 `EffectKind` 的三个变体一一对应; 因为不再需要解析 identity 字符串, 它不再返回 `Result`(`src-tauri/crates/lj-runtime/src/effect_registry/builtin.rs#L13-L27`)。
 
-缺 handler 不会被容忍: live 分支解析不到 operation 时返回稳定的 `OperationUnavailable`, 不静默回退到别的 handler(`src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs#L101-L120`)。replay 分支**不需要** handler——历史 capture 不应因 registry 变化而失效(`#L122-L134` 的意图, 与 `#L103-L104` 的注释)。
+这一层曾经叫 `PluginHost` / `FrozenRegistry`, 带 `PluginManifest` 声明与 `HOST_CONTRACT_VERSION` 版本协商; 通用 plugin system 按 ADR 0004 第 7 节属一期明确不建设, 那套 contract 已随 `lj-plugin-contract` crate 删除(见「规则模型与合同」页)。
+
+缺 handler 不会被容忍: live 分支按 `&declaration.kind` 在 frozen snapshot 里查不到 handler 时返回稳定的 `OperationUnavailable`, 不静默回退到别的 handler(`src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs#L99-L115`)。replay 分支**不需要** handler——历史 capture 不应因 registry 变化而失效(`#L116-L130`, 与 `#L101-L102` 的注释)。
 
 ## 启动校验与路径选择
 
@@ -82,7 +86,7 @@ handler 的注册与冻结只发生在 application composition 阶段, 冻结后
 
 `EventEmitter` 保证一个 session 只发一个终态(`terminal_sent` 标志), sequence 从 1 递增; 事件发送失败(接收端已丢弃)只置 `receiver_gone` 并停止投递, **不隐式取消 execution**(`src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L71-L120`)。
 
-`run_execution` 的顺序是: 发 `Started` → 取 execution permit(等待期间也可被取消) → `execute_path` → 释放 permit → 发终态(`#L123-L163`)。`execute_path` 先给入口节点种下 `IntentInput`, 然后按 `path.node_ids` 顺序逐节点执行; 每个节点前检查取消; Loop 节点走 `execute_loop` 并在缺 control program 时报 `Internal`; 走完全程后若 Mapper 没有产出 Delta, 则以 `InputTypeMismatch` 失败(`#L165-L234` 区域)。
+`run_execution` 的顺序是: 发 `Started` → 取 execution permit(等待期间也可被取消) → `execute_path` → 释放 permit → 发终态(`#L123-L163`)。`execute_path` 先给入口节点种下 `IntentInput`, 然后按 `path.node_ids` 顺序逐节点执行; 每个节点前检查取消; Loop 节点走 `execute_loop` 并在缺 control program 时报 `Internal`; 走完全程后若 Mapper 没有产出 Delta, 则以 `InputTypeMismatch` 失败(`#L165-L244`)。
 
 ## 控制流 routing
 
@@ -118,9 +122,9 @@ Merge 的顺序语义落在 runtime: 物理存储顺序无关, 只有 `order` �
 3. 取 effect ID 与取消 token, **先等来源级 permit 再等全局 permit**(注释写明这是为了避免同一来源排队的 effect 占住全局 permit 阻塞其他来源);
 4. 再次取消检查;
 5. 计算 fingerprint;
-6. Live → 从 frozen registry 解析 handler; Replay → 走 archive。
+6. Live → 按 `declaration.kind` 从 frozen registry 解析 handler; Replay → 走 archive。
 
-`effect_fingerprint` = hash(`plan_hash` + `invocation_path` + `kind` + `config_hash` + `input_hash`)(`src-tauri/crates/lj-runtime/src/plan_runtime/validation.rs#L453-L483`)。它防的是**调用错位**: archive 里的一条记录只对「同一份 Plan、同一调用序号、同一节点配置、同一输入」成立, 换 Plan、加一次循环迭代、改动脚本或输入都会让 fingerprint 变化, 从而拒绝把旧记录复用到新调用上。fingerprint 只含 hash, 不含 payload。
+`effect_fingerprint` = hash(`plan_hash` + `invocation_path` + `kind` + `config_hash` + `input_hash`)(`src-tauri/crates/lj-runtime/src/plan_runtime/validation.rs#L463-L483`)。它防的是**调用错位**: archive 里的一条记录只对「同一份 Plan、同一调用序号、同一节点配置、同一输入」成立, 换 Plan、加一次循环迭代、改动脚本或输入都会让 fingerprint 变化, 从而拒绝把旧记录复用到新调用上。fingerprint 只含 hash, 不含 payload。
 
 ## live: durable-before-advance
 
@@ -192,5 +196,5 @@ runtime 的测试按关注点分文件, 断言的是可观察行为而不是内�
 | --- | --- |
 | `replay_contract.rs` | compiler 产出的 Plan 通过 runtime hash 校验; 篡改 plan hash 或 compiler 身份被拒; live 与 replay 保持 typed 输出且不回退 live; 缺 capture、output hash 不符、fingerprint 不符、篡改 JS/Extract witness 都是硬失败 |
 | `control_contract.rs` | typed condition/merge/loop 执行选中分支并能精确 replay; 缺/多/篡改 control invocation 都不调用 live handler; Merge 在物理输入倒序时仍按显式 order; Loop 的空集合/超限/非数组/body 失败都有类型化边界; 全局 hard max 是包含式且溢出时**不启动任何 body effect**; 第一个迭代内取消会停止后续所有 body effect |
-| `scheduling_contract.rs` | 取消只发 `Cancelled` 且不再产生新 effect; 来源级与全局 semaphore 的阻塞行为; frozen registry 缺 operation 时稳定失败; 有界事件通道在下游 effect 之前施加背压 |
-| `plugin_host_test.rs` | 重复 operation/plugin 与未声明 operation 被拒; 失败注册不留半 capability; frozen registry 只能解析已注册 operation; builtin manifest 声明三个 operation |
+| `scheduling_contract.rs` | 取消只发 `Cancelled` 且不再产生新 effect; 来源级与全局 semaphore 的阻塞行为; frozen registry 缺 effect kind 时以 `OperationUnavailable` 稳定失败; 有界事件通道在下游 effect 之前施加背压 |
+| `effect_registry_test.rs` | 重复 effect kind(含同一批内重复)被拒且失败注册不留半 capability; frozen registry 只能解析已注册的 kind; `builtin::effects` 覆盖三个 `EffectKind` |

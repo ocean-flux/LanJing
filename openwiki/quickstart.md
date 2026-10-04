@@ -2,9 +2,6 @@
 type: "参考"
 title: "Quickstart"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-6d4b4e707b8d60b6ccfa3425
     resource: repo://.github/workflows/openwiki-update.yml
@@ -40,7 +37,10 @@ sources:
     resource: repo://src/features/rules/model/core.ts
   - id: openwiki-source-bfa866dbb93b4c8108ffdf7f
     resource: repo://src/shared/tauri/rules/wire.ts
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-04T13:54:24.186Z
 ---
 
 
@@ -120,9 +120,9 @@ CI 里**只有一个 OpenWiki 更新 workflow**(定时 + 手动, `openwiki code 
 | --- | --- | --- |
 | 外壳、导航、主题色、i18n | [React 工作台外壳](architecture/frontend-shell.md) | `src/app/**`、`src/index.css`、`src/shared/theme`、`src/shared/i18n` |
 | 规则节点 / 端口 / 画布交互 | [规则编辑器前端工作区](workflows/rule-editor-workspace.md) | `src/features/rules/model/{ports,connection-gate,flow-adapter,core}.ts` |
-| 规则定义与 Plan 的数据形状 | [规则模型与契约层](architecture/rule-model-and-contracts.md) | `src-tauri/crates/lj-rule-model`、`lj-plugin-contract`、`lj-media` |
+| 规则定义与 Plan 的数据形状 | [规则模型与契约层](architecture/rule-model-and-contracts.md) | `src-tauri/crates/lj-rule-model`、`lj-media` |
 | 校验规则与诊断定位 | [规则编译与校验](architecture/rule-compiler.md) | `src-tauri/crates/lj-compiler` |
-| 节点执行、循环、effect 适配、插件宿主 | [规则运行时与插件宿主](architecture/rule-runtime.md) | `src-tauri/crates/lj-runtime` |
+| 节点执行、循环、effect 适配与 effect 注册 | [规则运行时与 effect 注册](architecture/rule-runtime.md) | `src-tauri/crates/lj-runtime` |
 | 门面 API、生命周期编排、脱敏收敛 | [RuleSystem 门面与生命周期编排](architecture/rule-system-facade.md) | `src-tauri/crates/lj-rule-system` |
 | 规则文档保存 / 晋升 / 历史 / 凭据 owner | [Native Rule Document 生命周期](workflows/rule-document-lifecycle.md) | `lj-storage/src/transaction/document.rs`、`types/document.rs` |
 | 来源安装 / 更新 / 回退 / importer | [来源安装、更新与回退](workflows/source-install-and-update.md) | `lj-importer`、`candidate_source/**`、`src/features/sources/**` |

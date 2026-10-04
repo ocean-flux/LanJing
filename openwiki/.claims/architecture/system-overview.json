@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a57273a29370bbfc7de7f7eaa8c3ecab82a3041982428e8a843c80b02acca456",
+  "pageVersion": "sha256:3df91ca6df79ee144f06cd5ab424418ca5790a5a944e6241c894ad5d1dabb24e",
   "claims": [
     {
       "id": "claim_1ff0ec3b337943c1a699619af308fed3",
@@ -21,7 +21,7 @@
       "statement": "Tauri 根 package 只依赖 lj-rule-system 与 Tauri 插件, 不直接依赖 storage/importer/runtime; 这是门面之外不越层的编译期体现。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/Cargo.toml#L97-L113",
+          "resource": "repo://src-tauri/Cargo.toml#L96-L112",
           "version": "repo-lines-v1:sha256:1a92ba3a953d81cfe125dce5894d9db40e2b34ecb02176c1e570a5d447bea4b0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyZGY2YzcxNGM5OTRkMDhkYzg1YWFmZmU2MWVjNjRlMDI1NWJlMmI4YmY2Y2NhYzc1NmYxNzkwYWM5OTQwYzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjNjU5ZjIyOWM1YzYxYmU2ODA5NmJhYWRlZGM4OGNjYzk4MTY3NjQ2MTY5ZDRmNjY3MDc0YzRmYjM3NTAxMTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlYWM3NDUwMzViZGM3OTY5OGU1ZThkZGJkN2Q0Mjk3ZTFjYWVjYmFmYTdmMDViMjFkNGQxNDcwOGU2ZWNkN2EifQ"
         },
         {
@@ -43,32 +43,8 @@
           "version": "repo-lines-v1:sha256:82d9a814691bbd9984d992662a27858600ebb7dbf632754d8ff2f2aeac277bb6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0NGY5NjFlOTE5ZTVhNzIxYjk3MzA5NzNiNTc4YjAyODdhZDMwZTc1ZDI3YWYwZDA4ZjQ0OTcyMzVlZmMzYzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhM2RkNTg3N2I3MGY3OTIwZTgwNjUzOGM4YzM2MjcxMGQ2NTExYWVkOTY3Nzk4NmNiMTRiZTQ3NjVmYzc4M2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0M2VmNGRkZjg2MWYxMTE1OTQzNWQ0MzUxYjg1NTNmYTE2NzZhNDY0NzQzYjI2ZDI3MGYzMjlkODBmOWM1N2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1MjJkNGJjNDVhYjdiY2E1NWNkNzRjYjYyMWY4Zjk0ODFiN2Q1MjgzZmFkZDMxMTcyMThkYTg3Nzg0ZDVlODgifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L371-L384",
-          "version": "repo-lines-v1:sha256:c29a3a2acdd138d1c8b4d72f4cf7e8ba74d4c4a5fb7372db70ea90ca1ac19d3e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyOWNlYmNhNzY2YTJlMTg2ZmJiZWRjODBiMWM3MzM3ZDc5MzRlZTQ0NTdhYmEyY2Q0ODdjZmVlMmNlMjI4ZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOWVkMzY0M2VlMTIxYjZlYjJjZmM5NmM2ZDQ5ZjJmZjQ4MDBlODFhNTQ2NmNmNjVkNzhhZDU5NDE0NTgyNWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE0ZTg3OTVlYTJhOGYzZDNkZGNmMDY2MWQyMDgxNTJjOGMwMDNmZTMyZjJjZjcwNWU3OTFhZDhiMmUzZGZlMzIifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_49a8cf3d6faf4c688f82c9bc7294c5c7",
-      "statement": "ADR 0003 固定四层所有权: Plugin Host 负责 manifest/依赖解析/注册/scope/生命周期/权限 broker 与 runtime adapter, Rule Kernel 负责 Definition、Draft/Effective Revision、credential ownership、校验不变量、编译编排与事务端口, Rule Runtime 只执行 immutable Plan 并负责 scheduler/取消/event/durable capture/replay, RuleSystem 只作为 composition facade; 插件不能直接修改 revision、credential owner、capability grant、event sequence、archive 或 storage transaction。",
-      "evidence": [
-        {
-          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L38-L45",
-          "version": "repo-lines-v1:sha256:e816888ca778b3a4da48f33d6cd73899427c931b8a544e4e27837f16272172f0:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjIyMmMwNzQ1MjMyYTU3ODgzZjU1Yzc5YjQ2NjAxYTY2YWI4MzJhMTQ1ZWIyNTEwMDVhOGI3MmQxZTkyODA0ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZkMTJiNzUxYWI3OGU0MzhiYzA2MWIzZGE5NTZkMDc3MzlkNGVlN2Q2NGVmZTRmMGZjM2M0OGMwYzFiYmY2OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2I5MzIzMDY4ZWMzZTRmNmE3YTViMDk3Zjk5M2MxNzYxMmE4ODZkNDRiODU4YmEzYWI1ZmFmNjJjYzA4NmE1MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWVlZTEzNjFlMDZiMTk2Y2RmM2MzN2VmZmNiY2I5Mjk5YWFhYjE3NTUwNDc1YmM4ODIwMzUyNzQ0YTNkOWViYiJ9"
-        }
-      ]
-    },
-    {
-      "id": "claim_415cb6b89b2a4340bf77d2488e13bf52",
-      "statement": "Plugin Contract 与 Plugin Host 两层已实现到「内置 capability 的规范身份、Manifest 声明与原子注册 + 冻结 + 按 operation identity 解析」为止; handler contract 迁入 plugin-contract、manifest 校验/依赖图/plugin lock、registration lease/activation 回滚/drain 均未实现(注释指向 issue #36/#37/#38/#40/#41)。",
-      "evidence": [
-        {
-          "resource": "repo://src-tauri/crates/lj-plugin-contract/src/lib.rs#L1-L18",
-          "version": "repo-lines-v1:sha256:e61be2ff8fde9b77a9ab2739c19e689322ad9c0108339cb4de177f241ed00995:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlNjRkNWE5ZmIzOTczNDM0NjZjZDgxMGNjZGUzMGU5NzYwZmE1NzA1YTVkYjBhY2I1NDlkOGY4OThmZDZlODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4NzhlMTk1MDAxNmFjZWJlMTU5MzdkYTFhMjQyZDAzMGFlNTllNDkyNDJmNTBmMTVhNzcyOWUyMDVjZDU0YzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
-        },
-        {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plugin.rs#L44-L103",
-          "version": "repo-lines-v1:sha256:eb14558c2b2b1a64c0173f83a41b69e85bccb383b19c5ba04e05b48ed5afb500:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhOGI4MDkxMDY4MWZiMGU4MWRiYjk4OWU4N2U4ZWU4YjM5YTIxNzQzYmM0MzA0ZjYwZTcwODBmMzEwOWZmM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect/archive.rs#L336-L352",
+          "version": "repo-lines-v1:sha256:1ed9f4b1f60a3775e8a71520567d223a48c0b96d3f4302a09082f31d9500343e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmZjk2NDUyZTY1MGZkODRhNjg4YTA0YzY3ODExMjcyMzZjZjcwZTk4MGUxNTA5YWI4ODMyNDZmODFjYTM3MTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExZTZmM2IzNjZkN2I4MDRmOTMzYzg3YTM3NTJjYTYwYTQzNDJhNWRkZmExMjM2MGU4YjJlYTE4OTU2MGUzYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlNjk4OGNiMjkzMTQ4NjA0NzA3NGVlNGFiODNmYjZhYjU1Yzc0Y2M3ODY2N2MzNGVkMmMwNjlmNTI4ODQ3YTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIzZTA2YjQ5MThkYTE3MTZkYzI0ODYxOTA3NGFiZDk5MWFhZmFkODNkZjM2NDRiODBhYTQwODU3Nzk2NGZjOTYifQ"
         }
       ]
     },
@@ -175,30 +151,16 @@
       ]
     },
     {
-      "id": "claim_ad5e06ee290b45c19660286faefeed4a",
-      "statement": "ADR 0003 中尚未实现的规划包括: 用 descriptor envelope 替代核心闭集 enum(未知 plugin node 只能 round-trip 展示为 unavailable, 不能 validate/compile/execute)、分域 plugin registry(NodeDescriptor/NodeCompiler/EffectHandler/SourceAdapter/EditorDescriptor/service contract)、权限为 host policy ∩ source grant ∩ plugin manifest ∩ invocation grant 的交集、以及 plugin host 的 discovered→…→disposed 生命周期状态机与 RegistrationLease。",
-      "evidence": [
-        {
-          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L104-L136",
-          "version": "repo-lines-v1:sha256:7e7cfa64db71bf819f42930f416d63160f683c78ea6a42c05e0f9806b592cc38:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliZDg1ZGY5NzlhYTMxOWI0Mjc0MzlhNzMzM2M1MTZlZmZmMzhjMzNjYTdiM2QxNzY1N2RhNzI1OTYxNDMwNTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlZjc2NDgwNGIwNWY5N2ZmY2RjZjgxMDk2ODExN2Q0YTk0ODY0ZjgyNmY1ZGVlYTEzZDVhNjFkMDNjM2I2NjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhN2Y4NTI2NjdlZTNhZDgzMjEzYjYwMWQ2YTFmOTlmZTA3M2I4M2UyZWY1ZTlhNGUwNjI0YzFmY2UyNDU0ZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhYTJiMThkZGU5OWVjYjVkYTQ1YjE0ZDg3ZjRhOWQ0NmVmODg4YTdlNTBkMjBmNGZhMzNiYzIxMjZlN2JmNWYifQ"
-        },
-        {
-          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L138-L148",
-          "version": "repo-lines-v1:sha256:031b771880475721ac3b4dcf1165f8298fbec86130752296ba58ca53a1ad5c78:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4MDcwYzJhMWRmZWMyODE4ZTBkNzY1OTViMTg1YzM2YzBiNDM4Njc0NDk5YjVmNWVhOTdlZTNmZTBmYjgwNzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4MjBlOGZhYTJjYmM1YmJjNjUzN2IxYTJjM2YwMzhlNTYyODAxOTUxYTQwNzQwMDMwNTQwZDM2N2ZjNjczM2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmMzA4ZmZiMGEwZmJlMDBhZjIxZTc0OTU4NDY5MDBlMTdiOTQ3ZTBhYmUwYmIzYWM1MDMzM2FhMTk5YjkzNjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwZDgwZmExNjljNTAwYzdiNjU3YjFmODQyZjRhMDAyYzBjZmM0M2YzMmEzNGQxNjAzZjJjNGYyNzEzMWFkZGMifQ"
-        }
-      ]
-    },
-    {
       "id": "claim_91d400e2ab6e4e149b55b072ebe603fd",
-      "statement": "当前整体边界: 前端只有工作台层, 应用面/翻页引擎/资产网关未实现(ADR 0004-0007 均只有文档); Rust 侧插件机制只到内置 capability 注册与冻结; QuickJS plugin package 与 marketplace 不在范围内。",
+      "statement": "当前整体边界: 前端只有工作台层, 应用面/翻页引擎/资产网关未实现(ADR 0004 应用面分层与 0005-0007 均只有文档); Rust 侧不再有 plugin 机制, 通用 plugin system 属一期明确不建设且原 plugin/effect contract 层已删除。",
       "evidence": [
-        {
-          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L56-L68",
-          "version": "repo-lines-v1:sha256:25d0424f624a1fcb4bfe87192d5ac972b313405ebed13f5894799bd065e84acd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxYjk0MTE1MDAzZTYwYjA4NGU3NzIyN2U2MzljN2JkODRhM2VjZTY2MGEzNTU2ZGQ5ZGQ2NjAyMTJlMzk3NzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIxMzYwZmE4YjEwZjFmZjM4YjA2MGVlMDc4NDA0N2VmYmUyN2UzM2Y4NzVkNGY4OWY2NWRiMDFkOWVmYjFhNmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwODYwYzQ1ZmY3YzNiYjI4ZDgwYTYyYWI2NTVlYjEzMTEzYzgwMjUyM2U4NTZkNTI2NjBlMDU2ZmY0Yjc3NTUifQ"
-        },
         {
           "resource": "repo://docs/adr/0004-app-surfaces-and-workbench-layers.md#L25-L32",
           "version": "repo-lines-v1:sha256:c455a592b34346aa992962d2ceea3d139302ffdaef3be278947d5ad6cc903f91:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTQxNzFiZGQ3ZGJiMzhiYjIzMDY1ZDYzYWY2ZWE4YWM1M2UyNDhkMDEyNjhkOWMwNWQ0NmZiMWRjOTcyNDNlYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjVmN2E1YzBiNDVkMDNhZDk0ZDBlYTc5NGQ2MmUzMmJlNmI4NDgyNjZjZmNiZGU4MmM3MTQzZmEzNmM2MzZkNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjg5NmZmMWIxYzg2MGI4MzliNGI5Nzc1NmE0ZmQ1YTdkOGY3NTMwZWI3OGYxYjI5MmI2YWU5ODJmNTYwNmJkOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWRmMGQ0MDk3NzUxNDFiYTJkNTkxYWFjZmNjZTcwZGZkY2IyYmZlNmY2OWI2MDhjNTkzOTU5OGFhNmIwMWY5YSJ9"
+        },
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114",
+          "version": "repo-lines-v1:sha256:02f932ba84acfd1c166e524c753a91ce054aafb85ec534177ff7306437dc675e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4YTg3OGJmYWM5NDZkZTZhZjFjNmQ2NjVlNzQ5M2E3MGYwZTMzYjQ0NDVmYTljOTNhMjMzY2ZmNTYwMGVkN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNGQ1ODc1OWVjZjkzNGE2ZTEyOTY3ZDM3MzI2ZWVjODBjMGIwMGZmNzYwNTk0ZmY0NzhiOGZhZTAxOTJlNzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMWY1ZTQ2NmMzMjg2NzYyNTE3YjBjMGIxM2NiZDczYWRiMDJiYWQzYTQ0NzcxYzQwNTgzYTRjOTMwZDIxMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzYTZhNDAwNmJjMjUyNTFhMDc5OWNiYWM4ZmJhZmY2ZmRiZTA0NmYxMjdmMTJlOGQ1NWZiMTkxMDdjMGFmZTcifQ"
         },
         {
           "resource": "repo://docs/adr/0005-turn-engine-and-pagesource.md#L14-L26",
@@ -233,10 +195,42 @@
           "version": "repo-lines-v1:sha256:28d0358b43ca36ac152b784cf42e280031762130c29665b8587f3927efa39c74:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhNjUwZTM5YjE3MzgxYmQ4ZmFjMjdhOWU0ZmQ0NjJjZDgxZGQxNDJkNjM0NjY0OGUwN2Y3YzViYjcwMDJlMzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzYjUxNWJkMTc4NzA3Y2IyODExZDRlYzE1Y2U4MGE5MTViMmVlODYyOTA1ZmQzZDZiMTQ4NTY3ODM3MDg3NDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk5MGZjZjlkOTU2OTY1M2I2M2JlZWMwNTY5NzFlYjllY2EzZWI5YzkwNTEzM2UyMjhhZDQwNzVkMjQ3NDY2NjIifQ"
         }
       ]
+    },
+    {
+      "id": "claim_73bf4354b40a417380938d1eeae3cdbd",
+      "statement": "所有权现在是三层: Effect Registry(内置 effect handler 按 EffectKind 原子批量注册、freeze() 冻结、未注册 kind 稳定失败)、Rule Kernel(Definition、Draft/Effective Revision、credential ownership、校验不变量、编译编排)与 Rule Runtime(immutable Plan 的执行、调度、取消、capture、replay); ADR 0004 要求后续扩展必须保持 Rule Contract 和 Kernel/Runtime 所有权边界。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L129-L131",
+          "version": "repo-lines-v1:sha256:80c95c0190e194065adaab859bcfee26020b6d7bb76848433fb01c87294e1182:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDIyYTQxNzZjYmRhNjg2YTE5MDQ4ODQxMDc2MTVjYTljYjYzNzE3OWNmMzdkOWI0YzIyYWJhNzM4N2IwNWM2NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODFiNDY3ZTA0MGYzMjIxZjc4NmMzMTczMDdjMjMyMWIwYzlmZjBmMzM3NDAwYTNmMTkwMDlmMDMzZjlmNWMxMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2I2ZmMyNjdjNWQ1YzA4MDNhYmFmMWExNDg5MmZlZTNjYThhOTA4OTJjYzA2NDZmNDhhZjJhMzI3Njc4YmM2OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGQ5ZDczYmE5YjJhODRkZDM5NzMxZjE1YjM1OTJiMzMzNDkwZmRmZWE2YjgyNGFjNTAwYjMxNWFiZjJmNTQxOCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L61-L107",
+          "version": "repo-lines-v1:sha256:cf436671627f3ad169443c247d29476dfb5398e5eb950249dc47be7f495330d4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljMGRmNmZkMzY5YzllZjc3ODg2MjljM2IwN2UzN2E2OTQ5NTdjYmMwNTNlMTQ3MzAyYjQ2ODgxMDRiOTgwNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L123-L244",
+          "version": "repo-lines-v1:sha256:f7b2c08ddb756ee5aa491ee715e49d0c7b27c5e3d37842a70f4441421848a539:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiM2VlZDI1ZTY2MzMzMWUwMzJhMTA4MTVlNGQxMmRiY2JjNmZhM2M3ZDFkNTM3MDQxYmVhZGU2M2RkNmM0MDAyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0ZjcxM2UyMzlhMGU3YTFkOTkwOGFlNWQ3MDliMTFlZGYzNDQ5ZTVlNjZmNTdmMzI1NjI2NTg0MTE0Yjc3YzI2IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJjMzUyNDZjNzVhYzNjZWU0MzE0NWEyOTdiMjJiYjU0MWE1NjI3ZDI4M2UzYTQ1ODFjMWUwNjNjNDk3ZmZiMDBjIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_3c97716b9b304a8097dd6ef2249a8c34",
+      "statement": "通用 plugin system(动态 Rust ABI、通用 PluginHost、plugin catalog、跨插件 service、registration lease、第三方 executable plugin SDK、在线 marketplace)按 ADR 0004 第 7 节属一期明确不建设, 原有的 plugin/effect contract 层与 PluginHost / FrozenRegistry 已删除; 运行时只注册内置的三种 effect handler, 未注册 kind 由 dispatch 转成稳定失败。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114",
+          "version": "repo-lines-v1:sha256:02f932ba84acfd1c166e524c753a91ce054aafb85ec534177ff7306437dc675e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4YTg3OGJmYWM5NDZkZTZhZjFjNmQ2NjVlNzQ5M2E3MGYwZTMzYjQ0NDVmYTljOTNhMjMzY2ZmNTYwMGVkN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNGQ1ODc1OWVjZjkzNGE2ZTEyOTY3ZDM3MzI2ZWVjODBjMGIwMGZmNzYwNTk0ZmY0NzhiOGZhZTAxOTJlNzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMWY1ZTQ2NmMzMjg2NzYyNTE3YjBjMGIxM2NiZDczYWRiMDJiYWQzYTQ0NzcxYzQwNTgzYTRjOTMwZDIxMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzYTZhNDAwNmJjMjUyNTFhMDc5OWNiYWM4ZmJhZmY2ZmRiZTA0NmYxMjdmMTJlOGQ1NWZiMTkxMDdjMGFmZTcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:891bea5d2a131533378edbc36f034a8684d1b2da860f8ddc18f0a75415f75c55:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODIxMDk0MjNlZjYxNGUwODZhMTFjMWQwYWU4Y2Q2YWUxMjc5NjNjNzc2ODRjMDM5YzVkODc5NzY2MGNkOTA3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJlOGFjZDEwN2IyNTM1YTBkMDExYTQ5MDk2OTU0OGI5YzMxYTE2MjIwNzM3ZDFjNzZiYWEyM2NkOWM4Yjg5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRmZmM3ZjViYWRkOTAyODYyYzkwYTJjODQzYmI3N2RjMjMyMTVmY2EwOTVmZGQwZDA0Y2ZjMTc5NGQ4MzE4NSJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-04T13:54:24.186Z"
   }
 }

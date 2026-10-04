@@ -2,9 +2,6 @@
 type: "参考"
 title: "Testing and gates"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-6d4b4e707b8d60b6ccfa3425
     resource: repo://.github/workflows/openwiki-update.yml
@@ -36,8 +33,6 @@ sources:
     resource: repo://src-tauri/crates/lj-node-http/tests/processor_test.rs
   - id: openwiki-source-4faec7944a92fbaedeeffea2
     resource: repo://src-tauri/crates/lj-node-js/tests/processor_test.rs
-  - id: openwiki-source-9a4e81d284fecd0c1bb181d2
-    resource: repo://src-tauri/crates/lj-plugin-contract/tests/plugin_contract_test.rs
   - id: openwiki-source-5ded4b6721374179194a354c
     resource: repo://src-tauri/crates/lj-rule-model/tests/model_contract_test.rs
   - id: openwiki-source-32d4001fffac613566845710
@@ -48,12 +43,12 @@ sources:
     resource: repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/tests.rs
   - id: openwiki-source-985022f215d1a8fb48d686c6
     resource: repo://src-tauri/crates/lj-rule-system/src/system/query_adapter.rs
+  - id: openwiki-source-d52076293fecd21d5b53a29e
+    resource: repo://src-tauri/crates/lj-runtime/tests/effect_registry_test.rs
   - id: openwiki-source-a93b7dfdb8c469a921b0d6ba
     resource: repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test.rs
   - id: openwiki-source-115e591341fdf411553c3c50
     resource: repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/scheduling_contract.rs
-  - id: openwiki-source-db8ded15a0eccb916fd9c2c1
-    resource: repo://src-tauri/crates/lj-runtime/tests/plugin_host_test.rs
   - id: openwiki-source-3a3fdfb5a00399ef7859b900
     resource: repo://src-tauri/crates/lj-storage/src/keyring_init.rs
   - id: openwiki-source-91742d0fdf22103ae9601de4
@@ -78,7 +73,10 @@ sources:
     resource: repo://src/test/setup.ts
   - id: openwiki-source-581dc5746c844c4ee0b781c7
     resource: repo://vite.config.js
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-04T13:54:24.186Z
 ---
 
 
@@ -141,9 +139,11 @@ Oxlint 的规则面本身也是门禁的一部分(`.oxlintrc.json#L3-L25`): 除 
 
 | 层 | 位置 | 规模 | 证明什么 | 不能证明什么 |
 | --- | --- | --- | --- | --- |
-| 纯契约 | `lj-rule-model/tests/`、`lj-compiler/tests/plan_compiler_test.rs`、`lj-plugin-contract/tests/` | 3 + 1 + 1 个文件 | hash 归一化、端口/句柄类型矩阵、诊断路径与排序稳定性、插件身份格式 | 任何 IO、持久化、并发行为 |
+| 纯契约 | `lj-rule-model/tests/`、`lj-compiler/tests/plan_compiler_test.rs` | 3 + 1 个文件 | hash 归一化、端口/句柄类型矩阵、诊断路径与排序稳定性 | 任何 IO、持久化、并发行为 |
 | adapter | `lj-node-http/tests/processor_test.rs`、`lj-node-js/tests/`、`lj-node-extract/tests/`(含 `html_xpath_test.rs`) | 3 个 crate | 单个 effect handler 在 wiremock 前的行为、提取器与 QuickJS 约束 | 调度顺序、捕获持久化、取消语义 |
-| runtime | `lj-runtime/tests/plan_runtime_test/{scheduling_contract,control_contract,replay_contract}.rs` + `plugin_host_test.rs` | 6 + 8 + 10 + 6 | 调度/控制流/replay 的不变量, 插件注册原子性与冻结 | 真实 SQLite 事务下的 durable-before-advance |
+| runtime | `lj-runtime/tests/plan_runtime_test/{scheduling_contract,control_contract,replay_contract}.rs` + `effect_registry_test.rs` | 6 + 8 + 10 + 5 | 调度/控制流/replay 的不变量, effect 注册的原子性与冻结 | 真实 SQLite 事务下的 durable-before-advance |
+
+契约层最近收缩过一次: `lj-plugin-contract` 与其 8 条 identity/manifest 解析用例随 crate 删除; runtime 侧的 `plugin_host_test.rs`(7 条)换成 `effect_registry_test.rs`(5 条, `src-tauri/crates/lj-runtime/tests/effect_registry_test.rs#L73-L174`)。少掉的两条断言的是「重复 plugin identity」与「operation 不在 manifest 里」——这两个命题随「注册键改为 Rule Contract 的 `EffectKind`」一并消失, 不是被放宽。
 | storage | `lj-storage/tests/event_projection_storage_test/{archive,credential_writer,media_query,projection_retention,replay}_contract.rs` + `native_rule_document_test.rs` | 12 + 5 + 1 + 7 + 4 + 13 | 真实 SQLite/临时目录/mock keyring 下的追加顺序、乐观并发、vault、投影顺序与保留策略 | runtime 是否发出了正确的事件序列 |
 | facade | `lj-rule-system/src/system/lifecycle/document.rs#L1352-L2134`、`error_mapping.rs#L419-L436`、`query_adapter.rs#L447-L477`、`lifecycle/tests.rs#L142` | 19 + 2 + 4 + 1 | 凭据策略、provenance 脱敏、revision 冲突、draft 保留、分页边界、错误码稳定映射 | 跨 crate 的完整生命周期 |
 | 跨 crate 集成 | `lj-integration-tests/tests/legado_rule_system.rs`、`maccms_json_rule_system.rs` | 6 + 8 | 唯一覆盖完整链路的层(导入 → candidate → install → live 执行 → 捕获 → replay → 投影 → library 查询) | 真实网络与真实 DNS; 真实浏览器/UI |

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c8e000ef08ca50d58286adc5ab95075f8a1626c041f7edf52f9e5e2ed46eaade",
+  "pageVersion": "sha256:d6ff6fb13de6ca4a16db99ccda8a4fa806da58e0ed4951164758184a54f75e20",
   "claims": [
     {
       "id": "claim_9bd2693a288340c2ad0abf6f34a7839c",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L371-L427",
-          "version": "repo-lines-v1:sha256:49cb85674d356df62043e60dfecbcabe315890cf46d640bdbe850cfcb602a0ef:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyOWNlYmNhNzY2YTJlMTg2ZmJiZWRjODBiMWM3MzM3ZDc5MzRlZTQ0NTdhYmEyY2Q0ODdjZmVlMmNlMjI4ZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOWVkMzY0M2VlMTIxYjZlYjJjZmM5NmM2ZDQ5ZjJmZjQ4MDBlODFhNTQ2NmNmNjVkNzhhZDU5NDE0NTgyNWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+          "version": "repo-lines-v1:sha256:c2bc7bc312bdf5039bbe73f7062fd28b846f06e7ed8190adfbdf109114f9e041:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyOWNlYmNhNzY2YTJlMTg2ZmJiZWRjODBiMWM3MzM3ZDc5MzRlZTQ0NTdhYmEyY2Q0ODdjZmVlMmNlMjI4ZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOWVkMzY0M2VlMTIxYjZlYjJjZmM5NmM2ZDQ5ZjJmZjQ4MDBlODFhNTQ2NmNmNjVkNzhhZDU5NDE0NTgyNWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
         }
       ]
     },
@@ -33,36 +33,12 @@
       ]
     },
     {
-      "id": "claim_80a11b930eb04d458fc5402eaa83bff8",
-      "statement": "PluginHost::register_plugin 是原子批量注册: manifest 未声明的 operation、重复 plugin identity、重复 operation identity(含同批内重复)都在写入任何 handler 之前失败, 因此失败的注册不会留下半注册 capability; freeze() 产出仅按 operation identity 解析的 FrozenRegistry。",
-      "evidence": [
-        {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plugin.rs#L44-L103",
-          "version": "repo-lines-v1:sha256:eb14558c2b2b1a64c0173f83a41b69e85bccb383b19c5ba04e05b48ed5afb500:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhOGI4MDkxMDY4MWZiMGU4MWRiYjk4OWU4N2U4ZWU4YjM5YTIxNzQzYmM0MzA0ZjYwZTcwODBmMzEwOWZmM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
-        }
-      ]
-    },
-    {
-      "id": "claim_623b969434694e679d3f10361a03407c",
-      "statement": "内置能力使用 namespaced 常量: plugin lanjing.builtin 与 operation lanjing.effect.http / lanjing.effect.quickjs / lanjing.effect.extract; 内置 plugin 版本取运行时 crate 版本以避免两个会分叉的真相; effect_operation(kind) 把 Plan 的 EffectKind 映射到这三个 identity。",
-      "evidence": [
-        {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plugin/builtin.rs#L17-L56",
-          "version": "repo-lines-v1:sha256:d5ed480604d31c54691880d80c680bc11431c08367a5b5e21094da288c574b79:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxZDgxZGI3ZGMwZTBhNWNlM2E4NDQ0NzMzZDg1Mjg2NTJiNzhlZDJjYTFkZWY5NTVmNDM3NTQ3ODNkZWI5Y2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImViOTk0MzAzZTIxMjM3N2RlYjdlODA0ZDUyNTY3ZWQ5ODRiZTM4ZDE4M2ZlYjkxYmIzYzIwYWMzY2IzZjhjMjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkZWFiODIxOGE2NzBlYmIwODIwOGRjZjRlYmFmZTc3NDUwNDM5NWU4YTQzYzA4MTYxYjYzN2JhZGJhZjQwY2EifQ"
-        },
-        {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plugin/builtin.rs#L87-L95",
-          "version": "repo-lines-v1:sha256:e5bdb73b4acbc391b6b280bdb01e471533ca811c33cc2af7b0ae44b8dcc52a03:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODU3NzZlNWE1YjAxOGEyNjhlOTM0YTkyYTA3YzQwYTVhZGYwZWU4NzY4YWEzYzY3Mzg0MDRhZTI4YjQ2ZGMxNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTQyYzQwNjg0ZWI2ZjY0NTdiY2Y1YWZhMzIyYWQzYzQxMzM5MjE2MGRiOWNlODIxYTIxM2M4OThhYjI0Yzk5NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
-        }
-      ]
-    },
-    {
       "id": "claim_dc9bf3b002a64c829d0b48dbeefaedca",
-      "statement": "live 分支在 frozen registry 中解析不到 operation 时返回稳定的 OperationUnavailable 而不回退到其他 handler; replay 分支不需要 handler, 因此历史 capture 不因 registry 变化而失效。",
+      "statement": "live 分支在 frozen registry 中按 declaration.kind 解析不到 handler 时返回稳定的 OperationUnavailable 而不回退到其他 handler; replay 分支不需要 handler, 因此历史 capture 不因 registry 变化而失效。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs#L101-L134",
-          "version": "repo-lines-v1:sha256:b773b847fab59a72771d9fc3d8c0289c01bcc50c78a5749e4b1d6c65c92d280a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0N2E0NjQwOGFjMDhiNjdmZTk3NTcwOWE5NTE0YzAzZmNkOTI3NzAwMjk1NjYzNDU3OTRmNTUwMjM4MWI3ZmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNkY2ZlN2E1NzQ1MzcxNzc1NTZiNGMzZDI2ZTI3OTBiNjcxZTk4OWVkNTcxYWNmM2UxMzljOWM2NmYwMzg2YmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3OTRkMDJhODEyMTk0NGQxNzZkMjY1ZTliYjljYzU5ZjZhYjg5MGJjYWRmOGFlZmRlYmRiYmI0ZjJlYTg0NDQifQ"
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs#L99-L130",
+          "version": "repo-lines-v1:sha256:5b38c9f37a368b25783394fabfd1bfd3d8bf96e8d4e54305b6184aedd981db67:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0N2E0NjQwOGFjMDhiNjdmZTk3NTcwOWE5NTE0YzAzZmNkOTI3NzAwMjk1NjYzNDU3OTRmNTUwMjM4MWI3ZmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNkY2ZlN2E1NzQ1MzcxNzc1NTZiNGMzZDI2ZTI3OTBiNjcxZTk4OWVkNTcxYWNmM2UxMzljOWM2NmYwMzg2YmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         }
       ]
     },
@@ -95,8 +71,8 @@
       "statement": "EventEmitter 用一个 terminal_sent 标志保证单终态、sequence 从 1 递增, 且事件接收端丢弃只停止投递而不隐式取消 execution; run_execution 的顺序是发 Started → 取 execution permit(等待时可被取消) → execute_path → 释放 permit → 发终态, execute_path 先给 entry 种 IntentInput 再按路径逐节点执行(每节点前检查取消), 若 Mapper 未产出 Delta 则以 InputTypeMismatch 失败。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L123-L234",
-          "version": "repo-lines-v1:sha256:3d40231d09d675cc3c22e5bb5d71262e0163fe4ceb72905328425c592833b1d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiM2VlZDI1ZTY2MzMzMWUwMzJhMTA4MTVlNGQxMmRiY2JjNmZhM2M3ZDFkNTM3MDQxYmVhZGU2M2RkNmM0MDAyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJlZDg5NzliYWNlMTc5MzdmMTNjNmNlZjQ1ODE2OTdhNWEyNzczYTkwYmY3MTBkY2I2MmYzNTE0ZTBjMmY0MGRmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0ZjcxM2UyMzlhMGU3YTFkOTkwOGFlNWQ3MDliMTFlZGYzNDQ5ZTVlNjZmNTdmMzI1NjI2NTg0MTE0Yjc3YzI2IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhZjk4N2MwNGU3YWEzOTZlZTU4ZWVkNWIyNGY1ZTI3ZTRkOGE1MDVjMGVkNWM0NTkwOGFlMWIyZTVjNDcwYWQ4In0"
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L123-L244",
+          "version": "repo-lines-v1:sha256:f7b2c08ddb756ee5aa491ee715e49d0c7b27c5e3d37842a70f4441421848a539:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiM2VlZDI1ZTY2MzMzMWUwMzJhMTA4MTVlNGQxMmRiY2JjNmZhM2M3ZDFkNTM3MDQxYmVhZGU2M2RkNmM0MDAyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0ZjcxM2UyMzlhMGU3YTFkOTkwOGFlNWQ3MDliMTFlZGYzNDQ5ZTVlNjZmNTdmMzI1NjI2NTg0MTE0Yjc3YzI2IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJjMzUyNDZjNzVhYzNjZWU0MzE0NWEyOTdiMjJiYjU0MWE1NjI3ZDI4M2UzYTQ1ODFjMWUwNjNjNDk3ZmZiMDBjIn0"
         },
         {
           "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L71-L120",
@@ -133,8 +109,8 @@
       "statement": "execute_effect 的顺序为: 取消检查 → enforce_capabilities(能力不在安装 grant 内则 CapabilityDenied) → 取 effect id 与取消 token → 先等来源级 permit 再等全局 permit(注释说明避免同一来源排队的 effect 占住全局 permit) → 再次取消检查 → 计算 fingerprint → 按 ExecutionMode 分派 live 或 replay。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs#L12-L135",
-          "version": "repo-lines-v1:sha256:330a90620fe0d64acd51b517f840fe2e07a822f672a71e4d2a2da0b126712a38:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlNjFkNTI5NTVjNzNmNzU4YmVjMTY1M2U1N2RkMzZhOWFmZDIzYmExMTUyMjVhNDljYjAwYzM2ZmM2NzNiMDZkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0ODkzZjQwZTM3ODFlYjg5NmM4MmQwNDZhMDgwNjdhMTFlMzVjZGYyZjFkZmFmMjZmZWE5MGI4ZGI2Njc2NDEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIwYjUwNmU4NzFjMmM4YjVlMGQ5ODNmNDY5Y2E2M2EzNDJhNGFhNzJmZjQ0M2QzZmMzYzI3YjA0MGJjZTVmMDllIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs#L10-L131",
+          "version": "repo-lines-v1:sha256:70430a036eae3a87a24845abf20ad794242e476cb5753de5da51b34d493a97d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlNjFkNTI5NTVjNzNmNzU4YmVjMTY1M2U1N2RkMzZhOWFmZDIzYmExMTUyMjVhNDljYjAwYzM2ZmM2NzNiMDZkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJmZjg5Yzk4NTQwZTA1ZTM4NzliYWVlYjdmNDk2NmYzN2RlZTBkYzcyN2ZmYjFhYTAxMTI3MmMxZjk2ZmRjNzUzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -253,10 +229,52 @@
           "version": "repo-lines-v1:sha256:b90061d81bc8fe96f67702ab982b29a6cedf596dd710da747e64f36535e168ac:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyZDUyOGY5MGU2ZDhhNTU5YTgxMGIwMDYzMDY5ZDI2MzhlMzYxM2FjMjA2NjYzNDc1NGRkZGUxYTM2NDVmZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         }
       ]
+    },
+    {
+      "id": "claim_b6c3dae9d2554f4a84c00a5fd66b2197",
+      "statement": "effect handler 的注册与查找唯一键是 Rule Contract 的 EffectKind: EffectRegistry::register_all 是原子批量注册(重复 kind 含同批内重复都在写入任何 handler 之前失败, 失败不留半注册 capability), 错误是 EffectRegistryError::DuplicateEffectKind(稳定码 duplicate_effect_kind), freeze() 产出以 BTreeMap<EffectKind, EffectHandler> 为内部的只读快照。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:891bea5d2a131533378edbc36f034a8684d1b2da860f8ddc18f0a75415f75c55:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODIxMDk0MjNlZjYxNGUwODZhMTFjMWQwYWU4Y2Q2YWUxMjc5NjNjNzc2ODRjMDM5YzVkODc5NzY2MGNkOTA3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJlOGFjZDEwN2IyNTM1YTBkMDExYTQ5MDk2OTU0OGI5YzMxYTE2MjIwNzM3ZDFjNzZiYWEyM2NkOWM4Yjg5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRmZmM3ZjViYWRkOTAyODYyYzkwYTJjODQzYmI3N2RjMjMyMTVmY2EwOTVmZGQwZDA0Y2ZjMTc5NGQ4MzE4NSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L61-L83",
+          "version": "repo-lines-v1:sha256:eefa7a039463814c4d3d5713f8ad509db3b2df50fcb6373711fda44e019edb2a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljMGRmNmZkMzY5YzllZjc3ODg2MjljM2IwN2UzN2E2OTQ5NTdjYmMwNTNlMTQ3MzAyYjQ2ODgxMDRiOTgwNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5M2JjNjcyMzE2YWNhOWNmNDk2NjUwMGFjMDQ4MmZhNGY4NjBmMjc1ZGNmZWRkMGIwMWI4YTIxNGY0MmJlZTMifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L85-L100",
+          "version": "repo-lines-v1:sha256:8913a2da8938deb5578baccb1b375a1d79f58d7ac0eef4a4b467ace78b4af2cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImViMzBiNTM1ZDUwOGQ5ZDRlMjUxNmU1NzVhNWE3OGQwMmEyMjZlODZiMTUxNmFmMzRmNDcxMTJjNGM3YzI2YTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE2MmVlNTdlNDFhOGMyMGFlMDE2NGRmMjYxNDM5ZGNjNDk5ZDM1MjA4MzQxNTE1MTZkMDQ3ZThkZWFlOGE0NjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgzYzU0YzE0ZjI4NzE1ZWNhOTMyNzE0YjFmNjdhNjE5MDMyZjdiYTE2YzQxZTNlNDUyZGE3ZGJiMmFmOGViYmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ff794c31ca3940a5a1e27f71344b33d1",
+      "statement": "内置注册函数 builtin::effects 直接返回三对 (EffectKind, EffectHandler), 与 EffectKind 的三个变体一一对应; 因为不再需要解析 identity 字符串, 它不再返回 Result。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry/builtin.rs#L13-L27",
+          "version": "repo-lines-v1:sha256:68203204ab04d780e0f1ad9614d20c1db9cee1ad9d151ec1dfd7b671c16bce94:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE5NDcyNTdmZGFhY2RjNTRlMmMzNDA4ZWFlYjRhMzk2NTZlMWJhNTFmOGJiMWY1NjgxMTgxMDk0Y2Q1OTE2NTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImViOTk0MzAzZTIxMjM3N2RlYjdlODA0ZDUyNTY3ZWQ5ODRiZTM4ZDE4M2ZlYjkxYmIzYzIwYWMzY2IzZjhjMjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6ac8cea0840c401ca922204e44af0c18",
+      "statement": "原来的 PluginHost / FrozenRegistry 与 lj-plugin-contract crate(PluginManifest / OperationId / HOST_CONTRACT_VERSION 版本协商)已删除: 通用 plugin system 按 ADR 0004 第 7 节属一期明确不建设, 内置能力改用同一 Rule Contract 注册。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114",
+          "version": "repo-lines-v1:sha256:02f932ba84acfd1c166e524c753a91ce054aafb85ec534177ff7306437dc675e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4YTg3OGJmYWM5NDZkZTZhZjFjNmQ2NjVlNzQ5M2E3MGYwZTMzYjQ0NDVmYTljOTNhMjMzY2ZmNTYwMGVkN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNGQ1ODc1OWVjZjkzNGE2ZTEyOTY3ZDM3MzI2ZWVjODBjMGIwMGZmNzYwNTk0ZmY0NzhiOGZhZTAxOTJlNzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMWY1ZTQ2NmMzMjg2NzYyNTE3YjBjMGIxM2NiZDczYWRiMDJiYWQzYTQ0NzcxYzQwNTgzYTRjOTMwZDIxMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzYTZhNDAwNmJjMjUyNTFhMDc5OWNiYWM4ZmJhZmY2ZmRiZTA0NmYxMjdmMTJlOGQ1NWZiMTkxMDdjMGFmZTcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:891bea5d2a131533378edbc36f034a8684d1b2da860f8ddc18f0a75415f75c55:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODIxMDk0MjNlZjYxNGUwODZhMTFjMWQwYWU4Y2Q2YWUxMjc5NjNjNzc2ODRjMDM5YzVkODc5NzY2MGNkOTA3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJlOGFjZDEwN2IyNTM1YTBkMDExYTQ5MDk2OTU0OGI5YzMxYTE2MjIwNzM3ZDFjNzZiYWEyM2NkOWM4Yjg5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRmZmM3ZjViYWRkOTAyODYyYzkwYTJjODQzYmI3N2RjMjMyMTVmY2EwOTVmZGQwZDA0Y2ZjMTc5NGQ4MzE4NSJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-04T13:54:24.186Z"
   }
 }

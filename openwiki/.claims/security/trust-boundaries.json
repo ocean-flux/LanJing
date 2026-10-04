@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5f08b8c928e24afb0cd6d9d4ab804a5ee1b781822837b66452dc32bc47354883",
+  "pageVersion": "sha256:2f56406eaa02556c0e831bcd035104bf8a147498ed5a0d266cef1752a74c57cc",
   "claims": [
     {
       "id": "claim_676ce2fc14b84bdbb5840f547af276af",
@@ -199,7 +199,7 @@
           "version": "repo-lines-v1:sha256:80e52ed9e88e853d63e8bd6490529f29425b4e571531f5e019e88de427fdda42:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZkMTQ0MmRlNWRjOTk1NDdlZDExYWNkYzNjY2YzZjVmOWIzN2UwZTFlYzZlNWRhNWYxYzRkODE1YjI3YTM1MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk3YjFhODNkZWU2MGU2YzUwY2Q4ZmY2NjYxZTIxM2U0MDU4NTkwYTZiM2NiYWI3MzYyZWY5ODI2MTUwYmJkYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDUzNzM5MmY5NmNiOWNlZDVkOGE2ZTk1NDFkZDVmODlhMTE1ZDAxYjlkZWExNmIxYzkzMzc0OWFiNWI1OGI5MiJ9"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L15-L26",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L14-L25",
           "version": "repo-lines-v1:sha256:e9b2032a8afc110d0d43d354dd52fe401d71684569e700c6ba4af20aebdccab2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ZDlhNmJkYWQyNWNmMDAxYTY3ZTdkZjQzNmFlYWRkMmUyNjFhYmFmODRhZjA5ZjAwMGIwMTBiODRkODg2NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0MzNkMGVhOWVjZjJmMzljOWE1MDQwNzM5NWVlNDExNzJmZTY4MmM5Yzg4NWEzNTA4Zjc1YmRlZTE1MWVmZmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJjMTE1NmM5Mjk0ODhlNGYzZTcxOGYxY2JkMDQ3N2JhNjIzZjc3YjdmYWNmYzRiOWVlZDVjNjI1YzRkYzUwOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwZDBjMDYzNDg5ODQ2YTAwY2MwZDI2ZmFmMzRlMjRlOTFlY2UxOTU2ODUxZDk2MjZhYWZjMzUwYWI4YTE3ODIifQ"
         }
       ]
@@ -314,11 +314,19 @@
     },
     {
       "id": "claim_35a7c4e2a54049b2aaf0fff51a77580d",
-      "statement": "已决定但尚未实现的边界: ADR 0007 的 lanjing:// 资产网关不存在(全仓库无 register_uri_scheme / lanjing://), 因此若有图片, 走的是 CSP 放行的 https: 直连路径——而那正是 ADR 0007 判定为缺陷的路径; ADR 0003 的插件系统边界(manifest 校验/依赖图/租约/回滚)归 issue #36-#41, HOST_CONTRACT_VERSION = \"1\" 当前只声明不比对。",
+      "statement": "已决定但尚未实现的边界: ADR 0007 的 lanjing:// 资产网关不存在(全仓库无 register_uri_scheme / lanjing://), 因此若有图片, 走的是 CSP 放行的 https: 直连路径——而那正是 ADR 0007 判定为缺陷的路径; effect 注册侧今天只注册内置的三种 handler, 未注册 kind 转成 OperationUnavailable, 通用 plugin system 按 ADR 0004 第 7 节属一期明确不建设且原 plugin/effect contract 层已删除。",
       "evidence": [
         {
+          "resource": "repo://docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114",
+          "version": "repo-lines-v1:sha256:02f932ba84acfd1c166e524c753a91ce054aafb85ec534177ff7306437dc675e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4YTg3OGJmYWM5NDZkZTZhZjFjNmQ2NjVlNzQ5M2E3MGYwZTMzYjQ0NDVmYTljOTNhMjMzY2ZmNTYwMGVkN2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNGQ1ODc1OWVjZjkzNGE2ZTEyOTY3ZDM3MzI2ZWVjODBjMGIwMGZmNzYwNTk0ZmY0NzhiOGZhZTAxOTJlNzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMWY1ZTQ2NmMzMjg2NzYyNTE3YjBjMGIxM2NiZDczYWRiMDJiYWQzYTQ0NzcxYzQwNTgzYTRjOTMwZDIxMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzYTZhNDAwNmJjMjUyNTFhMDc5OWNiYWM4ZmJhZmY2ZmRiZTA0NmYxMjdmMTJlOGQ1NWZiMTkxMDdjMGFmZTcifQ"
+        },
+        {
           "resource": "repo://src-tauri/Cargo.toml#L1-L20",
-          "version": "repo-lines-v1:sha256:028265565d89f9bbbf9083cee50f9bfe0f8cb1ec5fa84039906043f02779706f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzNGUxMDJjODYxZjk5NGQyYWFjZTkxMTRkMzkyZGJjMTYyMTkwZTAwYmU4ZmUzNTdkNDcyMTUwY2E0Mzk2MTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1OGY2NTc2NzlhZjQwMWZmOTQwOTRjMzFiMTQ1MzNiNWUyNmZmZTJlNGRlMmJiZTVkMmNiZGI5MmYwNDUyNTUifQ"
+          "version": "repo-lines-v1:sha256:e9ecdf312aa66132b581bb5d6e5959d9fa1e260400fb98414e1aa89613d27f62:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzNGUxMDJjODYxZjk5NGQyYWFjZTkxMTRkMzkyZGJjMTYyMTkwZTAwYmU4ZmUzNTdkNDcyMTUwY2E0Mzk2MTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkNWUxNjc2NTlhYTJkNzUyM2QxYzE2YzE3NjAxYzk5OTdkZWQzZDA4OWVjODBkOTUwYWExNmRjOTQwZTdlMDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVlMjJlN2RmNTU5YjM1MzQwNGIyODc3ODA1YTE2MzdkNjE3ZTBiNTEzYTZkODVmMjZmYTY5YWUzMGVlMzA4MDQifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect_registry.rs#L61-L107",
+          "version": "repo-lines-v1:sha256:cf436671627f3ad169443c247d29476dfb5398e5eb950249dc47be7f495330d4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljMGRmNmZkMzY5YzllZjc3ODg2MjljM2IwN2UzN2E2OTQ5NTdjYmMwNTNlMTQ3MzAyYjQ2ODgxMDRiOTgwNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
           "resource": "repo://src-tauri/src/commands/state.rs#L1-L8",
@@ -329,6 +337,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-04T13:54:24.186Z"
   }
 }
