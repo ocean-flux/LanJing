@@ -79,3 +79,4 @@ lefthook-local.yml
 
 # Agent Directory
 .pi
+.claude
