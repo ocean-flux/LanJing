@@ -174,6 +174,10 @@ pub(super) fn runtime_error(error: &PlanRuntimeError, trace_id: &str) -> RuleErr
         PlanRuntimeError::MissingIntent => {
             ("unsupported_intent", "immutable Plan 未声明该标准意图")
         }
+        PlanRuntimeError::DescriptorDigestMismatch => (
+            "plan_descriptor_digest_mismatch",
+            "immutable Plan 不是用当前节点能力声明表封存的",
+        ),
         PlanRuntimeError::CompilerVersionMismatch | PlanRuntimeError::PlanHashMismatch => {
             ("plan_pin_invalid", "immutable Plan 版本或 hash 无效")
         }

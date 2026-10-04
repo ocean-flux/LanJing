@@ -39,6 +39,21 @@ fn runtime_rejects_tampered_plan_hash_and_compiler_identity() {
 }
 
 #[test]
+fn runtime_rejects_a_plan_sealed_against_a_different_descriptor_set() {
+    // reseal: Plan 自身 hash 自洽（等于另一个 descriptor 表 build 出的 Plan），唯一差异是
+    // 封存 Plan 时那张节点声明表，因此必须命中 descriptor 不匹配而不是 hash 不匹配。
+    let drift = rewrite_plan(
+        &sample_plan(),
+        |value| value["descriptor_digest"] = serde_json::json!("0".repeat(64)),
+        true,
+    );
+    assert!(matches!(
+        runtime(4).validate_plan(&drift),
+        Err(lj_runtime::PlanRuntimeError::DescriptorDigestMismatch)
+    ));
+}
+
+#[test]
 fn control_support_classification_still_requires_a_valid_program() {
     let plan = control_plan();
     let runtime = runtime(4);

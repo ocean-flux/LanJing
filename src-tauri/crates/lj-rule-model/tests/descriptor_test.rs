@@ -7,8 +7,8 @@ use lj_rule_model::definition::FlowNodeConfig;
 use lj_rule_model::descriptor::{
     DefaultConfig, FieldDescriptor, FieldEditor, NodeDescriptor, PortDescriptor, PortHandleSource,
     PortLabelDescriptor, PortRole, PortSide, PortValueSource, VariantKind, descriptor_for,
-    descriptor_for_wire, node_descriptor_set, node_descriptors, resolve_config_ports,
-    resolve_ports,
+    descriptor_for_wire, descriptor_set_digest, node_descriptor_set, node_descriptors,
+    resolve_config_ports, resolve_ports,
 };
 use lj_rule_model::plan::{LINEAR_INPUT_HANDLE, PortValueKind, PortValueType};
 use serde_json::{Value, json};
@@ -268,6 +268,24 @@ fn js_budget_field_bounds_are_the_host_ceiling() {
             "output_bytes": JsBudget::HOST_CEILING.output_bytes,
         })
     );
+}
+
+/// descriptor digest 只来源于 [`node_descriptor_set`]（编辑器读的同一份声明表）。
+///
+/// 本测试故意用公开 payload 独立重算: 实现若改为 hash 任何平行清单或手写常量, 这里立刻
+/// 不一致, 从而锁住「Plan 绑定的是这一套 port/字段声明」这条不变量。
+#[test]
+fn descriptor_digest_is_derived_from_the_single_declaration_table() {
+    let canonical = lj_rule_model::canonical_json(&node_descriptor_set())
+        .expect("descriptor 声明表必须可 canonical 序列化");
+    let expected = blake3::Hasher::new()
+        .update(canonical.as_bytes())
+        .finalize()
+        .to_hex()
+        .to_string();
+    assert_eq!(descriptor_set_digest(), expected);
+    assert_eq!(descriptor_set_digest(), descriptor_set_digest());
+    assert_eq!(descriptor_set_digest().len(), 64);
 }
 
 /// 前端 fixture 与 Rust 声明表同源：Rust 改变声明时该测试失败, 用

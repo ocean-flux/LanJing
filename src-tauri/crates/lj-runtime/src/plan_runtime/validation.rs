@@ -53,6 +53,9 @@ pub(super) fn validate_plan(
     if plan.compiler_version() != config.compiler_version {
         return Err(PlanRuntimeError::CompilerVersionMismatch);
     }
+    if plan.descriptor_digest() != lj_rule_model::descriptor::descriptor_set_digest() {
+        return Err(PlanRuntimeError::DescriptorDigestMismatch);
+    }
     if plan.plan_hash() != calculated_plan_hash(plan)? {
         return Err(PlanRuntimeError::PlanHashMismatch);
     }

@@ -3,6 +3,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use lj_capability::{IntentExport, StandardIntent};
+use lj_rule_model::descriptor::descriptor_set_digest;
 use lj_rule_model::{
     CapabilityManifest, EventEnvelope, EventType, ExecutionPlan, ExecutionPlanParts, FlowGraph,
     FlowNodeConfig, RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, RulePackage, SchemaContract,
@@ -63,6 +64,29 @@ fn sample_plan(definition_hash: &str) -> ExecutionPlan {
         },
     )
     .expect("sample Plan must seal")
+}
+
+/// Plan 在 seal 时把 descriptor digest 写进 sealed hash：节点声明漂移不会静默通过。
+#[test]
+fn plan_seals_the_descriptor_digest_into_its_hash() {
+    let plan = sample_plan("definition-hash");
+    assert_eq!(plan.descriptor_digest(), descriptor_set_digest());
+
+    let mut value = serde_json::to_value(&plan).expect("Plan wire");
+    value["descriptor_digest"] = json!("0".repeat(64));
+    let bytes = serde_json::to_vec(&value).expect("Plan wire bytes");
+    let drifted = read_execution_plan(&bytes).expect("descriptor 漂移的 Plan 仍可读取");
+    assert_eq!(drifted.plan_hash(), plan.plan_hash());
+    assert_ne!(
+        execution_plan_hash(&drifted).expect("重算 hash"),
+        plan.plan_hash(),
+        "descriptor digest 必须是 sealed hash 的一部分"
+    );
+
+    let round_tripped = read_execution_plan(&serde_json::to_vec(&plan).expect("Plan wire bytes"))
+        .expect("current Plan 可读取");
+    assert_eq!(round_tripped.plan_hash(), plan.plan_hash());
+    assert_eq!(round_tripped.descriptor_digest(), plan.descriptor_digest());
 }
 
 #[test]

@@ -59,6 +59,10 @@ pub enum PlanRuntimeError {
     #[error("Plan compiler 版本不匹配")]
     CompilerVersionMismatch,
 
+    /// Plan 封存时的节点能力声明表与当前 runtime 不一致。
+    #[error("Plan descriptor 声明表不匹配")]
+    DescriptorDigestMismatch,
+
     /// 重新计算后的 immutable Plan hash 不匹配。
     #[error("Plan hash 校验失败")]
     PlanHashMismatch,

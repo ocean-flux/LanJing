@@ -25,6 +25,7 @@ use crate::schema::{
 pub struct ExecutionPlan {
     compiler_version: String,
     definition_hash: String,
+    descriptor_digest: String,
     plan_hash: String,
     nodes: Vec<PlanNode>,
     edges: Vec<PlanEdge>,
@@ -48,6 +49,7 @@ impl ExecutionPlan {
         let mut plan = Self {
             compiler_version: compiler_version.into(),
             definition_hash: definition_hash.into(),
+            descriptor_digest: crate::descriptor::descriptor_set_digest().to_string(),
             plan_hash: String::new(),
             nodes: parts.nodes,
             edges: parts.edges,
@@ -76,6 +78,15 @@ impl ExecutionPlan {
     #[must_use]
     pub fn plan_hash(&self) -> &str {
         &self.plan_hash
+    }
+
+    /// 返回 seal 时使用的节点能力声明表 digest。
+    ///
+    /// Plan 的 port/字段语义由该版本声明表决定；runtime 在启动前比对当前表 digest，不一致
+    /// 即拒绝，不静默执行语义已漂移的 Plan。
+    #[must_use]
+    pub fn descriptor_digest(&self) -> &str {
+        &self.descriptor_digest
     }
 
     /// 返回 typed Plan 节点。
@@ -171,6 +182,7 @@ pub fn execution_plan_hash(plan: &ExecutionPlan) -> Result<String, Error> {
         schema_version: RULE_CONTRACT_SCHEMA_VERSION,
         compiler_version: &plan.compiler_version,
         definition_hash: &plan.definition_hash,
+        descriptor_digest: &plan.descriptor_digest,
         plan_hash: "",
         nodes: &nodes,
         edges: &edges,
@@ -218,6 +230,7 @@ impl ExecutionPlan {
             schema_version: RULE_CONTRACT_SCHEMA_VERSION,
             compiler_version: &self.compiler_version,
             definition_hash: &self.definition_hash,
+            descriptor_digest: &self.descriptor_digest,
             plan_hash,
             nodes: &self.nodes,
             edges: &self.edges,
@@ -269,6 +282,7 @@ struct ExecutionPlanWireRef<'a> {
     schema_version: u32,
     compiler_version: &'a str,
     definition_hash: &'a str,
+    descriptor_digest: &'a str,
     plan_hash: &'a str,
     nodes: &'a [PlanNode],
     edges: &'a [PlanEdge],
@@ -284,6 +298,7 @@ struct ExecutionPlanWireOwned {
     schema_version: u32,
     compiler_version: String,
     definition_hash: String,
+    descriptor_digest: String,
     plan_hash: String,
     nodes: Vec<PlanNode>,
     edges: Vec<PlanEdge>,
@@ -312,6 +327,7 @@ fn execution_plan_from_value(value: serde_json::Value) -> Result<ExecutionPlan, 
     Ok(ExecutionPlan {
         compiler_version: wire.compiler_version,
         definition_hash: wire.definition_hash,
+        descriptor_digest: wire.descriptor_digest,
         plan_hash: wire.plan_hash,
         nodes: wire.nodes,
         edges: wire.edges,

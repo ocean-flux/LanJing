@@ -4,6 +4,8 @@
 //! 字段标签与默认值都由同一份声明派生, 不需要新的前端页面分支或 runtime dispatch 分支。
 //! 本模块只出稳定 code 与 raw 文本, 不出本地化文案（视图层查 `messages/*/rules.json`）。
 
+use std::sync::LazyLock;
+
 use serde::{Serialize, Serializer};
 use serde_json::Value;
 
@@ -476,6 +478,25 @@ pub const fn node_descriptor_set() -> NodeDescriptorSet {
     NodeDescriptorSet {
         descriptors: DESCRIPTORS,
     }
+}
+
+/// 全部内置节点能力声明的 canonical digest（BLAKE3 hex）。
+///
+/// 唯一来源是 [`node_descriptors`]（编辑器读的同一份声明表），因此它绑定的是「Plan 用哪套
+/// port/字段语义封存」。Plan 在 seal 时写入这个 digest，runtime 在启动前比对，节点声明漂移
+/// 不会被静默忽略。
+#[must_use]
+pub fn descriptor_set_digest() -> &'static str {
+    static DIGEST: LazyLock<String> = LazyLock::new(|| {
+        let canonical = crate::hash::canonical_json(&node_descriptor_set())
+            .expect("descriptor 声明表必须可 canonical 序列化");
+        blake3::Hasher::new()
+            .update(canonical.as_bytes())
+            .finalize()
+            .to_hex()
+            .to_string()
+    });
+    &DIGEST
 }
 
 /// 按判别值查声明。
