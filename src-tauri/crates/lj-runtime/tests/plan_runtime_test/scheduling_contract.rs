@@ -217,6 +217,59 @@ async fn effect_error_becomes_one_failed_terminal_with_attribution() {
 }
 
 #[tokio::test]
+async fn missing_network_capability_fails_before_any_effect_with_stable_code() {
+    let runtime = runtime(4);
+    let archive = Arc::new(DurableFileArchive::new());
+    let http_calls = Arc::new(AtomicUsize::new(0));
+    let extract_calls = Arc::new(AtomicUsize::new(0));
+    let mut denied = request(
+        sample_plan(),
+        Uuid::new_v4(),
+        lj_runtime::ExecutionMode::Live,
+    );
+    denied.capabilities = PolicyCapabilities {
+        network: false,
+        system: SystemCapabilities::default(),
+    };
+    let events = collect_events(
+        runtime
+            .execute(
+                denied,
+                handlers(
+                    FixtureHttp::success(http_calls.clone()),
+                    extract_calls.clone(),
+                ),
+                archive,
+            )
+            .expect("denied session"),
+    )
+    .await;
+
+    assert_eq!(
+        http_calls.load(Ordering::SeqCst),
+        0,
+        "capability 被拒绝时不得触碰外部 handler"
+    );
+    assert_eq!(extract_calls.load(Ordering::SeqCst), 0);
+    assert!(
+        !events.iter().any(|event| matches!(
+            event.kind,
+            lj_runtime::ExecutionEventKind::EffectCaptured { .. }
+        )),
+        "被拒绝的 effect 不得留下 live capture: {events:?}"
+    );
+    assert_eq!(terminal_count(&events), 1);
+    let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
+        events.last().map(|event| &event.kind)
+    else {
+        panic!("capability 拒绝必须进入 Failed 终态");
+    };
+    assert_eq!(failure.code, RuntimeFailureCode::CapabilityDenied);
+    assert_eq!(failure.node_id, Some(Uuid::from_u128(101)));
+    assert_eq!(failure.execution_id, events[0].execution_id);
+}
+
+#[tokio::test]
 async fn missing_operation_in_frozen_registry_fails_with_stable_code() {
     let runtime = runtime(4);
     let events = collect_events(
