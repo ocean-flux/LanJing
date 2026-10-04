@@ -3187,7 +3187,6 @@ name = "lanjing"
 version = "0.1.0"
 dependencies = [
  "futures",
- "keyring-core",
  "lj-rule-system",
  "serde",
  "serde_json",
@@ -3202,10 +3201,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-window-state",
  "tauri-plugin-zustand",
- "tokio",
  "tracing",
- "uuid",
- "wiremock",
 ]
 
 [[package]]
@@ -5305,18 +5301,18 @@ dependencies = [
 
 [[package]]
 name = "rquickjs"
-version = "0.12.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ce6b626d30ecbedaaf8097a04982bc3b081f958f5bdf9b8796be4ac00ee48bb"
+checksum = "a0a22bf72f515cc4189dd7c63d016f6de92a11eee98ddf7dd64794198f6eb34e"
 dependencies = [
  "rquickjs-core",
 ]
 
 [[package]]
 name = "rquickjs-core"
-version = "0.12.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9334dd11023d5ae6c751f64496510a576208802ed1d022ef94afa7639c2c55e"
+checksum = "6657979a24d543e5fc66f32cef2f47ca82ce8eb55cec5f7d59a12b7b570bbf24"
 dependencies = [
  "hashbrown 0.17.1",
  "relative-path",
@@ -5325,9 +5321,9 @@ dependencies = [
 
 [[package]]
 name = "rquickjs-sys"
-version = "0.12.1"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eef73520804cf5aa4876097ac5733058d628c769eba9678e0f4dba5a4ef79703"
+checksum = "cee271d0eeba64f0915b846cb7ae02e16faf3dfdffdca91731101d9d30fe3423"
 dependencies = [
  "cc",
 ]
@@ -6785,13 +6781,15 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-mcp-bridge"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee9c726f2293f54dc9a61739886967a75c9f1701d17a3dcb8a4544f7353d4861"
+checksum = "db0e3b2116693ae3ea616e041d83d8d95898ee2393629b2d1b8ee1d80f2eedb0"
 dependencies = [
  "base64 0.22.1",
  "block2 0.5.1",
+ "cairo-rs",
  "futures-util",
+ "gio",
  "image",
  "jni 0.21.1",
  "objc2 0.5.2",
@@ -6807,6 +6805,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "uuid",
+ "webkit2gtk",
  "webview2-com",
  "windows",
  "windows-core 0.61.2",
@@ -8636,9 +8635,9 @@ dependencies = [
 
 [[package]]
 name = "xmloxide"
-version = "0.4.4"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95e39bca5f53e68cd365d8ff305c5dc65e494ba954442c92f57e638adc8f73e2"
+checksum = "58666a3723753360aa92f2eda5c6f5392285c6d7f063b4c2b07f47c697a22b47"
 dependencies = [
  "clap",
  "encoding_rs",
@@ -8833,27 +8832,27 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[package]]
 name = "zstd"
-version = "0.13.3"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
+checksum = "bf06bd8162af0734b344780deb55b42a2429ae430870d13fcc12f238e880fe6e"
 dependencies = [
  "zstd-safe",
 ]
 
 [[package]]
 name = "zstd-safe"
-version = "7.2.4"
+version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f49c4d5f0abb602a93fb8736af2a4f4dd9512e36f7f570d66e65ff867ed3b9d"
+checksum = "ae42c0555055784c70058d19ba8e275528e8a99a706684868ace5da4e716a4ab"
 dependencies = [
  "zstd-sys",
 ]
 
 [[package]]
 name = "zstd-sys"
-version = "2.0.16+zstd.1.5.7"
+version = "2.1.0+zstd.1.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91e19ebc2adc8f83e43039e79776e3fda8ca919132d68a1fed6a5faca2683748"
+checksum = "0ef0a8027ec3ee71300ab3bcbcd0393f434aa72b91ca6d635a39941deae8eea0"
 dependencies = [
  "cc",
  "pkg-config",
