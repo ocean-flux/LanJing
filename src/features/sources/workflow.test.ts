@@ -119,6 +119,24 @@ describe('source workflow', () => {
     expect(workflow.getState()).toMatchObject({ phase: 'error', errorCode: 'input_unrecognized' });
   });
 
+  it('trusts the declared update operation when the installed list misses the source', async () => {
+    const workflow = createSourceWorkflow(
+      adapter({
+        listSources: async () => [],
+        prepare: async () => candidate(undefined, false, 'update'),
+      }),
+    );
+    await workflow.refreshSources();
+    workflow.setInput('https://example.test/api.php/provide/vod/');
+
+    await workflow.prepareInput();
+
+    expect(workflow.getState()).toMatchObject({
+      phase: 'confirm',
+      prepared: [{ isUpdate: true, previous: null }],
+    });
+  });
+
   it('marks an existing identity as an update and resets grant after stale install', async () => {
     const workflow = createSourceWorkflow(
       adapter({
