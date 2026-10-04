@@ -70,6 +70,11 @@ export function nodeDescriptor(kind: string): NodeDescriptor | undefined {
   return byKind.get(kind);
 }
 
+/** 声明里是否有作者手写源码的字段（`code` 编辑器）。 */
+export function descriptorHasCodeField(descriptor: NodeDescriptor): boolean {
+  return descriptor.fields.some((field) => field.editor.editor === 'code');
+}
+
 /** 新节点的默认 config；未安装能力返回 `undefined`。 */
 export function descriptorDefaultConfig(kind: string): NodeConfig | undefined {
   return byKind.get(kind)?.default_config;

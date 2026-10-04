@@ -9,6 +9,7 @@ import type { NodeDescriptor } from '@/shared/tauri/rules';
 
 import {
   descriptorDefaultConfig,
+  descriptorHasCodeField,
   nodeDescriptor,
   nodeDescriptors,
   registerNodeDescriptors,
@@ -19,8 +20,27 @@ import { getNodePorts, portCompatible } from './ports';
 
 const BUILT_IN_KINDS = ['http', 'js', 'extract', 'mapper', 'merge', 'condition', 'loop'];
 
+/** 未安装能力没有声明，因此没有可运行的源码字段。 */
+function requireDescriptor(kind: string): NodeDescriptor {
+  const descriptor = nodeDescriptor(kind);
+  if (descriptor === undefined) throw new Error(`缺少 descriptor: ${kind}`);
+  return descriptor;
+}
+
 /** 模块加载时的声明表快照，用例改动注册表后复位用。 */
 const ORIGINAL_DESCRIPTORS = nodeDescriptors();
+
+/** 没有任何字段的声明（未安装能力的等价物；只用于 code 字段判定）。 */
+const unknownDescriptor: NodeDescriptor = {
+  kind: 'custom_reader',
+  label_key: 'rules_node_inspector_type_custom_reader',
+  description_key: 'rules_node_inspector_type_custom_reader',
+  icon: 'brackets-curly',
+  inputs: [],
+  outputs: [],
+  fields: [],
+  default_config: {},
+};
 
 describe('descriptor 注册表', () => {
   afterEach(() => {
@@ -134,5 +154,19 @@ describe('descriptor 注册表', () => {
     const json = resolveDescriptorPorts(descriptor, { output: 'json' });
     const raw = resolveDescriptorPorts(descriptor, { output: 'raw' });
     expect(json.outputs[0]?.labelKey).not.toBe(raw.outputs[0]?.labelKey);
+  });
+
+  it('code_field_presence_is_read_from_the_descriptor', () => {
+    // 预览入口的问法是「这个节点有没有作者手写源码」，答案只能来自声明。
+    for (const kind of BUILT_IN_KINDS) {
+      const descriptor = nodeDescriptor(kind);
+      if (descriptor === undefined) throw new Error(`未安装能力缺少 descriptor: ${kind}`);
+      const expected = descriptor.fields.some((field) => field.editor.editor === 'code');
+      expect(descriptorHasCodeField(descriptor)).toBe(expected);
+    }
+    expect(descriptorHasCodeField(requireDescriptor('js'))).toBe(true);
+    expect(descriptorHasCodeField(requireDescriptor('mapper'))).toBe(false);
+    // 未安装能力没有声明，因此没有声明可读的源码字段。
+    expect(descriptorHasCodeField(unknownDescriptor)).toBe(false);
   });
 });

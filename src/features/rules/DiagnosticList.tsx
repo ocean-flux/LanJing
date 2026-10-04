@@ -10,6 +10,7 @@ import { cn } from '@/shared/utils';
 import { useMessages } from '@/shared/i18n/messages';
 import type { InstallDiagnostic } from '@/shared/tauri/rules';
 import type { ValidationState } from './model/core';
+import { selectExecutionRun } from './model/session';
 import { useRuleEditorSession, useRuleEditorSessionStore } from './use-session';
 
 type Severity = InstallDiagnostic['severity'];
@@ -58,6 +59,7 @@ export function DiagnosticList() {
   const m = useMessages();
   const store = useRuleEditorSessionStore();
   const validation = useRuleEditorSession((state) => state.core.validation);
+  const execution = useRuleEditorSession(selectExecutionRun);
 
   const sorted = useMemo(
     () =>
@@ -107,29 +109,65 @@ export function DiagnosticList() {
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto">
           {sorted.map((diagnostic) => (
-            <li key={diagnosticKey(diagnostic)}>
-              <button
-                type="button"
-                className="flex w-full items-start gap-2 px-(--page-gutter) py-1.5 text-left text-ui-sm hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
-                onClick={() => {
-                  // 诊断的 span.path 目前对应节点 id，用于把画布焦点带过去。
-                  const nodeId = diagnostic.span?.path;
-                  if (nodeId) store.getState().revealNode(nodeId);
-                }}
-              >
-                <Icon
-                  name={diagnostic.severity === 'info' ? 'file-text' : 'warning-circle'}
-                  className={cn('mt-0.5 shrink-0', severityClass(diagnostic.severity))}
-                />
-                <span className="min-w-0 flex-1">{diagnostic.message}</span>
-                <span className="shrink-0 font-mono text-[10px] text-ink-subtle">
-                  {diagnostic.code}
-                </span>
-              </button>
-            </li>
+            <DiagnosticRow
+              key={diagnosticKey(diagnostic)}
+              diagnostic={diagnostic}
+              onReveal={(nodeId) => store.getState().revealNode(nodeId)}
+            />
           ))}
         </ul>
       )}
+
+      {/* 运行诊断与校验诊断分组展示：校验状态只是「文档能不能编译」，
+          一次运行失败不代表文档无效，混在同一列表里会让人误读状态徽章。 */}
+      {execution.diagnostics.length === 0 ? null : (
+        <>
+          <header className="flex h-(--density-row) shrink-0 items-center gap-2 border-y border-hairline px-(--page-gutter)">
+            <h3 className="text-ui-sm font-medium text-ink-muted">
+              {m.rules_execution_diagnostics()}
+            </h3>
+          </header>
+          <ul className="max-h-32 shrink-0 overflow-y-auto">
+            {execution.diagnostics.map((diagnostic, index) => (
+              <DiagnosticRow
+                key={`run:${String(index)}:${diagnosticKey(diagnostic)}`}
+                diagnostic={diagnostic}
+                onReveal={(nodeId) => store.getState().revealNode(nodeId)}
+              />
+            ))}
+          </ul>
+        </>
+      )}
     </section>
+  );
+}
+
+/** 一行诊断：稳定 code + 已本地化 message，点击把画布带到诊断指向的节点。 */
+function DiagnosticRow({
+  diagnostic,
+  onReveal,
+}: {
+  diagnostic: InstallDiagnostic;
+  onReveal: (nodeId: string) => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="flex w-full items-start gap-2 px-(--page-gutter) py-1.5 text-left text-ui-sm hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
+        onClick={() => {
+          // 诊断的 span.path 目前对应节点 id，用于把画布焦点带过去。
+          const nodeId = diagnostic.span?.path;
+          if (nodeId) onReveal(nodeId);
+        }}
+      >
+        <Icon
+          name={diagnostic.severity === 'info' ? 'file-text' : 'warning-circle'}
+          className={cn('mt-0.5 shrink-0', severityClass(diagnostic.severity))}
+        />
+        <span className="min-w-0 flex-1">{diagnostic.message}</span>
+        <span className="shrink-0 font-mono text-[10px] text-ink-subtle">{diagnostic.code}</span>
+      </button>
+    </li>
   );
 }

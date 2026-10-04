@@ -5,9 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useMessages } from '@/shared/i18n/messages';
 import { canonicalConfig } from '../model/node-defaults';
+import { descriptorHasCodeField, nodeDescriptor } from '../model/descriptor-registry';
 import type { FlowViewNode } from '../model/flow-adapter';
 import { nodeKindLabel } from '../labels';
 import { useRuleEditorSessionStore } from '../use-session';
+import { ExecutionPreview } from './ExecutionPreview';
 import { NodeConfigPanel } from './node-panels';
 
 export function NodeInspector({ node }: { node: FlowViewNode }) {
@@ -17,6 +19,10 @@ export function NodeInspector({ node }: { node: FlowViewNode }) {
     () => canonicalConfig(node.data.kind, node.data.config),
     [node.data.kind, node.data.config],
   );
+  // 「节点能不能跑一次预览」是 descriptor 元数据（声明了作者手写源码字段），
+  // 不是某个 kind 的专属行为：新的脚本节点能力自动拿到同一入口。
+  const descriptor = nodeDescriptor(node.data.kind);
+  const hasCode = descriptor !== undefined && descriptorHasCodeField(descriptor);
 
   return (
     <div className="flex flex-col gap-3">
@@ -37,6 +43,8 @@ export function NodeInspector({ node }: { node: FlowViewNode }) {
         config={config}
         onChange={(patch) => store.getState().setNodeConfig(node.id, patch)}
       />
+
+      {hasCode ? <ExecutionPreview /> : null}
 
       <p className="text-ui-sm leading-4 text-ink-subtle">{m.rules_node_inspector_hint()}</p>
     </div>

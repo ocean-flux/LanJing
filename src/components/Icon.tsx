@@ -48,6 +48,7 @@ export type IconName =
   | 'moon'
   | 'music-notes'
   | 'pencil-simple'
+  | 'play'
   | 'plus'
   | 'push-pin'
   | 'push-pin-fill'
@@ -58,6 +59,7 @@ export type IconName =
   | 'squares-four'
   | 'star'
   | 'star-fill'
+  | 'stop-circle'
   | 'sun'
   | 'translate'
   | 'trash'
@@ -108,6 +110,7 @@ const ICON_CLASSES: Record<IconName, string> = {
   moon: 'icon-[ph--moon]',
   'music-notes': 'icon-[ph--music-notes]',
   'pencil-simple': 'icon-[ph--pencil-simple]',
+  play: 'icon-[ph--play]',
   plus: 'icon-[ph--plus]',
   'push-pin': 'icon-[ph--push-pin]',
   'push-pin-fill': 'icon-[ph--push-pin-fill]',
@@ -118,6 +121,7 @@ const ICON_CLASSES: Record<IconName, string> = {
   'squares-four': 'icon-[ph--squares-four]',
   star: 'icon-[ph--star]',
   'star-fill': 'icon-[ph--star-fill]',
+  'stop-circle': 'icon-[ph--stop-circle]',
   sun: 'icon-[ph--sun]',
   translate: 'icon-[ph--translate]',
   trash: 'icon-[ph--trash]',
