@@ -133,6 +133,8 @@ pub struct VariantKind {
     pub value: &'static str,
     /// 对应的 closed kind。
     pub kind: PortValueKind,
+    /// 该变体的 port 标签 message key。
+    pub label_key: &'static str,
 }
 
 /// 节点上的一个声明式 port。
@@ -174,9 +176,27 @@ pub enum FieldEditor {
         options: &'static [SelectOptionDescriptor],
     },
     /// 字符串列表。
-    StringList,
+    StringList {
+        /// 单项 aria-label 的 message key。
+        item_label_key: &'static str,
+        /// 新增按钮的 message key。
+        add_label_key: &'static str,
+        /// 删除按钮的 message key。
+        remove_label_key: &'static str,
+        /// 少于该数量时禁止删除。
+        min_items: u32,
+    },
     /// key/value 对列表。
-    PairList,
+    PairList {
+        /// key 列标题的 message key。
+        key_label_key: &'static str,
+        /// value 列标题的 message key。
+        value_label_key: &'static str,
+        /// 新增按钮的 message key。
+        add_label_key: &'static str,
+        /// 删除按钮的 message key。
+        remove_label_key: &'static str,
+    },
     /// 视图层已注册的结构化子编辑器。
     Specialized {
         /// 子编辑器名。
@@ -291,9 +311,10 @@ pub struct ResolvedPorts {
 
 /// 按 config 解析一条 port: handle 展开与 value kind 落定。
 fn resolve_port(port: &PortDescriptor, config: &Value, position: usize) -> Vec<ResolvedPort> {
-    let value_type = resolve_value(port.value, config);
+    let (value_type, variant_label) = resolve_value(port.value, config);
+    let label_key = variant_label.unwrap_or(port.label.key);
     let label = |index: Option<usize>| ResolvedPortLabel {
-        key: port.label.key.to_owned(),
+        key: label_key.to_owned(),
         literal: port.label.literal,
         index: if port.label.numbered {
             index.or(Some(position + 1))
@@ -370,18 +391,20 @@ fn fixed_handle(source: PortHandleSource) -> String {
     }
 }
 
-fn resolve_value(source: PortValueSource, config: &Value) -> PortValueType {
+fn resolve_value(source: PortValueSource, config: &Value) -> (PortValueType, Option<&'static str>) {
     match source {
-        PortValueSource::Kind { kind } => PortValueType::kind(kind),
-        PortValueSource::Union { kinds } => PortValueType::union(kinds.iter().copied()),
+        PortValueSource::Kind { kind } => (PortValueType::kind(kind), None),
+        PortValueSource::Union { kinds } => (PortValueType::union(kinds.iter().copied()), None),
         PortValueSource::FieldVariant { field, variants } => {
             let selected = config.get(field).and_then(Value::as_str);
-            let kind = variants
+            let variant = variants
                 .iter()
                 .find(|variant| Some(variant.value) == selected)
-                .or_else(|| variants.first())
-                .map_or(PortValueKind::Json, |variant| variant.kind);
-            PortValueType::kind(kind)
+                .or_else(|| variants.first());
+            match variant {
+                Some(variant) => (PortValueType::kind(variant.kind), Some(variant.label_key)),
+                None => (PortValueType::kind(PortValueKind::Json), None),
+            }
         }
     }
 }
@@ -475,7 +498,27 @@ const LINEAR_INPUT: PortDescriptor = PortDescriptor {
     label: PortLabelDescriptor::literal("input"),
 };
 
-const HTTP_INPUTS: &[PortDescriptor] = &[LINEAR_INPUT];
+/// HTTP 节点是规则入口: 输入承接 intent entry、循环体绑定与透传原文, 但不接受
+/// Json 数据连边。
+const HTTP_INPUT_VALUE: PortValueSource = PortValueSource::Union {
+    kinds: &[
+        PortValueKind::IntentInput,
+        PortValueKind::Raw,
+        PortValueKind::LoopBinding,
+    ],
+};
+
+const HTTP_INPUT: PortDescriptor = PortDescriptor {
+    handle: PortHandleSource::Fixed {
+        handle: LINEAR_INPUT_HANDLE,
+    },
+    value: HTTP_INPUT_VALUE,
+    role: PortRole::Data,
+    side: PortSide::Left,
+    label: PortLabelDescriptor::literal("input"),
+};
+
+const HTTP_INPUTS: &[PortDescriptor] = &[HTTP_INPUT];
 const HTTP_OUTPUTS: &[PortDescriptor] = &[PortDescriptor {
     handle: PortHandleSource::Fixed {
         handle: LINEAR_OUTPUT_HANDLE,
@@ -502,10 +545,12 @@ const JS_OUTPUTS: &[PortDescriptor] = &[PortDescriptor {
             VariantKind {
                 value: "json",
                 kind: PortValueKind::Json,
+                label_key: "rules_port_label_json_output",
             },
             VariantKind {
                 value: "raw",
                 kind: PortValueKind::Raw,
+                label_key: "rules_port_label_raw_output",
             },
         ],
     },
@@ -703,7 +748,12 @@ const HTTP_FIELDS: &[FieldDescriptor] = &[
     field(
         "headers",
         "rules_node_inspector_field_headers",
-        FieldEditor::PairList,
+        FieldEditor::PairList {
+            key_label_key: "rules_node_inspector_header_name",
+            value_label_key: "rules_node_inspector_header_value",
+            add_label_key: "rules_node_inspector_header_add",
+            remove_label_key: "rules_node_inspector_header_remove",
+        },
     ),
 ];
 
@@ -811,7 +861,12 @@ const MAPPER_FIELDS: &[FieldDescriptor] = &[
     field(
         "identity_fields",
         "rules_node_inspector_field_identity_fields",
-        FieldEditor::StringList,
+        FieldEditor::StringList {
+            item_label_key: "rules_node_inspector_field_identity_fields",
+            add_label_key: "rules_node_inspector_identity_field_add",
+            remove_label_key: "rules_node_inspector_identity_field_remove",
+            min_items: 0,
+        },
     ),
 ];
 
@@ -853,7 +908,12 @@ const CONDITION_FIELDS: &[FieldDescriptor] = &[
     field(
         "branches",
         "rules_node_inspector_field_branches",
-        FieldEditor::StringList,
+        FieldEditor::StringList {
+            item_label_key: "rules_node_inspector_branch_handle",
+            add_label_key: "rules_node_inspector_branch_add",
+            remove_label_key: "rules_node_inspector_branch_remove",
+            min_items: 2,
+        },
     ),
     field(
         "expression",

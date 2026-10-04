@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useMessages } from '@/shared/i18n/messages';
 import type { FlowNode } from '@/shared/tauri/rules';
-import { uiHandleForSemantic, type FlowViewEdge } from '../model/flow-adapter';
+import { type FlowViewEdge } from '../model/flow-adapter';
 import { getNodePorts, type InputPortDef, type OutputPortDef } from '../model/ports';
 import { nodeKindLabel } from '../labels';
 import { useRuleEditorSessionStore } from '../use-session';
@@ -30,12 +30,11 @@ export function PortInspector({
   const m = useMessages();
   const store = useRuleEditorSessionStore();
 
-  const uiHandle = uiHandleForSemantic(node.config.kind, node.config.value, handle, direction);
   const ports = getNodePorts(node.config.kind, node.config.value);
   const port: InputPortDef | OutputPortDef | undefined =
     direction === 'source'
-      ? ports.outputs.find((candidate) => candidate.id === uiHandle)
-      : ports.inputs.find((candidate) => candidate.id === uiHandle);
+      ? ports.outputs.find((candidate) => candidate.id === handle)
+      : ports.inputs.find((candidate) => candidate.id === handle);
 
   const related = edges.filter((edge) =>
     direction === 'source'
@@ -72,8 +71,6 @@ export function PortInspector({
             ? m.rules_port_inspector_direction_output()
             : m.rules_port_inspector_direction_input()}
         </dd>
-        <dt className="text-ink-muted">{m.rules_port_inspector_ui_handle()}</dt>
-        <dd className="truncate text-right font-mono text-ink">{uiHandle}</dd>
         <dt className="text-ink-muted">{m.rules_port_inspector_semantic_handle()}</dt>
         <dd className="truncate text-right font-mono text-ink">{handle}</dd>
         <dt className="text-ink-muted">{m.rules_port_inspector_role()}</dt>

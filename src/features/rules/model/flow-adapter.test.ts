@@ -280,7 +280,7 @@ describe('semanticToFlow', () => {
     expect(edges[0].id).toBe(edges2[0].id);
   });
 
-  it('maps compiler handles to visible node handles without changing semantic edge data', () => {
+  it('maps compiler handles to node handles without changing semantic edge data', () => {
     const definition = createBlankDefinition('source:template');
     definition.flow = {
       nodes: [
@@ -296,7 +296,7 @@ describe('semanticToFlow', () => {
     };
 
     const { edges } = semanticToFlow(definition, null, null);
-    expect(edges[0]).toMatchObject({ sourceHandle: 'http_response', targetHandle: 'source' });
+    expect(edges[0]).toMatchObject({ sourceHandle: 'output', targetHandle: 'input' });
     expect(edges[0].data.edge).toEqual(definition.flow.edges[0]);
   });
 
@@ -383,13 +383,13 @@ describe('semanticToFlow', () => {
     expect(nodes.every((node) => node.selected !== true)).toBe(true);
   });
 
-  it('port selection keeps node unselected and marks the visible handle', () => {
+  it('port selection keeps node unselected and marks the selected handle', () => {
     const def = sevenNodeDefinition();
     const selection = portSelectionToken('node:js', 'source', 'output');
     const { nodes } = semanticToFlow(def, null, selection);
     const node = nodes.find((candidate) => candidate.id === 'node:js');
     expect(node?.selected).toBe(false);
-    expect(node?.data.selectedPort).toEqual({ direction: 'source', id: 'json' });
+    expect(node?.data.selectedPort).toEqual({ direction: 'source', id: 'output' });
   });
 
   it('collapsed Loop region hides only internal nodes and edges', () => {

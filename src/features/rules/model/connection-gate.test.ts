@@ -46,7 +46,7 @@ function conn(
 describe('validateConnection：端口类型', () => {
   it('接受 http_response → extract.source 的合法连接', () => {
     const result = validateConnection(
-      conn('http-a', 'http_response', 'extract-a', 'source'),
+      conn('http-a', 'output', 'extract-a', 'input'),
       graph([httpA, extractA]),
     );
     expect(result).toEqual({ ok: true });
@@ -54,30 +54,30 @@ describe('validateConnection：端口类型', () => {
 
   it('拒绝端口类型不兼容（http_response → mapper.in）', () => {
     const result = validateConnection(
-      conn('http-a', 'http_response', 'mapper-a', 'in'),
+      conn('http-a', 'output', 'mapper-a', 'input'),
       graph([httpA, mapperA]),
     );
     expect(result).toEqual({ ok: false, reason: 'incompatible-ports' });
   });
 
   it('拒绝自环（source === target）', () => {
-    const result = validateConnection(conn('js-a', 'json', 'js-a', 'in'), graph([jsA]));
+    const result = validateConnection(conn('js-a', 'output', 'js-a', 'input'), graph([jsA]));
     expect(result).toEqual({ ok: false, reason: 'self-loop' });
   });
 
   it('拒绝未知节点 / 未知 handle / 缺失 handle', () => {
-    expect(validateConnection(conn('nope', 'json', 'js-a', 'in'), graph([jsA]))).toEqual({
+    expect(validateConnection(conn('nope', 'output', 'js-a', 'input'), graph([jsA]))).toEqual({
       ok: false,
       reason: 'unknown-node',
     });
     expect(
-      validateConnection(conn('js-a', 'wat', 'extract-a', 'source'), graph([jsA, extractA])),
+      validateConnection(conn('js-a', 'wat', 'extract-a', 'input'), graph([jsA, extractA])),
     ).toEqual({
       ok: false,
       reason: 'unknown-handle',
     });
     expect(
-      validateConnection(conn('js-a', '', 'extract-a', 'source'), graph([jsA, extractA])),
+      validateConnection(conn('js-a', '', 'extract-a', 'input'), graph([jsA, extractA])),
     ).toEqual({
       ok: false,
       reason: 'missing-handle',
@@ -85,10 +85,10 @@ describe('validateConnection：端口类型', () => {
   });
 
   it('重连排除正在替换的旧边，不把原位置判为 duplicate', () => {
-    const existing = edge('http-a', 'http_response', 'extract-a', 'source');
-    const result = validateConnection(conn('http-a', 'http_response', 'extract-a', 'source'), {
+    const existing = edge('http-a', 'output', 'extract-a', 'input');
+    const result = validateConnection(conn('http-a', 'output', 'extract-a', 'input'), {
       ...graph([httpA, extractA], [existing]),
-      excludeEdgeId: 'http-a:http_response->extract-a:source',
+      excludeEdgeId: 'http-a:output->extract-a:input',
     });
     expect(result).toEqual({ ok: true });
   });
@@ -97,17 +97,17 @@ describe('validateConnection：端口类型', () => {
 describe('validateConnection：规则入口', () => {
   it('HTTP 入口不是可连接的输入端口', () => {
     expect(
-      validateConnection(conn('http-a', 'http_response', 'http-b', 'in'), graph([httpA, httpB])),
-    ).toEqual({ ok: false, reason: 'unknown-handle' });
+      validateConnection(conn('http-a', 'output', 'http-b', 'input'), graph([httpA, httpB])),
+    ).toEqual({ ok: false, reason: 'incompatible-ports' });
   });
 });
 
 describe('validateConnection：回边拒绝', () => {
   it('拒绝直接回环（A→B 后再连 B→A）', () => {
     const conditionA = { id: 'condition-a', kind: 'condition' as const };
-    const existing = edge('condition-a', 'branch:0', 'js-a', 'in');
+    const existing = edge('condition-a', 'true', 'js-a', 'input');
     const result = validateConnection(
-      conn('js-a', 'json', 'condition-a', 'in'),
+      conn('js-a', 'output', 'condition-a', 'input'),
       graph([conditionA, jsA], [existing]),
     );
     expect(result).toEqual({ ok: false, reason: 'back-edge' });
@@ -117,11 +117,11 @@ describe('validateConnection：回边拒绝', () => {
     const conditionA = { id: 'condition-a', kind: 'condition' as const };
     const conditionB = { id: 'condition-b', kind: 'condition' as const };
     const edges = [
-      edge('condition-a', 'branch:0', 'js-a', 'in'),
-      edge('js-a', 'json', 'condition-b', 'in'),
+      edge('condition-a', 'true', 'js-a', 'input'),
+      edge('js-a', 'output', 'condition-b', 'input'),
     ];
     const result = validateConnection(
-      conn('condition-b', 'branch:0', 'condition-a', 'in'),
+      conn('condition-b', 'true', 'condition-a', 'input'),
       graph([conditionA, conditionB, jsA], edges),
     );
     expect(result).toEqual({ ok: false, reason: 'back-edge' });
@@ -129,20 +129,20 @@ describe('validateConnection：回边拒绝', () => {
 
   it('允许无环的链路延伸（A→B→C 后再连 B→D）', () => {
     const edges = [
-      edge('http-a', 'http_response', 'extract-a', 'source'),
-      edge('extract-a', 'json', 'mapper-a', 'in'),
+      edge('http-a', 'output', 'extract-a', 'input'),
+      edge('extract-a', 'output', 'mapper-a', 'input'),
     ];
     const result = validateConnection(
-      conn('extract-a', 'json', 'js-a', 'in'),
+      conn('extract-a', 'output', 'js-a', 'input'),
       graph([httpA, extractA, mapperA, jsA], edges),
     );
     expect(result).toEqual({ ok: true });
   });
 
   it('允许 Loop body 内节点唯一回接 yield', () => {
-    const existing = edge('loop-a', 'body', 'js-a', 'in');
+    const existing = edge('loop-a', 'body', 'js-a', 'input');
     const result = validateConnection(
-      conn('js-a', 'json', 'loop-a', 'yield'),
+      conn('js-a', 'output', 'loop-a', 'yield'),
       graph([loopA, jsA], [existing]),
     );
     expect(result).toEqual({ ok: true });
@@ -151,11 +151,11 @@ describe('validateConnection：回边拒绝', () => {
   it('拒绝 Loop 第二条 yield 回边', () => {
     const jsB = { id: 'js-b', kind: 'js' as const };
     const existing = [
-      edge('loop-a', 'body', 'js-a', 'in'),
-      edge('js-a', 'json', 'loop-a', 'yield'),
+      edge('loop-a', 'body', 'js-a', 'input'),
+      edge('js-a', 'output', 'loop-a', 'yield'),
     ];
     const result = validateConnection(
-      conn('js-b', 'json', 'loop-a', 'yield'),
+      conn('js-b', 'output', 'loop-a', 'yield'),
       graph([loopA, jsA, jsB], existing),
     );
     expect(result).toEqual({ ok: false, reason: 'loop-yield-occupied' });
@@ -168,12 +168,12 @@ describe('validateConnection：意图兼容', () => {
     const g = graph(
       [httpA, extractA, mapperA, jsA],
       [
-        edge('http-a', 'http_response', 'extract-a', 'source'),
-        edge('extract-a', 'json', 'mapper-a', 'in'),
+        edge('http-a', 'output', 'extract-a', 'input'),
+        edge('extract-a', 'output', 'mapper-a', 'input'),
       ],
       'http-a',
     );
-    const result = validateConnection(conn('js-a', 'json', 'mapper-a', 'in'), g);
+    const result = validateConnection(conn('js-a', 'output', 'mapper-a', 'input'), g);
     expect(result).toEqual({ ok: false, reason: 'intent-mismatch' });
   });
 
@@ -181,12 +181,12 @@ describe('validateConnection：意图兼容', () => {
     const g = graph(
       [httpA, extractA, mapperA, jsA],
       [
-        edge('http-a', 'http_response', 'extract-a', 'source'),
-        edge('extract-a', 'json', 'mapper-a', 'in'),
+        edge('http-a', 'output', 'extract-a', 'input'),
+        edge('extract-a', 'output', 'mapper-a', 'input'),
       ],
       'http-a',
     );
-    expect(validateConnection(conn('extract-a', 'json', 'js-a', 'in'), g)).toEqual({
+    expect(validateConnection(conn('extract-a', 'output', 'js-a', 'input'), g)).toEqual({
       ok: true,
     });
   });
@@ -194,15 +194,15 @@ describe('validateConnection：意图兼容', () => {
   it('焦点为空（全部视图）时不校验意图', () => {
     const g = graph(
       [httpA, extractA, mapperA, jsA],
-      [edge('http-a', 'http_response', 'extract-a', 'source')],
+      [edge('http-a', 'output', 'extract-a', 'input')],
       null,
     );
-    expect(validateConnection(conn('js-a', 'json', 'extract-a', 'source'), g)).toEqual({
+    expect(validateConnection(conn('js-a', 'output', 'extract-a', 'input'), g)).toEqual({
       ok: false,
       reason: 'incompatible-ports',
     });
     // 同一图内无焦点时，js-a → mapper-a 合法
-    expect(validateConnection(conn('js-a', 'json', 'mapper-a', 'in'), g)).toEqual({
+    expect(validateConnection(conn('js-a', 'output', 'mapper-a', 'input'), g)).toEqual({
       ok: true,
     });
   });
@@ -211,8 +211,8 @@ describe('validateConnection：意图兼容', () => {
 describe('reachableNodes', () => {
   it('从入口出发 BFS 可达集合（含入口自身）', () => {
     const edges = [
-      edge('http-a', 'http_response', 'extract-a', 'source'),
-      edge('extract-a', 'json', 'mapper-a', 'in'),
+      edge('http-a', 'output', 'extract-a', 'input'),
+      edge('extract-a', 'output', 'mapper-a', 'input'),
     ];
     expect([...reachableNodes('http-a', edges)].sort()).toEqual([
       'extract-a',
@@ -224,8 +224,8 @@ describe('reachableNodes', () => {
 
   it('环路图不无限循环', () => {
     const edges = [
-      edge('http-a', 'http_response', 'extract-a', 'source'),
-      edge('extract-a', 'json', 'http-a', 'in'),
+      edge('http-a', 'output', 'extract-a', 'input'),
+      edge('extract-a', 'output', 'http-a', 'input'),
     ];
     expect([...reachableNodes('http-a', edges)].sort()).toEqual(['extract-a', 'http-a']);
   });
@@ -233,19 +233,15 @@ describe('reachableNodes', () => {
 
 describe('semanticEdgeFromConnection', () => {
   it('把 Svelte Flow Connection 映射为语义边', () => {
-    expect(
-      semanticEdgeFromConnection(conn('http-a', 'http_response', 'extract-a', 'source')),
-    ).toEqual(edge('http-a', 'http_response', 'extract-a', 'source'));
+    expect(semanticEdgeFromConnection(conn('http-a', 'output', 'extract-a', 'input'))).toEqual(
+      edge('http-a', 'output', 'extract-a', 'input'),
+    );
   });
 
-  it('把 custom node 可视端口还原为 compiler semantic handle', () => {
-    expect(
-      semanticEdgeFromConnection(
-        conn('http-a', 'http_response', 'extract-a', 'source'),
-        { id: 'http-a', kind: 'http', config: {} },
-        { id: 'extract-a', kind: 'extract', config: {} },
-      ),
-    ).toEqual(edge('http-a', 'output', 'extract-a', 'input'));
+  it('把连接直接落为 compiler 的 semantic handle', () => {
+    expect(semanticEdgeFromConnection(conn('http-a', 'output', 'extract-a', 'input'))).toEqual(
+      edge('http-a', 'output', 'extract-a', 'input'),
+    );
   });
 });
 
@@ -281,7 +277,7 @@ describe('recommendKinds：palette 推荐', () => {
   it('意图焦点激活时，选中节点不在焦点子图内 → 全部不兼容并解释', () => {
     const recs = recommendKinds({
       nodes: [httpA, extractA, jsA],
-      edges: [edge('http-a', 'http_response', 'extract-a', 'source')],
+      edges: [edge('http-a', 'output', 'extract-a', 'input')],
       selection: 'js-a',
       focusEntry: 'http-a',
     });
@@ -293,7 +289,7 @@ describe('recommendKinds：palette 推荐', () => {
   it('选中焦点子图内节点时可外扩推荐', () => {
     const recs = recommendKinds({
       nodes: [httpA, extractA],
-      edges: [edge('http-a', 'http_response', 'extract-a', 'source')],
+      edges: [edge('http-a', 'output', 'extract-a', 'input')],
       selection: 'extract-a',
       focusEntry: 'http-a',
     });
@@ -306,7 +302,8 @@ describe('recommendKinds：palette 推荐', () => {
 describe('canConnect', () => {
   it('是 validateConnection 的布尔投影', () => {
     const g = graph([httpA, extractA]);
-    expect(canConnect(conn('http-a', 'http_response', 'extract-a', 'source'), g)).toBe(true);
-    expect(canConnect(conn('http-a', 'http_response', 'extract-a', 'in'), g)).toBe(false);
+    const duplicate = graph([httpA, extractA], [edge('http-a', 'output', 'extract-a', 'input')]);
+    expect(canConnect(conn('http-a', 'output', 'extract-a', 'input'), g)).toBe(true);
+    expect(canConnect(conn('http-a', 'output', 'extract-a', 'input'), duplicate)).toBe(false);
   });
 });

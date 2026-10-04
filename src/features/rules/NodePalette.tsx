@@ -15,7 +15,7 @@ import {
   recommendKinds,
   type KindRecommendation,
 } from './model/connection-gate';
-import { NODE_KIND_ICONS } from './model/meta';
+import { nodeIcon } from './model/meta';
 import { selectFlowProjection } from './model/session';
 import { intentLabel, nodeKindDescription, nodeKindLabel, recommendBlockerText } from './labels';
 import { useRuleEditorSession, useRuleEditorSessionStore } from './use-session';
@@ -90,7 +90,7 @@ export function NodePalette({ onClose }: { onClose: () => void }) {
         onClick={() => addNode(item.kind)}
       >
         <Icon
-          name={NODE_KIND_ICONS[item.kind]}
+          name={nodeIcon(item.kind)}
           className={cn(
             'mt-0.5 shrink-0',
             item.compatible ? 'text-lantern-strong' : 'text-ink-subtle',

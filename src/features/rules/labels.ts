@@ -4,66 +4,35 @@
 //! 规则编辑器的所有展示文案都应经过本模块，不在组件里散写映射。
 
 import type { useMessages } from '@/shared/i18n/messages';
+import { nodeDescriptor } from './model/descriptor-registry';
 import type { EdgeLabel } from './model/flow-adapter';
 import type { RecommendBlocker } from './model/connection-gate';
 import type { NodeSummary } from './model/summary';
 import type { PortLabel } from './model/ports';
-import type { FlowNodeKind, StandardIntent } from '@/shared/tauri/rules';
+import type { StandardIntent } from '@/shared/tauri/rules';
 
 type Messages = ReturnType<typeof useMessages>;
 
-/** 节点类型标签（Inspector / 节点卡 / palette 共用）。 */
-export function nodeKindLabel(m: Messages, kind: FlowNodeKind): string {
-  switch (kind) {
-    case 'http': {
-      return m.rules_node_inspector_type_http();
-    }
-    case 'js': {
-      return m.rules_node_inspector_type_js();
-    }
-    case 'extract': {
-      return m.rules_node_inspector_type_extract();
-    }
-    case 'mapper': {
-      return m.rules_node_inspector_type_mapper();
-    }
-    case 'merge': {
-      return m.rules_node_inspector_type_merge();
-    }
-    case 'condition': {
-      return m.rules_node_inspector_type_condition();
-    }
-    case 'loop': {
-      return m.rules_node_inspector_type_loop();
-    }
-  }
+/** Descriptor / 模型出的 message key → 文案；key 不存在时返回 `null`。 */
+export function messageKeyText(m: Messages, key: string | undefined): string | null {
+  if (key === undefined) return null;
+  const message = (m as unknown as Record<string, (params?: never) => string>)[key];
+  return typeof message === 'function' ? message() : null;
+}
+
+/**
+ * 节点类型标签（Inspector / 节点卡 / palette 共用）。
+ *
+ * 文案 key 由 descriptor 声明；未安装能力没有声明，退回 wire kind 原文，
+ * 让作者仍能看出节点是什么。
+ */
+export function nodeKindLabel(m: Messages, kind: string): string {
+  return messageKeyText(m, nodeDescriptor(kind)?.label_key) ?? kind;
 }
 
 /** 节点类型说明（palette 用）。 */
-export function nodeKindDescription(m: Messages, kind: FlowNodeKind): string {
-  switch (kind) {
-    case 'http': {
-      return m.rules_node_desc_http();
-    }
-    case 'js': {
-      return m.rules_node_desc_js();
-    }
-    case 'extract': {
-      return m.rules_node_desc_extract();
-    }
-    case 'mapper': {
-      return m.rules_node_desc_mapper();
-    }
-    case 'merge': {
-      return m.rules_node_desc_merge();
-    }
-    case 'condition': {
-      return m.rules_node_desc_condition();
-    }
-    case 'loop': {
-      return m.rules_node_desc_loop();
-    }
-  }
+export function nodeKindDescription(m: Messages, kind: string): string {
+  return messageKeyText(m, nodeDescriptor(kind)?.description_key) ?? kind;
 }
 
 /** 标准意图标签。 */
@@ -179,6 +148,9 @@ export function nodeSummaryText(m: Messages, summary: NodeSummary): string {
     }
     case 'loop_fallback': {
       return m.rules_node_summary_loop_fallback();
+    }
+    case 'unavailable': {
+      return m.rules_node_unavailable({ kind: summary.kind });
     }
   }
 }

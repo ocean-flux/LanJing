@@ -150,3 +150,6 @@ export function Icon({ name, label, className, ...restProps }: IconProps) {
     />
   );
 }
+
+/** 白名单名字的运行时集合；descriptor 声明据此校验，避免拼出未登记的 class。 */
+export const ICON_NAMES: readonly IconName[] = Object.keys(ICON_CLASSES) as IconName[];

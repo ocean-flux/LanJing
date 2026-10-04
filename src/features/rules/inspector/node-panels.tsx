@@ -1,32 +1,34 @@
-//! 七类节点的配置面板。
+//! Inspector 的节点配置面板：字段、编辑器与顺序全部来自 descriptor 声明。
 //!
-//! legacy 是一个 743 行的 if/else 链，这里拆成七个同签名的面板函数：
-//! 每个只关心自己那份 config，写回一律走 `onChange(patch)` 的浅合并补丁，
-//! 由 core 的 `setNodeConfig` 做不可变替换与历史记录。
+//! 这里没有 kind → 面板的表。新增规则能力只要在 Rust descriptor 里声明字段，
+//! 面板自动渲染；`specialized` 编辑器按 `editor_kind` 选择结构化子编辑器，与具体
+//! 节点 kind 无关。
+//!
+//! 未安装能力（查不到 descriptor）不渲染任何字段，只给出 unavailable 说明：
+//! 节点仍可展示、保存与 round-trip，但不能 validate/compile/execute。
 
-import type { ReactElement } from 'react';
 import { Icon } from '@/components/Icon';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useMessages } from '@/shared/i18n/messages';
-import type { FlowNodeKind } from '@/shared/tauri/rules';
+import type { NodeFieldDescriptor, NodeFieldEditor } from '@/shared/tauri/rules';
+
+import { messageKeyText } from '../labels';
 import {
   collectionPatch,
+  collectionSelector,
   conditionExpression,
   conditionPatch,
-  collectionSelector,
   literalText,
   mergeInputValues,
-  numberValue,
   parseLiteral,
-  recordValue,
   stringArray,
   stringValue,
   type CollectionSelector,
-  type ConditionExpressionPatch,
+  type ConditionExpression,
   type JsonObject,
   type MergeInputValue,
 } from '../model/node-config';
+import { nodeDescriptor } from '../model/descriptor-registry';
 import { ExtractRuleList } from './ExtractRuleList';
 import { JsCodeEditor } from './JsCodeEditor';
 import {
@@ -45,294 +47,148 @@ export type PanelProps = {
   onChange: (patch: JsonObject) => void;
 };
 
-// 选项值是 Rust 侧的枚举变体名，不本地化。
-const METHOD_OPTIONS = [
-  { value: 'Get', label: 'GET' },
-  { value: 'Post', label: 'POST' },
-];
-const EXPECTED_TYPE_OPTIONS = [
-  { value: 'Html', label: 'HTML' },
-  { value: 'Xml', label: 'XML' },
-  { value: 'Json', label: 'JSON' },
-];
-const JS_OUTPUT_OPTIONS = [
-  { value: 'json', label: 'JSON' },
-  { value: 'raw', label: 'RAW' },
-];
-const EXTRACT_TARGET_OPTIONS = [
-  { value: 'Media', label: 'Media' },
-  { value: 'Units', label: 'Units' },
-  { value: 'Asset', label: 'Asset' },
-];
-const MAPPER_OUTPUT_OPTIONS = [
-  { value: 'items', label: 'Items' },
-  { value: 'discovery', label: 'Discovery' },
-  { value: 'units', label: 'Units' },
-  { value: 'assets', label: 'Assets' },
-];
-const MERGE_STRATEGY_OPTIONS = [
-  { value: 'single_active', label: 'Single active' },
-  { value: 'collect_array', label: 'Collect array' },
-  { value: 'concat_arrays', label: 'Concat arrays' },
-  { value: 'overlay_objects', label: 'Overlay objects' },
-];
-const ACTIVATION_OPTIONS = [
-  { value: 'required', label: 'Required' },
-  { value: 'optional', label: 'Optional' },
-];
-const OPERATOR_OPTIONS = [
-  'exists',
-  'is_null',
-  'eq',
-  'ne',
-  'lt',
-  'lte',
-  'gt',
-  'gte',
-  'contains',
-].map((operator) => ({ value: operator, label: operator }));
-
-/** 这两个操作符是一元的，不需要比较值。 */
+/** 二元 predicate 需要比较值，一元的不需要。 */
 const UNARY_OPERATORS = new Set(['exists', 'is_null']);
 
-const MERGE_MIN_INPUTS = 2;
-const CONDITION_MIN_BRANCHES = 2;
-const LOOP_MAX_ITERATIONS = 256;
-const LOOP_DEFAULT_ITERATIONS = 64;
-
-/** 迭代上限由 compiler 限死在 1..256，输入框在这里先夹一次。 */
-function clampIterations(raw: string): number {
-  const parsed = Number(raw) || LOOP_DEFAULT_ITERATIONS;
-  return Math.min(LOOP_MAX_ITERATIONS, Math.max(1, Math.floor(parsed)));
+/** 竖排字段的标签文案。 */
+function fieldLabel(m: ReturnType<typeof useMessages>, field: NodeFieldDescriptor): string {
+  return messageKeyText(m, field.label_key) ?? field.name;
 }
 
-function HttpPanel({ config, onChange }: PanelProps) {
+/** Select 字段。 */
+function SelectField({ field, config, onChange }: PanelProps & { field: NodeFieldDescriptor }) {
   const m = useMessages();
-  const headers = Object.entries(recordValue(config.headers));
-
+  const label = fieldLabel(m, field);
+  const editor = field.editor as Extract<NodeFieldEditor, { editor: 'select' }>;
+  const value = stringValue(config[field.name], editor.options[0]?.value ?? '');
   return (
-    <section className="flex flex-col gap-2" aria-label={m.rules_node_inspector_section_request()}>
-      <ConfigField label={m.rules_node_inspector_field_method()}>
-        {(id) => (
-          <ConfigSelect
-            id={id}
-            label={m.rules_node_inspector_field_method()}
-            value={stringValue(config.method, 'Get')}
-            options={METHOD_OPTIONS}
-            onChange={(method) => onChange({ method })}
-          />
-        )}
-      </ConfigField>
+    <ConfigField label={label}>
+      {(id) => (
+        <ConfigSelect
+          id={id}
+          label={label}
+          value={value}
+          options={editor.options}
+          onChange={(next) => onChange({ [field.name]: next })}
+        />
+      )}
+    </ConfigField>
+  );
+}
 
-      <ConfigField label="URL">
+/** 单行文本 / 数值字段。 */
+function TextField({ field, config, onChange }: PanelProps & { field: NodeFieldDescriptor }) {
+  const m = useMessages();
+  const label = fieldLabel(m, field);
+  if (field.editor.editor === 'number') {
+    const { min, max } = field.editor;
+    const fallback = min ?? 0;
+    return (
+      <ConfigField label={label}>
         {(id) => (
           <ConfigTextInput
             id={id}
-            label="URL"
-            className="font-mono"
-            value={stringValue(config.url)}
-            onChange={(url) => onChange({ url })}
+            type="number"
+            label={label}
+            value={Number(config[field.name] ?? fallback)}
+            onChange={(next) => {
+              const parsed = Number(next);
+              if (!Number.isFinite(parsed)) return;
+              onChange({ [field.name]: Math.min(max ?? parsed, Math.max(min ?? parsed, parsed)) });
+            }}
           />
         )}
       </ConfigField>
-
-      <ConfigField label={m.rules_node_inspector_field_expected_type()}>
-        {(id) => (
-          <ConfigSelect
-            id={id}
-            label={m.rules_node_inspector_field_expected_type()}
-            value={stringValue(config.expected_type, 'Html')}
-            options={EXPECTED_TYPE_OPTIONS}
-            onChange={(expectedType) => onChange({ expected_type: expectedType })}
-          />
-        )}
-      </ConfigField>
-
-      <ConfigField label={m.rules_node_inspector_field_charset()}>
-        {(id) => (
-          <ConfigTextInput
-            id={id}
-            label={m.rules_node_inspector_field_charset()}
-            placeholder={m.rules_node_inspector_charset_placeholder()}
-            value={stringValue(config.charset)}
-            onChange={(charset) => onChange({ charset: charset || null })}
-          />
-        )}
-      </ConfigField>
-
-      <ConfigField label={m.rules_node_inspector_field_body()}>
-        {(id) => (
-          <Textarea
-            id={id}
-            className="min-h-20 font-mono text-code"
-            value={stringValue(config.body)}
-            onChange={(event) => onChange({ body: event.target.value || null })}
-          />
-        )}
-      </ConfigField>
-
-      <PairListEditor
-        title={m.rules_node_inspector_field_headers()}
-        pairs={headers}
-        keyLabel={m.rules_node_inspector_header_name()}
-        valueLabel={m.rules_node_inspector_header_value()}
-        addLabel={m.rules_node_inspector_header_add()}
-        removeLabel={m.rules_node_inspector_header_remove()}
-        onChange={(next) =>
-          onChange({
-            // 空键会覆盖彼此，落盘前丢掉；正在输入的空行仍留在界面上。
-            headers: Object.fromEntries(next.filter(([key]) => key.trim().length > 0)),
-          })
-        }
-      />
-    </section>
-  );
-}
-
-function JsPanel({ config, onChange }: PanelProps) {
-  const m = useMessages();
+    );
+  }
   return (
-    <section className="flex flex-col gap-2">
-      <ConfigField label={m.rules_node_inspector_field_output()}>
-        {(id) => (
-          <ConfigSelect
-            id={id}
-            label={m.rules_node_inspector_field_output()}
-            value={stringValue(config.output, 'json')}
-            options={JS_OUTPUT_OPTIONS}
-            onChange={(output) => onChange({ output })}
-          />
-        )}
-      </ConfigField>
-
-      <ConfigField label={m.rules_node_inspector_field_script()}>
-        {() => (
-          <JsCodeEditor
-            aria-label={m.rules_node_inspector_field_script()}
-            value={stringValue(config.code)}
-            minLines={16}
-            onChange={(code) => onChange({ code })}
-          />
-        )}
-      </ConfigField>
-    </section>
+    <ConfigField label={label}>
+      {(id) => (
+        <ConfigTextInput
+          id={id}
+          label={label}
+          value={stringValue(config[field.name])}
+          onChange={(next) => onChange({ [field.name]: next })}
+        />
+      )}
+    </ConfigField>
   );
 }
 
-function ExtractPanel({ config, onChange }: PanelProps) {
+/** 多行源码字段。 */
+function CodeField({ field, config, onChange }: PanelProps & { field: NodeFieldDescriptor }) {
   const m = useMessages();
-  const fieldRules = config.field_rules;
-  const fieldGroupCount =
-    typeof fieldRules === 'object' && fieldRules !== null && !Array.isArray(fieldRules)
-      ? Object.keys(fieldRules).length
-      : 0;
-
+  const label = fieldLabel(m, field);
   return (
-    <section className="flex flex-col gap-3">
-      <ConfigField label={m.rules_node_inspector_field_expected_type()}>
-        {(id) => (
-          <ConfigSelect
-            id={id}
-            label={m.rules_node_inspector_field_expected_type()}
-            value={stringValue(config.expected_type, 'Html')}
-            options={EXPECTED_TYPE_OPTIONS}
-            onChange={(expectedType) => onChange({ expected_type: expectedType })}
-          />
-        )}
-      </ConfigField>
-
-      <ConfigField label={m.rules_node_inspector_field_output_target()}>
-        {(id) => (
-          <ConfigSelect
-            id={id}
-            label={m.rules_node_inspector_field_output_target()}
-            value={stringValue(config.output_target, 'Media')}
-            options={EXTRACT_TARGET_OPTIONS}
-            onChange={(target) => onChange({ output_target: target })}
-          />
-        )}
-      </ConfigField>
-
-      <ExtractRuleList
-        rules={Array.isArray(config.rules) ? config.rules : []}
-        onChange={(rules) => onChange({ rules })}
-      />
-
-      <p className="border border-hairline bg-surface-1 px-2 py-2 text-ui-sm text-ink-subtle">
-        {m.rules_node_inspector_field_rules_hint({ count: fieldGroupCount })}
-      </p>
-    </section>
+    <ConfigField label={label}>
+      {() => (
+        <JsCodeEditor
+          aria-label={label}
+          value={stringValue(config[field.name])}
+          onChange={(next) => onChange({ [field.name]: next })}
+        />
+      )}
+    </ConfigField>
   );
 }
 
-function MapperPanel({ config, onChange }: PanelProps) {
+/** 字符串列表字段。 */
+function StringListField({ field, config, onChange }: PanelProps & { field: NodeFieldDescriptor }) {
   const m = useMessages();
+  const editor = field.editor as Extract<NodeFieldEditor, { editor: 'string_list' }>;
   return (
-    <section className="flex flex-col gap-3">
-      <ConfigField label={m.rules_node_inspector_field_output()}>
-        {(id) => (
-          <ConfigSelect
-            id={id}
-            label={m.rules_node_inspector_field_output()}
-            value={stringValue(config.output, 'items')}
-            options={MAPPER_OUTPUT_OPTIONS}
-            onChange={(output) => onChange({ output })}
-          />
-        )}
-      </ConfigField>
-
-      <StringListEditor
-        title={m.rules_node_inspector_field_identity_fields()}
-        values={stringArray(config.identity_fields)}
-        itemLabel={m.rules_node_inspector_field_identity_fields()}
-        addLabel={m.rules_node_inspector_identity_field_add()}
-        removeLabel={m.rules_node_inspector_identity_field_remove()}
-        onChange={(identityFields) => onChange({ identity_fields: identityFields })}
-      />
-    </section>
+    <StringListEditor
+      title={fieldLabel(m, field)}
+      values={stringArray(config[field.name])}
+      itemLabel={messageKeyText(m, editor.item_label_key) ?? field.name}
+      addLabel={messageKeyText(m, editor.add_label_key) ?? field.name}
+      removeLabel={messageKeyText(m, editor.remove_label_key) ?? field.name}
+      minLength={editor.min_items}
+      onChange={(next) => onChange({ [field.name]: next })}
+    />
   );
 }
 
-function MergePanel({ config, onChange }: PanelProps) {
+/** Key/value 对列表字段。 */
+function PairListField({ field, config, onChange }: PanelProps & { field: NodeFieldDescriptor }) {
+  const m = useMessages();
+  const editor = field.editor as Extract<NodeFieldEditor, { editor: 'pair_list' }>;
+  const pairs = Object.entries(
+    typeof config[field.name] === 'object' && config[field.name] !== null
+      ? (config[field.name] as Record<string, string>)
+      : {},
+  ).filter((entry): entry is [string, string] => typeof entry[1] === 'string');
+  return (
+    <PairListEditor
+      title={fieldLabel(m, field)}
+      pairs={pairs}
+      keyLabel={messageKeyText(m, editor.key_label_key) ?? field.name}
+      valueLabel={messageKeyText(m, editor.value_label_key) ?? field.name}
+      addLabel={messageKeyText(m, editor.add_label_key) ?? field.name}
+      removeLabel={messageKeyText(m, editor.remove_label_key) ?? field.name}
+      onChange={(next) => onChange({ [field.name]: Object.fromEntries(next) })}
+    />
+  );
+}
+
+/** Merge 的 inputs：可增删与上下移动，`order` 始终是位置。 */
+function MergeInputsEditor({ config, onChange }: PanelProps) {
   const m = useMessages();
   const inputs = mergeInputValues(config.inputs);
-
-  /** 写回时按数组下标重编 order，保证与显示顺序一致。 */
   const commit = (next: MergeInputValue[]) =>
     onChange({
-      inputs: next.map((input, order) => ({
-        input_id: input.input_id,
-        handle: input.handle,
-        order,
-        activation: input.activation,
-      })),
+      inputs: next.map((input, index) => ({ ...input, order: index, handle: `in:${index}` })),
     });
-
-  const patchInput = (index: number, patch: Partial<MergeInputValue>) =>
-    commit(inputs.map((input, i) => (i === index ? { ...input, ...patch } : input)));
-
-  const move = (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= inputs.length) return;
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= inputs.length) return;
     const next = [...inputs];
-    [next[index], next[target]] = [next[target], next[index]];
+    const [moved] = next.splice(from, 1);
+    if (moved === undefined) return;
+    next.splice(to, 0, moved);
     commit(next);
   };
-
   return (
-    <section className="flex flex-col gap-3">
-      <ConfigField label={m.rules_node_inspector_field_strategy()}>
-        {(id) => (
-          <ConfigSelect
-            id={id}
-            label={m.rules_node_inspector_field_strategy()}
-            value={stringValue(config.strategy, 'single_active')}
-            options={MERGE_STRATEGY_OPTIONS}
-            onChange={(strategy) => onChange({ strategy })}
-          />
-        )}
-      </ConfigField>
-
+    <div className="flex flex-col gap-2">
       <ConfigListHeader
         title={m.rules_node_inspector_field_inputs()}
         addLabel={m.rules_node_inspector_merge_input_add()}
@@ -348,142 +204,109 @@ function MergePanel({ config, onChange }: PanelProps) {
           ])
         }
       />
-
+      {inputs.length <= 2 ? (
+        <p className="text-ui-sm text-ink-muted">{m.rules_node_inspector_merge_input_min()}</p>
+      ) : null}
       {inputs.map((input, index) => (
-        // 编辑过程中 input_id 与 handle 都可以临时重复，只有下标是唯一的。
-        // eslint-disable-next-line react/no-array-index-key
-        <div key={index} className="flex flex-col gap-2 border border-hairline bg-surface-1 p-2">
+        <div
+          key={`${input.input_id}-${String(index)}`}
+          className="flex flex-col gap-1 border border-hairline p-2"
+        >
+          <ConfigTextInput
+            label={m.rules_node_inspector_merge_input_id()}
+            value={input.input_id}
+            onChange={(next) =>
+              commit(inputs.map((item, i) => (i === index ? { ...item, input_id: next } : item)))
+            }
+          />
+          <ConfigTextInput
+            label={m.rules_node_inspector_merge_input_handle()}
+            value={input.handle}
+            onChange={(next) =>
+              commit(inputs.map((item, i) => (i === index ? { ...item, handle: next } : item)))
+            }
+          />
+          <ConfigSelect
+            label={m.rules_node_inspector_merge_input_activation()}
+            value={input.activation}
+            options={[
+              { value: 'required', label: 'Required' },
+              { value: 'optional', label: 'Optional' },
+            ]}
+            onChange={(next) =>
+              commit(
+                inputs.map((item, i) =>
+                  i === index
+                    ? { ...item, activation: next as MergeInputValue['activation'] }
+                    : item,
+                ),
+              )
+            }
+          />
           <div className="flex items-center gap-1">
-            <span className="flex-1 font-mono text-ui-sm text-ink-subtle">order {input.order}</span>
             <Button
               variant="ghost"
               size="icon-xs"
               aria-label={m.rules_node_inspector_merge_input_up()}
-              title={m.rules_node_inspector_merge_input_up()}
               disabled={index === 0}
-              onClick={() => move(index, -1)}
+              onClick={() => move(index, index - 1)}
             >
-              <Icon name="caret-up" />
+              <Icon name="arrow-left" />
             </Button>
             <Button
               variant="ghost"
               size="icon-xs"
               aria-label={m.rules_node_inspector_merge_input_down()}
-              title={m.rules_node_inspector_merge_input_down()}
               disabled={index === inputs.length - 1}
-              onClick={() => move(index, 1)}
+              onClick={() => move(index, index + 1)}
             >
-              <Icon name="caret-down" />
+              <Icon name="arrow-right" />
             </Button>
             <Button
               variant="ghost"
               size="icon-xs"
               aria-label={m.rules_node_inspector_merge_input_remove()}
-              title={
-                inputs.length <= MERGE_MIN_INPUTS
-                  ? m.rules_node_inspector_merge_input_min()
-                  : m.rules_node_inspector_merge_input_remove()
-              }
-              disabled={inputs.length <= MERGE_MIN_INPUTS}
+              disabled={inputs.length <= 2}
               onClick={() => commit(inputs.filter((_, i) => i !== index))}
             >
-              <Icon name="trash" className="text-ink-subtle" />
+              <Icon name="minus" />
             </Button>
           </div>
-
-          <ConfigTextInput
-            label={m.rules_node_inspector_merge_input_id()}
-            className="font-mono"
-            value={input.input_id}
-            onChange={(inputId) => patchInput(index, { input_id: inputId })}
-          />
-          <ConfigTextInput
-            label={m.rules_node_inspector_merge_input_handle()}
-            className="font-mono"
-            value={input.handle}
-            onChange={(handle) => patchInput(index, { handle })}
-          />
-          <ConfigSelect
-            label={m.rules_node_inspector_merge_input_activation()}
-            value={input.activation}
-            options={ACTIVATION_OPTIONS}
-            onChange={(activation) =>
-              patchInput(index, { activation: activation as MergeInputValue['activation'] })
-            }
-          />
         </div>
       ))}
-    </section>
+    </div>
   );
 }
 
-function ConditionPanel({ config, onChange }: PanelProps) {
+/** Condition 的 expression：typed predicate 或 js 表达式。 */
+function ConditionExpressionEditor({ config, onChange }: PanelProps) {
   const m = useMessages();
   const expression = conditionExpression(config);
   const branches = stringArray(config.branches);
   const branchOptions = branches.map((branch) => ({ value: branch, label: branch }));
-
-  const patchCondition = (patch: ConditionExpressionPatch) =>
-    onChange(conditionPatch(config, patch));
-
-  /** 改分支列表要连带修正 true/false 指向，否则会指到已删除的 handle。 */
-  const setBranches = (next: string[]) => {
-    const valid = next.map((branch) => branch.trim()).filter(Boolean);
-    if (valid.length < CONDITION_MIN_BRANCHES) return;
-    patchCondition({ branches: valid });
-  };
-
-  const patchPredicate = (patch: Record<string, unknown>) => {
-    if (expression.mode !== 'typed') return;
-    patchCondition({
-      mode: 'typed',
-      predicate: { ...expression.predicate, ...patch },
-      true_branch: expression.true_branch,
-      false_branch: expression.false_branch,
-    });
-  };
-
-  const setMode = (mode: 'typed' | 'js') => {
-    if (mode === 'js') {
-      onChange({
-        expression: { mode: 'js', code: expression.mode === 'js' ? expression.code : '' },
-      });
-      return;
-    }
-    patchCondition(
-      expression.mode === 'typed'
-        ? expression
-        : {
-            mode: 'typed',
-            predicate: { operator: 'exists', pointer: '' },
-            true_branch: branches[0] ?? 'true',
-            false_branch: branches[1] ?? 'false',
-          },
-    );
-  };
+  const patchExpression = (patch: Partial<ConditionExpression>) =>
+    onChange(conditionPatch(config, { ...expression, ...patch }));
 
   return (
-    <section className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <ModeToggle
         label={m.rules_node_inspector_condition_mode()}
         value={expression.mode}
-        onChange={setMode}
         typedLabel={m.rules_node_inspector_mode_typed()}
         jsLabel={m.rules_node_inspector_mode_js()}
+        onChange={(mode) => patchExpression(mode === 'js' ? { mode, code: '' } : { mode })}
       />
-
-      <StringListEditor
-        title={m.rules_node_inspector_field_branches()}
-        values={branches}
-        itemLabel={m.rules_node_inspector_branch_handle()}
-        addLabel={m.rules_node_inspector_branch_add()}
-        removeLabel={m.rules_node_inspector_branch_remove()}
-        minLength={CONDITION_MIN_BRANCHES}
-        onChange={setBranches}
-        makeNewValue={(count) => `branch_${count + 1}`}
-      />
-
-      {expression.mode === 'typed' ? (
+      {expression.mode === 'js' ? (
+        <ConfigField label={m.rules_node_inspector_field_expression()}>
+          {() => (
+            <JsCodeEditor
+              aria-label={m.rules_node_inspector_field_expression()}
+              value={expression.code}
+              onChange={(code) => patchExpression({ mode: 'js', code })}
+            />
+          )}
+        </ConfigField>
+      ) : (
         <>
           <ConfigField label={m.rules_node_inspector_field_operator()}>
             {(id) => (
@@ -492,188 +315,207 @@ function ConditionPanel({ config, onChange }: PanelProps) {
                 label={m.rules_node_inspector_field_operator()}
                 value={expression.predicate.operator}
                 options={OPERATOR_OPTIONS}
-                onChange={(operator) => patchPredicate({ operator })}
+                onChange={(operator) =>
+                  patchExpression({
+                    mode: 'typed',
+                    predicate: {
+                      ...expression.predicate,
+                      operator,
+                      ...(UNARY_OPERATORS.has(operator) ? { value: undefined } : {}),
+                    },
+                  })
+                }
               />
             )}
           </ConfigField>
-
           <ConfigField label={m.rules_node_inspector_field_pointer()}>
             {(id) => (
               <ConfigTextInput
                 id={id}
                 label={m.rules_node_inspector_field_pointer()}
-                className="font-mono"
                 value={expression.predicate.pointer}
-                onChange={(pointer) => patchPredicate({ pointer })}
+                onChange={(pointer) =>
+                  patchExpression({
+                    mode: 'typed',
+                    predicate: { ...expression.predicate, pointer },
+                  })
+                }
               />
             )}
           </ConfigField>
-
           {UNARY_OPERATORS.has(expression.predicate.operator) ? null : (
             <ConfigField label={m.rules_node_inspector_field_value()}>
               {(id) => (
                 <ConfigTextInput
                   id={id}
                   label={m.rules_node_inspector_field_value()}
-                  className="font-mono"
                   value={literalText(expression.predicate.value)}
-                  onChange={(value) => patchPredicate({ value: parseLiteral(value) })}
+                  onChange={(next) =>
+                    patchExpression({
+                      mode: 'typed',
+                      predicate: { ...expression.predicate, value: parseLiteral(next) },
+                    })
+                  }
                 />
               )}
             </ConfigField>
           )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <ConfigField label={m.rules_node_inspector_true_branch()}>
-              {(id) => (
-                <ConfigSelect
-                  id={id}
-                  label={m.rules_node_inspector_true_branch()}
-                  value={expression.true_branch}
-                  options={branchOptions}
-                  onChange={(value) =>
-                    patchCondition({
-                      mode: 'typed',
-                      predicate: expression.predicate,
-                      true_branch: value,
-                      false_branch: expression.false_branch,
-                    })
-                  }
-                />
-              )}
-            </ConfigField>
-            <ConfigField label={m.rules_node_inspector_false_branch()}>
-              {(id) => (
-                <ConfigSelect
-                  id={id}
-                  label={m.rules_node_inspector_false_branch()}
-                  value={expression.false_branch}
-                  options={branchOptions}
-                  onChange={(value) =>
-                    patchCondition({
-                      mode: 'typed',
-                      predicate: expression.predicate,
-                      true_branch: expression.true_branch,
-                      false_branch: value,
-                    })
-                  }
-                />
-              )}
-            </ConfigField>
-          </div>
+          <ConfigField label={m.rules_node_inspector_true_branch()}>
+            {(id) => (
+              <ConfigSelect
+                id={id}
+                label={m.rules_node_inspector_true_branch()}
+                value={expression.true_branch}
+                options={branchOptions}
+                onChange={(true_branch) => patchExpression({ mode: 'typed', true_branch })}
+              />
+            )}
+          </ConfigField>
+          <ConfigField label={m.rules_node_inspector_false_branch()}>
+            {(id) => (
+              <ConfigSelect
+                id={id}
+                label={m.rules_node_inspector_false_branch()}
+                value={expression.false_branch}
+                options={branchOptions}
+                onChange={(false_branch) => patchExpression({ mode: 'typed', false_branch })}
+              />
+            )}
+          </ConfigField>
         </>
-      ) : (
-        <ConfigField label={m.rules_node_inspector_field_expression()}>
-          {() => (
-            <JsCodeEditor
-              aria-label={m.rules_node_inspector_field_expression()}
-              value={expression.code}
-              minLines={12}
-              onChange={(code) => onChange({ expression: { mode: 'js', code } })}
-            />
-          )}
-        </ConfigField>
       )}
-    </section>
+    </div>
   );
 }
 
-function LoopPanel({ config, onChange }: PanelProps) {
+const OPERATOR_OPTIONS = [
+  'exists',
+  'is_null',
+  'eq',
+  'ne',
+  'lt',
+  'lte',
+  'gt',
+  'gte',
+  'contains',
+].map((operator) => ({ value: operator, label: operator }));
+
+/** Loop 的 collection：pointer 或 js。 */
+function LoopCollectionEditor({ config, onChange }: PanelProps) {
   const m = useMessages();
   const selector = collectionSelector(config);
-
-  const setMode = (mode: 'typed' | 'js') => {
-    const next: CollectionSelector =
-      mode === 'js'
-        ? { mode: 'js', code: selector.mode === 'js' ? selector.code : '' }
-        : { mode: 'typed', pointer: selector.mode === 'typed' ? selector.pointer : '' };
-    onChange(collectionPatch(config, next));
-  };
-
+  const commit = (next: CollectionSelector) => onChange(collectionPatch(config, next));
   return (
-    <section className="flex flex-col gap-3">
-      <ModeToggle
-        label={m.rules_node_inspector_collection_mode()}
-        value={selector.mode}
-        onChange={setMode}
-        typedLabel={m.rules_node_inspector_mode_typed()}
-        jsLabel={m.rules_node_inspector_mode_js()}
-      />
-
-      <ConfigField label={m.rules_node_inspector_field_collection()}>
-        {(id) =>
-          selector.mode === 'typed' ? (
-            <ConfigTextInput
-              id={id}
-              label={m.rules_node_inspector_field_collection()}
-              className="font-mono"
-              value={selector.pointer}
-              onChange={(pointer) => onChange({ collection: { mode: 'typed', pointer } })}
-            />
-          ) : (
+    <ConfigField label={m.rules_node_inspector_field_collection()}>
+      {() => (
+        <div className="flex flex-col gap-2">
+          <ModeToggle
+            label={m.rules_node_inspector_collection_mode()}
+            value={selector.mode}
+            typedLabel={m.rules_node_inspector_mode_typed()}
+            jsLabel={m.rules_node_inspector_mode_js()}
+            onChange={(mode) => commit(mode === 'js' ? { mode, code: '' } : { mode, pointer: '' })}
+          />
+          {selector.mode === 'js' ? (
             <JsCodeEditor
               aria-label={m.rules_node_inspector_field_collection()}
-              value={selector.code}
               minLines={10}
-              onChange={(code) => onChange({ collection: { mode: 'js', code } })}
+              value={selector.code}
+              onChange={(code) => commit({ mode: 'js', code })}
             />
-          )
-        }
-      </ConfigField>
-
-      <div className="grid grid-cols-2 gap-2">
-        <ConfigField label={m.rules_node_inspector_field_item_binding()}>
-          {(id) => (
+          ) : (
             <ConfigTextInput
-              id={id}
-              label={m.rules_node_inspector_field_item_binding()}
-              className="font-mono"
-              value={stringValue(config.item_binding, 'item')}
-              onChange={(binding) => onChange({ item_binding: binding })}
+              label={m.rules_node_inspector_field_collection()}
+              value={selector.pointer}
+              onChange={(pointer) => commit({ mode: 'typed', pointer })}
             />
           )}
-        </ConfigField>
-        <ConfigField label={m.rules_node_inspector_field_index_binding()}>
-          {(id) => (
-            <ConfigTextInput
-              id={id}
-              label={m.rules_node_inspector_field_index_binding()}
-              className="font-mono"
-              value={stringValue(config.index_binding, 'index')}
-              onChange={(binding) => onChange({ index_binding: binding })}
-            />
-          )}
-        </ConfigField>
-      </div>
-
-      <ConfigField
-        label={`${m.rules_node_inspector_field_max_iterations()} (1-${LOOP_MAX_ITERATIONS})`}
-      >
-        {(id) => (
-          <ConfigTextInput
-            id={id}
-            label={m.rules_node_inspector_field_max_iterations()}
-            type="number"
-            value={numberValue(config.max_iterations, LOOP_DEFAULT_ITERATIONS)}
-            onChange={(value) => onChange({ max_iterations: clampIterations(value) })}
-          />
-        )}
-      </ConfigField>
-    </section>
+        </div>
+      )}
+    </ConfigField>
   );
 }
 
-const PANELS: Record<FlowNodeKind, (props: PanelProps) => ReactElement> = {
-  http: HttpPanel,
-  js: JsPanel,
-  extract: ExtractPanel,
-  mapper: MapperPanel,
-  merge: MergePanel,
-  condition: ConditionPanel,
-  loop: LoopPanel,
+/** Extract 的 rules + field_rules 提示。 */
+function ExtractRulesEditor({ config, onChange }: PanelProps) {
+  const m = useMessages();
+  const rules = Array.isArray(config.rules) ? config.rules : [];
+  const fieldCount = Object.keys(
+    typeof config.field_rules === 'object' && config.field_rules !== null
+      ? (config.field_rules as Record<string, unknown>)
+      : {},
+  ).length;
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-ui-sm text-ink-muted">
+        {m.rules_node_inspector_field_rules_hint({ count: fieldCount })}
+      </p>
+      <ExtractRuleList rules={rules} onChange={(next) => onChange({ rules: next })} />
+    </div>
+  );
+}
+
+/** `editor_kind` → 结构化子编辑器。按 editor_kind 选择，与节点 kind 无关。 */
+const SPECIALIZED_EDITORS: Record<string, (props: PanelProps) => React.ReactElement> = {
+  merge_inputs: MergeInputsEditor,
+  condition_expression: ConditionExpressionEditor,
+  loop_collection: LoopCollectionEditor,
+  extract_rules: ExtractRulesEditor,
 };
 
-export function NodeConfigPanel({ kind, config, onChange }: PanelProps & { kind: FlowNodeKind }) {
-  const Panel = PANELS[kind];
-  return <Panel config={config} onChange={onChange} />;
+/** 一个字段的编辑器。 */
+function FieldEditorControl({
+  field,
+  config,
+  onChange,
+}: PanelProps & { field: NodeFieldDescriptor }) {
+  switch (field.editor.editor) {
+    case 'select': {
+      return <SelectField field={field} config={config} onChange={onChange} />;
+    }
+    case 'text':
+    case 'number': {
+      return <TextField field={field} config={config} onChange={onChange} />;
+    }
+    case 'code': {
+      return <CodeField field={field} config={config} onChange={onChange} />;
+    }
+    case 'string_list': {
+      return <StringListField field={field} config={config} onChange={onChange} />;
+    }
+    case 'pair_list': {
+      return <PairListField field={field} config={config} onChange={onChange} />;
+    }
+    case 'specialized': {
+      const Editor = SPECIALIZED_EDITORS[field.editor.editor_kind];
+      return Editor === undefined ? null : <Editor config={config} onChange={onChange} />;
+    }
+  }
+}
+
+/** 未安装能力的节点：没有声明，如实说明不可校验/编译/执行。 */
+function UnavailablePanel({ kind }: { kind: string }) {
+  const m = useMessages();
+  return (
+    <p className="text-ui-sm text-ink-muted" data-node-capability="unavailable">
+      {m.rules_node_unavailable({ kind })}
+    </p>
+  );
+}
+
+/**
+ * 节点配置面板：字段与顺序由 descriptor 声明驱动。
+ *
+ * `kind` 是 wire 字符串；查不到声明即未安装能力，只提示、不渲染任何字段。
+ */
+export function NodeConfigPanel({ kind, config, onChange }: PanelProps & { kind: string }) {
+  const descriptor = nodeDescriptor(kind);
+  if (descriptor === undefined) return <UnavailablePanel kind={kind} />;
+  return (
+    <>
+      {descriptor.fields.map((field) => (
+        <FieldEditorControl key={field.name} field={field} config={config} onChange={onChange} />
+      ))}
+    </>
+  );
 }

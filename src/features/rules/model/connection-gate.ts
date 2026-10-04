@@ -5,9 +5,8 @@
 //! （focused/dimmed）复用，保证 gate 与投影对“意图子图”的判定一致。
 
 import type { FlowEdge, FlowNodeKind, RuleDefinition, StandardIntent } from '@/shared/tauri/rules';
-import { semanticHandleForUi } from './flow-adapter';
 import { findInputPort, findOutputPort, getNodePorts, portCompatible } from './ports';
-import { NODE_KINDS } from './meta';
+import { nodeKinds } from './meta';
 
 /** Svelte Flow Connection 的轻量镜像（结构化兼容，避免纯逻辑依赖 UI 库）。 */
 export type FlowConnection = {
@@ -65,35 +64,15 @@ function edgeIdentity(edge: FlowEdge): string {
 }
 
 /** 从 Svelte Flow Connection 构造语义边（handle 已校验非空）。 */
-export function semanticEdgeFromConnection(
-  connection: FlowConnection,
-  sourceNode?: GateNode,
-  targetNode?: GateNode,
-): FlowEdge {
+export function semanticEdgeFromConnection(connection: FlowConnection): FlowEdge {
   return {
     from: {
       node_id: connection.source,
-      handle:
-        sourceNode?.config === undefined
-          ? (connection.sourceHandle ?? '')
-          : semanticHandleForUi(
-              sourceNode.kind,
-              sourceNode.config,
-              connection.sourceHandle ?? '',
-              'source',
-            ),
+      handle: connection.sourceHandle ?? '',
     },
     to: {
       node_id: connection.target,
-      handle:
-        targetNode?.config === undefined
-          ? (connection.targetHandle ?? '')
-          : semanticHandleForUi(
-              targetNode.kind,
-              targetNode.config,
-              connection.targetHandle ?? '',
-              'target',
-            ),
+      handle: connection.targetHandle ?? '',
     },
   };
 }
@@ -153,7 +132,7 @@ export function validateConnection(
 
   if (!portCompatible(outPort, inPort)) return { ok: false, reason: 'incompatible-ports' };
 
-  const nextEdge = semanticEdgeFromConnection(connection, sourceNode, targetNode);
+  const nextEdge = semanticEdgeFromConnection(connection);
   const activeEdges = graph.excludeEdgeId
     ? graph.edges.filter((edge) => edgeIdentity(edge) !== graph.excludeEdgeId)
     : graph.edges;
@@ -165,12 +144,7 @@ export function validateConnection(
   if (
     targetNode.kind === 'loop' &&
     targetHandle === 'yield' &&
-    activeEdges.some(
-      (edge) =>
-        edge.to.node_id === target &&
-        edge.to.handle ===
-          semanticHandleForUi(targetNode.kind, targetNode.config ?? {}, targetHandle, 'target'),
-    )
+    activeEdges.some((edge) => edge.to.node_id === target && edge.to.handle === targetHandle)
   ) {
     return { ok: false, reason: 'loop-yield-occupied' };
   }
@@ -178,15 +152,8 @@ export function validateConnection(
   // HTTP 入口输入单入边（意图入口语义）。
   if (
     targetNode.kind === 'http' &&
-    targetHandle === 'in' &&
-    activeEdges.some(
-      (edge) =>
-        edge.to.node_id === target &&
-        edge.to.handle ===
-          (targetNode.config === undefined
-            ? targetHandle
-            : semanticHandleForUi(targetNode.kind, targetNode.config, targetHandle, 'target')),
-    )
+    targetHandle === 'input' &&
+    activeEdges.some((edge) => edge.to.node_id === target && edge.to.handle === targetHandle)
   ) {
     return { ok: false, reason: 'entry-occupied' };
   }
@@ -249,7 +216,7 @@ export function recommendKinds(context: RecommendContext): KindRecommendation[] 
   const selected = selection ? nodes.find((node) => node.id === selection) : undefined;
   const focused = focusEntry ? reachableNodes(focusEntry, edges) : null;
 
-  return NODE_KINDS.map((kind) => {
+  return nodeKinds().map((kind) => {
     const blockers: RecommendBlocker[] = [];
 
     if (selected) {

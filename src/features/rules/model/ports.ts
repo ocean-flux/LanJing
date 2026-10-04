@@ -1,9 +1,16 @@
-//! 节点端口合同：七类节点的 handle、value kind 与结构角色。
+//! 节点端口展示合同：descriptor 声明的 port 与视图层 label/几何辅助。
+//!
+//! 端口语义（handle、value kind）来自 `model/descriptor-registry`，本模块不再自带
+//! kind → port 表。
 
-import type { FlowNodeKind } from '@/shared/tauri/rules';
+import {
+  nodeDescriptor,
+  resolveDescriptorPorts,
+  type ResolvedDescriptorPort,
+} from './descriptor-registry';
 
 /** 端口数据类型（闭集；与 compiler 的 PortValueKind 对齐）。 */
-export type PortType = 'http_response' | 'json' | 'raw' | 'delta' | 'loop_binding';
+export type PortType = 'intent_input' | 'http_response' | 'json' | 'raw' | 'delta' | 'loop_binding';
 
 /** 端口在规则图中的结构角色。 */
 export type PortRole = 'data' | 'control' | 'binding';
@@ -36,17 +43,59 @@ export type PortLabelKey =
   | 'condition_input'
   | 'condition_branch';
 
-/** 构造需要本地化的端口标签。 */
-function messageLabel(key: PortLabelKey, index?: number): PortLabel {
-  return index === undefined ? { kind: 'message', key } : { kind: 'message', key, index };
+/** 节点 config 的 wire 形态。 */
+type NodeConfig = Record<string, unknown>;
+
+/** Descriptor 出的 port 标签 key 前缀（`messages/*\/rules.json`）。 */
+const PORT_LABEL_PREFIX = 'rules_port_label_';
+
+/** Descriptor 标签 → 视图标签；`literal` 是 compiler 术语，原样显示。 */
+function descriptorPortLabel(port: ResolvedDescriptorPort): PortLabel {
+  if (port.literal) return { kind: 'literal', text: port.labelKey };
+  const key = (
+    port.labelKey.startsWith(PORT_LABEL_PREFIX)
+      ? port.labelKey.slice(PORT_LABEL_PREFIX.length)
+      : port.labelKey
+  ) as PortLabelKey;
+  return port.index === undefined
+    ? { kind: 'message', key }
+    : { kind: 'message', key, index: port.index };
 }
 
-/** 构造不翻译的端口标签。 */
-function literalLabel(text: string): PortLabel {
-  return { kind: 'literal', text };
+/** 输出端口的 value kind：descriptor 声明恰一个。 */
+function descriptorOutputKind(port: ResolvedDescriptorPort): PortType {
+  const [kind] = port.kinds;
+  if (kind === undefined) throw new Error(`输出端口 ${port.handle} 缺少 value kind`);
+  return kind;
 }
 
-/** 语义输入端口。 */
+/**
+ * 按节点的 descriptor 声明解析端口（含 handle 与 value kind 的 config 派生）。
+ *
+ * 端口语义只有 descriptor 一个来源；`kind` 查不到声明时返回空端口集合，也就是
+ * 「未安装能力」：可展示、可保存、可往返，但不可校验/编译/执行。
+ */
+export function getNodePorts(kind: string, config: NodeConfig = {}): NodePorts {
+  const descriptor = nodeDescriptor(kind);
+  if (descriptor === undefined) return { inputs: [], outputs: [] };
+  const resolved = resolveDescriptorPorts(descriptor, config);
+  return {
+    inputs: resolved.inputs.map((port) => ({
+      id: port.handle,
+      label: descriptorPortLabel(port),
+      accepts: [...port.kinds],
+      role: port.role,
+      side: port.side,
+    })),
+    outputs: resolved.outputs.map((port) => ({
+      id: port.handle,
+      label: descriptorPortLabel(port),
+      emits: descriptorOutputKind(port),
+      role: port.role,
+      side: port.side,
+    })),
+  };
+}
 export type InputPortDef = {
   id: string;
   label: PortLabel;
@@ -71,295 +120,6 @@ export type NodePorts = {
 };
 
 /** 七类节点的空配置回退合同。动态节点使用 getNodePorts。 */
-export const PORT_CONTRACT: Record<FlowNodeKind, NodePorts> = {
-  http: {
-    inputs: [],
-    outputs: [
-      {
-        id: 'http_response',
-        label: messageLabel('http_response'),
-        emits: 'http_response',
-        role: 'data',
-        side: 'right',
-      },
-    ],
-  },
-  js: {
-    inputs: [
-      {
-        id: 'in',
-        label: messageLabel('js_input'),
-        accepts: ['raw', 'json', 'loop_binding'],
-        role: 'data',
-        side: 'left',
-      },
-    ],
-    outputs: [
-      {
-        id: 'json',
-        label: messageLabel('json_output'),
-        emits: 'json',
-        role: 'data',
-        side: 'right',
-      },
-    ],
-  },
-  extract: {
-    inputs: [
-      {
-        id: 'source',
-        label: messageLabel('http_response'),
-        accepts: ['http_response'],
-        role: 'data',
-        side: 'left',
-      },
-    ],
-    outputs: [
-      {
-        id: 'json',
-        label: messageLabel('extract_result'),
-        emits: 'json',
-        role: 'data',
-        side: 'right',
-      },
-    ],
-  },
-  mapper: {
-    inputs: [
-      {
-        id: 'in',
-        label: messageLabel('json_input'),
-        accepts: ['json'],
-        role: 'data',
-        side: 'left',
-      },
-    ],
-    outputs: [
-      {
-        id: 'delta',
-        label: messageLabel('delta_output'),
-        emits: 'delta',
-        role: 'data',
-        side: 'right',
-      },
-    ],
-  },
-  merge: {
-    inputs: [
-      {
-        id: 'in:0',
-        label: messageLabel('merge_input', 1),
-        accepts: ['json'],
-        role: 'data',
-        side: 'left',
-      },
-      {
-        id: 'in:1',
-        label: messageLabel('merge_input', 2),
-        accepts: ['json'],
-        role: 'data',
-        side: 'left',
-      },
-    ],
-    outputs: [
-      {
-        id: 'json',
-        label: messageLabel('merge_result'),
-        emits: 'json',
-        role: 'data',
-        side: 'right',
-      },
-    ],
-  },
-  condition: {
-    inputs: [
-      {
-        id: 'in',
-        label: messageLabel('condition_input'),
-        accepts: ['json'],
-        role: 'data',
-        side: 'left',
-      },
-    ],
-    outputs: [
-      {
-        id: 'branch:0',
-        label: messageLabel('condition_branch', 1),
-        emits: 'json',
-        role: 'control',
-        side: 'right',
-      },
-      {
-        id: 'branch:1',
-        label: messageLabel('condition_branch', 2),
-        emits: 'json',
-        role: 'control',
-        side: 'right',
-      },
-      {
-        id: 'branch:2',
-        label: messageLabel('condition_branch', 3),
-        emits: 'json',
-        role: 'control',
-        side: 'right',
-      },
-    ],
-  },
-  loop: {
-    inputs: [
-      {
-        id: 'in',
-        label: literalLabel('collection'),
-        accepts: ['json'],
-        role: 'data',
-        side: 'left',
-      },
-      {
-        id: 'yield',
-        label: literalLabel('yield(value)'),
-        accepts: ['json'],
-        role: 'control',
-        side: 'top',
-      },
-    ],
-    outputs: [
-      {
-        id: 'body',
-        label: literalLabel('body(item,index)'),
-        emits: 'loop_binding',
-        role: 'binding',
-        side: 'bottom',
-      },
-      {
-        id: 'done',
-        label: literalLabel('done(collected)'),
-        emits: 'json',
-        role: 'control',
-        side: 'right',
-      },
-    ],
-  },
-};
-
-type NodeConfig = Record<string, unknown>;
-
-function stringArray(config: NodeConfig, key: string): string[] {
-  const value = config[key];
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string' && item.length > 0)
-    : [];
-}
-
-function mergeInputs(
-  config: NodeConfig,
-): { input_id: string; handle: string; order: number; activation?: string }[] {
-  const value = config.inputs;
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-    .map((item, index) => ({
-      input_id: typeof item.input_id === 'string' ? item.input_id : `input_${index + 1}`,
-      handle: typeof item.handle === 'string' ? item.handle : `in:${index}`,
-      order: typeof item.order === 'number' ? item.order : index,
-      activation: typeof item.activation === 'string' ? item.activation : undefined,
-    }))
-    .sort((left, right) => left.order - right.order);
-}
-
-/** 按 canonical node config 生成动态端口；不修改 Definition。 */
-export function getNodePorts(kind: FlowNodeKind, config: NodeConfig = {}): NodePorts {
-  if (kind === 'js') {
-    const output = typeof config.output === 'string' ? config.output.toLowerCase() : 'json';
-    return {
-      inputs: PORT_CONTRACT.js.inputs,
-      outputs: [
-        output === 'raw'
-          ? {
-              id: 'raw',
-              label: messageLabel('raw_output'),
-              emits: 'raw',
-              role: 'data',
-              side: 'right',
-            }
-          : PORT_CONTRACT.js.outputs[0],
-      ],
-    };
-  }
-
-  if (kind === 'merge') {
-    const inputs = mergeInputs(config);
-    // 无声明输入时直接用合同默认（已带本地化标签），不再拿展示文案回填 input_id。
-    if (inputs.length === 0) return PORT_CONTRACT.merge;
-    return {
-      inputs: inputs.map((input, index) => ({
-        id: input.handle,
-        label: input.input_id
-          ? literalLabel(input.input_id)
-          : messageLabel('merge_input', index + 1),
-        accepts: ['json'],
-        role: 'data',
-        side: 'left',
-      })),
-      outputs: PORT_CONTRACT.merge.outputs,
-    };
-  }
-
-  if (kind === 'condition') {
-    const branches = stringArray(config, 'branches');
-    const visibleBranches = branches.length > 0 ? branches : ['true', 'false'];
-    return {
-      inputs: PORT_CONTRACT.condition.inputs,
-      outputs: visibleBranches.map((branch, index) => ({
-        id: `branch:${index}`,
-        label: literalLabel(branch),
-        emits: 'json',
-        role: 'control',
-        side: 'right',
-      })),
-    };
-  }
-
-  if (kind === 'loop') {
-    return {
-      inputs: [
-        {
-          id: 'in',
-          label: literalLabel('collection'),
-          accepts: ['json'],
-          role: 'data',
-          side: 'left',
-        },
-        {
-          id: 'yield',
-          label: literalLabel('yield(value)'),
-          accepts: ['json'],
-          role: 'control',
-          side: 'top',
-        },
-      ],
-      outputs: [
-        {
-          id: 'body',
-          label: literalLabel('body(item,index)'),
-          emits: 'loop_binding',
-          role: 'binding',
-          side: 'bottom',
-        },
-        {
-          id: 'done',
-          label: literalLabel('done(collected)'),
-          emits: 'json',
-          role: 'control',
-          side: 'right',
-        },
-      ],
-    };
-  }
-
-  return PORT_CONTRACT[kind];
-}
-
-/** 计算同侧端口的相对位置；不使用固定像素间距，避免节点高度变化后漂移。 */
 export function portPositionPercent(index: number, count: number): number {
   if (count <= 1) return 50;
   const boundedIndex = Math.min(Math.max(index, 0), count - 1);
@@ -369,12 +129,12 @@ export function portPositionPercent(index: number, count: number): number {
 /** 生成 Handle 的内联侧向坐标；xyflow 负责侧边边界与 transform。 */
 export function portPositionStyle(side: PortSide, index: number, count: number): string {
   const percent = `${portPositionPercent(index, count)}%`;
-  return side === 'left' || side === 'right' ? `top: ${percent};` : `left: ${percent};`;
+  return side === 'left' || side === 'right' ? `top:${percent};` : `left:${percent};`;
 }
 
 /** 查找某类节点的输入端口。 */
 export function findInputPort(
-  kind: FlowNodeKind,
+  kind: string,
   handleId: string,
   config?: NodeConfig,
 ): InputPortDef | undefined {
@@ -383,7 +143,7 @@ export function findInputPort(
 
 /** 查找某类节点的输出端口。 */
 export function findOutputPort(
-  kind: FlowNodeKind,
+  kind: string,
   handleId: string,
   config?: NodeConfig,
 ): OutputPortDef | undefined {
@@ -397,9 +157,9 @@ export function portCompatible(out: OutputPortDef, input: InputPortDef): boolean
 
 /** 按节点类型、配置与 handle id 判端口兼容。 */
 export function handleCompatible(
-  sourceKind: FlowNodeKind,
+  sourceKind: string,
   sourceHandle: string,
-  targetKind: FlowNodeKind,
+  targetKind: string,
   targetHandle: string,
   sourceConfig?: NodeConfig,
   targetConfig?: NodeConfig,

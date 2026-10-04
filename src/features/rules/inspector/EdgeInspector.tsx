@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useMessages } from '@/shared/i18n/messages';
 import type { FlowNode } from '@/shared/tauri/rules';
-import { uiHandleForSemantic, type FlowViewEdge } from '../model/flow-adapter';
+import { type FlowViewEdge } from '../model/flow-adapter';
 import { getNodePorts } from '../model/ports';
 import { nodeKindLabel, portLabelText } from '../labels';
 import { useRuleEditorSessionStore } from '../use-session';
@@ -24,12 +24,11 @@ function portText(
   direction: 'source' | 'target',
 ): string {
   if (!node) return handle;
-  const uiHandle = uiHandleForSemantic(node.config.kind, node.config.value, handle, direction);
   const ports = getNodePorts(node.config.kind, node.config.value);
   const port =
     direction === 'source'
-      ? ports.outputs.find((candidate) => candidate.id === uiHandle)
-      : ports.inputs.find((candidate) => candidate.id === uiHandle);
+      ? ports.outputs.find((candidate) => candidate.id === handle)
+      : ports.inputs.find((candidate) => candidate.id === handle);
   return port ? portLabelText(m, port.label) : handle;
 }
 

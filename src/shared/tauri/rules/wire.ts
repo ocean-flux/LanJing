@@ -51,8 +51,14 @@ export interface IntentExport {
   mapper_output: string;
 }
 
-/** Flow 节点类型（FlowNodeKind，snake_case 闭集）。 */
-export type FlowNodeKind = 'http' | 'js' | 'extract' | 'mapper' | 'merge' | 'condition' | 'loop';
+/**
+ * Flow 节点 kind：wire 上是开放字符串，不封闭。
+ *
+ * 已安装能力是 `http` / `js` / `extract` / `mapper` / `merge` / `condition` / `loop`；
+ * 未安装能力保留作者写入的原文（Rust `FlowNodeConfig::Unavailable`），可展示、保存与
+ * round-trip，因此这里不能收成闭集。字段、端口与默认值一律由 descriptor 声明提供。
+ */
+export type FlowNodeKind = string;
 
 /** Flow 节点配置（FlowNodeConfig：`{ kind, value }`；value 为最小镜像，只读消费）。 */
 export interface FlowNodeConfig {
@@ -365,4 +371,125 @@ export function getNativeRuleProvenance(
   request: GetNativeRuleProvenanceRequest,
 ): Promise<NativeRuleProvenanceView | null> {
   return invoke<NativeRuleProvenanceView | null>('get_native_rule_provenance', { request });
+}
+
+// ---------------------------------------------------------------------------
+// 节点能力 descriptor 镜像（lj-rule-model::descriptor）
+//
+// 编辑器渲染、port 与默认值的唯一来源。前端不再自带 kind → 字段/端口/默认值表；
+// `kind` 是 wire 字符串而不是闭集，未安装能力因此不需要新的前端分支。
+// ---------------------------------------------------------------------------
+
+/** Port 在规则图中的结构角色（PortRole）。 */
+export type NodePortRole = 'data' | 'control' | 'binding';
+
+/** Port 在节点边界上的语义侧位（PortSide）。 */
+export type NodePortSide = 'left' | 'right' | 'top' | 'bottom';
+
+/** Port 展示标签声明（PortLabelDescriptor；key 为 messages 里的稳定 key）。 */
+export interface NodePortLabelDescriptor {
+  key: string;
+  literal: boolean;
+  numbered: boolean;
+}
+
+/** Port 可引用的闭集 value kind（PortValueKind）。 */
+export type PortValueKind =
+  | 'intent_input'
+  | 'raw'
+  | 'http_response'
+  | 'json'
+  | 'delta'
+  | 'loop_binding';
+
+/** 单一 kind 或显式 closed union（PortValueType）。 */
+export type PortValueTypeWire =
+  | { type: 'kind'; kind: PortValueKind }
+  | { type: 'union'; kinds: PortValueKind[] };
+
+/** Port handle 来源（PortHandleSource）。 */
+export type NodePortHandleSource =
+  | { source: 'fixed'; handle: string }
+  | { source: 'items'; field: string }
+  | { source: 'item_field'; field: string; handle_field: string };
+
+/** Config 枚举值 → value kind 映射（VariantKind）。 */
+export interface VariantKindWire {
+  value: string;
+  kind: PortValueKind;
+  label_key: string;
+}
+
+/** Port value type 来源（PortValueSource）。 */
+export type NodePortValueSource =
+  | { source: 'kind'; kind: PortValueKind }
+  | { source: 'union'; kinds: PortValueKind[] }
+  | { source: 'field_variant'; field: string; variants: VariantKindWire[] };
+
+/** 节点上的一个声明式 port（PortDescriptor）。 */
+export interface NodePortDescriptor {
+  handle: NodePortHandleSource;
+  value: NodePortValueSource;
+  role: NodePortRole;
+  side: NodePortSide;
+  label: NodePortLabelDescriptor;
+}
+
+/** 下拉选项（SelectOptionDescriptor）。 */
+export interface SelectOptionDescriptor {
+  value: string;
+  label: string;
+}
+
+/** 字段编辑器种类（FieldEditor）。 */
+export type NodeFieldEditor =
+  | { editor: 'text' }
+  | { editor: 'code' }
+  | { editor: 'number'; min: number | null; max: number | null }
+  | { editor: 'select'; options: SelectOptionDescriptor[] }
+  | {
+      editor: 'string_list';
+      item_label_key: string;
+      add_label_key: string;
+      remove_label_key: string;
+      min_items: number;
+    }
+  | {
+      editor: 'pair_list';
+      key_label_key: string;
+      value_label_key: string;
+      add_label_key: string;
+      remove_label_key: string;
+    }
+  | { editor: 'specialized'; editor_kind: string };
+
+/** 节点上的一个声明式配置字段（FieldDescriptor）。 */
+export interface NodeFieldDescriptor {
+  name: string;
+  label_key: string;
+  editor: NodeFieldEditor;
+  required: boolean;
+}
+
+/** 一个规则能力的完整声明（NodeDescriptor）。 */
+export interface NodeDescriptor {
+  kind: string;
+  label_key: string;
+  description_key: string;
+  icon: string;
+  inputs: NodePortDescriptor[];
+  outputs: NodePortDescriptor[];
+  fields: NodeFieldDescriptor[];
+  default_config: Record<string, unknown>;
+}
+
+/** Descriptor 声明集合（NodeDescriptorSet）。 */
+export interface NodeDescriptorSet {
+  descriptors: NodeDescriptor[];
+}
+
+/** 读取全部节点能力声明；非 Tauri 环境退化为声明表 fixture（同源生成物）。 */
+export function listRuleNodeDescriptors(): Promise<NodeDescriptorSet> {
+  if (!isTauri()) return Promise.resolve({ descriptors: [] });
+  return invoke<NodeDescriptorSet>('list_rule_node_descriptors', {});
 }

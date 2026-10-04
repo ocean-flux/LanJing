@@ -23,7 +23,6 @@ export type NativeRuleImportResult =
 
 type JsonObject = Record<string, unknown>;
 
-const NODE_KINDS = new Set(['http', 'js', 'extract', 'mapper', 'merge', 'condition', 'loop']);
 const STANDARD_INTENTS = new Set([
   'Search',
   'Discover',
@@ -70,7 +69,9 @@ function validFlow(value: unknown): boolean {
   for (const node of value.nodes) {
     if (!isObject(node) || !hasString(node, 'id') || !isObject(node.config)) return false;
     if (nodeIds.has(node.id as string)) return false;
-    if (!NODE_KINDS.has(String(node.config.kind)) || !isObject(node.config.value)) return false;
+    // 未安装能力的节点（kind 无 descriptor 声明）仍可读入与 round-trip；
+    // 它只是不参与 validate/compile/execute，所以这里不校验 kind 是否已安装。
+    if (!hasString(node.config, 'kind') || !isObject(node.config.value)) return false;
     nodeIds.add(node.id as string);
   }
 

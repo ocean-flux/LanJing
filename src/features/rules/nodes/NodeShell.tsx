@@ -10,7 +10,7 @@ import { cn } from '@/shared/utils';
 import { useMessages } from '@/shared/i18n/messages';
 import type { FlowNodeKind, InstallDiagnostic, StandardIntent } from '@/shared/tauri/rules';
 import type { FlowHandleDirection } from '../model/flow-adapter';
-import { NODE_KIND_ICONS } from '../model/meta';
+import { nodeIcon } from '../model/meta';
 import {
   portPositionStyle,
   type InputPortDef,
@@ -22,6 +22,7 @@ import { intentLabel, nodeKindLabel, portLabelText } from '../labels';
 
 /** Port value kind 的短标记；是 compiler 术语，不本地化。 */
 const PORT_TYPE_LABELS: Record<PortType, string> = {
+  intent_input: 'IntentInput',
   http_response: 'HTTP',
   json: 'JSON',
   raw: 'RAW',
@@ -251,7 +252,7 @@ export function NodeShell({
       <header className="flow-node-header">
         <div className="flex min-w-0 items-center gap-2">
           <span className="flow-node-icon" aria-hidden="true">
-            <Icon name={NODE_KIND_ICONS[kind]} className="text-base" />
+            <Icon name={nodeIcon(kind)} className="text-base" />
           </span>
           <div className="min-w-0">
             <p className="flow-node-kind">{kind}</p>

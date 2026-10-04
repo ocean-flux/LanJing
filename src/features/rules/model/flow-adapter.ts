@@ -12,6 +12,7 @@
 //!
 //! 本模块不持有任何状态；全部是纯函数，可直接在 Vitest 中测试。
 
+import { nodeKinds } from './meta';
 import type { AuthoringAction, NativeDocumentLayout, Position } from './core';
 import type {
   FlowEdge,
@@ -212,17 +213,6 @@ export function parseEditorSelection(selection: string | null): EditorSelection 
 // ---------------------------------------------------------------------------
 // 常量与纯函数辅助
 // ---------------------------------------------------------------------------
-
-/** 七类节点的展示顺序（默认网格的列次序）。 */
-export const KIND_ORDER: readonly FlowNodeKind[] = [
-  'http',
-  'js',
-  'extract',
-  'mapper',
-  'merge',
-  'condition',
-  'loop',
-] as const;
 
 /** 默认网格的列间距（px）。 */
 const GRID_COLUMN_GAP = 260;
@@ -517,7 +507,7 @@ export function projectLoopRegions(
 
 /** 七类 kind 的确定性默认网格位置（列=kind 次序，行=同类节点序号）。 */
 export function defaultNodePosition(kind: FlowNodeKind, ordinal: number): Position {
-  const column = KIND_ORDER.indexOf(kind);
+  const column = nodeKinds().indexOf(kind);
   return {
     x: GRID_ORIGIN + Math.max(0, column) * GRID_COLUMN_GAP,
     y: GRID_ORIGIN + ordinal * GRID_ROW_GAP,
@@ -546,81 +536,6 @@ export function reachableNodes(entryId: string, edges: readonly FlowEdge[]): Set
     }
   }
   return reachable;
-}
-
-/** 读取配置中的字符串数组（Merge/Condition 使用）。 */
-function stringArray(config: Record<string, unknown>, key: string): string[] {
-  const value = config[key];
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string')
-    : [];
-}
-
-/** 把 semantic handle 映射为 custom node 使用的可视 handle。 */
-export function uiHandleForSemantic(
-  kind: FlowNodeKind,
-  config: Record<string, unknown>,
-  handle: string,
-  direction: FlowHandleDirection,
-): string {
-  if (direction === 'target') {
-    if (kind === 'http' || kind === 'js' || kind === 'mapper') {
-      return handle === 'input' ? 'in' : handle;
-    }
-    if (kind === 'extract') return handle === 'input' ? 'source' : handle;
-    if (kind === 'loop') {
-      if (handle === 'collection') return 'in';
-      return handle;
-    }
-    if (kind === 'condition' && handle === 'input') return 'in';
-    return handle;
-  }
-
-  if (kind === 'http') return handle === 'output' ? 'http_response' : handle;
-  if (kind === 'js' && handle === 'output') {
-    return String(config.output).toLowerCase() === 'raw' ? 'raw' : 'json';
-  }
-  if (kind === 'extract') return handle === 'output' ? 'json' : handle;
-  if (kind === 'mapper' || kind === 'merge')
-    return handle === 'output' ? (kind === 'mapper' ? 'delta' : 'json') : handle;
-  if (kind === 'condition') {
-    const index = stringArray(config, 'branches').indexOf(handle);
-    return index === -1 ? handle : `branch:${index}`;
-  }
-  return handle;
-}
-
-/** 把 custom node 的可视 handle还原为 compiler 使用的 semantic handle。 */
-export function semanticHandleForUi(
-  kind: FlowNodeKind,
-  config: Record<string, unknown>,
-  handle: string,
-  direction: FlowHandleDirection,
-): string {
-  if (direction === 'target') {
-    if (kind === 'http' || kind === 'js' || kind === 'mapper') {
-      return handle === 'in' ? 'input' : handle;
-    }
-    if (kind === 'extract') return handle === 'source' ? 'input' : handle;
-    if (kind === 'loop') {
-      if (handle === 'in') return 'collection';
-      return handle;
-    }
-    if (kind === 'condition' && handle === 'in') return 'input';
-    return handle;
-  }
-
-  if (kind === 'http') return handle === 'http_response' ? 'output' : handle;
-  if (kind === 'js' && (handle === 'json' || handle === 'raw')) return 'output';
-  if (kind === 'extract') return handle === 'json' ? 'output' : handle;
-  if (kind === 'mapper' && handle === 'delta') return 'output';
-  if (kind === 'merge' && handle === 'json') return 'output';
-  if (kind === 'condition' && handle.startsWith('branch:')) {
-    const index = Number(handle.slice('branch:'.length));
-    const branch = stringArray(config, 'branches')[index];
-    return branch ?? handle;
-  }
-  return handle;
 }
 
 /** 读取布局中的节点位置/折叠；未保存的节点回退默认网格。 */
@@ -661,17 +576,8 @@ function edgePresentation(
   route: 'normal' | 'loop-back';
   lane: 'main' | 'branch' | 'auxiliary' | 'loop';
 } {
-  const sourceHandle = sourceNode
-    ? uiHandleForSemantic(
-        sourceNode.config.kind,
-        sourceNode.config.value,
-        edge.from.handle,
-        'source',
-      )
-    : edge.from.handle;
-  const targetHandle = targetNode
-    ? uiHandleForSemantic(targetNode.config.kind, targetNode.config.value, edge.to.handle, 'target')
-    : edge.to.handle;
+  const sourceHandle = edge.from.handle;
+  const targetHandle = edge.to.handle;
   const sourcePort = sourceNode
     ? getNodePorts(sourceNode.config.kind, sourceNode.config.value).outputs.find(
         (port) => port.id === sourceHandle,
@@ -778,12 +684,7 @@ export function semanticToFlow(
       selectionView.kind === 'port' && selectionView.nodeId === node.id
         ? {
             direction: selectionView.direction,
-            id: uiHandleForSemantic(
-              node.config.kind,
-              node.config.value,
-              selectionView.handle,
-              selectionView.direction,
-            ),
+            id: selectionView.handle,
           }
         : undefined;
     return {
@@ -829,22 +730,8 @@ export function semanticToFlow(
       id: edgeId(edge),
       source: edge.from.node_id,
       target: edge.to.node_id,
-      sourceHandle: sourceNode
-        ? uiHandleForSemantic(
-            sourceNode.config.kind,
-            sourceNode.config.value,
-            edge.from.handle,
-            'source',
-          )
-        : edge.from.handle,
-      targetHandle: targetNode
-        ? uiHandleForSemantic(
-            targetNode.config.kind,
-            targetNode.config.value,
-            edge.to.handle,
-            'target',
-          )
-        : edge.to.handle,
+      sourceHandle: edge.from.handle,
+      targetHandle: edge.to.handle,
       selected,
       hidden: collapsedBodyNodes.has(edge.from.node_id) && collapsedBodyNodes.has(edge.to.node_id),
       data: {

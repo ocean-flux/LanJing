@@ -24,7 +24,9 @@ export type NodeSummary =
   | { code: 'merge_fallback' }
   | { code: 'condition_branches'; count: number }
   | { code: 'condition_fallback' }
-  | { code: 'loop_fallback' };
+  | { code: 'loop_fallback' }
+  /** 未安装能力的节点：只上报 kind 原文，不猜测内容。 */
+  | { code: 'unavailable'; kind: string };
 
 /** 读取非空字符串字段。 */
 function str(value: unknown): string | undefined {
@@ -82,6 +84,9 @@ export function describeNode(kind: FlowNodeKind, config: Record<string, unknown>
     }
     case 'loop': {
       return { code: 'loop_fallback' };
+    }
+    default: {
+      return { code: 'unavailable', kind };
     }
   }
 }

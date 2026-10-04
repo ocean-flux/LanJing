@@ -32,7 +32,6 @@ import {
 import {
   loopRegionSelectionToken,
   parseEditorSelection,
-  semanticHandleForUi,
   type FlowHandleDirection,
   type FlowViewEdge,
   type FlowViewNode,
@@ -200,20 +199,14 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
   const revealRequest = useRuleEditorSession((state) => state.revealRequest);
   const intentFocus = useRuleEditorSession((state) => state.core.intentFocus);
 
-  /** 端口选择要把可视 handle 还原成 compiler 的 semantic handle。 */
+  /** 端口选择直接使用 descriptor 的 handle（NodeShell 渲染的就是它）。 */
   const selectPort = useCallback(
     (nodeId: string, direction: FlowHandleDirection, uiHandle: string) => {
       const node = selectFlowProjection(store.getState()).nodes.find(
         (candidate) => candidate.id === nodeId,
       );
       if (!node) return;
-      store
-        .getState()
-        .selectPort(
-          nodeId,
-          direction,
-          semanticHandleForUi(node.data.kind, node.data.config, uiHandle, direction),
-        );
+      store.getState().selectPort(nodeId, direction, uiHandle);
     },
     [store],
   );
@@ -301,13 +294,8 @@ export function RuleFlowCanvas({ className }: { className?: string }) {
   }, [rejectReason]);
 
   const toSemanticEdge = useCallback(
-    (connection: Connection) =>
-      semanticEdgeFromConnection(
-        connection,
-        gateGraph.nodes.find((node) => node.id === connection.source),
-        gateGraph.nodes.find((node) => node.id === connection.target),
-      ),
-    [gateGraph],
+    (connection: Connection) => semanticEdgeFromConnection(connection),
+    [],
   );
 
   /** 当前作用于批量操作的节点集合：优先框选，其次单点选中。 */

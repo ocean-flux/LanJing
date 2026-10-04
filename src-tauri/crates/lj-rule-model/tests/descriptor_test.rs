@@ -158,10 +158,12 @@ fn a_new_capability_needs_only_a_descriptor_entry() {
                 VariantKind {
                     value: "json",
                     kind: PortValueKind::Json,
+                    label_key: "rules_port_label_json_output",
                 },
                 VariantKind {
                     value: "raw",
                     kind: PortValueKind::Raw,
+                    label_key: "rules_port_label_raw_output",
                 },
             ],
         },
@@ -176,7 +178,12 @@ fn a_new_capability_needs_only_a_descriptor_entry() {
     const NEW_FIELDS: &[FieldDescriptor] = &[FieldDescriptor {
         name: "sources",
         label_key: "rules_node_inspector_field_inputs",
-        editor: FieldEditor::StringList,
+        editor: FieldEditor::StringList {
+            item_label_key: "rules_node_inspector_field_inputs",
+            add_label_key: "rules_node_inspector_identity_field_add",
+            remove_label_key: "rules_node_inspector_identity_field_remove",
+            min_items: 0,
+        },
         required: true,
     }];
     let descriptor = NodeDescriptor {
@@ -205,8 +212,8 @@ fn a_new_capability_needs_only_a_descriptor_entry() {
         PortValueType::kind(PortValueKind::Raw)
     );
     assert_eq!(
-        serde_json::to_value(descriptor.fields[0].editor).unwrap(),
-        json!({ "editor": "string_list" })
+        serde_json::to_value(descriptor.fields[0].editor).unwrap()["editor"],
+        json!("string_list")
     );
 }
 

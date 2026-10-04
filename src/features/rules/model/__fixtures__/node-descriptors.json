@@ -13,7 +13,7 @@
           },
           "value": {
             "source": "union",
-            "kinds": ["intent_input", "raw", "json", "loop_binding"]
+            "kinds": ["intent_input", "raw", "loop_binding"]
           },
           "role": "data",
           "side": "left",
@@ -112,7 +112,11 @@
           "name": "headers",
           "label_key": "rules_node_inspector_field_headers",
           "editor": {
-            "editor": "pair_list"
+            "editor": "pair_list",
+            "key_label_key": "rules_node_inspector_header_name",
+            "value_label_key": "rules_node_inspector_header_value",
+            "add_label_key": "rules_node_inspector_header_add",
+            "remove_label_key": "rules_node_inspector_header_remove"
           },
           "required": true
         }
@@ -162,11 +166,13 @@
             "variants": [
               {
                 "value": "json",
-                "kind": "json"
+                "kind": "json",
+                "label_key": "rules_port_label_json_output"
               },
               {
                 "value": "raw",
-                "kind": "raw"
+                "kind": "raw",
+                "label_key": "rules_port_label_raw_output"
               }
             ]
           },
@@ -391,7 +397,11 @@
           "name": "identity_fields",
           "label_key": "rules_node_inspector_field_identity_fields",
           "editor": {
-            "editor": "string_list"
+            "editor": "string_list",
+            "item_label_key": "rules_node_inspector_field_identity_fields",
+            "add_label_key": "rules_node_inspector_identity_field_add",
+            "remove_label_key": "rules_node_inspector_identity_field_remove",
+            "min_items": 0
           },
           "required": true
         }
@@ -548,7 +558,11 @@
           "name": "branches",
           "label_key": "rules_node_inspector_field_branches",
           "editor": {
-            "editor": "string_list"
+            "editor": "string_list",
+            "item_label_key": "rules_node_inspector_branch_handle",
+            "add_label_key": "rules_node_inspector_branch_add",
+            "remove_label_key": "rules_node_inspector_branch_remove",
+            "min_items": 2
           },
           "required": true
         },
