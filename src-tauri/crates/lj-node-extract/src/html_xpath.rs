@@ -9,7 +9,7 @@ use lj_runtime::NodeData;
 use xmloxide::Document;
 use xmloxide::NodeId;
 use xmloxide::html5::parse_html5;
-use xmloxide::xpath::{self, XPathValue};
+use xmloxide::xpath::{self, XPathNode, XPathValue};
 
 use crate::processor::resolve_url;
 use crate::regex_extract::RegexCache;
@@ -36,7 +36,7 @@ pub fn extract_single(
             regex_clean,
         } = rule
         {
-            match evaluate_xpath(&doc, root, expression, extract_type) {
+            match evaluate_xpath(&doc, root.into(), expression, extract_type) {
                 Ok(s) if !s.is_empty() => {
                     let cleaned = apply_clean(&s, regex_clean.as_ref(), regex_cache);
                     return vec![NodeData::Json(serde_json::json!({ "title": cleaned }))];
@@ -128,7 +128,7 @@ fn collect_list_nodes(
     root: NodeId,
     rules: &[ExtractRule],
     err_label: &str,
-) -> Result<Vec<NodeId>, Vec<NodeData>> {
+) -> Result<Vec<XPathNode>, Vec<NodeData>> {
     let list_xpath = match rules.first() {
         Some(ExtractRule::XPath { expression, .. }) => expression.as_str(),
         _ => {
@@ -148,7 +148,7 @@ fn collect_list_nodes(
 /// 从节点按 `field_rules` 取必须字段(空时返 "未知")。
 fn field_str(
     doc: &Document,
-    node: NodeId,
+    node: XPathNode,
     field_rules: &crate::FieldRules,
     field: &str,
     regex_cache: &RegexCache,
@@ -161,7 +161,7 @@ fn field_str(
 /// 从节点按 `field_rules` 取可选字段(XPath 回退链,首个非空胜出)。
 fn field_opt(
     doc: &Document,
-    node: NodeId,
+    node: XPathNode,
     field_rules: &crate::FieldRules,
     field: &str,
     regex_cache: &RegexCache,

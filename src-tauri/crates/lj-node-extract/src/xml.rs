@@ -5,7 +5,7 @@
 use lj_rule_model::{ExtractRule, ExtractType};
 use lj_runtime::NodeData;
 use xmloxide::Document;
-use xmloxide::xpath::{self, XPathValue};
+use xmloxide::xpath::{self, XPathNode, XPathValue};
 
 use crate::regex_extract::{RegexCache, apply_regex_clean};
 
@@ -31,7 +31,7 @@ pub fn extract_xml_single(
             regex_clean,
         } = rule
         {
-            match evaluate_xpath(&doc, root, expression, extract_type) {
+            match evaluate_xpath(&doc, root.into(), expression, extract_type) {
                 Ok(s) if !s.is_empty() => {
                     return Ok(apply_clean(&s, regex_clean.as_ref(), regex_cache));
                 }
@@ -81,7 +81,7 @@ pub fn extract_xml_list_video(
 /// 从节点按 `field_rules` 构建视频条目的 JSON 中间记录。
 fn build_video_from_node(
     doc: &Document,
-    node: xmloxide::NodeId,
+    node: XPathNode,
     field_rules: &crate::FieldRules,
     regex_cache: &RegexCache,
 ) -> serde_json::Value {
@@ -100,7 +100,7 @@ fn build_video_from_node(
 /// 从节点按 `field_rules` 取必须字段(空时返 "未知")。
 fn field_str_on_node(
     doc: &Document,
-    node: xmloxide::NodeId,
+    node: XPathNode,
     field_rules: &crate::FieldRules,
     field: &str,
     regex_cache: &RegexCache,
@@ -113,7 +113,7 @@ fn field_str_on_node(
 /// 从节点按 `field_rules` 取可选字段(回退链,首个非空胜出)。
 fn field_opt_on_node(
     doc: &Document,
-    node: xmloxide::NodeId,
+    node: XPathNode,
     field_rules: &crate::FieldRules,
     field: &str,
     regex_cache: &RegexCache,
@@ -144,13 +144,16 @@ fn field_opt_on_node(
 /// 返回 `UnsupportedFormat` 当 `XPath` 求值失败,`NoMatch` 当节点集为空。
 pub(crate) fn evaluate_xpath(
     doc: &Document,
-    ctx: xmloxide::NodeId,
+    ctx: XPathNode,
     expr: &str,
     extract_type: &ExtractType,
 ) -> Result<String, crate::error::ExtractError> {
-    let value = xpath::evaluate(doc, ctx, expr).map_err(|e| {
-        crate::error::ExtractError::UnsupportedFormat(format!("XPath 求值失败: {e}"))
-    })?;
+    let value = xpath::parser::parse(expr)
+        .map_err(xpath::XPathError::from)
+        .and_then(|parsed| xpath::XPathContext::new_at(doc, ctx).evaluate(&parsed))
+        .map_err(|e| {
+            crate::error::ExtractError::UnsupportedFormat(format!("XPath 求值失败: {e}"))
+        })?;
     match value {
         XPathValue::String(s) => Ok(s),
         XPathValue::NodeSet(ids) => {
@@ -173,11 +176,17 @@ pub(crate) fn evaluate_xpath(
 }
 
 /// 从 XML 节点按 `ExtractType` 取值(Text/Attr/Href/Src/Html/OwnText)。
-fn extract_node_value(
-    doc: &Document,
-    node: xmloxide::NodeId,
-    extract_type: &ExtractType,
-) -> String {
+fn extract_node_value(doc: &Document, node: XPathNode, extract_type: &ExtractType) -> String {
+    let node = match node {
+        XPathNode::Node(id) => id,
+        // 属性节点直接取属性值, 保留旧版单属性结果不受 ExtractType 影响的行为.
+        XPathNode::Attribute { owner, index } => {
+            return doc
+                .attributes(owner)
+                .get(index as usize)
+                .map_or_else(String::new, |attribute| attribute.value.clone());
+        }
+    };
     match extract_type {
         ExtractType::Text | ExtractType::OwnText | ExtractType::Html => doc.text_content(node),
         ExtractType::Href => doc.attribute(node, "href").unwrap_or("").to_string(),
@@ -217,6 +226,67 @@ mod tests {
 
     fn regex_cache() -> RegexCache {
         RegexCache::new()
+    }
+
+    #[test]
+    fn xpath_node_values_preserve_extraction_contract() {
+        let xml = r#"<root xmlns:p="urn:test"><item href="/a" src="cover" id="1">甲<b>乙</b>丙</item><item id="2">丁</item></root>"#;
+        let cache = regex_cache();
+        for (expression, extract_type, expected) in [
+            ("/root/item/@id", ExtractType::Text, "1$$$2"),
+            ("/root/item/@id[.='2']", ExtractType::Text, "2"),
+            ("/root/item[1]/text()", ExtractType::Text, "甲$$$丙"),
+            ("/root/item", ExtractType::Text, "甲乙丙$$$丁"),
+            ("/root/item[1]", ExtractType::OwnText, "甲乙丙"),
+            ("/root/item[1]", ExtractType::Html, "甲乙丙"),
+            ("/root/item[1]", ExtractType::Href, "/a"),
+            ("/root/item[1]", ExtractType::Src, "cover"),
+            ("/root/item[1]", ExtractType::Attr("id".into()), "1"),
+            ("/root/item[1]/@href", ExtractType::Html, "/a"),
+            ("/root/item[1]/@href", ExtractType::OwnText, "/a"),
+            ("/root/namespace::p", ExtractType::Text, "甲乙丙丁"),
+            ("string(/root/item[1]/@id)", ExtractType::Text, "1"),
+            ("count(/root/item)", ExtractType::Text, "2"),
+            ("boolean(/root/item)", ExtractType::Text, "true"),
+        ] {
+            let result = extract_xml_single(
+                xml,
+                &[ExtractRule::XPath {
+                    expression: expression.into(),
+                    extract_type,
+                    regex_clean: None,
+                }],
+                &cache,
+            );
+            assert_eq!(result.unwrap(), expected, "{expression}");
+        }
+    }
+
+    #[test]
+    fn xml_list_preserves_attribute_and_text_contexts() {
+        let xml = r#"<root><item id="1">甲</item><item id="2">乙</item></root>"#;
+        let mut fields = crate::FieldRules::new();
+        fields.insert(
+            "name".into(),
+            vec![ExtractRule::XPath {
+                expression: ".".into(),
+                extract_type: ExtractType::Text,
+                regex_clean: None,
+            }],
+        );
+        for (expression, expected) in [
+            ("/root/item/@id", ["1", "2"]),
+            ("/root/item/text()", ["甲", "乙"]),
+        ] {
+            let result = extract_xml_list_video(xml, expression, &fields, &regex_cache());
+            assert_eq!(result.len(), 2);
+            for (item, title) in result.iter().zip(expected) {
+                let NodeData::Json(value) = item else {
+                    panic!("期望 Json, got {item:?}");
+                };
+                assert_eq!(value["title"], title, "{expression}");
+            }
+        }
     }
 
     #[test]

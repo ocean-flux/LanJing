@@ -45,6 +45,36 @@ fn test_html_xpath_attr_href() {
     assert_eq!(json_at(&result, 0)["title"], "/book/123");
 }
 
+#[test]
+fn html_xpath_preserves_attribute_list_context() {
+    let html = "<a href='/1'>甲</a><a href='/2'>乙</a>";
+    let rules = vec![ExtractRule::XPath {
+        expression: "//a/@href".into(),
+        extract_type: ExtractType::Text,
+        regex_clean: None,
+    }];
+    let mut fields = HashMap::new();
+    for field in ["name", "chapterName", "chapterUrl"] {
+        fields.insert(
+            field.into(),
+            vec![ExtractRule::XPath {
+                expression: ".".into(),
+                extract_type: ExtractType::Text,
+                regex_clean: None,
+            }],
+        );
+    }
+    let cache = RegexCache::new();
+    let result = html_xpath::extract_list(html, &rules, &fields, &cache, "");
+    assert_eq!(result.len(), 2);
+    assert_eq!(json_at(&result, 0)["title"], "/1");
+    assert_eq!(json_at(&result, 1)["title"], "/2");
+    let toc = html_xpath::extract_toc_list(html, &rules, &fields, &cache, "https://example.com");
+    assert_eq!(toc.len(), 2);
+    assert_eq!(toc[0]["title"], "/1");
+    assert_eq!(toc[1]["url"], "https://example.com/2");
+}
+
 /// 列表模式：Html + `XPath` 逐 item 逐字段提取。
 #[test]
 fn test_html_xpath_list() {
