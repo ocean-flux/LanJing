@@ -151,6 +151,28 @@ impl DurableFileArchive {
             .output_hash = "corrupted-output-hash".to_string();
     }
 
+    /// 只改历史输出内容, 不动 `output_hash` / `witness_hash`: 验证 replay 从内容重算 hash,
+    /// 而不是相信 archive 自己记的 hash 字段。
+    fn tamper_first_output_payload(&self) {
+        let mut captures = self.captures.lock().expect("archive capture mutex");
+        let capture = captures
+            .first_mut()
+            .expect("live execution must have a capture");
+        let tampered = match capture.output.as_ref() {
+            EffectOutput::Http(response) => EffectOutput::Http(HttpResponse {
+                status: response.status,
+                headers: response.headers.clone(),
+                body: b"tampered-historical-body".to_vec(),
+                charset: response.charset.clone(),
+            }),
+            EffectOutput::QuickJs(_) => EffectOutput::QuickJs(QuickJsOutput::Json(
+                serde_json::json!([{ "title": "被篡改的历史脚本输出" }]),
+            )),
+            other => panic!("该场景的首个 capture 必须是网络或脚本 effect: {other:?}"),
+        };
+        capture.output = Arc::new(tampered);
+    }
+
     fn corrupt_first_fingerprint(&self) {
         let mut captures = self.captures.lock().expect("archive capture mutex");
         captures
@@ -474,7 +496,16 @@ fn fixture_http_witness(error: Option<HttpEffectErrorKind>) -> HttpEffectWitness
     }
 }
 
-struct FixtureQuickJs;
+struct FixtureQuickJs {
+    calls: Arc<AtomicUsize>,
+}
+
+impl FixtureQuickJs {
+    /// 带调用计数的 handler, 供「live 必须 capture 每个跑过的脚本 effect」类断言使用。
+    fn counting(calls: Arc<AtomicUsize>) -> Self {
+        Self { calls }
+    }
+}
 
 #[async_trait]
 impl QuickJsEffectHandler for FixtureQuickJs {
@@ -483,6 +514,7 @@ impl QuickJsEffectHandler for FixtureQuickJs {
         request: QuickJsEffectRequest,
         _cancellation: EffectCancellation,
     ) -> Result<CapturedEffectOutput, EffectError> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
         let output = EffectOutput::QuickJs(QuickJsOutput::Json(serde_json::json!([
             {"title": "真实 typed QuickJS 输出", "url": "https://example.invalid/item"}
         ])));
@@ -673,11 +705,49 @@ fn registry_with(
 fn handlers(http: FixtureHttp, extract_calls: Arc<AtomicUsize>) -> Arc<FrozenEffectRegistry> {
     registry_with(
         Arc::new(http),
-        Arc::new(FixtureQuickJs),
+        Arc::new(FixtureQuickJs::counting(Arc::new(AtomicUsize::new(0)))),
         Arc::new(FixtureExtract {
             calls: extract_calls,
         }),
     )
+}
+
+/// 三类受控 effect 各自的 live 调用次数。
+///
+/// replay 的不变量「禁止 live fallback」只能靠调用计数证明: 只看返回的错误无法区分
+/// 「读了 archive」与「静默重跑了 live handler 再报错」。
+#[derive(Clone)]
+struct LiveCalls {
+    http: Arc<AtomicUsize>,
+    quickjs: Arc<AtomicUsize>,
+    extract: Arc<AtomicUsize>,
+}
+
+impl LiveCalls {
+    fn new() -> Self {
+        Self {
+            http: Arc::new(AtomicUsize::new(0)),
+            quickjs: Arc::new(AtomicUsize::new(0)),
+            extract: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    fn total(&self) -> usize {
+        self.http.load(Ordering::SeqCst)
+            + self.quickjs.load(Ordering::SeqCst)
+            + self.extract.load(Ordering::SeqCst)
+    }
+
+    /// 完整注册 HTTP/QuickJS/Extract, 三类 handler 都按实际调用计数。
+    fn registry(&self) -> Arc<FrozenEffectRegistry> {
+        registry_with(
+            Arc::new(FixtureHttp::success(self.http.clone())),
+            Arc::new(FixtureQuickJs::counting(self.quickjs.clone())),
+            Arc::new(FixtureExtract {
+                calls: self.extract.clone(),
+            }),
+        )
+    }
 }
 
 /// 只让 `QuickJS` 节点失败 (timeout) 的 registry; HTTP/Extract 不需要被调用。

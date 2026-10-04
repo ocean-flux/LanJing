@@ -173,40 +173,288 @@ async fn live_and_replay_preserve_typed_outputs_without_live_fallback() {
     ));
 }
 
-#[tokio::test]
-async fn replay_missing_capture_fails_with_single_attributed_terminal() {
-    let runtime = runtime(4);
+/// P4 覆盖的两类受控 effect: 网络 (来源规则 Http + Extract) 与脚本 (受控 `QuickJS`)。
+///
+/// 三类 effect 共用同一条 replay 校验路径, 因此新增类别用参数化覆盖, 而不是复制用例。
+fn network_and_script_plans() -> [(&'static str, ExecutionPlan, Uuid); 2] {
+    [
+        ("网络与提取", sample_plan(), Uuid::from_u128(101)),
+        ("受控脚本", quickjs_plan(), Uuid::from_u128(1)),
+    ]
+}
+
+/// (标签, Plan, Search 意图路径上真正执行的受控 effect 类别及其顺序)。
+fn capture_scenarios() -> [(&'static str, ExecutionPlan, Vec<EffectKind>); 2] {
+    [
+        (
+            "网络与提取",
+            sample_plan(),
+            vec![EffectKind::Http, EffectKind::Extract],
+        ),
+        ("受控脚本", quickjs_plan(), vec![EffectKind::QuickJs]),
+    ]
+}
+
+/// 一次 live 运行后断言每个实际跑过的受控 effect 都进了 durable archive, 不多不少。
+async fn assert_live_capture_matches_execution(
+    label: &str,
+    plan: ExecutionPlan,
+    expected_kinds: &[EffectKind],
+) {
+    let runtime = runtime(8);
     let archive = Arc::new(DurableFileArchive::new());
+    let calls = LiveCalls::new();
     let events = collect_events(
         runtime
             .execute(
-                request(
-                    sample_plan(),
-                    Uuid::new_v4(),
-                    lj_runtime::ExecutionMode::Replay {
-                        archived_execution_id: Uuid::new_v4(),
-                    },
-                ),
-                handlers(
-                    FixtureHttp::success(Arc::new(AtomicUsize::new(0))),
-                    Arc::new(AtomicUsize::new(0)),
-                ),
-                archive,
+                request(plan, Uuid::new_v4(), lj_runtime::ExecutionMode::Live),
+                calls.registry(),
+                archive.clone(),
             )
-            .expect("replay session"),
+            .expect("live session"),
     )
     .await;
+    assert!(
+        matches!(
+            events.last().map(|event| &event.kind),
+            Some(lj_runtime::ExecutionEventKind::Completed)
+        ),
+        "{label} live 必须先正常完成: {events:?}"
+    );
 
-    assert_eq!(terminal_count(&events), 1);
-    let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
-        events.last().map(|event| &event.kind)
-    else {
-        panic!("缺 capture 必须进入 Failed 终态");
-    };
-    assert_eq!(failure.code, RuntimeFailureCode::ReplayCaptureMissing);
-    assert_eq!(failure.node_id, Some(Uuid::from_u128(101)));
-    assert!(failure.effect_id.is_some());
-    assert_eq!(failure.trace_id, "runtime-test-trace");
+    let event_kinds: Vec<EffectKind> = events
+        .iter()
+        .filter_map(|event| match &event.kind {
+            lj_runtime::ExecutionEventKind::EffectCaptured { kind, .. } => Some(kind.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        event_kinds, expected_kinds,
+        "{label}: 每个实际执行的外部 effect 都必须在交付前 capture"
+    );
+
+    let captures = archive.captures();
+    assert_eq!(
+        captures
+            .iter()
+            .map(|capture| capture.kind.clone())
+            .collect::<Vec<_>>(),
+        expected_kinds,
+        "{label}: durable archive 必须与交付事件一一对应"
+    );
+    let expected_count = expected_kinds.len();
+    assert_eq!(
+        calls.total(),
+        expected_count,
+        "{label}: capture 数必须等于实际执行数, 否则存在静默漏 capture"
+    );
+    for (kind, actual) in [
+        (EffectKind::Http, calls.http.load(Ordering::SeqCst)),
+        (EffectKind::QuickJs, calls.quickjs.load(Ordering::SeqCst)),
+        (EffectKind::Extract, calls.extract.load(Ordering::SeqCst)),
+    ] {
+        assert_eq!(
+            actual,
+            expected_kinds.iter().filter(|item| **item == kind).count(),
+            "{label}: {kind:?} 的 live 调用数与 capture 数不一致"
+        );
+    }
+    let mut ordinals: Vec<u64> = captures
+        .iter()
+        .map(|capture| capture.invocation_path.ordinal())
+        .collect();
+    ordinals.sort_unstable();
+    assert_eq!(
+        ordinals,
+        (1..=u64::try_from(expected_count).expect("用例 capture 数可转换为 u64"))
+            .collect::<Vec<_>>(),
+        "{label}: invocation ordinal 必须无洞"
+    );
+}
+
+#[tokio::test]
+async fn live_run_captures_every_network_and_script_effect_it_ran() {
+    for (label, plan, expected_kinds) in capture_scenarios() {
+        assert_live_capture_matches_execution(label, plan, &expected_kinds).await;
+    }
+}
+
+#[tokio::test]
+async fn replay_missing_capture_fails_with_single_attributed_terminal() {
+    for (label, plan, entry_node) in network_and_script_plans() {
+        let runtime = runtime(4);
+        let archive = Arc::new(DurableFileArchive::new());
+        let calls = LiveCalls::new();
+        let events = collect_events(
+            runtime
+                .execute(
+                    request(
+                        plan,
+                        Uuid::new_v4(),
+                        lj_runtime::ExecutionMode::Replay {
+                            archived_execution_id: Uuid::new_v4(),
+                        },
+                    ),
+                    calls.registry(),
+                    archive,
+                )
+                .expect("replay session"),
+        )
+        .await;
+
+        assert_eq!(terminal_count(&events), 1, "{label} 只能有一个终态");
+        let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
+            events.last().map(|event| &event.kind)
+        else {
+            panic!("{label} 缺 capture 必须进入 Failed 终态");
+        };
+        assert_eq!(failure.code, RuntimeFailureCode::ReplayCaptureMissing);
+        assert_eq!(failure.node_id, Some(entry_node));
+        assert!(failure.effect_id.is_some());
+        assert_eq!(failure.trace_id, "runtime-test-trace");
+        assert_eq!(
+            calls.total(),
+            0,
+            "{label}: 缺 capture 必须硬失败, 绝不能回退到 live handler"
+        );
+    }
+}
+
+#[tokio::test]
+async fn replay_rejects_tampered_historical_output_payload_for_network_and_script_effects() {
+    for (label, plan, entry_node) in network_and_script_plans() {
+        let runtime = runtime(4);
+        let archive = Arc::new(DurableFileArchive::new());
+        let calls = LiveCalls::new();
+        let live_execution = Uuid::new_v4();
+        let live_events = collect_events(
+            runtime
+                .execute(
+                    request(
+                        plan.clone(),
+                        live_execution,
+                        lj_runtime::ExecutionMode::Live,
+                    ),
+                    calls.registry(),
+                    archive.clone(),
+                )
+                .expect("live session"),
+        )
+        .await;
+        assert!(
+            matches!(
+                live_events.last().map(|event| &event.kind),
+                Some(lj_runtime::ExecutionEventKind::Completed)
+            ),
+            "{label} live 必须先正常完成"
+        );
+        let live_calls = calls.total();
+        assert!(live_calls > 0, "{label} live 必须真的跑过受控 effect");
+        // 只改历史输出内容, 不动任何 hash 字段。
+        archive.tamper_first_output_payload();
+
+        let events = collect_events(
+            runtime
+                .execute(
+                    request(
+                        plan,
+                        Uuid::new_v4(),
+                        lj_runtime::ExecutionMode::Replay {
+                            archived_execution_id: live_execution,
+                        },
+                    ),
+                    calls.registry(),
+                    archive,
+                )
+                .expect("replay session"),
+        )
+        .await;
+
+        assert_eq!(terminal_count(&events), 1, "{label} 只能有一个终态");
+        let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
+            events.last().map(|event| &event.kind)
+        else {
+            panic!("{label} 篡改的历史输出必须硬失败");
+        };
+        assert_eq!(
+            failure.code,
+            RuntimeFailureCode::ReplayOutputHashMismatch,
+            "{label}: replay 必须从输出内容重算 hash, 而不是相信 archive 记的 hash"
+        );
+        assert_eq!(failure.node_id, Some(entry_node));
+        assert_eq!(
+            calls.total(),
+            live_calls,
+            "{label}: 校验失败不得回退到 live handler"
+        );
+    }
+}
+
+#[tokio::test]
+async fn replay_rejects_mismatched_historical_input_for_network_and_script_effects() {
+    for (label, plan, entry_node) in network_and_script_plans() {
+        let runtime = runtime(4);
+        let archive = Arc::new(DurableFileArchive::new());
+        let calls = LiveCalls::new();
+        let live_execution = Uuid::new_v4();
+        let live_events = collect_events(
+            runtime
+                .execute(
+                    request(
+                        plan.clone(),
+                        live_execution,
+                        lj_runtime::ExecutionMode::Live,
+                    ),
+                    calls.registry(),
+                    archive.clone(),
+                )
+                .expect("live session"),
+        )
+        .await;
+        assert!(
+            matches!(
+                live_events.last().map(|event| &event.kind),
+                Some(lj_runtime::ExecutionEventKind::Completed)
+            ),
+            "{label} live 必须先正常完成"
+        );
+        let live_calls = calls.total();
+
+        // 同一份固定 archive, 但 replay 的输入已不是当初那次运行的历史输入。
+        let mut replay_request = request(
+            plan,
+            Uuid::new_v4(),
+            lj_runtime::ExecutionMode::Replay {
+                archived_execution_id: live_execution,
+            },
+        );
+        replay_request.input = IntentInput::Query("另一个输入".to_string());
+        let events = collect_events(
+            runtime
+                .execute(replay_request, calls.registry(), archive)
+                .expect("replay session"),
+        )
+        .await;
+
+        assert_eq!(terminal_count(&events), 1, "{label} 只能有一个终态");
+        let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
+            events.last().map(|event| &event.kind)
+        else {
+            panic!("{label} 输入不匹配必须硬失败");
+        };
+        assert_eq!(
+            failure.code,
+            RuntimeFailureCode::ReplayFingerprintMismatch,
+            "{label}: replay 必须把历史输入与当前输入绑定校验"
+        );
+        assert_eq!(failure.node_id, Some(entry_node));
+        assert_eq!(
+            calls.total(),
+            live_calls,
+            "{label}: 输入不匹配不得回退到 live handler"
+        );
+    }
 }
 
 #[tokio::test]
