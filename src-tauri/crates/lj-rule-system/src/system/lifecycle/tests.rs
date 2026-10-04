@@ -683,6 +683,30 @@ fn definition_with_entry_js(
     definition
 }
 
+/// control 定义里 `alpha` 分支的 JS 节点 ID；它的输出才是 mapper 消费的 items。
+const CONTROL_ALPHA_NODE: u128 = 2_003;
+
+/// 替换 `alpha` 分支的 JS 源码：只有这个节点的输出会进入 mapper 与媒体 delta。
+fn definition_with_alpha_js(identity: &str, alpha_code: &str) -> RuleDefinition {
+    let mut definition = definition_with_entry_js(
+        identity,
+        "JSON.stringify([{ enabled: true, title: '入口', url: 'https://example.invalid/entry' }])",
+        JsBudget::default(),
+    );
+    let node = definition
+        .flow_mut()
+        .nodes
+        .iter_mut()
+        .find(|node| node.id == Uuid::from_u128(CONTROL_ALPHA_NODE))
+        .expect("control 定义必须含 alpha 分支节点");
+    node.config = FlowNodeConfig::Js(JsConfig {
+        code: alpha_code.to_string(),
+        output: JsOutputKind::Json,
+        budgets: JsBudget::default(),
+    });
+    definition
+}
+
 /// 安装一版定义并返回更新后的 installed source revision。
 async fn install_definition(
     system: &RuleSystem,
@@ -902,5 +926,80 @@ async fn js_effect_outcomes_leave_draft_and_effective_rule_revisions_intact() {
     let after = document_revision_state(&system, &document_id).await;
     assert_eq!(after.semantic_revision, 4);
     assert_eq!(after.effective_revision, Some(4));
+    drop(system);
+}
+
+/// JS 变换节点够不到明文 source credential。
+///
+/// 真实 live execution 会把已解密的 source secret 带进 runtime；`alpha` 分支 JS 把所有可达
+/// 全局与 `input` 原样回显到 item title，于是「脚本能看到什么」会一路进入媒体 delta 与交付
+/// 事件。因此下面的正反断言都不是空转：正例证明回显真的到达交付面，反例证明明文不在其中。
+#[tokio::test]
+async fn js_effect_cannot_reach_plaintext_source_credentials() {
+    const SECRET: &str = "plaintext-credential-must-not-be-reachable";
+    const IDENTITY: &str = "source:js-credential-boundary";
+    let system = open_package_test_system().await;
+    let secret_bytes = serde_json::to_vec(&serde_json::json!({
+        "authorization": format!("Bearer {SECRET}"),
+    }))
+    .expect("credential map 必须可序列化");
+    let definition = definition_with_alpha_js(
+        IDENTITY,
+        r"JSON.stringify([{ title: JSON.stringify(Object.getOwnPropertyNames(globalThis).sort()) + '::'
+                + typeof globalThis.input + '::' + JSON.stringify(globalThis.input) + '::'
+                + typeof globalThis.credential + typeof globalThis.credentials
+                + typeof globalThis.secret + typeof globalThis.token,
+            url: 'https://example.invalid/alpha' }])",
+    );
+    let candidate = system
+        .stage_prepared_candidate(
+            PreparedRuleInput {
+                definition,
+                runtime_credentials: Some(secret_bytes),
+                display_title: Some("凭据边界".to_string()),
+                display_group: None,
+                diagnostics: Vec::new(),
+            },
+            0,
+            "trace-js-credential-boundary",
+        )
+        .await
+        .expect("带 runtime credential 的 candidate 必须可暂存");
+    let installed = system
+        .install(candidate.id, CapabilityGrant::network_only())
+        .await
+        .expect("candidate 必须可安装");
+    let session = system
+        .execute(ExecuteRequest {
+            source_id: installed.source_id,
+            intent: StandardIntent::Search,
+            input: IntentInput::Query("credential-boundary".to_string()),
+            mode: ExecutionMode::Live,
+        })
+        .await
+        .expect("live execution 必须能启动");
+    let events = session.into_events().collect::<Vec<_>>().await;
+    assert_eq!(
+        events.last().map(|event| &event.kind),
+        Some(&ExecutionEventKind::Completed),
+        "凭据边界用例必须先正常完成"
+    );
+    let delivered = serde_json::to_string(&events).expect("交付事件必须可序列化");
+    assert!(
+        delivered.contains("AggregateError"),
+        "JS 回显的全局名单必须真的进入交付事件, 否则本断言是空转"
+    );
+    assert!(
+        delivered.contains("undefinedundefinedundefinedundefined"),
+        "JS 对 credential 类全局的探测必须真的执行过"
+    );
+    assert!(
+        !delivered.contains(SECRET),
+        "明文 credential 不得进入 JS 可达表面或任何交付事件"
+    );
+    assert!(
+        !delivered.contains("Bearer "),
+        "明文 credential header 不得出现在交付事件里"
+    );
     drop(system);
 }
