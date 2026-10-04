@@ -1054,3 +1054,23 @@ describe('createRuleEditorSession 预览执行', () => {
     expect(session.getState().execution.status).toBe('running');
   });
 });
+
+// 订阅不上时不能假装运行：没有事件流就没有运行诊断，如实失败。
+describe('createRuleEditorSession 预览执行订阅失败', () => {
+  beforeEach(() => {
+    invoke.mockReset();
+    listen.mockReset();
+  });
+
+  it('listen 失败直接进 failed，不发 execute', async () => {
+    listen.mockRejectedValue(new Error('event API 不可用'));
+
+    const session = createRuleEditorSession();
+    await session.getState().startPreviewRun(PREVIEW_REQUEST);
+
+    const { execution } = session.getState();
+    expect(execution.status).toBe('failed');
+    expect(execution.failureCode).toBe('EXECUTION_FAILED');
+    expect(invoke).not.toHaveBeenCalled();
+  });
+});

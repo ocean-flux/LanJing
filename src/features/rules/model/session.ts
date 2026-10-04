@@ -464,13 +464,19 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
           if (next !== current) set({ execution: next });
           if (isExecutionRunFinished(next)) stopPreviewListener();
         };
-        previewUnlisten = await listenRuleExecutionEvents((event) => {
-          if (activeExecutionId === null) {
-            buffered.push(event);
-          } else if (event.execution_id === activeExecutionId) {
-            fold(event);
-          }
-        });
+        try {
+          previewUnlisten = await listenRuleExecutionEvents((event) => {
+            if (activeExecutionId === null) {
+              buffered.push(event);
+            } else if (event.execution_id === activeExecutionId) {
+              fold(event);
+            }
+          });
+        } catch (error) {
+          // 订阅不上就不能老老实实报运行诊断；如实失败，不瓣一个看不到结果的运行。
+          set({ execution: failExecutionRun(get().execution, error) });
+          return;
+        }
 
         let executionId: ExecutionId;
         try {
