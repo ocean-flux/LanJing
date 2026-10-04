@@ -35,8 +35,8 @@ use lj_runtime::{
     HttpEffectErrorKind, HttpEffectHandler, HttpEffectRequest, HttpEffectWitness,
     HttpExecutionCredentials, HttpRequestWitness, HttpResponse, PlanExecutionRequest, PlanRuntime,
     PlanRuntimeConfig, PlanSupport, QuickJsEffectHandler, QuickJsEffectRequest,
-    QuickJsEffectWitness, QuickJsOutput, ReplayCompletionLookup, RuntimeFailureCode,
-    effect_input_hash, effect_output_hash, quickjs_script_hash,
+    QuickJsEffectWitness, QuickJsErrorKind, QuickJsOutput, ReplayCompletionLookup,
+    RuntimeFailureCode, effect_input_hash, effect_output_hash, quickjs_script_hash,
 };
 use tokio::sync::Notify;
 use uuid::Uuid;
@@ -506,6 +506,45 @@ impl QuickJsEffectHandler for FixtureQuickJs {
     }
 }
 
+/// 按需返回固定可归档脚本失败类别的 handler。
+///
+/// 真实 `QuickJS` watchdog 的 timeout 合同由 `lj-node-js` 与 e2e 测试覆盖; 本 fixture 只用来
+/// 固定 runtime 对「已归档类型化脚本失败」的处理: 失败必须 durable capture 后进入稳定
+/// code 的 Failed 终态, 且 replay 复现同一终态。
+struct FailingQuickJs {
+    calls: Arc<AtomicUsize>,
+    error: QuickJsErrorKind,
+}
+
+#[async_trait]
+impl QuickJsEffectHandler for FailingQuickJs {
+    async fn execute_quickjs(
+        &self,
+        request: QuickJsEffectRequest,
+        _cancellation: EffectCancellation,
+    ) -> Result<CapturedEffectOutput, EffectError> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        let output = EffectOutput::QuickJs(QuickJsOutput::Error(self.error));
+        let input_hash = effect_input_hash(&request.input).map_err(|_| {
+            EffectError::new(EffectErrorCode::Internal, "QuickJS 输入 hash 计算失败")
+        })?;
+        let output_hash = effect_output_hash(&output).map_err(|_| {
+            EffectError::new(EffectErrorCode::Internal, "QuickJS 输出 hash 计算失败")
+        })?;
+        Ok(CapturedEffectOutput::new(
+            output,
+            EffectWitness::QuickJs(QuickJsEffectWitness {
+                script_hash: quickjs_script_hash(&request.code),
+                input_hash,
+                output_hash,
+                error: Some(self.error),
+                host_calls: Vec::new(),
+                duration_ms: 0,
+            }),
+        ))
+    }
+}
+
 struct ControlQuickJs {
     calls: Arc<AtomicUsize>,
 }
@@ -637,6 +676,23 @@ fn handlers(http: FixtureHttp, extract_calls: Arc<AtomicUsize>) -> Arc<FrozenEff
         Arc::new(FixtureQuickJs),
         Arc::new(FixtureExtract {
             calls: extract_calls,
+        }),
+    )
+}
+
+/// 只让 `QuickJS` 节点失败 (timeout) 的 registry; HTTP/Extract 不需要被调用。
+fn timeout_handlers(
+    http: FixtureHttp,
+    quickjs_calls: Arc<AtomicUsize>,
+) -> Arc<FrozenEffectRegistry> {
+    registry_with(
+        Arc::new(http),
+        Arc::new(FailingQuickJs {
+            calls: quickjs_calls,
+            error: QuickJsErrorKind::Timeout,
+        }),
+        Arc::new(FixtureExtract {
+            calls: Arc::new(AtomicUsize::new(0)),
         }),
     )
 }

@@ -270,6 +270,119 @@ async fn missing_network_capability_fails_before_any_effect_with_stable_code() {
 }
 
 #[tokio::test]
+async fn script_timeout_is_a_captured_failed_terminal_and_not_a_cancellation() {
+    let runtime = runtime(4);
+    let archive = Arc::new(DurableFileArchive::new());
+    let quickjs_calls = Arc::new(AtomicUsize::new(0));
+    let live_execution = Uuid::new_v4();
+    let live_events = collect_events(
+        runtime
+            .execute(
+                request(
+                    quickjs_plan(),
+                    live_execution,
+                    lj_runtime::ExecutionMode::Live,
+                ),
+                timeout_handlers(
+                    FixtureHttp::success(Arc::new(AtomicUsize::new(0))),
+                    quickjs_calls.clone(),
+                ),
+                archive.clone(),
+            )
+            .expect("timeout live session"),
+    )
+    .await;
+
+    assert_eq!(quickjs_calls.load(Ordering::SeqCst), 1);
+    assert!(
+        !live_events
+            .iter()
+            .any(|event| matches!(event.kind, lj_runtime::ExecutionEventKind::Cancelled)),
+        "脚本超时是 effect 失败, 不是 cancellation: {live_events:?}"
+    );
+    assert_eq!(terminal_count(&live_events), 1);
+    let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
+        live_events.last().map(|event| &event.kind)
+    else {
+        panic!("脚本超时必须进入 Failed 终态");
+    };
+    assert_eq!(failure.code, RuntimeFailureCode::EffectFailed);
+    assert_eq!(failure.node_id, Some(Uuid::from_u128(1)));
+    assert!(failure.effect_id.is_some());
+    assert_eq!(failure.execution_id, live_events[0].execution_id);
+
+    // 失败类别本身 (而不只是一个笼统的失败) 必须随输出 durable 归档, 否则 replay 无法复现。
+    let captures = archive.captures();
+    assert_eq!(captures.len(), 1, "超时 effect 必须先 durable capture");
+    assert!(
+        matches!(
+            captures[0].output.as_ref(),
+            EffectOutput::QuickJs(QuickJsOutput::Error(QuickJsErrorKind::Timeout))
+        ),
+        "capture 必须保存稳定的 timeout 类别: {:?}",
+        captures[0].output
+    );
+    let capture_position = live_events
+        .iter()
+        .position(|event| {
+            matches!(
+                event.kind,
+                lj_runtime::ExecutionEventKind::EffectCaptured { .. }
+            )
+        })
+        .expect("超时 effect 必须发出 EffectCaptured");
+    assert!(
+        capture_position < live_events.len() - 1,
+        "durable capture 必须先于失败终态"
+    );
+
+    let replay_events = collect_events(
+        runtime
+            .execute(
+                request(
+                    quickjs_plan(),
+                    Uuid::new_v4(),
+                    lj_runtime::ExecutionMode::Replay {
+                        archived_execution_id: live_execution,
+                    },
+                ),
+                timeout_handlers(
+                    FixtureHttp::success(Arc::new(AtomicUsize::new(0))),
+                    quickjs_calls.clone(),
+                ),
+                archive,
+            )
+            .expect("timeout replay session"),
+    )
+    .await;
+
+    assert_eq!(
+        quickjs_calls.load(Ordering::SeqCst),
+        1,
+        "replay 不得重跑 live handler"
+    );
+    assert_eq!(terminal_count(&replay_events), 1);
+    assert_eq!(
+        replay_events
+            .iter()
+            .filter(|event| matches!(
+                event.kind,
+                lj_runtime::ExecutionEventKind::EffectReplayed { .. }
+            ))
+            .count(),
+        1,
+        "超时 capture 必须可被 replay 读取"
+    );
+    let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
+        replay_events.last().map(|event| &event.kind)
+    else {
+        panic!("超时 capture 的 replay 必须复现同一 Failed 终态");
+    };
+    assert_eq!(failure.code, RuntimeFailureCode::EffectFailed);
+    assert_eq!(failure.node_id, Some(Uuid::from_u128(1)));
+}
+
+#[tokio::test]
 async fn missing_operation_in_frozen_registry_fails_with_stable_code() {
     let runtime = runtime(4);
     let events = collect_events(

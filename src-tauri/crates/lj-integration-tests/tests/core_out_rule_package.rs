@@ -18,8 +18,8 @@ use lj_media::{MediaGraphDelta, MediaResourceId};
 use lj_rule_model::DiagnosticSeverity;
 use lj_rule_system::test_support::{TempRuleSystem, init_mock_keyring};
 use lj_rule_system::{
-    CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, RuleInput, RuleSystem,
-    SourceId,
+    CapabilityGrant, EffectWitnessForTest, ExecuteRequest, ExecutionEventKind, ExecutionMode,
+    QuickJsErrorKindForTest, RuleErrorStage, RuleInput, RuleSystem, SourceId,
 };
 use serde_json::{Value, json};
 use wiremock::matchers::{method, path, query_param};
@@ -51,6 +51,11 @@ fn fixture_bytes() -> Vec<u8> {
 /// fixture 只承诺「来源规则引用 `base_url`」, 不承诺某个固定地址; 注入后导入、编译与安装
 /// 全部重新基于注入值派生。
 fn package_input(base_url: &str) -> RuleInput {
+    package_input_with_js(base_url, None)
+}
+
+/// 同上, 但可把受控 JS 节点的源码与时间预算换成给定的值。
+fn package_input_with_js(base_url: &str, js: Option<(&str, u32)>) -> RuleInput {
     let mut package: Value = serde_json::from_slice(&fixture_bytes()).expect("parse fixture JSON");
     let definition = package
         .get_mut("definition")
@@ -61,6 +66,16 @@ fn package_input(base_url: &str) -> RuleInput {
         "fixture 只声明占位 base_url, 由调用方注入真实部署地址"
     );
     definition["base_url"] = json!(base_url);
+    if let Some((code, timeout_ms)) = js {
+        let node = definition["flow"]["nodes"]
+            .as_array_mut()
+            .expect("fixture flow 必须含节点数组")
+            .iter_mut()
+            .find(|node| node["config"]["kind"] == json!("js"))
+            .expect("fixture 必须含受控 JS 节点");
+        node["config"]["value"]["code"] = json!(code);
+        node["config"]["value"]["budgets"]["timeout_ms"] = json!(timeout_ms);
+    }
     RuleInput::Package {
         source_json: serde_json::to_string(&package).expect("serialize Rule Package input"),
     }
@@ -309,6 +324,89 @@ async fn core_out_rule_package_fixture_is_self_consistent_and_installs_as_a_cand
         candidate.definition_hash, inspection.definition_hash,
         "候选必须与已校验的 Rule Package 绑定同一个 Definition"
     );
+    drop(system);
+}
+
+#[tokio::test]
+async fn controlled_js_timeout_is_archived_with_its_stable_code_before_failing() {
+    init_mock_keyring();
+    let temp = TempRuleSystem::new("core-out-js-timeout");
+    let system = temp.open(Duration::from_mins(1)).await;
+
+    let candidate = system
+        .prepare_install(package_input_with_js(
+            BASE_URL_PLACEHOLDER,
+            Some(("while (true) {}", 1)),
+        ))
+        .await
+        .expect("超时 fixture 候选");
+    let source = system
+        .install(candidate.id, CapabilityGrant::network_only())
+        .await
+        .expect("network grant 后必须完成安装");
+
+    let session = system
+        .execute(ExecuteRequest {
+            source_id: source.source_id.clone(),
+            intent: StandardIntent::Discover,
+            input: IntentInput::Query(JS_QUERY.to_string()),
+            mode: ExecutionMode::Live,
+        })
+        .await
+        .expect("已安装来源的标准意图必须可执行");
+    let execution_id = session.id;
+    let events = session.into_events().collect::<Vec<_>>().await;
+    assert_contiguous(&events);
+    assert_eq!(terminal_count(&events), 1, "session 只能有一个终态");
+    assert!(
+        !events
+            .iter()
+            .any(|event| matches!(event.kind, ExecutionEventKind::Cancelled)),
+        "脚本超时不是 cancellation: {events:?}"
+    );
+    let Some(ExecutionEventKind::Failed { error }) = events.last().map(|event| &event.kind) else {
+        panic!("脚本超时必须进入 Failed 终态: {events:?}");
+    };
+    assert_eq!(error.stage, RuleErrorStage::Execution);
+    assert_eq!(error.code, "execution_failed");
+
+    // 终态 code 是执行级的; 具体失败类别只能从 durable capture 读回, 因此它必须真的被归档。
+    let captured: Vec<(uuid::Uuid, String)> = events
+        .iter()
+        .filter_map(|event| match &event.kind {
+            ExecutionEventKind::EffectCaptured {
+                effect_id,
+                artifact_refs,
+                output_hash,
+            } => {
+                assert!(
+                    !artifact_refs.is_empty(),
+                    "超时的 effect 必须有 durable artifact 引用"
+                );
+                assert_eq!(output_hash.len(), 64, "live effect 输出必须带 BLAKE3 hex");
+                Some((*effect_id, output_hash.clone()))
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        captured.len(),
+        CONTROLLED_JS_EFFECTS,
+        "受控 JS 超时必须恰好留下一份 capture: {events:?}"
+    );
+    let witness = system
+        .read_effect_witness_for_test(execution_id, captured[0].0)
+        .await
+        .expect("超时 capture 必须留在 durable archive");
+    let EffectWitnessForTest::QuickJs(witness) = witness.witness else {
+        panic!("受控 JS capture 必须是 QuickJS witness: {witness:?}");
+    };
+    assert_eq!(
+        witness.error,
+        Some(QuickJsErrorKindForTest::Timeout),
+        "capture 必须按稳定类别记录 timeout, 而不是丢失成一个笼统失败"
+    );
+    assert_eq!(witness.output_hash, captured[0].1);
     drop(system);
 }
 
