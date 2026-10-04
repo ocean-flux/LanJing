@@ -15,6 +15,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
   cancelExecution,
   executeRule,
+  executionFailureDiagnostics,
   listenRuleExecutionEvents,
   type ExecutionEvent,
   type ExecutionId,
@@ -103,11 +104,7 @@ export class SessionError extends Error {
  * 仍然是稳定 code，而不是把任意对象当作后端错误解释。
  */
 function saveFailureDiagnostics(error: unknown): InstallDiagnostic[] {
-  if (isRuleErrorWire(error)) {
-    return error.diagnostics.length > 0
-      ? error.diagnostics
-      : [{ code: error.code, severity: 'error', message: error.message }];
-  }
+  if (isRuleErrorWire(error)) return executionFailureDiagnostics(error);
   return [
     {
       code: 'SAVE_FAILED',
@@ -361,7 +358,7 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
           }
         });
       } catch (error) {
-        // 订阅不上就不能老老实实报运行诊断；如实失败，不瓣一个看不到结果的运行。
+        // 订阅不上就不能老老实实报运行诊断；如实失败，不假装跑了一次看不到结果的运行。
         set({ execution: failExecutionRun(get().execution, error) });
         return;
       }
