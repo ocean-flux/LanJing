@@ -16,7 +16,7 @@ use tracing::Instrument;
 use uuid::Uuid;
 
 use crate::effect::{CancellationHandle, EffectArchive, HttpExecutionCredentials};
-use crate::plugin::FrozenRegistry;
+use crate::effect_registry::FrozenEffectRegistry;
 
 use super::{scheduler, validation};
 
@@ -371,7 +371,7 @@ impl PlanRuntime {
     pub fn execute(
         &self,
         mut request: PlanExecutionRequest,
-        registry: Arc<FrozenRegistry>,
+        registry: Arc<FrozenEffectRegistry>,
         archive: Arc<dyn EffectArchive>,
     ) -> Result<ExecutionSession, PlanRuntimeError> {
         self.validate_plan(&request.plan)?;

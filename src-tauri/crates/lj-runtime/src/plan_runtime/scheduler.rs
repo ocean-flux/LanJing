@@ -26,8 +26,8 @@ use crate::effect::{
     QuickJsEffectRequest, QuickJsOutput, ReplayCompletionLookup, effect_input_hash,
     effect_output_hash, quickjs_script_hash,
 };
+use crate::effect_registry::{EffectHandler, FrozenEffectRegistry};
 use crate::mapper::MapperContext;
-use crate::plugin::{EffectHandler, FrozenRegistry};
 
 use super::api::{
     ExecutionEvent, ExecutionEventKind, ExecutionFailure, ExecutionMode, PlanExecutionRequest,
@@ -124,7 +124,7 @@ pub(super) async fn run_execution(
     state: Arc<RuntimeState>,
     request: PlanExecutionRequest,
     path: ExecutionPath,
-    registry: Arc<FrozenRegistry>,
+    registry: Arc<FrozenEffectRegistry>,
     archive: Arc<dyn EffectArchive>,
     cancellation: CancellationHandle,
     sender: mpsc::Sender<ExecutionEvent>,
@@ -166,7 +166,7 @@ async fn execute_path(
     state: &RuntimeState,
     request: &PlanExecutionRequest,
     path: &ExecutionPath,
-    registry: &FrozenRegistry,
+    registry: &FrozenEffectRegistry,
     archive: &dyn EffectArchive,
     cancellation: &CancellationHandle,
     emitter: &mut EventEmitter,
@@ -246,7 +246,7 @@ async fn execute_path(
 struct EffectExecution<'a> {
     state: &'a RuntimeState,
     request: &'a PlanExecutionRequest,
-    registry: &'a FrozenRegistry,
+    registry: &'a FrozenEffectRegistry,
     archive: &'a dyn EffectArchive,
     cancellation: &'a CancellationHandle,
     emitter: &'a mut EventEmitter,

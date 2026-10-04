@@ -23,7 +23,6 @@ lj-media = { path = "../lj-media" }
 lj-node-extract = { path = "../lj-node-extract" }
 lj-node-http = { path = "../lj-node-http" }
 lj-node-js = { path = "../lj-node-js" }
-lj-plugin-contract = { path = "../lj-plugin-contract" }
 lj-rule-model = { path = "../lj-rule-model" }
 lj-runtime = { path = "../lj-runtime" }
 lj-storage = { path = "../lj-storage" }

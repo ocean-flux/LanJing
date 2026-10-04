@@ -3486,13 +3486,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lj-plugin-contract"
-version = "0.1.0"
-dependencies = [
- "thiserror 2.0.19",
-]
-
-[[package]]
 name = "lj-rule-model"
 version = "0.1.0"
 dependencies = [
@@ -3518,7 +3511,6 @@ dependencies = [
  "lj-node-extract",
  "lj-node-http",
  "lj-node-js",
- "lj-plugin-contract",
  "lj-rule-model",
  "lj-runtime",
  "lj-storage",
@@ -3540,7 +3532,6 @@ dependencies = [
  "lj-capability",
  "lj-compiler",
  "lj-media",
- "lj-plugin-contract",
  "lj-rule-model",
  "serde",
  "serde_json",

@@ -15,19 +15,18 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use lj_capability::{IntentExport, IntentInput, StandardIntent};
 use lj_compiler::Compiler;
-use lj_plugin_contract::OperationId;
 use lj_rule_model::definition::MapperOutputKind;
 use lj_rule_model::{
     CapabilityManifest, CollectionSelector, ConditionConfig, ConditionPredicate, ControlExpression,
-    ControlTrace, ControlledMapper, ExecutionPlan, ExecutionPlanParts, ExpectedDataType,
-    ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, ForEachConfig,
-    HttpMethod, HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
-    LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE,
-    MAX_LOOP_ITERATIONS, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy, PlanNode,
-    PlanNodeConfig, PolicyCapabilities, RuleDefinition, SourceIdentity, SystemCapabilities,
-    TypedLiteral, execution_plan_hash, read_execution_plan,
+    ControlTrace, ControlledMapper, EffectKind, ExecutionPlan, ExecutionPlanParts,
+    ExpectedDataType, ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef,
+    ForEachConfig, HttpMethod, HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE,
+    LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE,
+    LOOP_YIELD_HANDLE, MAX_LOOP_ITERATIONS, MergeConfig, MergeInput, MergeInputActivation,
+    MergeStrategy, PlanNode, PlanNodeConfig, PolicyCapabilities, RuleDefinition, SourceIdentity,
+    SystemCapabilities, TypedLiteral, execution_plan_hash, read_execution_plan,
 };
-use lj_runtime::plugin::{EffectHandler, FrozenRegistry, PluginHost, builtin};
+use lj_runtime::effect_registry::{EffectHandler, EffectRegistry, FrozenEffectRegistry, builtin};
 use lj_runtime::{
     CapturedEffectOutput, ControlReplayLookup, ControlTraceCapture, ControlTraceReceipt,
     DurableCaptureReceipt, EffectArchive, EffectArchiveError, EffectCancellation, EffectCapture,
@@ -610,24 +609,13 @@ impl ExtractEffectHandler for FixtureExtract {
     }
 }
 
-/// 用内置 manifest 装配一个只注册指定 operation 的 frozen registry。
-fn registry_from(effects: Vec<(&str, EffectHandler)>) -> Arc<FrozenRegistry> {
-    let effects = effects
-        .into_iter()
-        .map(|(operation, handler)| {
-            (
-                OperationId::parse(operation).expect("内置 operation identity 必须合法"),
-                handler,
-            )
-        })
-        .collect();
-    let mut host = PluginHost::new();
-    host.register_plugin(
-        builtin::manifest().expect("内置 manifest 必须合法"),
-        effects,
-    )
-    .expect("内置 capability 注册必须成功");
-    Arc::new(host.freeze())
+/// 用内置 effect 集合装配一个只注册指定 kind 的 frozen registry。
+fn registry_from(effects: Vec<(EffectKind, EffectHandler)>) -> Arc<FrozenEffectRegistry> {
+    let mut registry = EffectRegistry::new();
+    registry
+        .register_all(effects)
+        .expect("内置 capability 注册必须成功");
+    Arc::new(registry.freeze())
 }
 
 /// 完整注册内置 HTTP、QuickJS rule node 与 Extract handler 的 registry。
@@ -635,17 +623,15 @@ fn registry_with(
     http: Arc<dyn HttpEffectHandler>,
     quickjs: Arc<dyn QuickJsEffectHandler>,
     extract: Arc<dyn ExtractEffectHandler>,
-) -> Arc<FrozenRegistry> {
-    let mut host = PluginHost::new();
-    host.register_plugin(
-        builtin::manifest().expect("内置 manifest 必须合法"),
-        builtin::effects(http, quickjs, extract).expect("内置 effect 声明必须合法"),
-    )
-    .expect("内置 capability 注册必须成功");
-    Arc::new(host.freeze())
+) -> Arc<FrozenEffectRegistry> {
+    let mut registry = EffectRegistry::new();
+    registry
+        .register_all(builtin::effects(http, quickjs, extract))
+        .expect("内置 capability 注册必须成功");
+    Arc::new(registry.freeze())
 }
 
-fn handlers(http: FixtureHttp, extract_calls: Arc<AtomicUsize>) -> Arc<FrozenRegistry> {
+fn handlers(http: FixtureHttp, extract_calls: Arc<AtomicUsize>) -> Arc<FrozenEffectRegistry> {
     registry_with(
         Arc::new(http),
         Arc::new(FixtureQuickJs),
@@ -659,7 +645,7 @@ fn control_handlers(
     http: FixtureHttp,
     quickjs_calls: Arc<AtomicUsize>,
     extract_calls: Arc<AtomicUsize>,
-) -> Arc<FrozenRegistry> {
+) -> Arc<FrozenEffectRegistry> {
     registry_with(
         Arc::new(http),
         Arc::new(ControlQuickJs {
@@ -671,15 +657,15 @@ fn control_handlers(
     )
 }
 
-/// 故意不注册 `QuickJS` operation 的 registry，用于验证 lookup miss 的稳定失败。
+/// 故意不注册 `QuickJS` effect 的 registry，用于验证 lookup miss 的稳定失败。
 fn registry_without_quickjs(
     http: FixtureHttp,
     extract_calls: Arc<AtomicUsize>,
-) -> Arc<FrozenRegistry> {
+) -> Arc<FrozenEffectRegistry> {
     registry_from(vec![
-        (builtin::HTTP_OPERATION, EffectHandler::Http(Arc::new(http))),
+        (EffectKind::Http, EffectHandler::Http(Arc::new(http))),
         (
-            builtin::EXTRACT_OPERATION,
+            EffectKind::Extract,
             EffectHandler::Extract(Arc::new(FixtureExtract {
                 calls: extract_calls,
             })),

@@ -5,8 +5,7 @@
 //! token、完整 URL query、Plan JSON 或 opaque payload。
 
 use lj_compiler::CompilerError;
-use lj_plugin_contract::PluginError;
-use lj_runtime::{PlanRuntimeError, RuntimeFailureCode};
+use lj_runtime::{PlanRuntimeError, RuntimeFailureCode, effect_registry::EffectRegistryError};
 use lj_storage::StorageError;
 
 use crate::{RuleError, RuleErrorStage};
@@ -95,14 +94,14 @@ pub(super) fn runtime_failure_error(code: RuntimeFailureCode, trace_id: &str) ->
     )
 }
 
-/// 将 plugin contract 与注册错误映射为调用方可见的安全错误。
+/// 将 effect registry 注册错误映射为调用方可见的安全错误。
 ///
-/// message 只包含稳定错误码，不包含 plugin payload 或 identity 以外的声明内容。
-pub(super) fn plugin_error(error: &PluginError, trace_id: &str) -> RuleError {
+/// message 只包含稳定错误码与 effect kind，不包含 handler payload。
+pub(super) fn effect_registry_error(error: &EffectRegistryError, trace_id: &str) -> RuleError {
     RuleError::new(
         RuleErrorStage::Internal,
-        "plugin_registration_failed",
-        format!("内置 plugin 注册失败: {}", error.code()),
+        "effect_registry_registration_failed",
+        format!("内置 effect 注册失败: {}", error.code()),
         trace_id.to_string(),
         false,
         Vec::new(),

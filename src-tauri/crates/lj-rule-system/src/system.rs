@@ -25,12 +25,12 @@ use lj_node_http::processor::HttpEffectAdapter;
 use lj_node_js::processor::QuickJsEffectAdapter;
 #[cfg(feature = "test-support")]
 use lj_runtime::EffectReplayLookup;
-use lj_runtime::plugin::{FrozenRegistry, PluginHost, builtin};
+use lj_runtime::effect_registry::{EffectRegistry, FrozenEffectRegistry, builtin};
 use lj_runtime::{CancellationHandle, PlanRuntime, PlanRuntimeConfig};
 use lj_storage::{EventProjectionStorage, StorageConfig};
 use uuid::Uuid;
 
-use self::error_mapping::{plugin_error, runtime_error, storage_error};
+use self::error_mapping::{effect_registry_error, runtime_error, storage_error};
 use crate::{ExecutionEvent, ExecutionId, RuleError, RuleErrorStage, RuleSystemConfig};
 
 /// 规则生命周期唯一 concrete façade。
@@ -51,7 +51,7 @@ struct RuleSystemState {
     storage: EventProjectionStorage,
     compiler: Compiler,
     runtime: PlanRuntime,
-    registry: Arc<FrozenRegistry>,
+    registry: Arc<FrozenEffectRegistry>,
     candidate_ttl_ms: i64,
     session_event_capacity: usize,
     executions: Mutex<HashMap<Uuid, CancellationHandle>>,
@@ -114,18 +114,15 @@ impl RuleSystem {
             Arc::new(HttpEffectAdapter::new())
         };
         // 内置 capability 在接受任何规则请求之前完成注册并冻结；execution 始终绑定这个 snapshot。
-        let mut host = PluginHost::new();
-        host.register_plugin(
-            builtin::manifest().map_err(|error| plugin_error(&error, &trace_id))?,
-            builtin::effects(
+        let mut effect_registry = EffectRegistry::new();
+        effect_registry
+            .register_all(builtin::effects(
                 http,
                 Arc::new(QuickJsEffectAdapter),
                 Arc::new(ExtractEffectAdapter),
-            )
-            .map_err(|error| plugin_error(&error, &trace_id))?,
-        )
-        .map_err(|error| plugin_error(&error, &trace_id))?;
-        let registry = Arc::new(host.freeze());
+            ))
+            .map_err(|error| effect_registry_error(&error, &trace_id))?;
+        let registry = Arc::new(effect_registry.freeze());
 
         Ok(Self {
             state: Arc::new(RuleSystemState {

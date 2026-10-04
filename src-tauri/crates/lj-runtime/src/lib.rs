@@ -5,11 +5,11 @@
 
 pub mod capability;
 pub mod effect;
+pub mod effect_registry;
 pub(crate) mod mapper;
 pub(crate) mod mapper_fields;
 pub mod node_data;
 pub mod plan_runtime;
-pub mod plugin;
 
 pub use capability::{check_capability, default_capabilities, merge};
 pub use effect::{

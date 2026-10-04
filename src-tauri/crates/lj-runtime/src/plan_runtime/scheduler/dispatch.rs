@@ -8,7 +8,7 @@ use super::{
     failed,
 };
 
-use crate::plugin::EffectHandler;
+use crate::effect_registry::EffectHandler;
 
 pub(in crate::plan_runtime::scheduler) async fn acquire_permit(
     semaphore: Arc<tokio::sync::Semaphore>,

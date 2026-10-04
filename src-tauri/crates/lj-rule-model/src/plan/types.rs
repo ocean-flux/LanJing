@@ -122,7 +122,7 @@ impl PlanPort {
 }
 
 /// Effect 种类。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum EffectKind {
     /// HTTP 外部效应。
     Http,
