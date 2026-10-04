@@ -403,8 +403,14 @@ export function SourcesHome() {
             <>
               <ul className="divide-y divide-hairline border-y border-hairline">
                 {prepared.map((entry) => (
-                  <li key={entry.item.id} className="flex h-(--density-row) items-center truncate">
-                    {entry.item.name}
+                  <li
+                    key={entry.item.id}
+                    className="flex h-(--density-row) items-center gap-2 truncate"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{entry.item.name}</span>
+                    {entry.candidate.operation === 'update' ? (
+                      <Badge variant="default">{m.sources_install_update()}</Badge>
+                    ) : null}
                   </li>
                 ))}
               </ul>
