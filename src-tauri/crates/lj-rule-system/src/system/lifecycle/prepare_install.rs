@@ -95,6 +95,7 @@ fn prepare_transient_rule_input(
 ) -> Result<PreparedRuleInput, RuleError> {
     match input {
         RuleInput::Legado { source_json } => prepare_legado_input(&source_json, trace_id),
+        RuleInput::Package { source_json } => prepare_package_input(&source_json, trace_id),
         RuleInput::MaccmsJson { url } => {
             let imported = MaccmsImporter.import_url(&url).map_err(|error| {
                 RuleError::new(
@@ -109,6 +110,21 @@ fn prepare_transient_rule_input(
             Ok(prepared_import(imported))
         }
     }
+}
+
+/// 从导入的 Rule Package 读取 Definition；package 不承载 runtime credential。
+fn prepare_package_input(
+    package_json: &str,
+    trace_id: &str,
+) -> Result<PreparedRuleInput, RuleError> {
+    let package = super::package::read_package(package_json.as_bytes(), trace_id)?;
+    Ok(PreparedRuleInput {
+        definition: package.definition().clone(),
+        runtime_credentials: None,
+        display_title: None,
+        display_group: None,
+        diagnostics: Vec::new(),
+    })
 }
 
 fn prepared_import(mut imported: ImportedNativeRule) -> PreparedRuleInput {

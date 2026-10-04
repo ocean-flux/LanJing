@@ -2,6 +2,7 @@
 
 mod document;
 mod execution;
+mod package;
 mod prepare_install;
 
 #[cfg(test)]

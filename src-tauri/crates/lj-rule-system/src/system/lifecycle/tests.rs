@@ -7,16 +7,20 @@ use keyring_core::{mock, set_default_store};
 use lj_capability::{IntentExport, IntentInput, StandardIntent};
 use lj_rule_model::definition::MapperOutputKind;
 use lj_rule_model::{
-    CapabilityManifest, ConditionConfig, ControlExpression, ControlledMapper, FlowEdge, FlowGraph,
-    FlowNode, FlowNodeConfig, FlowPortRef, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE,
-    LINEAR_OUTPUT_HANDLE, MERGE_OUTPUT_HANDLE, MergeConfig, MergeInput, MergeInputActivation,
-    MergeStrategy, PolicyCapabilities, RuleDefinition, SourceIdentity, SystemCapabilities,
+    CapabilityManifest, ConditionConfig, ControlExpression, ControlledMapper, DiagnosticSeverity,
+    FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, JsConfig, JsOutputKind,
+    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MERGE_OUTPUT_HANDLE, MergeConfig, MergeInput,
+    MergeInputActivation, MergeStrategy, PolicyCapabilities, RuleDefinition, RulePackage,
+    SourceIdentity, SystemCapabilities, UnavailableNodeConfig, definition_hash,
 };
 use uuid::Uuid;
 
 use super::super::RuleSystem;
 use super::prepare_install::PreparedRuleInput;
-use crate::{CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, RuleSystemConfig};
+use crate::{
+    CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, RuleErrorStage, RuleInput,
+    RuleSystemConfig, SourceId,
+};
 
 fn init_mock_keyring() {
     static INIT: Once = Once::new();
@@ -212,4 +216,187 @@ async fn current_control_candidate_passes_gate_and_installs_executes_and_replays
     );
     drop(system);
     let _ = fs::remove_dir_all(root);
+}
+
+async fn open_package_test_system() -> RuleSystem {
+    init_mock_keyring();
+    let root = std::env::temp_dir().join(format!("lj-rule-system-package-{}", Uuid::new_v4()));
+    fs::create_dir_all(&root).expect("create fixture root");
+    RuleSystem::open(
+        RuleSystemConfig::desktop(root.join("event-store.db"), root.join("artifacts"))
+            .with_keyring_service(format!("lanjing.rule-system.test.{}", Uuid::new_v4())),
+    )
+    .await
+    .expect("open RuleSystem")
+}
+
+fn package_bytes(definition: &RuleDefinition, version: &str) -> Vec<u8> {
+    serde_json::to_vec(&RulePackage::new(
+        definition.source_identity().clone(),
+        version,
+        definition.clone(),
+    ))
+    .expect("serialize Rule Package")
+}
+
+fn definition_with_unavailable_node() -> RuleDefinition {
+    let mut definition = current_control_definition();
+    definition.flow_mut().nodes[0].config = FlowNodeConfig::Unavailable(
+        UnavailableNodeConfig::new("custom_reader", serde_json::json!({ "selector": ".entry" })),
+    );
+    definition
+}
+
+fn package_input(definition: &RuleDefinition, version: &str) -> RuleInput {
+    RuleInput::Package {
+        source_json: String::from_utf8(package_bytes(definition, version)).expect("utf-8 package"),
+    }
+}
+
+fn has_error_capability_diagnostic(error: &crate::RuleError) -> bool {
+    error
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.code == "NODE_CAPABILITY_UNAVAILABLE")
+}
+
+#[tokio::test]
+async fn inspect_rule_package_reports_identity_version_and_canonical_definition_hash() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+
+    let inspection = system
+        .inspect_rule_package(&package_bytes(&definition, "v1"))
+        .expect("合法 package 必须通过 facade 校验");
+
+    assert_eq!(
+        inspection.source_id,
+        SourceId::from_identity("source:rule-system-control-test".to_string())
+    );
+    assert_eq!(inspection.version, "v1");
+    assert_eq!(
+        inspection.definition_hash,
+        definition_hash(&definition).expect("canonical Definition hash")
+    );
+    assert!(inspection.unavailable_nodes.is_empty());
+    assert!(
+        !inspection
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
+    );
+    drop(system);
+}
+
+#[tokio::test]
+async fn inspect_rule_package_flags_unavailable_capability_nodes_without_refusing_the_file() {
+    let system = open_package_test_system().await;
+    let definition = definition_with_unavailable_node();
+
+    let inspection = system
+        .inspect_rule_package(&package_bytes(&definition, "v2"))
+        .expect("含未安装能力的 package 仍须可读入、展示与保存");
+
+    assert_eq!(inspection.unavailable_nodes.len(), 1);
+    assert_eq!(
+        inspection.unavailable_nodes[0].node_id,
+        Uuid::from_u128(2_001)
+    );
+    assert_eq!(inspection.unavailable_nodes[0].kind, "custom_reader");
+    assert!(
+        inspection
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == "NODE_CAPABILITY_UNAVAILABLE")
+    );
+    drop(system);
+}
+
+#[tokio::test]
+async fn inspect_rule_package_reports_stable_error_for_incompatible_schema() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+    let mut value = serde_json::to_value(RulePackage::new(
+        definition.source_identity().clone(),
+        "v1",
+        definition,
+    ))
+    .expect("serialize Rule Package");
+    value["schema_version"] = serde_json::json!(2);
+
+    let error = system
+        .inspect_rule_package(&serde_json::to_vec(&value).expect("serialize fixture"))
+        .expect_err("不兼容 schema 必须被拒绝");
+
+    assert_eq!(error.stage, RuleErrorStage::Import);
+    assert_eq!(error.code, "RULE_CONTRACT_SCHEMA_UNSUPPORTED");
+    drop(system);
+}
+
+#[tokio::test]
+async fn inspect_rule_package_reports_stable_error_for_invalid_data() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+    let mut value = serde_json::to_value(RulePackage::new(
+        definition.source_identity().clone(),
+        "v1",
+        definition,
+    ))
+    .expect("serialize Rule Package");
+    value["definition"]["unknown"] = serde_json::json!(true);
+
+    let error = system
+        .inspect_rule_package(&serde_json::to_vec(&value).expect("serialize fixture"))
+        .expect_err("未知字段必须仍是非法数据");
+
+    assert_eq!(error.stage, RuleErrorStage::Import);
+    assert_eq!(error.code, "RULE_CONTRACT_INVALID_DATA");
+    drop(system);
+}
+
+#[tokio::test]
+async fn prepare_install_imports_valid_package_as_candidate() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+
+    let candidate = system
+        .prepare_install(package_input(&definition, "v1"))
+        .await
+        .expect("合法 package 必须可导入");
+
+    assert_eq!(
+        candidate.definition_hash,
+        definition_hash(&definition).expect("canonical Definition hash")
+    );
+    assert_eq!(candidate.profile.id.0, "source:rule-system-control-test");
+    assert!(
+        !candidate
+            .diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
+    );
+    drop(system);
+}
+
+#[tokio::test]
+async fn prepare_install_rejects_package_with_unavailable_capability() {
+    let system = open_package_test_system().await;
+    let definition = definition_with_unavailable_node();
+
+    let error = system
+        .prepare_install(package_input(&definition, "v2"))
+        .await
+        .expect_err("含未安装能力的 package 不得进入 candidate 或 Plan");
+
+    assert_eq!(error.stage, RuleErrorStage::Validation);
+    assert!(has_error_capability_diagnostic(&error));
+    // 拒绝不得留残余: 没有 installed source 就没有可 execute 的来源。
+    assert!(
+        system
+            .list_installed_sources()
+            .await
+            .expect("list installed sources")
+            .is_empty()
+    );
+    drop(system);
 }

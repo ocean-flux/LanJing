@@ -3,7 +3,8 @@ import { invoke, isTauri } from '@tauri-apps/api/core';
 export type CapabilityGrantPreset = 'none' | 'network_only';
 export type SourcePrepareRequest =
   | { kind: 'legado'; source_json: string }
-  | { kind: 'maccms_json'; url: string };
+  | { kind: 'maccms_json'; url: string }
+  | { kind: 'package'; source_json: string };
 export type StandardIntent =
   | 'Search'
   | 'Discover'

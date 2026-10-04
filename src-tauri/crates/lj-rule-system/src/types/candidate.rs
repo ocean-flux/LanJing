@@ -21,6 +21,11 @@ pub enum RuleInput {
         /// 原始 Legado 书源 JSON。
         source_json: String,
     },
+    /// 导入的 Rule Package JSON，只在 prepare 阶段短暂存在。
+    Package {
+        /// 原始 Rule Package JSON。
+        source_json: String,
+    },
 }
 
 impl fmt::Debug for RuleInput {
@@ -34,8 +39,39 @@ impl fmt::Debug for RuleInput {
                 .debug_struct("Legado")
                 .field("source_json_bytes", &source_json.len())
                 .finish(),
+            Self::Package { source_json } => formatter
+                .debug_struct("Package")
+                .field("source_json_bytes", &source_json.len())
+                .finish(),
         }
     }
+}
+
+/// 引用未安装能力的节点摘要。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UnavailableNodeSummary {
+    /// 节点稳定 ID。
+    pub node_id: Uuid,
+    /// 未安装能力的 wire kind。
+    pub kind: String,
+}
+
+/// 任意 Rule Package 文件的 ingest preflight 结果。
+///
+/// 只读取 metadata、稳定身份与 schema，并报告 canonical Definition hash、校验诊断与
+/// 引用未安装能力的节点；不 staging、不安装、不编译。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RulePackageInspection {
+    /// package 声明的来源身份。
+    pub source_id: SourceId,
+    /// package 声明的版本。
+    pub version: String,
+    /// canonical Definition BLAKE3。
+    pub definition_hash: String,
+    /// Definition 校验诊断。
+    pub diagnostics: Vec<Diagnostic>,
+    /// 引用未安装能力的节点；只可展示与保存，不可 validate/compile/execute。
+    pub unavailable_nodes: Vec<UnavailableNodeSummary>,
 }
 
 /// 只可作为 install token 传递的 opaque candidate ID。

@@ -5,10 +5,25 @@
 //! token、完整 URL query、Plan JSON 或 opaque payload。
 
 use lj_compiler::CompilerError;
+use lj_rule_model::SchemaReadError;
 use lj_runtime::{PlanRuntimeError, RuntimeFailureCode, effect_registry::EffectRegistryError};
 use lj_storage::StorageError;
 
 use crate::{RuleError, RuleErrorStage};
+
+/// 将 `lj-rule-model` ingest preflight 失败收敛为调用方可见的稳定错误。
+///
+/// message 固定，不包含 JSON 片段、字段值或包内容。
+pub(super) fn schema_read_error(error: &SchemaReadError, trace_id: &str) -> RuleError {
+    RuleError::new(
+        RuleErrorStage::Import,
+        error.code(),
+        "Rule Package 未通过规则合同校验",
+        trace_id.to_string(),
+        false,
+        Vec::new(),
+    )
+}
 
 /// 将 runtime 已持久化失败映射为调用方可见的安全错误。
 pub(super) fn runtime_failure_error(code: RuntimeFailureCode, trace_id: &str) -> RuleError {
