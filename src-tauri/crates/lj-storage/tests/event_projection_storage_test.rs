@@ -591,3 +591,50 @@ async fn candidate_summary_round_trips_safe_preview_and_rejects_insufficient_gra
     assert!(installed.grant.network);
     storage.shutdown().await.expect("writer shutdown");
 }
+
+#[tokio::test]
+async fn stale_candidate_baseline_is_rejected_and_installed_source_is_untouched() {
+    let temp = TempStore::new("candidate-stale");
+    let storage = temp.open().await;
+    let now = 1_750_000_000_000;
+
+    install_source(&storage, now).await;
+    let installed = storage
+        .get_installed_source("source:test")
+        .await
+        .expect("read installed source")
+        .expect("来源已由 harness 安装");
+
+    // updated_candidate 仍以 revision 0 为基线, 而来源已经在 revision 1 上。
+    let draft = updated_candidate(now + 10);
+    let candidate_id = draft.candidate_id;
+    storage
+        .stage_candidate(draft)
+        .await
+        .expect("stage stale candidate");
+
+    assert!(matches!(
+        storage
+            .install_candidate(InstallCandidateRequest {
+                candidate_id,
+                grant: PolicyCapabilities {
+                    network: true,
+                    ..PolicyCapabilities::default()
+                },
+                event_id: Uuid::new_v4(),
+                trace_id: "trace-stale-candidate".to_string(),
+                occurred_at_ms: now + 11,
+                correlation_id: None,
+            })
+            .await,
+        Err(StorageError::CandidateStale)
+    ));
+
+    let after = storage
+        .get_installed_source("source:test")
+        .await
+        .expect("read installed source after rejected install")
+        .expect("已安装来源必须仍然存在");
+    assert_eq!(after, installed, "过期 candidate 不得改动已安装来源");
+    storage.shutdown().await.expect("writer shutdown");
+}
