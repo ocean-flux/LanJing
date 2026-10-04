@@ -14,10 +14,10 @@ use lj_rule_model::{
     LOOP_YIELD_HANDLE, LoopControlRegion, LoopIterationLimit, MAX_LOOP_ITERATIONS,
     MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy, OutputTarget,
     PlanEdge, PlanForEachConfig, PlanNode, PlanNodeConfig, PlanPort, PortValueKind, PortValueType,
-    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SchemaReadError, SourceIdentity, SourceSpan,
-    TypedLiteral, canonical_json, canonical_json_deep_eq, canonical_number_cmp,
+    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, RulePackage, SchemaReadError, SourceIdentity,
+    SourceSpan, TypedLiteral, canonical_json, canonical_json_deep_eq, canonical_number_cmp,
     canonical_number_eq, definition_hash, execution_plan_hash, read_execution_plan,
-    read_rule_definition, typed_literal_matches_json,
+    read_rule_definition, read_rule_package, typed_literal_matches_json,
 };
 use serde_json::json;
 use uuid::Uuid;
@@ -322,6 +322,59 @@ fn seven_flow_node_configs_roundtrip_as_closed_tagged_current() {
     );
     let reread = read_rule_definition(&serde_json::to_vec(&wire).unwrap()).unwrap();
     assert_eq!(reread, definition);
+}
+
+#[test]
+fn rule_package_round_trip_keeps_one_contract_and_canonical_definition_hash() {
+    let definition = control_definition();
+    let package = RulePackage::new(
+        definition.source_identity().clone(),
+        "v1",
+        definition.clone(),
+    );
+
+    let bytes = serde_json::to_vec(&package).unwrap();
+    let reread = read_rule_package(&bytes).unwrap();
+
+    assert_eq!(reread, package);
+    assert_eq!(reread.source_identity(), definition.source_identity());
+    assert_eq!(reread.version(), "v1");
+    assert_eq!(
+        definition_hash(reread.definition()).unwrap(),
+        definition_hash(&definition).unwrap()
+    );
+    // 每个内置能力都走同一 Rule Contract 的 typed wire。
+    let kinds = |definition: &RuleDefinition| {
+        definition
+            .flow()
+            .nodes
+            .iter()
+            .map(FlowNode::kind)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(kinds(reread.definition()), kinds(&definition));
+    assert!(kinds(&definition).iter().all(Option::is_some));
+    // writer 幂等：读回再写出与首次写出逐字节一致。
+    assert_eq!(serde_json::to_vec(&reread).unwrap(), bytes);
+}
+
+#[test]
+fn execution_plan_reader_rejects_unknown_node_capability() {
+    let definition = control_definition();
+    let plan = control_plan(&definition);
+    let mut value = serde_json::to_value(&plan).unwrap();
+    value["nodes"][0]["config"] =
+        json!({ "kind": "custom_reader", "value": { "selector": ".entry" } });
+
+    let error = read_execution_plan(&serde_json::to_vec(&value).unwrap()).unwrap_err();
+    assert_eq!(error.code(), "RULE_CONTRACT_INVALID_DATA");
+    assert!(matches!(
+        error,
+        SchemaReadError::InvalidData {
+            contract: lj_rule_model::SchemaContract::ExecutionPlan,
+            ..
+        }
+    ));
 }
 
 #[test]
