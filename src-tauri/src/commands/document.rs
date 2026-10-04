@@ -15,6 +15,13 @@ use tauri::State;
 
 use super::state::AppState;
 
+/// 取回全部规则节点能力声明：编辑器字段、port、默认值与诊断入口的唯一来源。
+#[tauri::command]
+#[must_use]
+pub fn list_rule_node_descriptors() -> lj_rule_system::NodeDescriptorSet {
+    lj_rule_system::node_descriptor_set()
+}
+
 /// 创建 blank/template native rule document。
 #[tauri::command]
 pub(crate) async fn create_native_rule_document(

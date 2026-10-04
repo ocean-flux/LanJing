@@ -4,6 +4,7 @@
 //! `Policy` DTO，以及节点配置 IR。不引入 ORM、Tokio、Tauri、HTTP/QuickJS 实现。
 
 pub mod definition;
+pub mod descriptor;
 pub mod diagnostic;
 pub mod endpoint;
 pub mod error;

@@ -30,6 +30,7 @@ macro_rules! lanjing_commands {
                 list_media_units => commands::query::list_media_units,
                 list_media_assets => commands::query::list_media_assets,
         create_native_rule_document => commands::document::create_native_rule_document,
+        list_rule_node_descriptors => commands::document::list_rule_node_descriptors,
         save_native_rule_document => commands::document::save_native_rule_document,
         validate_native_rule_document => commands::document::validate_native_rule_document,
         list_native_rule_documents => commands::document::list_native_rule_documents,
@@ -139,6 +140,7 @@ mod tests {
             "list_media_units",
             "list_media_assets",
             "create_native_rule_document",
+            "list_rule_node_descriptors",
             "save_native_rule_document",
             "validate_native_rule_document",
             "list_native_rule_documents",
@@ -159,7 +161,8 @@ mod tests {
             EXPECTED.len(),
             "Tauri command 注册不得重复"
         );
-        assert_eq!(EXPECTED.len(), 25, "facade 命令注册必须恰为 25 项");
+        // #61 新增 list_rule_node_descriptors：descriptor 声明经 IPC 暴露给编辑器。
+        assert_eq!(EXPECTED.len(), 26, "facade 命令注册必须恰为 26 项");
         assert!(
             REGISTERED_COMMAND_NAMES
                 .iter()

@@ -9,6 +9,8 @@ pub(crate) mod system;
 mod types;
 
 pub use error::{RuleError, RuleErrorStage};
+// 节点能力声明由 façade 再导出，与其它 rule contract 类型一致：根 package 不直接依赖 lj-rule-model。
+pub use lj_rule_model::descriptor::{NodeDescriptorSet, node_descriptor_set};
 pub use system::RuleSystem;
 pub use types::{
     CandidateId, CapabilityGrant, CreateMode, CreateNativeRuleDocumentRequest,

@@ -15,10 +15,9 @@ use lj_rule_model::definition::{
 use lj_rule_model::literal::TypedLiteral;
 use lj_rule_model::plan::{
     CONDITION_INPUT_HANDLE, ControlRegion, EffectDeclaration, EffectKind, ExecutionPlan,
-    ExecutionPlanParts, IntentEntry, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE,
-    LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopControlRegion,
-    MERGE_OUTPUT_HANDLE, PlanEdge, PlanForEachConfig, PlanNode, PlanNodeConfig, PlanPort,
-    PortValueKind, PortValueType,
+    ExecutionPlanParts, IntentEntry, LINEAR_INPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE,
+    LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopControlRegion, MERGE_OUTPUT_HANDLE, PlanEdge,
+    PlanForEachConfig, PlanNode, PlanNodeConfig, PlanPort, PortValueKind, PortValueType,
 };
 use lj_rule_model::{Diagnostic, DiagnosticSeverity, definition_hash};
 use uuid::Uuid;

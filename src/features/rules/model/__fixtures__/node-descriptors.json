@@ -1,0 +1,703 @@
+{
+  "descriptors": [
+    {
+      "kind": "http",
+      "label_key": "rules_node_inspector_type_http",
+      "description_key": "rules_node_desc_http",
+      "icon": "broadcast",
+      "inputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "input"
+          },
+          "value": {
+            "source": "union",
+            "kinds": ["intent_input", "raw", "json", "loop_binding"]
+          },
+          "role": "data",
+          "side": "left",
+          "label": {
+            "key": "input",
+            "literal": true,
+            "numbered": false
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "output"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "http_response"
+          },
+          "role": "data",
+          "side": "right",
+          "label": {
+            "key": "rules_port_label_http_response",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "fields": [
+        {
+          "name": "method",
+          "label_key": "rules_node_inspector_field_method",
+          "editor": {
+            "editor": "select",
+            "options": [
+              {
+                "value": "Get",
+                "label": "GET"
+              },
+              {
+                "value": "Post",
+                "label": "POST"
+              }
+            ]
+          },
+          "required": true
+        },
+        {
+          "name": "url",
+          "label_key": "rules_node_inspector_field_url_template",
+          "editor": {
+            "editor": "text"
+          },
+          "required": true
+        },
+        {
+          "name": "expected_type",
+          "label_key": "rules_node_inspector_field_expected_type",
+          "editor": {
+            "editor": "select",
+            "options": [
+              {
+                "value": "Html",
+                "label": "HTML"
+              },
+              {
+                "value": "Xml",
+                "label": "XML"
+              },
+              {
+                "value": "Json",
+                "label": "JSON"
+              }
+            ]
+          },
+          "required": true
+        },
+        {
+          "name": "charset",
+          "label_key": "rules_node_inspector_field_charset",
+          "editor": {
+            "editor": "text"
+          },
+          "required": true
+        },
+        {
+          "name": "body",
+          "label_key": "rules_node_inspector_field_body",
+          "editor": {
+            "editor": "code"
+          },
+          "required": true
+        },
+        {
+          "name": "headers",
+          "label_key": "rules_node_inspector_field_headers",
+          "editor": {
+            "editor": "pair_list"
+          },
+          "required": true
+        }
+      ],
+      "default_config": {
+        "body": null,
+        "charset": null,
+        "expected_type": "Html",
+        "headers": {},
+        "method": "Get",
+        "url": ""
+      }
+    },
+    {
+      "kind": "js",
+      "label_key": "rules_node_inspector_type_js",
+      "description_key": "rules_node_desc_js",
+      "icon": "code",
+      "inputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "input"
+          },
+          "value": {
+            "source": "union",
+            "kinds": ["intent_input", "raw", "json", "loop_binding"]
+          },
+          "role": "data",
+          "side": "left",
+          "label": {
+            "key": "rules_port_label_js_input",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "output"
+          },
+          "value": {
+            "source": "field_variant",
+            "field": "output",
+            "variants": [
+              {
+                "value": "json",
+                "kind": "json"
+              },
+              {
+                "value": "raw",
+                "kind": "raw"
+              }
+            ]
+          },
+          "role": "data",
+          "side": "right",
+          "label": {
+            "key": "rules_port_label_json_output",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "fields": [
+        {
+          "name": "output",
+          "label_key": "rules_node_inspector_field_output",
+          "editor": {
+            "editor": "select",
+            "options": [
+              {
+                "value": "json",
+                "label": "JSON"
+              },
+              {
+                "value": "raw",
+                "label": "RAW"
+              }
+            ]
+          },
+          "required": true
+        },
+        {
+          "name": "code",
+          "label_key": "rules_node_inspector_field_script",
+          "editor": {
+            "editor": "code"
+          },
+          "required": true
+        }
+      ],
+      "default_config": {
+        "code": "",
+        "output": "json"
+      }
+    },
+    {
+      "kind": "extract",
+      "label_key": "rules_node_inspector_type_extract",
+      "description_key": "rules_node_desc_extract",
+      "icon": "tree-structure",
+      "inputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "input"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "http_response"
+          },
+          "role": "data",
+          "side": "left",
+          "label": {
+            "key": "rules_port_label_http_response",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "output"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "data",
+          "side": "right",
+          "label": {
+            "key": "rules_port_label_extract_result",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "fields": [
+        {
+          "name": "expected_type",
+          "label_key": "rules_node_inspector_field_expected_type",
+          "editor": {
+            "editor": "select",
+            "options": [
+              {
+                "value": "Html",
+                "label": "HTML"
+              },
+              {
+                "value": "Xml",
+                "label": "XML"
+              },
+              {
+                "value": "Json",
+                "label": "JSON"
+              }
+            ]
+          },
+          "required": true
+        },
+        {
+          "name": "output_target",
+          "label_key": "rules_node_inspector_field_output_target",
+          "editor": {
+            "editor": "select",
+            "options": [
+              {
+                "value": "Media",
+                "label": "Media"
+              },
+              {
+                "value": "Units",
+                "label": "Units"
+              },
+              {
+                "value": "Asset",
+                "label": "Asset"
+              }
+            ]
+          },
+          "required": true
+        },
+        {
+          "name": "rules",
+          "label_key": "rules_node_inspector_field_rules_hint",
+          "editor": {
+            "editor": "specialized",
+            "editor_kind": "extract_rules"
+          },
+          "required": true
+        }
+      ],
+      "default_config": {
+        "expected_type": "Html",
+        "field_rules": {},
+        "output_target": "Media",
+        "rules": []
+      }
+    },
+    {
+      "kind": "mapper",
+      "label_key": "rules_node_inspector_type_mapper",
+      "description_key": "rules_node_desc_mapper",
+      "icon": "translate",
+      "inputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "input"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "data",
+          "side": "left",
+          "label": {
+            "key": "rules_port_label_json_input",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "output"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "delta"
+          },
+          "role": "data",
+          "side": "right",
+          "label": {
+            "key": "rules_port_label_delta_output",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "fields": [
+        {
+          "name": "output",
+          "label_key": "rules_node_inspector_field_output",
+          "editor": {
+            "editor": "select",
+            "options": [
+              {
+                "value": "items",
+                "label": "Items"
+              },
+              {
+                "value": "discovery",
+                "label": "Discovery"
+              },
+              {
+                "value": "units",
+                "label": "Units"
+              },
+              {
+                "value": "assets",
+                "label": "Assets"
+              }
+            ]
+          },
+          "required": true
+        },
+        {
+          "name": "identity_fields",
+          "label_key": "rules_node_inspector_field_identity_fields",
+          "editor": {
+            "editor": "string_list"
+          },
+          "required": true
+        }
+      ],
+      "default_config": {
+        "identity_fields": [],
+        "output": "items"
+      }
+    },
+    {
+      "kind": "merge",
+      "label_key": "rules_node_inspector_type_merge",
+      "description_key": "rules_node_desc_merge",
+      "icon": "git-merge",
+      "inputs": [
+        {
+          "handle": {
+            "source": "item_field",
+            "field": "inputs",
+            "handle_field": "handle"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "data",
+          "side": "left",
+          "label": {
+            "key": "rules_port_label_merge_input",
+            "literal": false,
+            "numbered": true
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "output"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "data",
+          "side": "right",
+          "label": {
+            "key": "rules_port_label_merge_result",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "fields": [
+        {
+          "name": "strategy",
+          "label_key": "rules_node_inspector_field_strategy",
+          "editor": {
+            "editor": "select",
+            "options": [
+              {
+                "value": "single_active",
+                "label": "Single active"
+              },
+              {
+                "value": "collect_array",
+                "label": "Collect array"
+              },
+              {
+                "value": "concat_arrays",
+                "label": "Concat arrays"
+              },
+              {
+                "value": "overlay_objects",
+                "label": "Overlay objects"
+              }
+            ]
+          },
+          "required": true
+        },
+        {
+          "name": "inputs",
+          "label_key": "rules_node_inspector_field_inputs",
+          "editor": {
+            "editor": "specialized",
+            "editor_kind": "merge_inputs"
+          },
+          "required": true
+        }
+      ],
+      "default_config": {
+        "inputs": [
+          {
+            "activation": "required",
+            "handle": "in:0",
+            "input_id": "input_1",
+            "order": 0
+          },
+          {
+            "activation": "optional",
+            "handle": "in:1",
+            "input_id": "input_2",
+            "order": 1
+          }
+        ],
+        "strategy": "single_active"
+      }
+    },
+    {
+      "kind": "condition",
+      "label_key": "rules_node_inspector_type_condition",
+      "description_key": "rules_node_desc_condition",
+      "icon": "compass",
+      "inputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "input"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "data",
+          "side": "left",
+          "label": {
+            "key": "rules_port_label_condition_input",
+            "literal": false,
+            "numbered": false
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "handle": {
+            "source": "items",
+            "field": "branches"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "control",
+          "side": "right",
+          "label": {
+            "key": "rules_port_label_condition_branch",
+            "literal": false,
+            "numbered": true
+          }
+        }
+      ],
+      "fields": [
+        {
+          "name": "branches",
+          "label_key": "rules_node_inspector_field_branches",
+          "editor": {
+            "editor": "string_list"
+          },
+          "required": true
+        },
+        {
+          "name": "expression",
+          "label_key": "rules_node_inspector_field_expression",
+          "editor": {
+            "editor": "specialized",
+            "editor_kind": "condition_expression"
+          },
+          "required": true
+        }
+      ],
+      "default_config": {
+        "branches": ["true", "false"],
+        "expression": {
+          "false_branch": "false",
+          "mode": "typed",
+          "predicate": {
+            "operator": "exists",
+            "pointer": ""
+          },
+          "true_branch": "true"
+        }
+      }
+    },
+    {
+      "kind": "loop",
+      "label_key": "rules_node_inspector_type_loop",
+      "description_key": "rules_node_desc_loop",
+      "icon": "arrow-counter-clockwise",
+      "inputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "collection"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "data",
+          "side": "left",
+          "label": {
+            "key": "collection",
+            "literal": true,
+            "numbered": false
+          }
+        },
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "yield"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "control",
+          "side": "top",
+          "label": {
+            "key": "yield(value)",
+            "literal": true,
+            "numbered": false
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "body"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "loop_binding"
+          },
+          "role": "binding",
+          "side": "bottom",
+          "label": {
+            "key": "body(item,index)",
+            "literal": true,
+            "numbered": false
+          }
+        },
+        {
+          "handle": {
+            "source": "fixed",
+            "handle": "done"
+          },
+          "value": {
+            "source": "kind",
+            "kind": "json"
+          },
+          "role": "control",
+          "side": "right",
+          "label": {
+            "key": "done(collected)",
+            "literal": true,
+            "numbered": false
+          }
+        }
+      ],
+      "fields": [
+        {
+          "name": "collection",
+          "label_key": "rules_node_inspector_field_collection",
+          "editor": {
+            "editor": "specialized",
+            "editor_kind": "loop_collection"
+          },
+          "required": true
+        },
+        {
+          "name": "item_binding",
+          "label_key": "rules_node_inspector_field_item_binding",
+          "editor": {
+            "editor": "text"
+          },
+          "required": true
+        },
+        {
+          "name": "index_binding",
+          "label_key": "rules_node_inspector_field_index_binding",
+          "editor": {
+            "editor": "text"
+          },
+          "required": true
+        },
+        {
+          "name": "max_iterations",
+          "label_key": "rules_node_inspector_field_max_iterations",
+          "editor": {
+            "editor": "number",
+            "min": 1,
+            "max": 256
+          },
+          "required": true
+        }
+      ],
+      "default_config": {
+        "collection": {
+          "mode": "typed",
+          "pointer": ""
+        },
+        "index_binding": "index",
+        "item_binding": "item",
+        "max_iterations": 64
+      }
+    }
+  ]
+}
