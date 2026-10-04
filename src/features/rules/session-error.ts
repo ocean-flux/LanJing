@@ -27,5 +27,8 @@ export function sessionErrorText(m: Messages, error: unknown): string {
     case 'document_not_open': {
       return m.rules_error_document_not_open();
     }
+    case 'save_failed': {
+      return m.rules_error_save_failed();
+    }
   }
 }

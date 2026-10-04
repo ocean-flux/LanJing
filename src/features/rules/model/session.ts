@@ -35,6 +35,7 @@ import { canonicalConfig } from './node-defaults';
 import {
   createNativeRuleDocument,
   getNativeRuleDocument,
+  isRuleErrorWire,
   saveNativeRuleDocument,
   validateNativeRuleDocument,
   type CreateMode,
@@ -57,17 +58,51 @@ export type SessionErrorCode =
   | 'document_semantic_missing'
   | 'document_semantic_unsaved'
   | 'document_validation_required'
-  | 'document_not_open';
+  | 'document_not_open'
+  | 'save_failed';
 
-/** 携带稳定 code 的 session 错误。 */
+/**
+ * 携带稳定 code 的 session 错误。
+ *
+ * `detail` 只用作 `Error.message`（日志与断言）；面向用户的文案一律由 code 决定，
+ * 因此不会因后端 message 变动而破坏稳定性。
+ */
 export class SessionError extends Error {
   readonly code: SessionErrorCode;
 
-  constructor(code: SessionErrorCode) {
-    super(code);
+  constructor(code: SessionErrorCode, detail?: string) {
+    super(detail ?? code);
     this.name = 'SessionError';
     this.code = code;
   }
+}
+
+/**
+ * 保存失败 → 既有诊断表面的稳定诊断。
+ *
+ * 后端 `RuleError` 自带稳定 code 与已本地化 message，有 diagnostics 时原样透传；
+ * 没有时用 code 合成一条。非 IPC 错误（网络/JS 异常）退化为合成为 `SAVE_FAILED`，
+ * 仍然是稳定 code，而不是把任意对象当作后端错误解释。
+ */
+function saveFailureDiagnostics(error: unknown): InstallDiagnostic[] {
+  if (isRuleErrorWire(error)) {
+    return error.diagnostics.length > 0
+      ? error.diagnostics
+      : [{ code: error.code, severity: 'error', message: error.message }];
+  }
+  return [
+    {
+      code: 'SAVE_FAILED',
+      severity: 'error',
+      message: error instanceof Error ? error.message : String(error),
+    },
+  ];
+}
+
+/** 保存失败的用户可见摘要；展示文案由 SessionError code 决定。 */
+function saveFailureDetail(error: unknown): string {
+  if (isRuleErrorWire(error)) return error.message;
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** 从详情快照重建本地 state；缺少语义快照时返回稳定错误。 */
@@ -313,8 +348,12 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
           }
           return outcome;
         } catch (error) {
-          step({ kind: 'saveFailure', epoch: inFlight.epoch });
-          throw error;
+          step({
+            kind: 'saveFailure',
+            epoch: inFlight.epoch,
+            diagnostics: saveFailureDiagnostics(error),
+          });
+          throw new SessionError('save_failed', saveFailureDetail(error));
         }
       },
 

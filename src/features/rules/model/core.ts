@@ -291,7 +291,7 @@ export type AuthoringAction =
   | { kind: 'credentialClear'; nodeId: string; jsonPointer: string; logicalName: string }
   | { kind: 'saveRequest' }
   | { kind: 'saveResponse'; epoch: number; outcome: SaveNativeRuleDocumentOutcome }
-  | { kind: 'saveFailure'; epoch: number }
+  | { kind: 'saveFailure'; epoch: number; diagnostics: InstallDiagnostic[] }
   | { kind: 'replaceSemanticSnapshot'; definition: RuleDefinition; revision: number }
   | { kind: 'replaceLayoutSnapshot'; layout: unknown; revision: number }
   | { kind: 'rebaseSemantic'; revision: number }
@@ -1211,11 +1211,29 @@ function saveResponse(
   return { ...next, epoch: next.epoch + 1, inFlightSave: null };
 }
 
-/** 保存调用失败：清理 in-flight，保留 dirty，且不恢复一次性 credential 明文。 */
-function saveFailure(state: NativeRuleAuthoringState, epoch: number): NativeRuleAuthoringState {
+/**
+ * 保存调用失败：清理 in-flight，保留 dirty，且不恢复一次性 credential 明文。
+ *
+ * 后端 RuleError 的稳定诊断同时写进诊断表面；保存失败不代表校验结论改变，
+ * 所以只改 status/diagnostics，保留上一轮的 revision/hash 身份。
+ */
+function saveFailure(
+  state: NativeRuleAuthoringState,
+  epoch: number,
+  diagnostics: InstallDiagnostic[],
+): NativeRuleAuthoringState {
   const inFlight = state.inFlightSave;
   if (!inFlight || inFlight.epoch !== epoch || state.epoch !== epoch) return state;
-  return { ...state, epoch: state.epoch + 1, inFlightSave: null };
+  return {
+    ...state,
+    epoch: state.epoch + 1,
+    inFlightSave: null,
+    validation: {
+      ...state.validation,
+      status: 'error',
+      diagnostics: cloneJson(diagnostics),
+    },
+  };
 }
 
 /** 不可变 reducer。 */
@@ -1484,7 +1502,7 @@ export function reduce(
       return saveResponse(state, action.epoch, action.outcome);
     }
     case 'saveFailure': {
-      return saveFailure(state, action.epoch);
+      return saveFailure(state, action.epoch, action.diagnostics);
     }
     case 'replaceSemanticSnapshot': {
       return {

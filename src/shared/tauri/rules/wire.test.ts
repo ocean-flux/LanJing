@@ -10,6 +10,7 @@ import {
   deleteNativeRuleDocument,
   getNativeRuleDocument,
   getNativeRuleProvenance,
+  isRuleErrorWire,
   listNativeRuleDocuments,
   renameNativeRuleDocument,
   saveNativeRuleDocument,
@@ -368,3 +369,32 @@ function makeSummary(): NativeRuleDocumentSummary {
     updated_at_ms: 1_700_000_000_000,
   };
 }
+
+describe('isRuleErrorWire', () => {
+  const ruleError = {
+    stage: 'persistence',
+    code: 'version_conflict',
+    message: '文档已被其他写入者更新',
+    trace_id: 'trace:1',
+    retryable: true,
+    diagnostics: [
+      {
+        code: 'NODE_CAPABILITY_UNAVAILABLE',
+        severity: 'error',
+        message: '节点引用了未安装的规则能力',
+      },
+    ],
+  };
+
+  it('接受 RuleError serde 形状', () => {
+    expect(isRuleErrorWire(ruleError)).toBe(true);
+  });
+
+  it('拒绝非 IPC 错误与残缺对象', () => {
+    expect(isRuleErrorWire(new Error('boom'))).toBe(false);
+    expect(isRuleErrorWire(null)).toBe(false);
+    expect(isRuleErrorWire('version_conflict')).toBe(false);
+    expect(isRuleErrorWire({ code: 'version_conflict' })).toBe(false);
+    expect(isRuleErrorWire({ ...ruleError, diagnostics: 'none' })).toBe(false);
+  });
+});

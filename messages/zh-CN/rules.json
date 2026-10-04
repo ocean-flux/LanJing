@@ -232,6 +232,7 @@
   "rules_error_document_not_found": "规则文档不存在或已被删除。",
   "rules_error_semantic_missing": "文档还没有语义定义，请先保存。",
   "rules_error_document_not_open": "尚未打开规则文档。",
+  "rules_error_save_failed": "保存规则文档失败，草稿已保留。",
   "rules_validated": "校验完成",
   "rules_saved": "已保存",
   "rules_inspector_title": "检查器",

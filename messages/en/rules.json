@@ -232,6 +232,7 @@
   "rules_error_document_not_found": "The rule document does not exist or was deleted.",
   "rules_error_semantic_missing": "The document has no semantic definition yet. Save it first.",
   "rules_error_document_not_open": "No rule document is open.",
+  "rules_error_save_failed": "Saving the rule document failed. Your draft is kept.",
   "rules_validated": "Validation finished",
   "rules_saved": "Saved",
   "rules_inspector_title": "Inspector",

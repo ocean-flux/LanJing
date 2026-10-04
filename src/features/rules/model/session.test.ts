@@ -21,6 +21,7 @@ import type {
   NativeRuleDocumentDetail,
   NativeRuleDocumentSummary,
   RuleDefinition,
+  RuleErrorWire,
   SaveNativeRuleDocumentOutcome,
   SaveNativeRuleDocumentRequest,
 } from '@/shared/tauri/rules';
@@ -467,6 +468,102 @@ describe('createRuleEditorSession', () => {
     const outcome = await state().save();
     expect(outcome.semantic?.activation).toBe('draft');
     expect(state().effectiveSemanticRevision).toBe(1);
+  });
+
+  // -----------------------------------------------------------------------
+  // 保存失败：稳定诊断 + 保留 Effective Rule Revision
+  // -----------------------------------------------------------------------
+
+  it('保存失败产生稳定诊断，保留 Effective Rule Revision 与草稿', async () => {
+    const session = createRuleEditorSession();
+    const state = () => session.getState();
+    invoke.mockResolvedValueOnce(
+      mockDetail({
+        summary: mockSummary({ semantic_revision: 1, layout_revision: 1 }),
+        effective_semantic_revision: 1,
+      }),
+    );
+    await state().loadDocument('doc:1');
+    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://draft.test' });
+
+    invoke.mockClear();
+    invoke.mockRejectedValueOnce({
+      stage: 'persistence',
+      code: 'version_conflict',
+      message: '文档已被其他写入者更新',
+      trace_id: 'trace:1',
+      retryable: true,
+      diagnostics: [],
+    } satisfies RuleErrorWire);
+
+    // 稳定 code：session 只抛 SessionError('save_failed')，message 保留后端安全摘要。
+    await expect(state().save()).rejects.toMatchObject({ code: 'save_failed' });
+
+    // (a) 稳定诊断出现在既有诊断表面（DiagnosticList 的输入）。
+    expect(state().core.validation.status).toBe('error');
+    expect(state().core.validation.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'version_conflict',
+        severity: 'error',
+        message: '文档已被其他写入者更新',
+      }),
+    ]);
+
+    // (b) Effective Rule Revision / savedSemanticRevision 不被替换。
+    expect(state().effectiveSemanticRevision).toBe(1);
+    expect(state().core.savedSemanticRevision).toBe(1);
+
+    // (c) 草稿仍在且仍可编辑。
+    expect(state().core.dirty.semantic).toBe(true);
+    expect(selectIsSaving(state())).toBe(false);
+    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://draft-2.test' });
+    expect(state().core.definition.base_url).toBe('https://draft-2.test');
+  });
+
+  it('保存失败透传后端 compiler 诊断而不丢弃它们', async () => {
+    const session = createRuleEditorSession();
+    const state = () => session.getState();
+    invoke.mockResolvedValueOnce(mockDetail());
+    await state().loadDocument('doc:1');
+    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://draft.test' });
+
+    invoke.mockClear();
+    invoke.mockRejectedValueOnce({
+      stage: 'compile',
+      code: 'compile_failed',
+      message: 'Definition 无法编译为 immutable Plan',
+      trace_id: 'trace:2',
+      retryable: false,
+      diagnostics: [
+        {
+          code: 'NODE_CAPABILITY_UNAVAILABLE',
+          severity: 'error',
+          message: '节点引用了未安装的规则能力 custom_reader',
+          span: { path: '/flow/nodes/node:custom/config', start: 0, end: 0 },
+        },
+      ],
+    } satisfies RuleErrorWire);
+
+    await expect(state().save()).rejects.toThrow('Definition 无法编译为 immutable Plan');
+    expect(state().core.validation.diagnostics).toEqual([
+      expect.objectContaining({ code: 'NODE_CAPABILITY_UNAVAILABLE', severity: 'error' }),
+    ]);
+  });
+
+  it('非 IPC 错误也产生稳定 SAVE_FAILED 诊断', async () => {
+    const session = createRuleEditorSession();
+    const state = () => session.getState();
+    invoke.mockResolvedValueOnce(mockDetail());
+    await state().loadDocument('doc:1');
+    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://draft.test' });
+
+    invoke.mockClear();
+    invoke.mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(state().save()).rejects.toThrow('storage unavailable');
+    expect(state().core.validation.diagnostics).toEqual([
+      expect.objectContaining({ code: 'SAVE_FAILED', severity: 'error' }),
+    ]);
   });
 
   describe('dirty分域', () => {

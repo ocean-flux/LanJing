@@ -300,6 +300,58 @@ export interface NativeRuleProvenanceView {
 }
 
 // ---------------------------------------------------------------------------
+// 错误合同（lj-rule-system::RuleError serde 镜像）
+// ---------------------------------------------------------------------------
+
+/** 规则生命周期失败所属阶段（RuleErrorStage）。 */
+export type RuleErrorStage =
+  | 'import'
+  | 'validation'
+  | 'compile'
+  | 'candidate'
+  | 'install'
+  | 'capability'
+  | 'execution'
+  | 'effect'
+  | 'persistence'
+  | 'replay'
+  | 'cancelled'
+  | 'internal';
+
+/**
+ * 规则生命周期的安全错误（RuleError）。
+ *
+ * Tauri command 的 reject 值就是这个形状而不是 `Error` 实例；`diagnostics` 是
+ * compiler 已本地化的稳定 code + message，展示层直接消费，不重新解释。
+ */
+export interface RuleErrorWire {
+  stage: RuleErrorStage;
+  code: string;
+  message: string;
+  trace_id: string;
+  retryable: boolean;
+  diagnostics: InstallDiagnostic[];
+}
+
+/**
+ * 判断被 reject 的值是否满足 RuleError 合同。
+ *
+ * 只做形状校验：非 IPC 错误（网络异常、JS 异常）必须返回 false，让调用方
+ * 合成自己的稳定 code，而不是把任意对象当成后端错误解释。
+ */
+export function isRuleErrorWire(value: unknown): value is RuleErrorWire {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<RuleErrorWire>;
+  return (
+    typeof candidate.stage === 'string' &&
+    typeof candidate.code === 'string' &&
+    typeof candidate.message === 'string' &&
+    typeof candidate.retryable === 'boolean' &&
+    Array.isArray(candidate.diagnostics)
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Invoke wrapper（11 个，与 Tauri command 名一致；统一 `{ request }` wrapper）
 // ---------------------------------------------------------------------------
 
