@@ -197,6 +197,14 @@ export type PreviewRunRequest = {
   input: IntentInput;
 };
 
+/**
+ * 重放请求：在预览请求上指一段历史 execution。
+ *
+ * 重放的目标来源、意图与输入必须与那次历史一致，否则后端会用稳定的 replay 专属 code
+ * 如实拒绝；拒绝不会被前端改写成一次实时请求。
+ */
+export type ReplayRunRequest = PreviewRunRequest & { archivedExecutionId: ExecutionId };
+
 export type SessionActions = {
   // 文档生命周期
   loadDocument: (documentId: string) => Promise<void>;
@@ -222,6 +230,12 @@ export type SessionActions = {
    * 不会丢掉 `started` 与启动阶段的诊断。
    */
   startPreviewRun: (request: PreviewRunRequest) => Promise<void>;
+  /**
+   * 重放一段历史 execution。
+   *
+   * 重放只读固定历史 archive：失败就如实失败，任何路径都不回退成 live 请求。
+   */
+  startReplayRun: (request: ReplayRunRequest) => Promise<void>;
   /** 请求取消进行中的预览；终态由 runtime 的 `cancelled` 事件落定。 */
   cancelPreviewRun: () => Promise<void>;
 
@@ -313,6 +327,66 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
     const stopPreviewListener = () => {
       previewUnlisten?.();
       previewUnlisten = null;
+    };
+
+    /**
+     * 跑一次预览：live 与 replay 共用同一条折叠路径，只有请求里的 mode 不同。
+     *
+     * 请求本身失败（订阅不上、启动被拒）只落到运行诊断，不向调用方抛错 —— 诊断栏
+     * 就是失败的去处，抛出去只会让调用方再报一次同样的事。
+     */
+    const runPreview = async (
+      request: PreviewRunRequest,
+      replayOf: ExecutionId | null,
+    ): Promise<void> => {
+      // 同一时刻只跑一次预览：上一次订阅先收掉，避免两条流折进同一个状态。
+      stopPreviewListener();
+      set({ execution: beginExecutionRun(replayOf) });
+
+      // 订阅先于启动：execute 返回前到达的事件先缓冲，拿到 id 后再补叠。
+      const buffered: ExecutionEvent[] = [];
+      let activeExecutionId: ExecutionId | null = null;
+      const fold = (event: ExecutionEvent) => {
+        const current = get().execution;
+        const next = reduceExecutionRun(current, event);
+        if (next !== current) set({ execution: next });
+        if (isExecutionRunFinished(next)) stopPreviewListener();
+      };
+      try {
+        previewUnlisten = await listenRuleExecutionEvents((event) => {
+          if (activeExecutionId === null) {
+            buffered.push(event);
+          } else if (event.execution_id === activeExecutionId) {
+            fold(event);
+          }
+        });
+      } catch (error) {
+        // 订阅不上就不能老老实实报运行诊断；如实失败，不瓣一个看不到结果的运行。
+        set({ execution: failExecutionRun(get().execution, error) });
+        return;
+      }
+
+      let executionId: ExecutionId;
+      try {
+        const response = await executeRule({
+          source_id: request.sourceId,
+          intent: request.intent,
+          input: request.input,
+          mode: replayOf === null ? { mode: 'live' } : { mode: 'replay', execution_id: replayOf },
+        });
+        executionId = response.execution_id;
+      } catch (error) {
+        // 启动就失败（来源未安装、重放基线不可用、IPC 异常）：走同一诊断表面。
+        stopPreviewListener();
+        set({ execution: failExecutionRun(get().execution, error) });
+        return;
+      }
+
+      activeExecutionId = executionId;
+      set({ execution: attachExecutionId(get().execution, executionId) });
+      for (const event of buffered) {
+        if (event.execution_id === executionId) fold(event);
+      }
     };
 
     return {
@@ -450,56 +524,12 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
         }
       },
 
-      async startPreviewRun({ sourceId, intent, input }) {
-        // 同一时刻只跑一次预览：上一次订阅先收掉，避免两条流折进同一个状态。
-        stopPreviewListener();
-        set({ execution: beginExecutionRun() });
+      async startPreviewRun(request) {
+        await runPreview(request, null);
+      },
 
-        // 订阅先于启动：execute 返回前到达的事件先缓冲，拿到 id 后再补叠。
-        const buffered: ExecutionEvent[] = [];
-        let activeExecutionId: ExecutionId | null = null;
-        const fold = (event: ExecutionEvent) => {
-          const current = get().execution;
-          const next = reduceExecutionRun(current, event);
-          if (next !== current) set({ execution: next });
-          if (isExecutionRunFinished(next)) stopPreviewListener();
-        };
-        try {
-          previewUnlisten = await listenRuleExecutionEvents((event) => {
-            if (activeExecutionId === null) {
-              buffered.push(event);
-            } else if (event.execution_id === activeExecutionId) {
-              fold(event);
-            }
-          });
-        } catch (error) {
-          // 订阅不上就不能老老实实报运行诊断；如实失败，不瓣一个看不到结果的运行。
-          set({ execution: failExecutionRun(get().execution, error) });
-          return;
-        }
-
-        let executionId: ExecutionId;
-        try {
-          const response = await executeRule({
-            source_id: sourceId,
-            intent,
-            input,
-            mode: { mode: 'live' },
-          });
-          executionId = response.execution_id;
-        } catch (error) {
-          // 启动就失败（来源未安装、意图不支持、IPC 异常）：走同一诊断表面，不抛出去
-          // 让调用方再报一次。
-          stopPreviewListener();
-          set({ execution: failExecutionRun(get().execution, error) });
-          return;
-        }
-
-        activeExecutionId = executionId;
-        set({ execution: attachExecutionId(get().execution, executionId) });
-        for (const event of buffered) {
-          if (event.execution_id === executionId) fold(event);
-        }
+      async startReplayRun({ archivedExecutionId, ...request }) {
+        await runPreview(request, archivedExecutionId);
       },
 
       async cancelPreviewRun() {
@@ -674,4 +704,16 @@ export function selectCanRedo(state: SessionState): boolean {
 /** 预览运行态。 */
 export function selectExecutionRun(state: SessionState): ExecutionRunState {
   return state.execution;
+}
+
+/**
+ * 可重放的历史 execution id；没有时为 null。
+ *
+ * 只认本会话里以 live 跑完并成功的运行：后端要求被重放的 execution 以 Completed
+ * 结束，并且重放自己的运行不是可重放基线（历史 archive 固定在最初那次 live 运行上）。
+ */
+export function selectReplaySource(state: SessionState): ExecutionId | null {
+  const { execution } = state;
+  if (execution.status !== 'succeeded' || execution.mode !== 'live') return null;
+  return execution.executionId;
 }

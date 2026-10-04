@@ -14,7 +14,9 @@ import {
   selectFlowProjection,
   selectHasUnsavedChanges,
   selectIsSaving,
+  selectReplaySource,
 } from './session';
+import { replayFailureReasonOf } from './execution';
 import type {
   FlowEdge,
   FlowNodeKind,
@@ -1072,5 +1074,124 @@ describe('createRuleEditorSession 预览执行订阅失败', () => {
     expect(execution.status).toBe('failed');
     expect(execution.failureCode).toBe('EXECUTION_FAILED');
     expect(invoke).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 重放运行（startReplayRun / selectReplaySource）
+//
+// 核心不变量：重放要么是一次重放，要么是一次如实的失败；任何路径都不回退成实时请求。
+// ---------------------------------------------------------------------------
+
+/** 后端在重放基线缺 archive 时的稳定错误。 */
+const REPLAY_CAPTURE_MISSING: RuleErrorWire = {
+  stage: 'replay',
+  code: 'replay_capture_missing',
+  message: '历史 execution 缺少 invocation archive',
+  trace_id: 'trace:1',
+  retryable: false,
+  diagnostics: [],
+};
+
+const REPLAY_REQUEST = { ...PREVIEW_REQUEST, archivedExecutionId: 'exec:archived' } as const;
+
+describe('createRuleEditorSession 重放运行', () => {
+  beforeEach(() => {
+    invoke.mockReset();
+    listen.mockReset();
+  });
+
+  it('重放用 replay 模式 pin 住历史 execution，并把重放结局折进运行态', async () => {
+    const stream = mockEventStream();
+    invoke.mockImplementation((command) => {
+      if (command === 'execute') return Promise.resolve({ execution_id: 'exec:replay' });
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
+    const session = createRuleEditorSession();
+    await session.getState().startReplayRun(REPLAY_REQUEST);
+
+    expect(invoke).toHaveBeenCalledWith('execute', {
+      request: {
+        source_id: 'source:test',
+        intent: 'Search',
+        input: { type: 'Query', value: '关键词' },
+        mode: { mode: 'replay', execution_id: 'exec:archived' },
+      },
+    });
+
+    const started = session.getState().execution;
+    expect(started.mode).toBe('replay');
+    expect(started.replayOf).toBe('exec:archived');
+    expect(started.executionId).toBe('exec:replay');
+
+    stream.emit(previewEvent(1, { kind: 'started' }, 'exec:replay'));
+    stream.emit(previewEvent(2, { kind: 'failed', error: REPLAY_CAPTURE_MISSING }, 'exec:replay'));
+
+    const failed = session.getState().execution;
+    expect(failed.status).toBe('failed');
+    expect(failed.failureCode).toBe('replay_capture_missing');
+    expect(replayFailureReasonOf(failed)).toBe('capture_missing');
+  });
+
+  it('重放基线有缺时如实失败，不发起任何实时请求', async () => {
+    mockEventStream();
+    invoke.mockRejectedValueOnce(REPLAY_CAPTURE_MISSING);
+
+    const session = createRuleEditorSession();
+    await session.getState().startReplayRun(REPLAY_REQUEST);
+
+    // 只发过一次 execute，且只能是 replay 模式：没有 live fallback。
+    expect(invoke.mock.calls.filter(([command]) => command === 'execute')).toEqual([
+      [
+        'execute',
+        {
+          request: {
+            source_id: 'source:test',
+            intent: 'Search',
+            input: { type: 'Query', value: '关键词' },
+            mode: { mode: 'replay', execution_id: 'exec:archived' },
+          },
+        },
+      ],
+    ]);
+
+    const { execution } = session.getState();
+    expect(execution.status).toBe('failed');
+    expect(execution.mode).toBe('replay');
+    expect(replayFailureReasonOf(execution)).toBe('capture_missing');
+  });
+});
+
+describe('selectReplaySource', () => {
+  beforeEach(() => {
+    invoke.mockReset();
+    listen.mockReset();
+  });
+
+  it('只有跑完并成功的 live 运行才给出可重放历史', async () => {
+    const stream = mockEventStream();
+    invoke.mockImplementation((command) => {
+      if (command === 'execute') return Promise.resolve({ execution_id: 'exec:1' });
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
+    const session = createRuleEditorSession();
+    expect(selectReplaySource(session.getState())).toBeNull();
+
+    await session.getState().startPreviewRun(PREVIEW_REQUEST);
+    // 运行中还没跑完，没有任何历史可重放。
+    expect(selectReplaySource(session.getState())).toBeNull();
+
+    stream.emit(previewEvent(1, { kind: 'started' }));
+    stream.emit(previewEvent(2, { kind: 'completed' }));
+    expect(selectReplaySource(session.getState())).toBe('exec:1');
+
+    // 重放自己不是可重放基线：后端只认 live 运行固定下的 archive。
+    await session.getState().startReplayRun({ ...PREVIEW_REQUEST, archivedExecutionId: 'exec:1' });
+    stream.emit(previewEvent(1, { kind: 'started' }));
+    stream.emit(previewEvent(2, { kind: 'completed' }));
+    expect(session.getState().execution.status).toBe('succeeded');
+    expect(selectReplaySource(session.getState())).toBeNull();
   });
 });
