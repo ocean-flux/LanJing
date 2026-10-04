@@ -49,6 +49,11 @@ struct FieldSpec {
     support: ImportSupport,
 }
 
+/// 普通规则字段：必须是 current adapter 可执行的提取表达式。
+const RULE_RESULT_TYPE: &str = "rule";
+/// 下一页规则字段：允许空声明，表示来源没有下一页。
+const NEXT_PAGE_RULE_RESULT_TYPE: &str = "next_page_rule";
+
 macro_rules! field {
     ($pointer:literal, $type:ident, $required:literal, $support:ident) => {
         FieldSpec {
@@ -64,7 +69,16 @@ macro_rules! field {
             pointer: $pointer,
             field_type: FieldType::$type,
             required: $required,
-            rule_result_type: Some("rule"),
+            rule_result_type: Some(RULE_RESULT_TYPE),
+            support: ImportSupport::$support,
+        }
+    };
+    ($pointer:literal, $type:ident, $required:literal, $support:ident, next_page_rule) => {
+        FieldSpec {
+            pointer: $pointer,
+            field_type: FieldType::$type,
+            required: $required,
+            rule_result_type: Some(NEXT_PAGE_RULE_RESULT_TYPE),
             support: ImportSupport::$support,
         }
     };
@@ -142,11 +156,23 @@ static FIELD_SPECS: &[FieldSpec] = &[
     field!("/ruleToc/updateTime", String, false, Blocked, rule),
     field!("/ruleToc/isVip", String, false, Blocked, rule),
     field!("/ruleToc/isPay", String, false, Blocked, rule),
-    field!("/ruleToc/nextTocUrl", String, false, Blocked, rule),
+    field!(
+        "/ruleToc/nextTocUrl",
+        String,
+        false,
+        Executable,
+        next_page_rule
+    ),
     field!("/ruleContent", ObjectOrString, false, Executable),
     field!("/ruleContent/content", String, false, Executable, rule),
     field!("/ruleContent/title", String, false, Blocked, rule),
-    field!("/ruleContent/nextContentUrl", String, false, Blocked, rule),
+    field!(
+        "/ruleContent/nextContentUrl",
+        String,
+        false,
+        Executable,
+        next_page_rule
+    ),
     field!("/ruleContent/webJs", String, false, Blocked, rule),
     field!("/ruleContent/sourceRegex", String, false, Blocked, rule),
     field!("/ruleContent/replaceRegex", String, false, Blocked, rule),
@@ -271,6 +297,70 @@ fn classify_legado(document: &ParsedDocument, diagnostics: &mut Vec<ImportDiagno
     }
     let mut path = Vec::new();
     classify_object(document, properties, &mut path, diagnostics);
+    classify_shadowed_next_page(document, properties, diagnostics);
+}
+
+/// 报告被发现入口顶掉的下一页声明: 两者共用同一个 `ContinueAction` 导出。
+fn classify_shadowed_next_page(
+    document: &ParsedDocument,
+    properties: &[ObjectProperty],
+    diagnostics: &mut Vec<ImportDiagnostic>,
+) {
+    let explore_url = properties
+        .iter()
+        .find(|property| property.key == "exploreUrl")
+        .map(|property| &document.nodes[property.value]);
+    if !matches!(explore_url.map(|node| &node.kind), Some(JsonKind::String(value)) if !value.trim().is_empty())
+    {
+        return;
+    }
+    for pointer in ["/ruleToc/nextTocUrl", "/ruleContent/nextContentUrl"] {
+        let Some(node) = string_node_at(document, properties, pointer) else {
+            continue;
+        };
+        let JsonKind::String(expression) = &node.kind else {
+            continue;
+        };
+        if expression.trim().is_empty() {
+            continue;
+        }
+        diagnostics.push(ImportDiagnostic::new(
+            DiagnosticSeverity::Warning,
+            "next_page_rule_shadowed",
+            pointer,
+            node.span.byte_offset,
+            node.span.byte_length,
+            ImportSupport::Blocked,
+        ));
+    }
+}
+
+/// 沿 RFC 6901 pointer 在根对象下找字符串节点, 用于跨字段诊断的真实 span。
+fn string_node_at<'a>(
+    document: &'a ParsedDocument,
+    properties: &[ObjectProperty],
+    pointer: &str,
+) -> Option<&'a JsonNode> {
+    let mut segments = pointer.split('/').filter(|segment| !segment.is_empty());
+    let first = segments.next()?;
+    let mut node = document.nodes.get(
+        properties
+            .iter()
+            .find(|property| property.key == first)?
+            .value,
+    )?;
+    for segment in segments {
+        let JsonKind::Object(children) = &node.kind else {
+            return None;
+        };
+        node = document.nodes.get(
+            children
+                .iter()
+                .find(|property| property.key == segment)?
+                .value,
+        )?;
+    }
+    matches!(&node.kind, JsonKind::String(_)).then_some(node)
 }
 
 fn classify_object(
@@ -341,7 +431,7 @@ fn classify_object(
             && ((pointer == "/exploreUrl" && !expression.trim_start().starts_with("@js:"))
                 || (field.rule_result_type.is_some()
                     && field.support == ImportSupport::Executable
-                    && !rule_expression_is_supported(expression)))
+                    && !rule_expression_is_accepted(field, expression)))
         {
             diagnostics.push(ImportDiagnostic::new(
                 DiagnosticSeverity::Error,
@@ -424,6 +514,14 @@ fn value_matches(field: &FieldSpec, value: &JsonNode) -> bool {
 fn is_integer_string(value: &str) -> bool {
     let digits = value.strip_prefix('-').unwrap_or(value);
     !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
+}
+
+/// 下一页规则字段允许空字符串/null 声明, 表示该来源只有一页; 其余仍走通用规则白名单。
+fn rule_expression_is_accepted(field: &FieldSpec, value: &str) -> bool {
+    if field.rule_result_type == Some(NEXT_PAGE_RULE_RESULT_TYPE) && value.trim().is_empty() {
+        return true;
+    }
+    rule_expression_is_supported(value)
 }
 
 fn rule_expression_is_supported(value: &str) -> bool {

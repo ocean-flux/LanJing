@@ -44,6 +44,14 @@ pub(crate) fn definition(
     let base_url = normalize_base_url(&source.book_source_url)?;
     let source_identity = source_identity(&base_url);
     let mut builder = DefinitionBuilder::new(source_identity.clone(), headers);
+    // Legado 一个来源只有一套 ContinueAction: 发现入口的继续动作不能与分页链共存,
+    // 否则来源自身的继续动作会被分页链顶掉。冲突由 `strict_json` 报出 warning。
+    let next_page = next_page_declaration(source);
+    let explore_url = source
+        .explore_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
 
     if let Some(search_url) = source
         .search_url
@@ -65,11 +73,7 @@ pub(crate) fn definition(
         });
     }
 
-    if let Some(explore_url) = source
-        .explore_url
-        .as_deref()
-        .filter(|value| !value.trim().is_empty())
-    {
+    if let Some(explore_url) = explore_url {
         builder.add_discover(extract_js_code(explore_url)?);
         let (rules, fields) = collect_explore_rules(source.rule_explore.as_ref());
         builder.add_http_extract_mapper(HttpIntentFlow {
@@ -123,6 +127,22 @@ pub(crate) fn definition(
             output_target: OutputTarget::Asset,
             mapper_output: MapperOutputKind::Assets,
             identity_fields: ASSET_IDENTITY_FIELDS,
+        });
+    }
+
+    if let Some(declaration) = next_page.filter(|_| explore_url.is_none()) {
+        // 下一页规则产出的是一个继续动作: HTTP 请求页游标 URL, Extract 把下一页 URL 取出,
+        // Discovery Mapper 把它变成携带 `url` 的 MediaAction, 调用方据此继续读取下一页。
+        let field_rules = next_page_field_rules(&declaration.rules);
+        builder.add_http_extract_mapper(HttpIntentFlow {
+            intent: StandardIntent::ContinueAction,
+            role: declaration.role,
+            url: format!("{{{{{}}}}}", declaration.cursor_variable),
+            rules: declaration.rules,
+            field_rules,
+            output_target: OutputTarget::Media,
+            mapper_output: MapperOutputKind::Discovery,
+            identity_fields: DISCOVERY_ACTION_IDENTITY_FIELDS,
         });
     }
 
@@ -232,6 +252,65 @@ impl<'de> Visitor<'de> for HeaderEntriesVisitor {
 pub(crate) fn source_identity(base_url: &str) -> String {
     let digest = blake3::hash(format!("legado:{base_url}").as_bytes());
     format!("source:legado:{}", digest.to_hex())
+}
+
+/// 来源声明的下一页: 继续动作请求的游标模板变量与整页规则。
+struct NextPageDeclaration {
+    role: &'static str,
+    cursor_variable: &'static str,
+    rules: Vec<ExtractRule>,
+}
+
+/// 按 `nextTocUrl` → `nextContentUrl` 顺序取第一个非空声明；空字符串/null 代表该列表单页。
+fn next_page_declaration(source: &LegadoSourceJson) -> Option<NextPageDeclaration> {
+    let toc = source
+        .rule_toc
+        .as_ref()
+        .and_then(|rule| rule.next_toc_url.as_deref());
+    let content = source
+        .rule_content
+        .as_ref()
+        .and_then(|rule| rule.next_content_url.as_deref());
+    [
+        ("next-toc-page", BOOK_URL_TEMPLATE_VAR, toc),
+        ("next-content-page", CHAPTER_URL_TEMPLATE_VAR, content),
+    ]
+    .into_iter()
+    .find_map(|(role, cursor_variable, expression)| {
+        let rules = parse_legado_rule(expression?.trim());
+        (!rules.is_empty()).then_some(NextPageDeclaration {
+            role,
+            cursor_variable,
+            rules,
+        })
+    })
+}
+
+/// 下一页 URL 必须落到列表记录的可继续动作目标字段, Discovery Mapper 才能产出携带 `url` 的动作。
+fn next_page_field_rules(rules: &[ExtractRule]) -> FieldRules {
+    let mut fields = FieldRules::new();
+    insert_field(
+        &mut fields,
+        "bookUrl",
+        rules.iter().map(element_relative_rule).collect(),
+    );
+    fields
+}
+
+/// 整页规则选中元素后，取值要从该元素自身读；非 CSS 规则已在 `strict_json` 字段矩阵被拒。
+fn element_relative_rule(rule: &ExtractRule) -> ExtractRule {
+    match rule {
+        ExtractRule::CssSelector {
+            extract_type,
+            regex_clean,
+            ..
+        } => ExtractRule::CssSelector {
+            selector: String::new(),
+            extract_type: extract_type.clone(),
+            regex_clean: regex_clean.clone(),
+        },
+        other => other.clone(),
+    }
 }
 
 struct HttpIntentFlow {

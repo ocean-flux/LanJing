@@ -113,6 +113,8 @@ pub struct RuleToc {
     pub chapter_name: Option<String>,
     /// 章节 URL 选择器。
     pub chapter_url: Option<String>,
+    /// 目录下一页 URL 规则; 空值表示单页目录。
+    pub next_toc_url: Option<String>,
 }
 
 /// 正文规则。
@@ -121,6 +123,8 @@ pub struct RuleToc {
 pub struct RuleContent {
     /// 正文内容选择器。
     pub content: Option<String>,
+    /// 正文下一页 URL 规则; 空值表示正文单页。
+    pub next_content_url: Option<String>,
     /// 替换正则表达式(管道符分隔)。
     pub replace_regex: Option<String>,
 }
