@@ -1594,6 +1594,151 @@ mod tests {
         drop(system);
     }
 
+    /// 保存一版语义 revision, 返回它落到了 Draft 还是 Effective。
+    async fn save_semantic(
+        system: &RuleSystem,
+        document_id: &str,
+        expected_revision: i64,
+        definition: RuleDefinition,
+    ) -> SemanticActivation {
+        system
+            .save_native_rule_document(SaveNativeRuleDocumentRequest {
+                document_id: document_id.to_string(),
+                semantic: Some(SemanticSave {
+                    expected_revision,
+                    definition,
+                    credential_mutations: Vec::new(),
+                }),
+                layout: None,
+            })
+            .await
+            .expect("保存文档")
+            .semantic
+            .expect("语义域结果")
+            .activation
+            .expect("保存必须给出激活结果")
+    }
+
+    async fn read_document(system: &RuleSystem, document_id: &str) -> NativeRuleDocumentDetail {
+        system
+            .get_native_rule_document(GetNativeRuleDocumentRequest {
+                document_id: document_id.to_string(),
+            })
+            .await
+            .expect("读取文档")
+            .expect("文档必须存在")
+    }
+
+    async fn preview_document(
+        system: &RuleSystem,
+        document_id: &str,
+        revision: i64,
+    ) -> ValidateNativeRuleDocumentPreview {
+        system
+            .validate_native_rule_document(ValidateNativeRuleDocumentRequest {
+                document_id: document_id.to_string(),
+                revision,
+            })
+            .await
+            .expect("校验预览")
+    }
+
+    /// 校验失败的 Recovery Draft 仍可继续编辑, 只有改到通过校验才能替换 Effective Rule Revision。
+    ///
+    /// 相邻用例已证明两端: 无效保存只成为 Draft、合法保存替换 Effective。未证明的是中间那段 ——
+    /// 失败草稿自身能不能继续编辑: 失败那一版必须能原样读回, 在它上面再改一版仍然无效时
+    /// 仍不得发布, 改到通过校验后才能按草稿 revision 重新发布。否则用户一旦保存失败就会
+    /// 丢掉可恢复的编辑起点, 或者一个尚未通过的草稿被静默发布。
+    #[tokio::test]
+    async fn recovery_draft_stays_editable_and_only_publishes_once_valid() {
+        let system = open_system().await;
+        let created = system
+            .create_native_rule_document(CreateNativeRuleDocumentRequest {
+                mode: CreateMode::Template {
+                    title: "恢复草稿".to_string(),
+                    intent: StandardIntent::Search,
+                    data_type: ExpectedDataType::Json,
+                    base_url: "https://example.test".to_string(),
+                },
+            })
+            .await
+            .expect("创建有效模板");
+        let document_id = created.document_id.clone();
+
+        // revision 1 = 通过校验的模板, 成为 Effective Rule Revision。
+        let published = read_document(&system, &document_id).await;
+        assert_eq!(published.semantic_revision, 1);
+        assert_eq!(published.effective_semantic_revision, Some(1));
+        let published_definition = published.definition.clone().expect("模板定义存在");
+        let published_hash = published
+            .effective_summary
+            .as_ref()
+            .map(|summary| summary.definition_hash.clone());
+
+        // revision 2 = 校验失败的草稿 (缺意图导出)。
+        let mut broken = published_definition.clone();
+        broken.intent_exports_mut().clear();
+        assert_eq!(
+            save_semantic(&system, &document_id, 1, broken.clone()).await,
+            SemanticActivation::Draft,
+            "校验失败只能成为 Draft"
+        );
+
+        // 失败那一版必须能原样读回, 否则根本没有可编辑的恢复起点。
+        let draft = read_document(&system, &document_id).await;
+        assert_eq!(draft.semantic_revision, 2);
+        assert_eq!(draft.effective_semantic_revision, Some(1));
+        assert_eq!(
+            draft
+                .effective_summary
+                .as_ref()
+                .map(|summary| summary.definition_hash.clone()),
+            published_hash,
+            "校验失败不得动 Effective Rule Revision"
+        );
+        assert_eq!(draft.definition.as_ref(), Some(&broken));
+        assert!(!preview_document(&system, &document_id, 2).await.valid);
+
+        // 在恢复草稿上继续编辑, 但仍然无效: 不得发布, Effective 仍是 revision 1。
+        let mut still_broken = draft.definition.clone().expect("恢复草稿定义");
+        *still_broken.base_url_mut() = "https://still-not-valid.example.test".to_string();
+        assert_eq!(
+            save_semantic(&system, &document_id, 2, still_broken.clone()).await,
+            SemanticActivation::Draft
+        );
+        let draft = read_document(&system, &document_id).await;
+        assert_eq!(draft.semantic_revision, 3);
+        assert_eq!(draft.effective_semantic_revision, Some(1));
+        assert_eq!(
+            draft.definition.as_ref(),
+            Some(&still_broken),
+            "继续编辑必须真的落到恢复草稿上"
+        );
+        assert!(!preview_document(&system, &document_id, 3).await.valid);
+
+        // 把恢复草稿改到通过校验, 再按草稿 revision 重新发布。
+        let mut recovered = draft.definition.clone().expect("恢复草稿定义");
+        *recovered.intent_exports_mut() = published_definition.intent_exports().clone();
+        assert_eq!(
+            save_semantic(&system, &document_id, 3, recovered).await,
+            SemanticActivation::Effective,
+            "修复后的恢复草稿必须能重新发布"
+        );
+        let republished = read_document(&system, &document_id).await;
+        assert_eq!(republished.semantic_revision, 4);
+        assert_eq!(republished.effective_semantic_revision, Some(4));
+        let recovery_preview = preview_document(&system, &document_id, 4).await;
+        assert!(recovery_preview.valid);
+        assert!(
+            recovery_preview
+                .plan_hash
+                .as_deref()
+                .is_some_and(|hash| !hash.is_empty()),
+            "重新发布的 revision 必须能产出 immutable Plan"
+        );
+        drop(system);
+    }
+
     /// 合法保存会替换当前 Effective Rule Revision。
     #[tokio::test]
     async fn valid_save_replaces_effective_rule() {
