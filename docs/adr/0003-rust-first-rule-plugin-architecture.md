@@ -1,6 +1,6 @@
 # ADR 0003：规则插件采用 Rust-first、QuickJS host API 和分域扩展契约
 
-- 状态：已采纳
+- 状态：已被 ADR 0004 取代
 - 影响范围：规则模型、规则编译与运行时、Native Rule Document、Source Adapter、QuickJS plugin runtime
 
 ## 背景
