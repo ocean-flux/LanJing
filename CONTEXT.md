@@ -129,3 +129,27 @@ _Avoid_: direct rollback, publish history
 **Rule Document Status**:
 Rule Document 当前草稿与生效版本的关系摘要，用于说明用户正在编辑的版本是否已经生效。
 _Avoid_: validation result, publish status
+
+**Rule Package**:
+一期规则扩展的单位：由规则、来源 metadata、版本声明和可选脚本配置组成、可导入和导出的文件。它不是动态二进制，不能声明宿主 service、注入前端代码，也不能直接改写 Source Revision、Rule Revision 或 archive。
+_Avoid_: plugin package, rule JSON
+
+**Node Descriptor**:
+规则节点能力的唯一声明表，声明节点的 port、字段、默认值和诊断；编辑器渲染与 Plan seal 都读它，Plan 因此绑定它的 digest。
+_Avoid_: node schema, node metadata
+
+**Resource Budget**:
+规则为受控节点声明的资源请求，包含执行超时、内存上限和输出上限。生效值取规则声明与 host policy 上限的交集，规则只能收紧不能抬高上限。
+_Avoid_: quota, resource limit
+
+**Preview Run**:
+作者用当前已安装来源、按选定标准意图真实执行一次规则并观察运行诊断、effect 捕获与终态的运行动作。它执行已安装版本，不执行未保存的编辑状态。
+_Avoid_: dry run, test run
+
+**Replay**:
+用固定历史 execution 的 archive 重新执行同一条 Plan 的运行动作。replay 只读历史捕获，禁止回退到 live I/O。
+_Avoid_: retry, re-run
+
+**Effect Capture**:
+执行受控外部 effect 时持久化的输入、输出与 artifact 收据。它是 replay 的唯一数据来源，也是这次 execution 可重放的证据。
+_Avoid_: cache, log, snapshot
