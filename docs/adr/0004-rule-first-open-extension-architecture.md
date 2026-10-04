@@ -91,7 +91,8 @@ JS 不能访问 SQLite、Tauri、React state、任意文件系统、环境变量
 ### 6. 版本和安全不变量保持不变
 
 - 已发布的 identity 不被覆盖。
-- 不兼容 schema 或 contract 必须显式升级版本。
+- 项目仍在初期, 允许直接进行破坏性 contract、Definition、Plan、storage DTO 和 typed wire 变更。
+- 不建设 v2 并存模型、旧 reader、兼容 adapter 或旧本地数据 migration。schema/version 只用于识别当前形状和拒绝不兼容输入。
 - unknown payload 可以展示、保存和 round-trip, 但不能 validate、compile 或 execute。
 - Source Update 必须经过 Install Candidate 和 stale 检查, 不能覆盖式静默更新。
 - Rule Draft Revision 校验失败不能替换 Effective Rule Revision。
