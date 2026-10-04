@@ -21,7 +21,7 @@ pub(super) fn runtime_failure_error(code: RuntimeFailureCode, trace_id: &str) ->
         RuntimeFailureCode::OperationUnavailable => (
             RuleErrorStage::Internal,
             "runtime_operation_unavailable",
-            "执行绑定的 registry 缺少该 operation 的 handler",
+            "执行绑定的 registry 缺少该 effect kind 的 handler",
         ),
         RuntimeFailureCode::EffectFailed => (
             RuleErrorStage::Effect,

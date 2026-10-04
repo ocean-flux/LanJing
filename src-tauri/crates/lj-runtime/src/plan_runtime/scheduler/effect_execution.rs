@@ -104,7 +104,7 @@ pub(in crate::plan_runtime::scheduler) async fn execute_effect(
                 return Err(failed(
                     context.request,
                     RuntimeFailureCode::OperationUnavailable,
-                    "frozen registry 缺少该 operation 的 handler",
+                    "frozen registry 缺少该 effect kind 的 handler",
                     Some(node.id),
                     Some(effect_id),
                 ));

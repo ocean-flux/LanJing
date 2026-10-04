@@ -85,7 +85,7 @@ pub enum PlanRuntimeError {
 pub enum RuntimeFailureCode {
     /// capability grant 拒绝 effect。
     CapabilityDenied,
-    /// 执行绑定的 frozen registry 缺少该 operation 的 handler。
+    /// 执行绑定的 frozen registry 缺少该 effect kind 的 handler。
     OperationUnavailable,
     /// effect adapter 返回失败。
     EffectFailed,
