@@ -5,9 +5,9 @@ use std::collections::{BTreeMap, HashMap};
 use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::{
     CapabilityManifest, EventEnvelope, EventType, ExecutionPlan, ExecutionPlanParts, FlowGraph,
-    FlowNodeConfig, RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SchemaContract, SchemaReadError,
-    SourceIdentity, canonical_json, definition_hash, execution_plan_hash, read_execution_plan,
-    read_rule_definition, read_rule_package,
+    FlowNodeConfig, RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, RulePackage, SchemaContract,
+    SchemaReadError, SourceIdentity, canonical_json, definition_hash, execution_plan_hash,
+    read_execution_plan, read_rule_definition, read_rule_package,
 };
 use serde::Serialize;
 use serde_json::json;
@@ -353,6 +353,32 @@ fn policy_and_capability_manifest_roundtrip() {
         serde_json::from_str::<PolicyCapabilities>(&json).unwrap(),
         capabilities
     );
+}
+
+#[test]
+fn package_identity_must_match_nested_definition_identity() {
+    let definition = sample_definition();
+    let mut value = serde_json::to_value(RulePackage::new(
+        SourceIdentity {
+            id: "source:other".to_string(),
+        },
+        "v1",
+        definition,
+    ))
+    .unwrap();
+
+    let error = read_rule_package(&serde_json::to_vec(&value).unwrap()).unwrap_err();
+    assert_eq!(error.code(), "RULE_CONTRACT_INVALID_DATA");
+    assert!(matches!(
+        error,
+        SchemaReadError::InvalidData {
+            contract: SchemaContract::RulePackage,
+            ..
+        }
+    ));
+
+    value["source_identity"]["id"] = json!("source:demo");
+    assert!(read_rule_package(&serde_json::to_vec(&value).unwrap()).is_ok());
 }
 
 #[test]

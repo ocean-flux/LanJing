@@ -408,6 +408,12 @@ fn package_from_value(value: serde_json::Value) -> Result<RulePackage, SchemaRea
     }
     validate_contract_value(&wire.definition, SchemaContract::RuleDefinition)?;
     let definition = definition_from_value(wire.definition)?;
+    if wire.source_identity != *definition.source_identity() {
+        return Err(invalid_data(
+            SchemaContract::RulePackage,
+            "package source_identity 必须与嵌套 Definition 的 source_identity 一致".to_string(),
+        ));
+    }
     Ok(RulePackage {
         source_identity: wire.source_identity,
         version: wire.version,
