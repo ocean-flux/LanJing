@@ -97,10 +97,10 @@ fn seven_nodes() -> Vec<FlowNode> {
         }),
         FlowNode::new(
             id(2),
-            FlowNodeConfig::Js(JsConfig {
-                code: "JSON.stringify(input)".to_string(),
-                output: JsOutputKind::Json,
-            }),
+            FlowNodeConfig::Js(JsConfig::new(
+                "JSON.stringify(input)".to_string(),
+                JsOutputKind::Json,
+            )),
         ),
         FlowNode::new(id(3), FlowNodeConfig::Extract(extract_spec())),
         FlowNode::new(

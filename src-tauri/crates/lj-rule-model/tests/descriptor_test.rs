@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use lj_rule_model::budget::JsBudget;
 use lj_rule_model::definition::FlowNodeConfig;
 use lj_rule_model::descriptor::{
     DefaultConfig, FieldDescriptor, FieldEditor, NodeDescriptor, PortDescriptor, PortHandleSource,
@@ -214,6 +215,58 @@ fn a_new_capability_needs_only_a_descriptor_entry() {
     assert_eq!(
         serde_json::to_value(descriptor.fields[0].editor).unwrap()["editor"],
         json!("string_list")
+    );
+}
+
+/// JS 预算字段的编辑器上下界与默认值都是 host policy 上限的投影。
+///
+/// descriptor 里的数字是字面量（`const` 数组的限制），本测试把它们钉回
+/// [`JsBudget::HOST_CEILING`]：两处一旦漂移，编辑器会让人写出必然被后端夹回的值。
+#[test]
+fn js_budget_field_bounds_are_the_host_ceiling() {
+    let descriptor = descriptor_for_wire("js").expect("js 必须有 descriptor");
+    let editor = descriptor
+        .fields
+        .iter()
+        .find(|field| field.name == "budgets")
+        .expect("js 必须声明 budgets 字段")
+        .editor;
+    let FieldEditor::Numbers { fields } = editor else {
+        panic!("budgets 必须是 numbers 编辑器");
+    };
+    let bounds: Vec<(&str, i64, i64)> = fields
+        .iter()
+        .map(|field| (field.name, field.min, field.max))
+        .collect();
+    assert_eq!(
+        bounds,
+        vec![
+            (
+                "timeout_ms",
+                1,
+                i64::from(JsBudget::HOST_CEILING.timeout_ms)
+            ),
+            (
+                "memory_bytes",
+                1,
+                i64::try_from(JsBudget::HOST_CEILING.memory_bytes).unwrap()
+            ),
+            (
+                "output_bytes",
+                1,
+                i64::try_from(JsBudget::HOST_CEILING.output_bytes).unwrap()
+            ),
+        ]
+    );
+
+    let default = descriptor.default_config.value();
+    assert_eq!(
+        default["budgets"],
+        json!({
+            "timeout_ms": JsBudget::HOST_CEILING.timeout_ms,
+            "memory_bytes": JsBudget::HOST_CEILING.memory_bytes,
+            "output_bytes": JsBudget::HOST_CEILING.output_bytes,
+        })
     );
 }
 

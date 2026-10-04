@@ -7,6 +7,7 @@
 use serde::{Serialize, Serializer};
 use serde_json::Value;
 
+use crate::budget::JsBudget;
 use crate::definition::FlowNodeKind;
 use crate::plan::{
     CONDITION_INPUT_HANDLE, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE,
@@ -170,6 +171,13 @@ pub enum FieldEditor {
         /// 允许上界。
         max: Option<i64>,
     },
+    /// 一组带上下界的命名数值子字段（资源预算这类 object 字段）。
+    ///
+    /// 子字段名字、上下界都来自声明，视图不做任何节点专属分支。
+    Numbers {
+        /// 子字段声明，顺序即渲染顺序。
+        fields: &'static [NumberFieldDescriptor],
+    },
     /// 枚举下拉。
     Select {
         /// 选项（值是 Rust 侧枚举变体名，标签为原文，不本地化）。
@@ -211,6 +219,19 @@ pub struct SelectOptionDescriptor {
     pub value: &'static str,
     /// 展示文本（原文，不本地化）。
     pub label: &'static str,
+}
+
+/// [`FieldEditor::Numbers`] 里的一个数值子字段。
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct NumberFieldDescriptor {
+    /// config 对象里的字段名。
+    pub name: &'static str,
+    /// 标签的 message key。
+    pub label_key: &'static str,
+    /// 允许下界。
+    pub min: i64,
+    /// 允许上界。
+    pub max: i64,
 }
 
 /// 节点上的一个声明式配置字段。
@@ -796,6 +817,38 @@ const JS_FIELDS: &[FieldDescriptor] = &[
         "rules_node_inspector_field_script",
         FieldEditor::Code,
     ),
+    field(
+        "budgets",
+        "rules_node_inspector_field_budgets",
+        FieldEditor::Numbers {
+            fields: JS_BUDGET_FIELDS,
+        },
+    ),
+];
+
+/// JS 资源预算的三个子字段：名字与上下界都是 host policy 上限的投影。
+///
+/// 上下界写成字面量是因为 `const` 数组里没有无 panic 的 `u64` → `i64` 转换；
+/// 与 host policy 的一致性由 `js_budget_field_bounds_are_the_host_ceiling` 测试钉住。
+const JS_BUDGET_FIELDS: &[NumberFieldDescriptor] = &[
+    NumberFieldDescriptor {
+        name: "timeout_ms",
+        label_key: "rules_node_inspector_budget_timeout_ms",
+        min: 1,
+        max: 5_000,
+    },
+    NumberFieldDescriptor {
+        name: "memory_bytes",
+        label_key: "rules_node_inspector_budget_memory_bytes",
+        min: 1,
+        max: 16_777_216,
+    },
+    NumberFieldDescriptor {
+        name: "output_bytes",
+        label_key: "rules_node_inspector_budget_output_bytes",
+        min: 1,
+        max: 1_048_576,
+    },
 ];
 
 const EXTRACT_FIELDS: &[FieldDescriptor] = &[
@@ -980,7 +1033,17 @@ static DESCRIPTORS: &[NodeDescriptor] = &[
         inputs: JS_INPUTS,
         outputs: JS_OUTPUTS,
         fields: JS_FIELDS,
-        default_config: DefaultConfig(|| serde_json::json!({ "code": "", "output": "json" })),
+        default_config: DefaultConfig(|| {
+            serde_json::json!({
+                "code": "",
+                "output": "json",
+                "budgets": {
+                    "timeout_ms": JsBudget::HOST_CEILING.timeout_ms,
+                    "memory_bytes": JsBudget::HOST_CEILING.memory_bytes,
+                    "output_bytes": JsBudget::HOST_CEILING.output_bytes,
+                },
+            })
+        }),
     },
     NodeDescriptor {
         kind: FlowNodeKind::Extract,

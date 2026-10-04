@@ -870,10 +870,7 @@ fn quickjs_definition() -> RuleDefinition {
             nodes: vec![
                 FlowNode::new(
                     quickjs,
-                    FlowNodeConfig::Js(JsConfig {
-                        code: "JSON.stringify([{ title: 'fixture', url: 'https://example.invalid/item' }])".to_string(),
-                        output: JsOutputKind::Json,
-                    }),
+                    FlowNodeConfig::Js(JsConfig::new("JSON.stringify([{ title: 'fixture', url: 'https://example.invalid/item' }])".to_string(), JsOutputKind::Json)),
                 ),
                 FlowNode::new(
                     mapper,
@@ -943,10 +940,10 @@ fn control_definition(
     let nodes = vec![
         FlowNode::new(
             entry,
-            FlowNodeConfig::Js(JsConfig {
-                code: "control_entry".to_string(),
-                output: JsOutputKind::Json,
-            }),
+            FlowNodeConfig::Js(JsConfig::new(
+                "control_entry".to_string(),
+                JsOutputKind::Json,
+            )),
         ),
         FlowNode::new(
             condition,
@@ -957,17 +954,14 @@ fn control_definition(
         ),
         FlowNode::new(
             alpha,
-            FlowNodeConfig::Js(JsConfig {
-                code: alpha_code.to_string(),
-                output: JsOutputKind::Json,
-            }),
+            FlowNodeConfig::Js(JsConfig::new(alpha_code.to_string(), JsOutputKind::Json)),
         ),
         FlowNode::new(
             beta,
-            FlowNodeConfig::Js(JsConfig {
-                code: "control_beta".to_string(),
-                output: JsOutputKind::Json,
-            }),
+            FlowNodeConfig::Js(JsConfig::new(
+                "control_beta".to_string(),
+                JsOutputKind::Json,
+            )),
         ),
         FlowNode::new(
             merge,

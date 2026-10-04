@@ -3,9 +3,9 @@
 use super::{
     Arc, CapturedEffectOutput, EffectCancellation, EffectDeclaration, EffectError, EffectErrorCode,
     EffectFailure, EffectInput, EffectKind, EffectOutput, ExtractEffectRequest, HttpEffectRequest,
-    MediaResourceId, OwnedSemaphorePermit, PlanExecutionRequest, PlanNode, PlanNodeConfig,
-    PolicyCapabilities, QuickJsEffectRequest, QuickJsOutput, RunOutcome, RuntimeFailureCode, Uuid,
-    failed,
+    JsBudget, MediaResourceId, OwnedSemaphorePermit, PlanExecutionRequest, PlanNode,
+    PlanNodeConfig, PolicyCapabilities, QuickJsEffectRequest, QuickJsOutput, RunOutcome,
+    RuntimeFailureCode, Uuid, effective_js_budget, failed,
 };
 
 use crate::effect_registry::EffectHandler;
@@ -61,7 +61,7 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
             .await
         }
         EffectHandler::QuickJs(quickjs) => {
-            let code = executed_js_code(node, js_code_override)?;
+            let ExecutedJs { code, budgets } = executed_js(node, js_code_override)?;
             quickjs
                 .execute_quickjs(
                     QuickJsEffectRequest {
@@ -71,6 +71,7 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
                         effect_id,
                         trace_id: request.trace_id.clone(),
                         code,
+                        budgets,
                         input,
                         capabilities: request.capabilities.clone(),
                     },
@@ -109,13 +110,26 @@ fn handler_config_mismatch() -> EffectError {
     )
 }
 
-pub(in crate::plan_runtime::scheduler) fn executed_js_code(
+/// 实际执行的 JS：脚本源码与生效资源预算。
+///
+/// 生效预算在这里落定，因为这是「Plan 节点声明」到「effect 请求」的唯一必经之处：
+/// control JS（condition/loop 表达式覆盖）没有自己的预算声明，用 host policy 默认值；
+/// 显式 JS 节点的声明值被 host policy 夹住，规则无法抬高自己的上限。
+pub(in crate::plan_runtime::scheduler) struct ExecutedJs {
+    pub(in crate::plan_runtime::scheduler) code: String,
+    pub(in crate::plan_runtime::scheduler) budgets: JsBudget,
+}
+
+pub(in crate::plan_runtime::scheduler) fn executed_js(
     node: &PlanNode,
     js_code_override: Option<&str>,
-) -> Result<String, EffectError> {
+) -> Result<ExecutedJs, EffectError> {
     if let Some(code) = js_code_override {
         return (!code.trim().is_empty())
-            .then(|| code.to_string())
+            .then(|| ExecutedJs {
+                code: code.to_string(),
+                budgets: effective_js_budget(JsBudget::default()),
+            })
             .ok_or_else(|| EffectError::new(EffectErrorCode::Internal, "control JS 配置无法读取"));
     }
     let PlanNodeConfig::Js(config) = &node.config else {
@@ -125,7 +139,10 @@ pub(in crate::plan_runtime::scheduler) fn executed_js_code(
         ));
     };
     (!config.code.trim().is_empty())
-        .then(|| config.code.clone())
+        .then(|| ExecutedJs {
+            code: config.code.clone(),
+            budgets: effective_js_budget(config.budgets),
+        })
         .ok_or_else(|| EffectError::new(EffectErrorCode::Internal, "Plan JS 配置无法读取"))
 }
 
@@ -164,4 +181,66 @@ pub(in crate::plan_runtime::scheduler) fn enforce_capabilities(
         return Err("安装 grant 未允许 network capability");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use lj_rule_model::{JsBudget, JsConfig, JsOutputKind, PlanNode, PlanNodeConfig};
+    use uuid::Uuid;
+
+    use super::executed_js;
+
+    fn js_node(budgets: JsBudget) -> PlanNode {
+        PlanNode {
+            id: Uuid::new_v4(),
+            inputs: Vec::new(),
+            outputs: Vec::new(),
+            config: PlanNodeConfig::Js(JsConfig {
+                code: "1".to_string(),
+                output: JsOutputKind::Json,
+                budgets,
+            }),
+        }
+    }
+
+    #[test]
+    fn plan_declaration_cannot_raise_the_js_budget_ceiling() {
+        let node = js_node(JsBudget {
+            timeout_ms: 600_000,
+            memory_bytes: 1024 * 1024 * 1024,
+            output_bytes: 512 * 1024 * 1024,
+        });
+        let executed = executed_js(&node, None).expect("JS 节点必须能取出执行脚本");
+        assert_eq!(executed.budgets, JsBudget::HOST_CEILING);
+    }
+
+    #[test]
+    fn control_js_uses_the_host_policy_default_budget() {
+        let node = js_node(JsBudget {
+            timeout_ms: 10,
+            memory_bytes: 1024,
+            output_bytes: 2048,
+        });
+        let executed = executed_js(&node, Some("1 + 1")).expect("control JS 必须能取出执行脚本");
+        assert_eq!(executed.budgets, JsBudget::HOST_CEILING);
+        assert_eq!(executed.code, "1 + 1");
+    }
+
+    #[test]
+    fn explicit_js_declaration_is_clamped_not_replaced() {
+        let node = js_node(JsBudget {
+            timeout_ms: 250,
+            memory_bytes: 4096,
+            output_bytes: 8192,
+        });
+        let executed = executed_js(&node, None).expect("JS 节点必须能取出执行脚本");
+        assert_eq!(
+            executed.budgets,
+            JsBudget {
+                timeout_ms: 250,
+                memory_bytes: 4096,
+                output_bytes: 8192,
+            }
+        );
+    }
 }

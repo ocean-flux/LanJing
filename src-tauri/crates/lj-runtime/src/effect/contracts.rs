@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use lj_capability::IntentInput;
-use lj_rule_model::{EffectKind, ExtractSpec, HttpSpec, PolicyCapabilities};
+use lj_rule_model::{EffectKind, ExtractSpec, HttpSpec, JsBudget, PolicyCapabilities};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -214,6 +214,8 @@ pub struct QuickJsEffectRequest {
     pub trace_id: String,
     /// compiler 写入 Plan 的脚本源码。
     pub code: String,
+    /// host policy 夹住后的生效资源预算；调用方不得直接透传规则声明原值。
+    pub budgets: JsBudget,
     /// Plan 上游输入。
     pub input: EffectInput,
     /// 安装 grant 后的有效能力。

@@ -10,7 +10,7 @@ use std::sync::Arc;
 use lj_media::MediaResourceId;
 use lj_rule_model::{
     CollectionSelector, ControlExpression, ControlTrace, EffectDeclaration, EffectKind,
-    FlowPortRef, InvocationPath, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
+    FlowPortRef, InvocationPath, JsBudget, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
     LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LoopInvocationSegment, MAX_LOOP_ITERATIONS,
     MERGE_OUTPUT_HANDLE, PlanNode, PlanNodeConfig, PlanNodeKind, PolicyCapabilities,
 };
@@ -18,6 +18,7 @@ use tokio::sync::{OwnedSemaphorePermit, mpsc};
 use tracing::Instrument;
 use uuid::Uuid;
 
+use crate::capability::effective_js_budget;
 use crate::effect::{
     CancellationHandle, CapturedEffectOutput, ControlReplayLookup, ControlTraceCapture,
     DurableCaptureReceipt, EffectArchive, EffectArchiveError, EffectArchiveErrorCode,
@@ -47,8 +48,8 @@ mod state;
 
 use control_archive::{persist_or_replay_control, replay_archive_outcome};
 use dispatch::{
-    acquire_permit, captured_output_failure, enforce_capabilities, executed_js_code,
-    invoke_live_effect, source_media_id,
+    acquire_permit, captured_output_failure, enforce_capabilities, executed_js, invoke_live_effect,
+    source_media_id,
 };
 use effect_execution::execute_effect;
 use live_capture::execute_live_effect;

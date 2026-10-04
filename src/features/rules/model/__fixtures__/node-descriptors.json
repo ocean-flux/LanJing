@@ -211,9 +211,42 @@
             "editor": "code"
           },
           "required": true
+        },
+        {
+          "name": "budgets",
+          "label_key": "rules_node_inspector_field_budgets",
+          "editor": {
+            "editor": "numbers",
+            "fields": [
+              {
+                "name": "timeout_ms",
+                "label_key": "rules_node_inspector_budget_timeout_ms",
+                "min": 1,
+                "max": 5000
+              },
+              {
+                "name": "memory_bytes",
+                "label_key": "rules_node_inspector_budget_memory_bytes",
+                "min": 1,
+                "max": 16777216
+              },
+              {
+                "name": "output_bytes",
+                "label_key": "rules_node_inspector_budget_output_bytes",
+                "min": 1,
+                "max": 1048576
+              }
+            ]
+          },
+          "required": true
         }
       ],
       "default_config": {
+        "budgets": {
+          "memory_bytes": 16777216,
+          "output_bytes": 1048576,
+          "timeout_ms": 5000
+        },
         "code": "",
         "output": "json"
       }

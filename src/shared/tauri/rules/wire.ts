@@ -493,11 +493,20 @@ export interface SelectOptionDescriptor {
   label: string;
 }
 
+/** 数值组里的一个子字段（NumberFieldDescriptor）。 */
+export interface NumberFieldDescriptor {
+  name: string;
+  label_key: string;
+  min: number;
+  max: number;
+}
+
 /** 字段编辑器种类（FieldEditor）。 */
 export type NodeFieldEditor =
   | { editor: 'text' }
   | { editor: 'code' }
   | { editor: 'number'; min: number | null; max: number | null }
+  | { editor: 'numbers'; fields: NumberFieldDescriptor[] }
   | { editor: 'select'; options: SelectOptionDescriptor[] }
   | {
       editor: 'string_list';

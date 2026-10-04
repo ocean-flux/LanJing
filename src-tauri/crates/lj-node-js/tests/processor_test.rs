@@ -8,7 +8,7 @@ use std::time::Duration;
 use lj_capability::IntentInput;
 use lj_node_js::execute_js_blocking_cancellable;
 use lj_node_js::processor::QuickJsEffectAdapter;
-use lj_rule_model::PolicyCapabilities;
+use lj_rule_model::{JsBudget, PolicyCapabilities};
 use lj_runtime::{
     CancellationHandle, EffectErrorCode, EffectInput, EffectOutput, EffectWitness,
     QuickJsEffectHandler, QuickJsEffectRequest, QuickJsHostCall, QuickJsOutput,
@@ -21,7 +21,15 @@ fn run_js(
     timeout_ms: u64,
 ) -> Result<String, lj_node_js::error::JsError> {
     let cancellation = CancellationHandle::new().token();
-    execute_js_blocking_cancellable(code, page, key, timeout_ms, &cancellation)
+    execute_js_blocking_cancellable(code, page, key, budget(timeout_ms), &cancellation)
+}
+
+/// 测试用的预算：只改超时，内存/输出用 host policy 默认值。
+fn budget(timeout_ms: u64) -> JsBudget {
+    JsBudget {
+        timeout_ms: u32::try_from(timeout_ms).unwrap_or(u32::MAX),
+        ..JsBudget::default()
+    }
 }
 
 /// 简单 JS 表达式求值。
@@ -258,6 +266,7 @@ fn quickjs_effect_request(code: &str) -> QuickJsEffectRequest {
         effect_id: Uuid::new_v4(),
         trace_id: "quickjs-effect-trace".to_string(),
         code: code.to_string(),
+        budgets: JsBudget::default(),
         input: EffectInput::Intent(IntentInput::Query("typed".to_string())),
         capabilities: PolicyCapabilities {
             network: true,

@@ -11,7 +11,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use rquickjs::prelude::Func;
 use rquickjs::{Context, Runtime as JsRuntime};
 
-use lj_rule_model::Capability;
+use lj_rule_model::{Capability, JsBudget};
 use lj_runtime::check_capability;
 use lj_runtime::{
     CapturedEffectOutput, EffectCancellation, EffectError, EffectErrorCode, EffectInput,
@@ -21,12 +21,6 @@ use lj_runtime::{
 };
 
 use crate::error::JsError;
-
-/// JS 内存上限 16 MB。
-const JS_MEMORY_LIMIT: usize = 16 * 1024 * 1024;
-
-/// JS 执行超时时间（毫秒）。
-const JS_TIMEOUT_MS: u64 = 5000;
 
 /// 对 JS 字符串字面量中的特殊字符进行转义，防止注入攻击。
 ///
@@ -88,6 +82,7 @@ impl QuickJsEffectHandler for QuickJsEffectAdapter {
                 EffectError::new(EffectErrorCode::Internal, "QuickJS JSON 输入编码失败")
             })?;
         let code = request.code;
+        let budgets = request.budgets;
         let blocking_cancellation = cancellation.clone();
         let started = Instant::now();
         let execution = match tokio::task::spawn_blocking(move || {
@@ -96,7 +91,7 @@ impl QuickJsEffectHandler for QuickJsEffectAdapter {
                 page,
                 key.as_deref(),
                 json_input.as_deref(),
-                JS_TIMEOUT_MS,
+                budgets,
                 &blocking_cancellation,
             )
         })
@@ -205,6 +200,9 @@ impl JsExecution {
 
 /// 在 blocking lane 执行可取消的 JS 代码。
 ///
+/// 资源上限全部来自调用方传入的 [`JsBudget`]（已由 host policy 夹住）：adapter 不再自己持有
+/// 任何预算常量，否则请求里的生效值与实际执行上限会静默漂移。
+///
 /// watchdog 与 `rquickjs` Runtime 在同一 blocking 线程生命周期内结束；此函数不会把
 /// 非 `Send` `QuickJS` 句柄跨线程返回。
 ///
@@ -215,10 +213,10 @@ pub fn execute_js_blocking_cancellable(
     code: &str,
     page: Option<u32>,
     key: Option<&str>,
-    timeout_ms: u64,
+    budgets: JsBudget,
     cancellation: &EffectCancellation,
 ) -> Result<String, JsError> {
-    execute_js_blocking_with_witness(code, page, key, None, timeout_ms, cancellation).result
+    execute_js_blocking_with_witness(code, page, key, None, budgets, cancellation).result
 }
 
 fn execute_js_blocking_with_witness(
@@ -226,7 +224,7 @@ fn execute_js_blocking_with_witness(
     page: Option<u32>,
     key: Option<&str>,
     json_input: Option<&str>,
-    timeout_ms: u64,
+    budgets: JsBudget,
     cancellation: &EffectCancellation,
 ) -> JsExecution {
     let host_calls = Arc::new(Mutex::new(Vec::new()));
@@ -235,7 +233,7 @@ fn execute_js_blocking_with_witness(
         page,
         key,
         json_input,
-        timeout_ms,
+        budgets,
         cancellation,
         host_calls.clone(),
     );
@@ -255,12 +253,12 @@ fn execute_js_inner(
     page: Option<u32>,
     key: Option<&str>,
     json_input: Option<&str>,
-    timeout_ms: u64,
+    budgets: JsBudget,
     cancellation: &EffectCancellation,
     host_calls: Arc<Mutex<Vec<QuickJsHostCall>>>,
 ) -> Result<String, JsError> {
     let runtime = JsRuntime::new().map_err(|error| JsError::RuntimeCreate(error.to_string()))?;
-    runtime.set_memory_limit(JS_MEMORY_LIMIT);
+    runtime.set_memory_limit(memory_limit(budgets.memory_bytes));
     runtime.set_max_stack_size(256 * 1024);
     let context =
         Context::full(&runtime).map_err(|error| JsError::ContextCreate(error.to_string()))?;
@@ -277,6 +275,7 @@ fn execute_js_inner(
     let timed_out = Arc::new(AtomicBool::new(false));
     let cancelled = Arc::new(AtomicBool::new(false));
     let stop_watchdog = Arc::new(AtomicBool::new(false));
+    let timeout_ms = u64::from(budgets.timeout_ms);
     let interrupt_for_handler = interrupted.clone();
     runtime.set_interrupt_handler(Some(Box::new(move || {
         interrupt_for_handler.load(Ordering::Acquire)
@@ -339,6 +338,11 @@ fn execute_js_inner(
         return Err(JsError::Timeout(timeout_ms));
     }
     evaluation
+}
+
+/// 把声明里的字节预算落到 `set_memory_limit` 的 `usize` 形参上。
+fn memory_limit(memory_bytes: u64) -> usize {
+    usize::try_from(memory_bytes).unwrap_or(usize::MAX)
 }
 
 fn install_host_functions(

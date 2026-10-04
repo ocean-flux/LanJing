@@ -349,10 +349,7 @@ impl DefinitionBuilder {
         let mapper = self.node_id("discover-mapper");
         self.nodes.push(FlowNode::new(
             entry,
-            FlowNodeConfig::Js(JsConfig {
-                code,
-                output: JsOutputKind::Json,
-            }),
+            FlowNodeConfig::Js(JsConfig::new(code, JsOutputKind::Json)),
         ));
         self.nodes.push(mapper_node(
             mapper,

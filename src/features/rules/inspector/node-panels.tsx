@@ -132,6 +132,42 @@ function CodeField({ field, config, onChange }: PanelProps & { field: NodeFieldD
   );
 }
 
+/** 一组命名数值子字段（资源预算这类 object 字段）。 */
+function NumbersField({ field, config, onChange }: PanelProps & { field: NodeFieldDescriptor }) {
+  const m = useMessages();
+  const editor = field.editor as Extract<NodeFieldEditor, { editor: 'numbers' }>;
+  const group =
+    typeof config[field.name] === 'object' && config[field.name] !== null
+      ? (config[field.name] as JsonObject)
+      : {};
+  return (
+    <ConfigField label={fieldLabel(m, field)}>
+      {() => (
+        <div className="flex flex-col gap-2">
+          {editor.fields.map((sub) => {
+            const label = messageKeyText(m, sub.label_key) ?? sub.name;
+            return (
+              <ConfigTextInput
+                key={sub.name}
+                type="number"
+                label={label}
+                value={Number(group[sub.name] ?? sub.min)}
+                onChange={(next) => {
+                  const parsed = Number(next);
+                  if (!Number.isFinite(parsed)) return;
+                  // 上界是 host policy 上限：先夹住再提交，避免前端造出必然被后端夹回来的值。
+                  const bounded = Math.min(sub.max, Math.max(sub.min, parsed));
+                  onChange({ [field.name]: { ...group, [sub.name]: bounded } });
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+    </ConfigField>
+  );
+}
+
 /** 字符串列表字段。 */
 function StringListField({ field, config, onChange }: PanelProps & { field: NodeFieldDescriptor }) {
   const m = useMessages();
@@ -476,6 +512,9 @@ function FieldEditorControl({
     case 'text':
     case 'number': {
       return <TextField field={field} config={config} onChange={onChange} />;
+    }
+    case 'numbers': {
+      return <NumbersField field={field} config={config} onChange={onChange} />;
     }
     case 'code': {
       return <CodeField field={field} config={config} onChange={onChange} />;

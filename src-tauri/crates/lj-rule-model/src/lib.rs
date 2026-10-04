@@ -3,6 +3,7 @@
 //! 只承载可序列化合同：`Definition`、`Plan`、`EventEnvelope`、`Diagnostic`、
 //! `Policy` DTO，以及节点配置 IR。不引入 ORM、Tokio、Tauri、HTTP/QuickJS 实现。
 
+pub mod budget;
 pub mod definition;
 pub mod descriptor;
 pub mod diagnostic;
@@ -19,6 +20,7 @@ pub mod policy;
 pub mod schema;
 pub mod sensitive;
 
+pub use budget::{JsBudget, JsBudgetCeiling};
 pub use definition::{
     CapabilityManifest, CollectionSelector, ConditionConfig, ConditionOperator, ConditionPredicate,
     ControlExpression, ControlledMapper, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,

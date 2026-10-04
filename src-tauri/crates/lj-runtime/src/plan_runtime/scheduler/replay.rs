@@ -5,7 +5,7 @@ use super::{
     EffectInput, EffectOutput, EffectReplayLookup, EffectWitness, EventEmitter, ExecutionEventKind,
     JsOutputKind, PlanExecutionRequest, PlanNode, PlanNodeConfig, PreparedEffectInvocation,
     QuickJsOutput, RunOutcome, RuntimeFailureCode, Uuid, captured_output_failure,
-    effect_input_hash, effect_output_hash, executed_js_code, failed, quickjs_script_hash,
+    effect_input_hash, effect_output_hash, executed_js, failed, quickjs_script_hash,
     replay_archive_outcome,
 };
 
@@ -133,13 +133,14 @@ pub(in crate::plan_runtime::scheduler) fn replay_witness_matches(
     match witness {
         EffectWitness::Http(_) => true,
         EffectWitness::QuickJs(witness) => {
-            let Ok(code) = executed_js_code(node, js_code_override) else {
+            let Ok(executed) = executed_js(node, js_code_override) else {
                 return false;
             };
             let Ok(input_hash) = effect_input_hash(input) else {
                 return false;
             };
-            witness.script_hash == quickjs_script_hash(&code) && witness.input_hash == input_hash
+            witness.script_hash == quickjs_script_hash(&executed.code)
+                && witness.input_hash == input_hash
         }
         EffectWitness::Extract(witness) => {
             effect_input_hash(input).is_ok_and(|input_hash| witness.input_hash == input_hash)

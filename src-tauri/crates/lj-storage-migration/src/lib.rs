@@ -109,10 +109,7 @@ mod tests {
                 nodes: vec![
                     FlowNode::new(
                         entry,
-                        FlowNodeConfig::Js(JsConfig {
-                            code: "[]".to_string(),
-                            output: JsOutputKind::Json,
-                        }),
+                        FlowNodeConfig::Js(JsConfig::new("[]".to_string(), JsOutputKind::Json)),
                     ),
                     FlowNode::new(
                         mapper,

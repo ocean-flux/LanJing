@@ -49,10 +49,7 @@ fn current_control_definition() -> RuleDefinition {
             nodes: vec![
                 FlowNode::new(
                     entry,
-                    FlowNodeConfig::Js(JsConfig {
-                        code: "JSON.stringify([{ enabled: true, title: '入口', url: 'https://example.invalid/entry' }])".to_string(),
-                        output: JsOutputKind::Json,
-                    }),
+                    FlowNodeConfig::Js(JsConfig::new("JSON.stringify([{ enabled: true, title: '入口', url: 'https://example.invalid/entry' }])".to_string(), JsOutputKind::Json)),
                 ),
                 FlowNode::new(
                     condition,
@@ -65,17 +62,11 @@ fn current_control_definition() -> RuleDefinition {
                 ),
                 FlowNode::new(
                     alpha,
-                    FlowNodeConfig::Js(JsConfig {
-                        code: "JSON.stringify([{ title: '命中', url: 'https://example.invalid/alpha' }])".to_string(),
-                        output: JsOutputKind::Json,
-                    }),
+                    FlowNodeConfig::Js(JsConfig::new("JSON.stringify([{ title: '命中', url: 'https://example.invalid/alpha' }])".to_string(), JsOutputKind::Json)),
                 ),
                 FlowNode::new(
                     beta,
-                    FlowNodeConfig::Js(JsConfig {
-                        code: "JSON.stringify([{ title: '未命中', url: 'https://example.invalid/beta' }])".to_string(),
-                        output: JsOutputKind::Json,
-                    }),
+                    FlowNodeConfig::Js(JsConfig::new("JSON.stringify([{ title: '未命中', url: 'https://example.invalid/beta' }])".to_string(), JsOutputKind::Json)),
                 ),
                 FlowNode::new(
                     merge,

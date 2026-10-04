@@ -4,6 +4,7 @@ use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
+use crate::budget::JsBudget;
 use crate::endpoint::HttpSpec;
 use crate::extract_rule::ExtractSpec;
 use crate::literal::TypedLiteral;
@@ -82,6 +83,22 @@ pub struct JsConfig {
     pub code: String,
     /// compiler 用于确定输出 port kind 的显式声明。
     pub output: JsOutputKind,
+    /// 规则声明的资源预算；生效值 = 本声明与 host policy 上限的交集。
+    pub budgets: JsBudget,
+}
+
+impl JsConfig {
+    /// 用 host policy 默认预算构造（新节点与导入翻译的默认声明）。
+    ///
+    /// 预算仍然随 wire 显式持久化：本构造函数只决定初始值，不代表可以省略声明。
+    #[must_use]
+    pub fn new(code: String, output: JsOutputKind) -> Self {
+        Self {
+            code,
+            output,
+            budgets: JsBudget::default(),
+        }
+    }
 }
 
 /// Merge input 在本次控制路径中的激活策略。

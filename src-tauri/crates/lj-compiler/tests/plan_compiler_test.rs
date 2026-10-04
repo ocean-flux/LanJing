@@ -154,10 +154,10 @@ fn seven_node_definition(expression: ControlExpression) -> RuleDefinition {
         vec![
             FlowNode::new(
                 id(JS),
-                FlowNodeConfig::Js(JsConfig {
-                    code: "JSON.stringify([{ enabled: true }])".to_string(),
-                    output: JsOutputKind::Json,
-                }),
+                FlowNodeConfig::Js(JsConfig::new(
+                    "JSON.stringify([{ enabled: true }])".to_string(),
+                    JsOutputKind::Json,
+                )),
             ),
             FlowNode::new(
                 id(CONDITION),

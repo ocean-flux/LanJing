@@ -1,6 +1,8 @@
 //! Plan runtime 的能力检查归属模块。
 
-use lj_rule_model::{Capability, CapabilityError, PolicyCapabilities, SystemCapabilities};
+use lj_rule_model::{
+    Capability, CapabilityError, JsBudget, JsBudgetCeiling, PolicyCapabilities, SystemCapabilities,
+};
 
 /// 默认能力配置：network=true, fs/env/process=false。
 #[must_use]
@@ -13,6 +15,20 @@ pub fn default_capabilities() -> PolicyCapabilities {
             process: false,
         },
     }
+}
+
+/// 内置 runtime 的 JS 资源预算 host policy 上限。
+#[must_use]
+pub const fn js_budget_ceiling() -> JsBudgetCeiling {
+    JsBudgetCeiling::HOST_POLICY
+}
+
+/// 规则声明的预算与 host policy 上限取交集后的生效预算。
+///
+/// 规则声明只能收紧，不能抬高上限。
+#[must_use]
+pub fn effective_js_budget(requested: JsBudget) -> JsBudget {
+    js_budget_ceiling().clamp(requested)
 }
 
 /// 合并全局能力和源级能力（源级只能收紧不能放宽）。
