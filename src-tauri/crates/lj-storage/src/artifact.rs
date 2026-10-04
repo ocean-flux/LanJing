@@ -378,7 +378,7 @@ fn decode_key(encoded: &str) -> Result<Vec<u8>, StorageError> {
         return Err(StorageError::KeyLost);
     }
     let mut key = Vec::with_capacity(32);
-    for chunk in encoded.as_bytes().chunks_exact(2) {
+    for chunk in encoded.as_bytes().as_chunks::<2>().0 {
         let text = std::str::from_utf8(chunk).map_err(|_| StorageError::KeyLost)?;
         let byte = u8::from_str_radix(text, 16).map_err(|_| StorageError::KeyLost)?;
         key.push(byte);

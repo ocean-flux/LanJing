@@ -211,8 +211,9 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
         original_credentials.cookie_namespace(),
         "source/source:test"
     );
-    assert!(
-        original_credentials.into_secret_bytes().as_deref() == Some(b"source-secret-v1".as_slice())
+    assert_eq!(
+        original_credentials.into_secret_bytes().as_deref(),
+        Some(b"source-secret-v1".as_slice())
     );
     let original_pin = storage
         .load_execution_replay_pin(original_execution_id)
@@ -240,14 +241,14 @@ async fn execution_source_credentials_follow_pinned_source_version_for_replay_an
         })
         .await
         .expect("start v2 execution");
-    assert!(
+    assert_eq!(
         storage
             .load_execution_source_credentials(current_execution_id)
             .await
             .expect("read execution-pinned v2 secret")
             .into_secret_bytes()
-            .as_deref()
-            == Some(b"source-secret-v2".as_slice())
+            .as_deref(),
+        Some(b"source-secret-v2".as_slice())
     );
 
     let replay_execution_id = Uuid::new_v4();
