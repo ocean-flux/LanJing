@@ -4,6 +4,11 @@
 //! 规则编辑器的所有展示文案都应经过本模块，不在组件里散写映射。
 
 import type { useMessages } from '@/shared/i18n/messages';
+import {
+  type ExecutionRunMode,
+  type ExecutionRunStatus,
+  type ReplayFailureReason,
+} from './model/execution';
 import { nodeDescriptor } from './model/descriptor-registry';
 import type { EdgeLabel } from './model/flow-adapter';
 import type { RecommendBlocker } from './model/connection-gate';
@@ -163,4 +168,69 @@ export function recommendBlockerText(m: Messages, blocker: RecommendBlocker): st
         target: nodeKindLabel(m, blocker.targetKind),
       })
     : m.rules_recommend_blocker_outside_intent_focus();
+}
+
+/** 预览运行状态标签。 */
+export function executionStatusLabel(m: Messages, status: ExecutionRunStatus): string {
+  switch (status) {
+    case 'idle': {
+      return m.rules_execution_status_idle();
+    }
+    case 'running': {
+      return m.rules_execution_status_running();
+    }
+    case 'succeeded': {
+      return m.rules_execution_status_succeeded();
+    }
+    case 'failed': {
+      return m.rules_execution_status_failed();
+    }
+    case 'cancelled': {
+      return m.rules_execution_status_cancelled();
+    }
+  }
+}
+
+/**
+ * 运行状态的语义色调。
+ *
+ * 成功 / 失败 / 取消是三种不同的已知结局，各自用既有语义 token；未结束的运行不可
+ * 与任何一种结局混为一色。能选色值的只有这一处，组件不自己解释状态。
+ */
+export function executionStatusClass(status: ExecutionRunStatus): string {
+  switch (status) {
+    case 'succeeded': {
+      return 'text-positive';
+    }
+    case 'failed': {
+      return 'text-danger';
+    }
+    case 'cancelled': {
+      return 'text-warning';
+    }
+    case 'idle':
+    case 'running': {
+      return 'text-ink-muted';
+    }
+  }
+}
+
+/** 运行模式标签：重放与实时运行必须一眼可分辨。 */
+export function executionModeLabel(m: Messages, mode: ExecutionRunMode): string {
+  return mode === 'replay' ? m.rules_execution_mode_replay() : m.rules_execution_mode_live();
+}
+
+/** 重放失败归类文案：告诉作者下一步该补什么，而不是只说「失败」。 */
+export function replayFailureText(m: Messages, reason: ReplayFailureReason): string {
+  switch (reason) {
+    case 'capture_missing': {
+      return m.rules_execution_replay_failure_capture_missing();
+    }
+    case 'history_mismatch': {
+      return m.rules_execution_replay_failure_history_mismatch();
+    }
+    case 'history_unavailable': {
+      return m.rules_execution_replay_failure_history_unavailable();
+    }
+  }
 }

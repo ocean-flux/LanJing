@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/shared/utils';
 import { useMessages } from '@/shared/i18n/messages';
 import type { InstallDiagnostic } from '@/shared/tauri/rules';
+import { executionModeLabel, executionStatusClass, executionStatusLabel } from './labels';
 import type { ValidationState } from './model/core';
 import { selectExecutionRun } from './model/session';
 import { useRuleEditorSession, useRuleEditorSessionStore } from './use-session';
@@ -126,6 +127,11 @@ export function DiagnosticList() {
             <h3 className="text-ui-sm font-medium text-ink-muted">
               {m.rules_execution_diagnostics()}
             </h3>
+            {/* 运行诊断可能属于一次重放：分组标题处就标出模式与结局，
+                不让一段重放的失败看起来像一次实时运行的失败。 */}
+            <span className={cn('text-ui-sm', executionStatusClass(execution.status))}>
+              {executionModeLabel(m, execution.mode)} · {executionStatusLabel(m, execution.status)}
+            </span>
           </header>
           <ul className="max-h-32 shrink-0 overflow-y-auto">
             {execution.diagnostics.map((diagnostic, index) => (
