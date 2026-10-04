@@ -243,17 +243,17 @@ fn js_budget_field_bounds_are_the_host_ceiling() {
         vec![
             (
                 "timeout_ms",
-                1,
+                i64::from(JsBudget::MIN_TIMEOUT_MS),
                 i64::from(JsBudget::HOST_CEILING.timeout_ms)
             ),
             (
                 "memory_bytes",
-                1,
+                i64::try_from(JsBudget::MIN_MEMORY_BYTES).unwrap(),
                 i64::try_from(JsBudget::HOST_CEILING.memory_bytes).unwrap()
             ),
             (
                 "output_bytes",
-                1,
+                i64::try_from(JsBudget::MIN_OUTPUT_BYTES).unwrap(),
                 i64::try_from(JsBudget::HOST_CEILING.output_bytes).unwrap()
             ),
         ]

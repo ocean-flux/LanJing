@@ -230,7 +230,7 @@ mod tests {
     fn explicit_js_declaration_is_clamped_not_replaced() {
         let node = js_node(JsBudget {
             timeout_ms: 250,
-            memory_bytes: 4096,
+            memory_bytes: 2 * 1024 * 1024,
             output_bytes: 8192,
         });
         let executed = executed_js(&node, None).expect("JS 节点必须能取出执行脚本");
@@ -238,9 +238,19 @@ mod tests {
             executed.budgets,
             JsBudget {
                 timeout_ms: 250,
-                memory_bytes: 4096,
+                memory_bytes: 2 * 1024 * 1024,
                 output_bytes: 8192,
             }
         );
+    }
+
+    #[test]
+    fn sub_floor_memory_declaration_is_raised_to_the_engine_minimum() {
+        let node = js_node(JsBudget {
+            memory_bytes: 1024,
+            ..JsBudget::HOST_CEILING
+        });
+        let executed = executed_js(&node, None).expect("JS 节点必须能取出执行脚本");
+        assert_eq!(executed.budgets.memory_bytes, JsBudget::MIN_MEMORY_BYTES);
     }
 }

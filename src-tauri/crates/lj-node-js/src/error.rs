@@ -21,6 +21,16 @@ pub enum JsError {
     #[error("JS 执行超时(超过 {0}ms)")]
     Timeout(u64),
 
+    /// JS 堆用量超过声明的内存预算。
+    ///
+    /// 这是一个 Rust 侧判定：脚本在 JS 层 `try/catch` 也吞不掉。
+    #[error("JS 内存超限")]
+    MemoryLimit,
+
+    /// JS 输出超过声明的字节预算；不静默截断。
+    #[error("JS 输出超限(超过 {0} 字节)")]
+    OutputBudget(u64),
+
     /// JS 执行因外部取消被 interrupt handler 中止。
     #[error("JS 执行已取消")]
     Cancelled,

@@ -826,10 +826,10 @@ const JS_FIELDS: &[FieldDescriptor] = &[
     ),
 ];
 
-/// JS 资源预算的三个子字段：名字与上下界都是 host policy 上限的投影。
+/// JS 资源预算的三个子字段：名字与上下界都是合同边界的投影。
 ///
 /// 上下界写成字面量是因为 `const` 数组里没有无 panic 的 `u64` → `i64` 转换；
-/// 与 host policy 的一致性由 `js_budget_field_bounds_are_the_host_ceiling` 测试钉住。
+/// 与 [`JsBudget`] 的一致性由 `js_budget_field_bounds_are_the_host_ceiling` 测试钉住。
 const JS_BUDGET_FIELDS: &[NumberFieldDescriptor] = &[
     NumberFieldDescriptor {
         name: "timeout_ms",
@@ -840,7 +840,7 @@ const JS_BUDGET_FIELDS: &[NumberFieldDescriptor] = &[
     NumberFieldDescriptor {
         name: "memory_bytes",
         label_key: "rules_node_inspector_budget_memory_bytes",
-        min: 1,
+        min: 1_048_576,
         max: 16_777_216,
     },
     NumberFieldDescriptor {

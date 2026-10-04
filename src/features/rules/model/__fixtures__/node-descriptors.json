@@ -227,7 +227,7 @@
               {
                 "name": "memory_bytes",
                 "label_key": "rules_node_inspector_budget_memory_bytes",
-                "min": 1,
+                "min": 1048576,
                 "max": 16777216
               },
               {

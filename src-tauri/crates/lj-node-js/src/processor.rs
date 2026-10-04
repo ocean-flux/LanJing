@@ -3,11 +3,13 @@
 //! `rquickjs` Runtime 非 `Send`，所有对象都留在 `spawn_blocking` 的 blocking lane；
 //! runtime 通过 typed `QuickJsEffectHandler` 收集结果与取消状态。
 
+use std::ptr;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use rquickjs::allocator::{Allocator, RustAllocator};
 use rquickjs::prelude::Func;
 use rquickjs::{Context, Runtime as JsRuntime};
 
@@ -177,6 +179,8 @@ fn quickjs_error_kind(error: &JsError) -> QuickJsErrorKind {
         JsError::ContextCreate(_) => QuickJsErrorKind::ContextInitialization,
         JsError::EvalError(_) => QuickJsErrorKind::Evaluation,
         JsError::Timeout(_) => QuickJsErrorKind::Timeout,
+        JsError::MemoryLimit => QuickJsErrorKind::MemoryLimit,
+        JsError::OutputBudget(_) => QuickJsErrorKind::OutputBudget,
         JsError::Watchdog => QuickJsErrorKind::Watchdog,
         JsError::Cancelled | JsError::CapabilityBlocked(_) => QuickJsErrorKind::WorkerFailure,
     }
@@ -257,11 +261,23 @@ fn execute_js_inner(
     cancellation: &EffectCancellation,
     host_calls: Arc<Mutex<Vec<QuickJsHostCall>>>,
 ) -> Result<String, JsError> {
-    let runtime = JsRuntime::new().map_err(|error| JsError::RuntimeCreate(error.to_string()))?;
-    runtime.set_memory_limit(memory_limit(budgets.memory_bytes));
+    let memory_exceeded = Arc::new(AtomicBool::new(false));
+    let runtime = match JsRuntime::new_with_alloc(BudgetAllocator::new(
+        budgets.memory_bytes,
+        memory_exceeded.clone(),
+    )) {
+        Ok(runtime) => runtime,
+        // 预算小到 runtime 都建不起来时，“初始化失败”对作者没有任何信息量；
+        // 标记已经落下，如实报成内存超限。
+        Err(_) if memory_exceeded.load(Ordering::Acquire) => return Err(JsError::MemoryLimit),
+        Err(error) => return Err(JsError::RuntimeCreate(error.to_string())),
+    };
     runtime.set_max_stack_size(256 * 1024);
-    let context =
-        Context::full(&runtime).map_err(|error| JsError::ContextCreate(error.to_string()))?;
+    let context = match Context::full(&runtime) {
+        Ok(context) => context,
+        Err(_) if memory_exceeded.load(Ordering::Acquire) => return Err(JsError::MemoryLimit),
+        Err(error) => return Err(JsError::ContextCreate(error.to_string())),
+    };
 
     let mut replaced_code = code.to_string();
     if let Some(page) = page {
@@ -337,12 +353,122 @@ fn execute_js_inner(
     if timed_out.load(Ordering::Acquire) {
         return Err(JsError::Timeout(timeout_ms));
     }
-    evaluation
+    if memory_exceeded.load(Ordering::Acquire) {
+        return Err(JsError::MemoryLimit);
+    }
+    let output = evaluation?;
+    if u64::try_from(output.len()).unwrap_or(u64::MAX) > budgets.output_bytes {
+        return Err(JsError::OutputBudget(budgets.output_bytes));
+    }
+    Ok(output)
 }
 
-/// 把声明里的字节预算落到 `set_memory_limit` 的 `usize` 形参上。
-fn memory_limit(memory_bytes: u64) -> usize {
-    usize::try_from(memory_bytes).unwrap_or(usize::MAX)
+/// 按 `JsBudget.memory_bytes` 计费并夹住 `QuickJS` 堆的分配器。
+///
+/// 为什么不用 `Runtime::set_memory_limit`：`QuickJS` 的内存超限是一个**可捕获**的
+/// `InternalError: out of memory`，脚本 `try/catch` 之后 eval 会正常返回，adapter 就只能靠错误
+/// 文本猜。这里在 Rust 侧计费，超预算即拒绝分配并落标记，判定与脚本写了什么无关。
+struct BudgetAllocator {
+    budget: usize,
+    used: usize,
+    exceeded: Arc<AtomicBool>,
+}
+
+impl BudgetAllocator {
+    fn new(memory_bytes: u64, exceeded: Arc<AtomicBool>) -> Self {
+        Self {
+            // 调用方可能直接给一个低于合同下限的预算（例如绕过 clamp 的内部调用）：
+            // 这里也不允许引擎落到自己的初始化失败路径上。
+            budget: usize::try_from(memory_bytes.max(JsBudget::MIN_MEMORY_BYTES))
+                .unwrap_or(usize::MAX),
+            used: 0,
+            exceeded,
+        }
+    }
+
+    /// 预留 `size` 字节；超出预算时落标记并返回 `false`。
+    fn reserve(&mut self, size: usize) -> bool {
+        match self.used.checked_add(size) {
+            Some(next) if next <= self.budget => {
+                self.used = next;
+                true
+            }
+            _ => {
+                self.exceeded.store(true, Ordering::Release);
+                false
+            }
+        }
+    }
+}
+
+// SAFETY: 四个方法都把同一指针原样交给 `RustAllocator`，也不重复 free；
+// `usable_size` 直接转发，因此计费尺寸与 QuickJS 看到的一致。
+unsafe impl Allocator for BudgetAllocator {
+    fn alloc(&mut self, size: usize) -> *mut u8 {
+        let pointer = RustAllocator.alloc(size);
+        if pointer.is_null() {
+            return pointer;
+        }
+        if !self.reserve(unsafe { RustAllocator::usable_size(pointer) }) {
+            unsafe { RustAllocator.dealloc(pointer) };
+            return ptr::null_mut();
+        }
+        pointer
+    }
+
+    fn calloc(&mut self, count: usize, size: usize) -> *mut u8 {
+        let pointer = RustAllocator.calloc(count, size);
+        if pointer.is_null() {
+            return pointer;
+        }
+        if !self.reserve(unsafe { RustAllocator::usable_size(pointer) }) {
+            unsafe { RustAllocator.dealloc(pointer) };
+            return ptr::null_mut();
+        }
+        pointer
+    }
+
+    unsafe fn dealloc(&mut self, pointer: *mut u8) {
+        let charged = unsafe { RustAllocator::usable_size(pointer) };
+        self.used = self.used.saturating_sub(charged);
+        unsafe { RustAllocator.dealloc(pointer) };
+    }
+
+    unsafe fn realloc(&mut self, pointer: *mut u8, new_size: usize) -> *mut u8 {
+        if pointer.is_null() {
+            return self.alloc(new_size);
+        }
+        let previous = unsafe { RustAllocator::usable_size(pointer) };
+        let base = self.used.saturating_sub(previous);
+        // 先判预算再 realloc：失败时原块仍然有效，不需要回滚计费。
+        if !self.reserve_for_realloc(base, new_size) {
+            return ptr::null_mut();
+        }
+        let reallocated = unsafe { RustAllocator.realloc(pointer, new_size) };
+        if reallocated.is_null() {
+            self.used = base + previous;
+            return reallocated;
+        }
+        self.used = base + unsafe { RustAllocator::usable_size(reallocated) };
+        reallocated
+    }
+
+    unsafe fn usable_size(pointer: *mut u8) -> usize {
+        unsafe { RustAllocator::usable_size(pointer) }
+    }
+}
+
+impl BudgetAllocator {
+    /// realloc 的预算判定：不修改计费，只回答「能否容纳」。
+    fn reserve_for_realloc(&mut self, base: usize, new_size: usize) -> bool {
+        match base.checked_add(new_size) {
+            Some(next) if next <= self.budget => true,
+            _ => {
+                self.exceeded.store(true, Ordering::Release);
+                false
+            }
+        }
+    }
 }
 
 fn install_host_functions(

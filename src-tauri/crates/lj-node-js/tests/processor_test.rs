@@ -121,11 +121,86 @@ JSON.stringify(result);
     assert_eq!(parsed.as_array().unwrap().len(), 2);
 }
 
-/// 内存上限 —— 分配超大数组应触发 `JsError`。
+/// 内存上限 —— 分配超大数组应返回专用的稳定错误。
 #[test]
 fn test_memory_limit() {
-    let result = run_js("new Array(100000000)", None, None, 5000);
-    assert!(result.is_err(), "超大内存分配应返回错误: {result:?}");
+    let result = run_js("new Array(100000000).fill(1)", None, None, 5000);
+    assert!(
+        matches!(result, Err(lj_node_js::error::JsError::MemoryLimit)),
+        "超大内存分配应返回 MemoryLimit: {result:?}"
+    );
+}
+
+/// 内存上限的判定在 Rust 侧：脚本在 JS 层 try/catch 也吞不掉。
+#[test]
+fn test_memory_limit_cannot_be_swallowed_by_try_catch() {
+    let result = run_js(
+        "try { new Array(100000000).fill(1); 'swallowed' } catch (error) { 'swallowed' }",
+        None,
+        None,
+        5000,
+    );
+    assert!(
+        matches!(result, Err(lj_node_js::error::JsError::MemoryLimit)),
+        "JS 层 catch 不能把内存超限变成正常结果: {result:?}"
+    );
+}
+
+/// 输出上限 —— 超限返回稳定错误，不静默截断。
+#[test]
+fn test_output_budget_fails_instead_of_truncating() {
+    let cancellation = CancellationHandle::new().token();
+    let result = execute_js_blocking_cancellable(
+        "'x'.repeat(4096)",
+        None,
+        None,
+        JsBudget {
+            output_bytes: 64,
+            ..JsBudget::default()
+        },
+        &cancellation,
+    );
+    assert!(
+        matches!(result, Err(lj_node_js::error::JsError::OutputBudget(64))),
+        "输出超限应返回 OutputBudget: {result:?}"
+    );
+}
+
+/// 输出恰好等于上限时仍然成功。
+#[test]
+fn test_output_budget_boundary_is_inclusive() {
+    let cancellation = CancellationHandle::new().token();
+    let result = execute_js_blocking_cancellable(
+        "'x'.repeat(64)",
+        None,
+        None,
+        JsBudget {
+            output_bytes: 64,
+            ..JsBudget::default()
+        },
+        &cancellation,
+    );
+    assert_eq!(result.unwrap().len(), 64);
+}
+
+/// 内存预算低于合同下限时，adapter 按下限执行而不是坠机。
+///
+/// `QuickJS` 在内存极小的情况下会在自己的初始化失败路径上直接访问非法指针（实测段错误），
+/// 所以这里不把非法值原样交给引擎。
+#[test]
+fn test_sub_floor_memory_budget_is_raised_to_the_floor() {
+    let cancellation = CancellationHandle::new().token();
+    let result = execute_js_blocking_cancellable(
+        "1 + 1",
+        None,
+        None,
+        JsBudget {
+            memory_bytes: 1,
+            ..JsBudget::default()
+        },
+        &cancellation,
+    );
+    assert_eq!(result.unwrap(), "2");
 }
 
 #[tokio::test]
@@ -232,6 +307,48 @@ async fn plan_quickjs_effect_accepts_closed_json_control_inputs() {
     loop_output
         .validate()
         .expect("Loop selector output 必须绑定 JSON input witness");
+}
+
+#[tokio::test]
+async fn plan_quickjs_effect_maps_memory_limit_to_stable_error() {
+    let output = QuickJsEffectAdapter
+        .execute_quickjs(
+            quickjs_effect_request("new Array(100000000).fill(1)"),
+            CancellationHandle::new().token(),
+        )
+        .await
+        .expect("执行过的 QuickJS 失败必须返回可 archive 输出");
+    assert_eq!(
+        output.output,
+        EffectOutput::QuickJs(QuickJsOutput::Error(
+            lj_runtime::QuickJsErrorKind::MemoryLimit
+        ))
+    );
+    output
+        .validate()
+        .expect("内存超限 output 必须与安全 witness 绑定");
+}
+
+#[tokio::test]
+async fn plan_quickjs_effect_maps_output_budget_to_stable_error() {
+    let mut request = quickjs_effect_request("'x'.repeat(4096)");
+    request.budgets = JsBudget {
+        output_bytes: 64,
+        ..JsBudget::default()
+    };
+    let output = QuickJsEffectAdapter
+        .execute_quickjs(request, CancellationHandle::new().token())
+        .await
+        .expect("执行过的 QuickJS 失败必须返回可 archive 输出");
+    assert_eq!(
+        output.output,
+        EffectOutput::QuickJs(QuickJsOutput::Error(
+            lj_runtime::QuickJsErrorKind::OutputBudget
+        ))
+    );
+    output
+        .validate()
+        .expect("输出超限 output 必须与安全 witness 绑定");
 }
 
 #[tokio::test]

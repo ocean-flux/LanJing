@@ -223,6 +223,12 @@ fn effect_witness_for_test(witness: lj_runtime::EffectWitness) -> EffectWitnessF
                         QuickJsErrorKindForTest::ContextInitialization
                     }
                     lj_runtime::QuickJsErrorKind::Timeout => QuickJsErrorKindForTest::Timeout,
+                    lj_runtime::QuickJsErrorKind::MemoryLimit => {
+                        QuickJsErrorKindForTest::MemoryLimit
+                    }
+                    lj_runtime::QuickJsErrorKind::OutputBudget => {
+                        QuickJsErrorKindForTest::OutputBudget
+                    }
                     lj_runtime::QuickJsErrorKind::Watchdog => QuickJsErrorKindForTest::Watchdog,
                     lj_runtime::QuickJsErrorKind::WorkerFailure => {
                         QuickJsErrorKindForTest::WorkerFailure

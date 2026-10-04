@@ -333,6 +333,8 @@ pub enum QuickJsErrorKindForTest {
     RuntimeInitialization,
     ContextInitialization,
     Timeout,
+    MemoryLimit,
+    OutputBudget,
     Watchdog,
     WorkerFailure,
 }

@@ -29,6 +29,18 @@ impl JsBudget {
         memory_bytes: 16 * 1024 * 1024,
         output_bytes: 1024 * 1024,
     };
+
+    /// 时间预算下限（毫秒）。
+    pub const MIN_TIMEOUT_MS: u32 = 1;
+
+    /// 内存预算下限（字节）。
+    ///
+    /// 低于它 `QuickJS` 连 runtime 都建不起来（实测 128 KiB 时报 Context 创建失败，
+    /// 更小的预算会落到引擎自己的初始化失败路径），所以它是合同的一部分：生效值永不低于此。
+    pub const MIN_MEMORY_BYTES: u64 = 1024 * 1024;
+
+    /// 输出预算下限（字节）。
+    pub const MIN_OUTPUT_BYTES: u64 = 1;
 }
 
 impl Default for JsBudget {
@@ -58,13 +70,28 @@ impl JsBudgetCeiling {
         output_bytes: JsBudget::HOST_CEILING.output_bytes,
     };
 
-    /// 取规则声明与上限的交集；每项至少 1，避免声明 0 造成「必然超限」的死配置。
+    /// 取规则声明与 host policy 的交集：每项都不超过上限，也不低于该项下限。
+    ///
+    /// 下限不是形式：时间/输出预算为 0 会造出「必然超限」的死配置，内存预算低到
+    /// runtime 都建不起来。两种情况下都按边界值执行，而不是把非法值原样交给引擎。
     #[must_use]
     pub const fn clamp(&self, requested: JsBudget) -> JsBudget {
         JsBudget {
-            timeout_ms: clamp_u32(requested.timeout_ms, self.timeout_ms),
-            memory_bytes: clamp_u64(requested.memory_bytes, self.memory_bytes),
-            output_bytes: clamp_u64(requested.output_bytes, self.output_bytes),
+            timeout_ms: clamp_u32(
+                requested.timeout_ms,
+                JsBudget::MIN_TIMEOUT_MS,
+                self.timeout_ms,
+            ),
+            memory_bytes: clamp_u64(
+                requested.memory_bytes,
+                JsBudget::MIN_MEMORY_BYTES,
+                self.memory_bytes,
+            ),
+            output_bytes: clamp_u64(
+                requested.output_bytes,
+                JsBudget::MIN_OUTPUT_BYTES,
+                self.output_bytes,
+            ),
         }
     }
 }
@@ -75,22 +102,22 @@ impl Default for JsBudgetCeiling {
     }
 }
 
-const fn clamp_u32(requested: u32, ceiling: u32) -> u32 {
+const fn clamp_u32(requested: u32, floor: u32, ceiling: u32) -> u32 {
     let bounded = if requested < ceiling {
         requested
     } else {
         ceiling
     };
-    if bounded == 0 { 1 } else { bounded }
+    if bounded < floor { floor } else { bounded }
 }
 
-const fn clamp_u64(requested: u64, ceiling: u64) -> u64 {
+const fn clamp_u64(requested: u64, floor: u64, ceiling: u64) -> u64 {
     let bounded = if requested < ceiling {
         requested
     } else {
         ceiling
     };
-    if bounded == 0 { 1 } else { bounded }
+    if bounded < floor { floor } else { bounded }
 }
 
 #[cfg(test)]
@@ -112,7 +139,7 @@ mod tests {
     fn clamp_keeps_a_tighter_declaration() {
         let requested = JsBudget {
             timeout_ms: 250,
-            memory_bytes: 1024,
+            memory_bytes: 2 * 1024 * 1024,
             output_bytes: 2048,
         };
         assert_eq!(JsBudgetCeiling::HOST_POLICY.clamp(requested), requested);
@@ -128,10 +155,20 @@ mod tests {
         assert_eq!(
             JsBudgetCeiling::HOST_POLICY.clamp(requested),
             JsBudget {
-                timeout_ms: 1,
-                memory_bytes: 1,
-                output_bytes: 1,
+                timeout_ms: JsBudget::MIN_TIMEOUT_MS,
+                memory_bytes: JsBudget::MIN_MEMORY_BYTES,
+                output_bytes: JsBudget::MIN_OUTPUT_BYTES,
             }
         );
+    }
+
+    #[test]
+    fn clamp_raises_sub_floor_memory_budgets_to_the_engine_minimum() {
+        let effective = JsBudgetCeiling::HOST_POLICY.clamp(JsBudget {
+            memory_bytes: 1024,
+            ..JsBudget::HOST_CEILING
+        });
+        assert_eq!(effective.memory_bytes, JsBudget::MIN_MEMORY_BYTES);
+        assert!(effective.memory_bytes < JsBudget::HOST_CEILING.memory_bytes);
     }
 }

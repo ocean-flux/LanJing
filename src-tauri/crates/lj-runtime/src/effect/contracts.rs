@@ -32,6 +32,10 @@ pub enum QuickJsErrorKind {
     ContextInitialization,
     /// watchdog 到达执行时限。
     Timeout,
+    /// JS 堆用量超过规则声明的内存预算。
+    MemoryLimit,
+    /// JS 输出超过规则声明的字节预算。
+    OutputBudget,
     /// watchdog 清理失败。
     Watchdog,
     /// blocking worker 意外结束。
