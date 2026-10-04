@@ -55,7 +55,7 @@ fn adapter_exports_six_standard_intents_as_stable_definition() {
             .flow()
             .nodes
             .iter()
-            .any(|node| node.kind() == FlowNodeKind::Http)
+            .any(|node| node.kind() == Some(FlowNodeKind::Http))
     );
     assert!(
         adapted
@@ -63,7 +63,7 @@ fn adapter_exports_six_standard_intents_as_stable_definition() {
             .flow()
             .nodes
             .iter()
-            .any(|node| node.kind() == FlowNodeKind::Js)
+            .any(|node| node.kind() == Some(FlowNodeKind::Js))
     );
     assert!(
         adapted
@@ -71,7 +71,7 @@ fn adapter_exports_six_standard_intents_as_stable_definition() {
             .flow()
             .nodes
             .iter()
-            .all(|node| node.kind() != FlowNodeKind::Merge)
+            .all(|node| node.kind() != Some(FlowNodeKind::Merge))
     );
 }
 

@@ -25,7 +25,8 @@ pub fn canonicalize(definition: &RuleDefinition) -> RuleDefinition {
             | FlowNodeConfig::Js(_)
             | FlowNodeConfig::Extract(_)
             | FlowNodeConfig::Mapper(_)
-            | FlowNodeConfig::Loop(_) => {}
+            | FlowNodeConfig::Loop(_)
+            | FlowNodeConfig::Unavailable(_) => {}
         }
     }
     flow.nodes.sort_by_key(|node| node.id);

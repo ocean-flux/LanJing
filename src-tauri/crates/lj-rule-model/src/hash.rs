@@ -51,7 +51,8 @@ fn canonical_definition(definition: &RuleDefinition) -> RuleDefinition {
             FlowNodeConfig::Http(_)
             | FlowNodeConfig::Js(_)
             | FlowNodeConfig::Extract(_)
-            | FlowNodeConfig::Loop(_) => {}
+            | FlowNodeConfig::Loop(_)
+            | FlowNodeConfig::Unavailable(_) => {}
         }
     }
     flow.nodes.sort_by_key(|node| node.id);

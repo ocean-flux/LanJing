@@ -248,7 +248,7 @@ mod tests {
             .flow()
             .nodes
             .iter()
-            .filter(|node| node.kind() == FlowNodeKind::Http)
+            .filter(|node| node.kind() == Some(FlowNodeKind::Http))
             .filter_map(|node| match &node.config {
                 FlowNodeConfig::Http(spec) => Some(spec.url.as_str()),
                 _ => None,

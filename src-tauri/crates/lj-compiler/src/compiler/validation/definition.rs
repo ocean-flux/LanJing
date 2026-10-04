@@ -4,7 +4,7 @@ use super::super::{
     BTreeSet, CollectionSelector, ConditionConfig, ConditionPredicate, ControlExpression,
     ControlledMapper, Diagnostic, FlowNode, FlowNodeConfig, MAX_LOOP_ITERATIONS, MergeConfig,
     RuleDefinition, TypedLiteral, diagnostic, is_valid_json_pointer, node_diagnostic,
-    pointer_token, schema_span,
+    pointer_token, schema_span, unavailable_capability_diagnostic,
 };
 
 pub(in crate::compiler) fn validate_definition_header(
@@ -72,6 +72,9 @@ pub(in crate::compiler) fn validate_node_configuration(
             require_network(node, definition, diagnostics);
         }
         FlowNodeConfig::Extract(_) => {}
+        FlowNodeConfig::Unavailable(config) => {
+            diagnostics.push(unavailable_capability_diagnostic(node, config));
+        }
         FlowNodeConfig::Mapper(mapper) => validate_mapper(node, mapper, diagnostics),
         FlowNodeConfig::Merge(config) => validate_merge_config(node, config, diagnostics),
         FlowNodeConfig::Condition(config) => {

@@ -24,7 +24,7 @@ pub use definition::{
     FlowNodeKind, FlowPortRef, ForEachConfig, JsConfig, JsOutputKind, LoopIterationLimit,
     LoopIterationLimitError, MAX_LOOP_ITERATIONS, MapperOutputKind, MergeConfig, MergeInput,
     MergeInputActivation, MergeStrategy, RuleDefinition, RulePackage, SourceIdentity, SourceSpan,
-    read_rule_definition, read_rule_package,
+    UnavailableNodeConfig, read_rule_definition, read_rule_package,
 };
 pub use diagnostic::{Diagnostic, DiagnosticSeverity};
 pub use endpoint::{HttpMethod, HttpSpec};

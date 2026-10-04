@@ -7,15 +7,16 @@ use lj_compiler::Compiler;
 use lj_rule_model::{
     CONDITION_INPUT_HANDLE, CanonicalNumber, CapabilityManifest, CollectionSelector,
     ConditionConfig, ConditionPredicate, ControlExpression, ControlRegion, ControlledMapper,
-    EffectKind, ExpectedDataType, ExtractSpec, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
-    FlowPortRef, ForEachConfig, HttpMethod, HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE,
-    LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE,
-    LOOP_YIELD_HANDLE, LoopIterationLimit, MAX_LOOP_ITERATIONS, MERGE_OUTPUT_HANDLE,
-    MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy, OutputTarget,
-    PlanNode, PlanNodeConfig, PolicyCapabilities, PortValueKind, PortValueType,
-    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SourceIdentity, SourceSpan, SystemCapabilities,
-    TypedLiteral,
+    DiagnosticSeverity, EffectKind, ExpectedDataType, ExtractSpec, FlowEdge, FlowGraph, FlowNode,
+    FlowNodeConfig, FlowPortRef, ForEachConfig, HttpMethod, HttpSpec, JsConfig, JsOutputKind,
+    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE,
+    LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopIterationLimit, MAX_LOOP_ITERATIONS,
+    MERGE_OUTPUT_HANDLE, MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation,
+    MergeStrategy, OutputTarget, PlanNode, PlanNodeConfig, PolicyCapabilities, PortValueKind,
+    PortValueType, RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SourceIdentity, SourceSpan,
+    SystemCapabilities, TypedLiteral, UnavailableNodeConfig,
 };
+use serde_json::json;
 use uuid::Uuid;
 
 const JS: u128 = 1;
@@ -471,6 +472,31 @@ fn control_script_source_is_not_echoed_in_diagnostics() {
 }
 
 #[test]
+fn unavailable_node_capability_is_rejected_without_producing_a_plan() {
+    let mut definition = seven_node_definition(typed_condition_expression());
+    node_mut(&mut definition, JS).config = FlowNodeConfig::Unavailable(UnavailableNodeConfig::new(
+        "custom_reader",
+        json!({ "selector": ".entry" }),
+    ));
+
+    let diagnostics = lj_compiler::validate(&definition);
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == "NODE_CAPABILITY_UNAVAILABLE"
+            && diagnostic.severity == DiagnosticSeverity::Error
+    }));
+
+    let error = Compiler::default()
+        .compile(&definition)
+        .expect_err("未安装能力节点不得产出 immutable Plan");
+    assert!(
+        error
+            .diagnostics()
+            .iter()
+            .any(|diagnostic| diagnostic.code == "NODE_CAPABILITY_UNAVAILABLE")
+    );
+}
+
+#[test]
 fn declaration_reordering_and_source_spans_do_not_change_definition_or_plan_hash() {
     let compiler = Compiler::with_version("test-compiler@1".to_string());
     let base = seven_node_definition(typed_condition_expression());
@@ -486,7 +512,8 @@ fn declaration_reordering_and_source_spans_do_not_change_definition_or_plan_hash
             | FlowNodeConfig::Js(_)
             | FlowNodeConfig::Extract(_)
             | FlowNodeConfig::Mapper(_)
-            | FlowNodeConfig::Loop(_) => {}
+            | FlowNodeConfig::Loop(_)
+            | FlowNodeConfig::Unavailable(_) => {}
         }
     }
 

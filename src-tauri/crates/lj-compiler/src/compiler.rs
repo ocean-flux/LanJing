@@ -37,7 +37,7 @@ use analysis::{NodePorts, ValidatedLoopRegion, analyze};
 pub use canonicalize::canonicalize;
 use diagnostics::{
     diagnostic, edge_diagnostic, node_diagnostic, node_path, pointer_token, schema_span,
-    semantic_span, sort_diagnostics,
+    semantic_span, sort_diagnostics, unavailable_capability_diagnostic,
 };
 use graph::{
     adjacency, edges_by_input, edges_by_output, has_cycle, is_reachable, is_valid_json_pointer,

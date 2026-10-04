@@ -170,6 +170,8 @@ pub(in crate::compiler) fn validate_input_and_control_handles(
             FlowNodeConfig::Loop(_) => {
                 validate_loop_handle_counts(node, &incoming, &outgoing, diagnostics);
             }
+            // 未安装能力节点的 port 语义未知；由 Definition 校验统一拒绝。
+            FlowNodeConfig::Unavailable(_) => {}
             FlowNodeConfig::Http(_)
             | FlowNodeConfig::Js(_)
             | FlowNodeConfig::Extract(_)

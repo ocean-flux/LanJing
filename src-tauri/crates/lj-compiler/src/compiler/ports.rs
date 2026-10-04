@@ -97,6 +97,8 @@ pub(in crate::compiler) fn ports_for_node(node: &FlowNode) -> NodePorts {
                 PlanPort::new(LOOP_DONE_HANDLE, PortValueType::kind(PortValueKind::Json)),
             ],
         ),
+        // 未安装能力节点的 port 语义未知，不声明任何 port。
+        FlowNodeConfig::Unavailable(_) => (Vec::new(), Vec::new()),
     };
     // Merge input 顺序由显式 order 决定；其他节点 handle 排序只保证稳定展示，不承载语义。
     if !is_merge {

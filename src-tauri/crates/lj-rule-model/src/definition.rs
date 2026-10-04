@@ -11,7 +11,7 @@ pub use config::{
     ControlExpression, ControlledMapper, FlowNodeConfig, FlowNodeKind, ForEachConfig, JsConfig,
     JsOutputKind, LoopIterationLimit, LoopIterationLimitError, MAX_LOOP_ITERATIONS,
     MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation, MergeStrategy, SourceIdentity,
-    SourceSpan,
+    SourceSpan, UnavailableNodeConfig,
 };
 pub use contract::{
     FlowEdge, FlowGraph, FlowNode, FlowPortRef, RuleDefinition, RulePackage, read_rule_definition,

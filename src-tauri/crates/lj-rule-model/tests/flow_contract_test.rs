@@ -174,6 +174,7 @@ fn plan_config(config: &FlowNodeConfig) -> PlanNodeConfig {
             config.index_binding.clone(),
             LoopIterationLimit::new(u32::from(config.max_iterations)).unwrap(),
         )),
+        FlowNodeConfig::Unavailable(_) => panic!("未安装能力不可编译为 Plan"),
     }
 }
 
@@ -276,13 +277,13 @@ fn seven_flow_node_configs_roundtrip_as_closed_tagged_current() {
     assert_eq!(
         kinds,
         vec![
-            FlowNodeKind::Http,
-            FlowNodeKind::Js,
-            FlowNodeKind::Extract,
-            FlowNodeKind::Mapper,
-            FlowNodeKind::Merge,
-            FlowNodeKind::Condition,
-            FlowNodeKind::Loop,
+            Some(FlowNodeKind::Http),
+            Some(FlowNodeKind::Js),
+            Some(FlowNodeKind::Extract),
+            Some(FlowNodeKind::Mapper),
+            Some(FlowNodeKind::Merge),
+            Some(FlowNodeKind::Condition),
+            Some(FlowNodeKind::Loop),
         ]
     );
 
@@ -538,7 +539,8 @@ fn definition_and_plan_hashes_ignore_declaration_order_and_layout_span() {
             FlowNodeConfig::Http(_)
             | FlowNodeConfig::Js(_)
             | FlowNodeConfig::Extract(_)
-            | FlowNodeConfig::Loop(_) => {}
+            | FlowNodeConfig::Loop(_)
+            | FlowNodeConfig::Unavailable(_) => {}
         }
     }
     assert_eq!(

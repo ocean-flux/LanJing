@@ -44,9 +44,9 @@ impl FlowNode {
         self
     }
 
-    /// 返回与 config 一致的节点类型。
+    /// 返回与 config 一致的节点类型；未安装能力返回 `None`。
     #[must_use]
-    pub const fn kind(&self) -> FlowNodeKind {
+    pub const fn kind(&self) -> Option<FlowNodeKind> {
         self.config.kind()
     }
 }

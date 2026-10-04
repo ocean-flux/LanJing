@@ -5,8 +5,8 @@ use std::collections::{BTreeMap, HashMap};
 use lj_capability::{IntentExport, StandardIntent};
 use lj_rule_model::{
     CapabilityManifest, EventEnvelope, EventType, ExecutionPlan, ExecutionPlanParts, FlowGraph,
-    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SchemaContract, SchemaReadError, SourceIdentity,
-    canonical_json, definition_hash, execution_plan_hash, read_execution_plan,
+    FlowNodeConfig, RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SchemaContract, SchemaReadError,
+    SourceIdentity, canonical_json, definition_hash, execution_plan_hash, read_execution_plan,
     read_rule_definition, read_rule_package,
 };
 use serde::Serialize;
@@ -353,4 +353,61 @@ fn policy_and_capability_manifest_roundtrip() {
         serde_json::from_str::<PolicyCapabilities>(&json).unwrap(),
         capabilities
     );
+}
+
+#[test]
+fn unknown_capability_node_payload_round_trips_as_opaque() {
+    let node_id = Uuid::parse_str("33333333-3333-3333-3333-333333333333").unwrap();
+    let payload = json!({ "selector": ".entry", "flags": ["a", "b"] });
+    let mut value = serde_json::to_value(sample_definition()).unwrap();
+    value["flow"]["nodes"] = json!([{
+        "id": node_id,
+        "config": { "kind": "custom_reader", "value": payload },
+    }]);
+
+    let definition = read_rule_definition(&serde_json::to_vec(&value).unwrap())
+        .expect("未安装能力的 payload 必须可读入, 以支持保存与 round-trip");
+    let node = &definition.flow().nodes[0];
+    assert_eq!(node.kind(), None, "未安装能力不映射到内置节点 kind");
+    match &node.config {
+        FlowNodeConfig::Unavailable(config) => {
+            assert_eq!(config.kind, "custom_reader");
+            assert_eq!(config.value, payload);
+        }
+        other => panic!("期望 opaque payload, 实际 {other:?}"),
+    }
+
+    // writer 保留作者 wire 形状，不引入第二层包装。
+    let rewritten = serde_json::to_value(&definition).unwrap();
+    assert_eq!(rewritten["flow"]["nodes"], value["flow"]["nodes"]);
+    let reread = read_rule_definition(&serde_json::to_vec(&rewritten).unwrap()).unwrap();
+    assert_eq!(reread, definition);
+    assert_eq!(
+        definition_hash(&reread).unwrap(),
+        definition_hash(&definition).unwrap()
+    );
+}
+
+#[test]
+fn malformed_known_node_payload_stays_invalid_data() {
+    for (label, config) in [
+        (
+            "非法 enum 值",
+            json!({ "kind": "js", "value": { "code": "x", "output": "not-an-output-kind" } }),
+        ),
+        ("缺失 value", json!({ "kind": "js" })),
+        ("kind 非字符串", json!({ "kind": 7, "value": {} })),
+        (
+            "已知 payload 的未知字段",
+            json!({ "kind": "js", "value": { "code": "x", "output": "json", "extra": 1 } }),
+        ),
+    ] {
+        let mut value = serde_json::to_value(sample_definition()).unwrap();
+        value["flow"]["nodes"] = json!([{
+            "id": "33333333-3333-3333-3333-333333333333",
+            "config": config,
+        }]);
+        let error = read_rule_definition(&serde_json::to_vec(&value).unwrap()).unwrap_err();
+        assert_eq!(error.code(), "RULE_CONTRACT_INVALID_DATA", "case: {label}");
+    }
 }

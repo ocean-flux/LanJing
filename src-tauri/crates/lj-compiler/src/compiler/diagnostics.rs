@@ -28,6 +28,19 @@ pub(in crate::compiler) fn node_diagnostic(
     )
 }
 
+/// 未安装能力节点的稳定诊断；只暴露能力 kind，不暴露 payload。
+pub(in crate::compiler) fn unavailable_capability_diagnostic(
+    node: &FlowNode,
+    config: &lj_rule_model::UnavailableNodeConfig,
+) -> Diagnostic {
+    node_diagnostic(
+        "NODE_CAPABILITY_UNAVAILABLE",
+        format!("节点引用了未安装的规则能力 {}", config.kind),
+        node,
+        "",
+    )
+}
+
 pub(in crate::compiler) fn edge_diagnostic(
     code: &str,
     message: impl Into<String>,

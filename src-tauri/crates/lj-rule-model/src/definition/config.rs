@@ -1,7 +1,8 @@
 //! Definition 的 closed config 与 control expression。
 
 use serde::de::Error as _;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 
 use crate::endpoint::HttpSpec;
 use crate::extract_rule::ExtractSpec;
@@ -410,14 +411,64 @@ pub enum FlowNodeKind {
     Loop,
 }
 
-/// 无 kind/config mismatch 的闭集 Flow 节点配置。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(
-    tag = "kind",
-    content = "value",
-    rename_all = "snake_case",
-    deny_unknown_fields
-)]
+impl FlowNodeKind {
+    /// 全部内置节点 kind。
+    const ALL: [Self; 7] = [
+        Self::Http,
+        Self::Js,
+        Self::Extract,
+        Self::Mapper,
+        Self::Merge,
+        Self::Condition,
+        Self::Loop,
+    ];
+
+    /// 返回 serde `kind` tag 的稳定 wire 名称。
+    #[must_use]
+    pub const fn wire_name(self) -> &'static str {
+        match self {
+            Self::Http => "http",
+            Self::Js => "js",
+            Self::Extract => "extract",
+            Self::Mapper => "mapper",
+            Self::Merge => "merge",
+            Self::Condition => "condition",
+            Self::Loop => "loop",
+        }
+    }
+
+    /// 解析内置节点 kind；未安装能力返回 `None`。
+    #[must_use]
+    pub fn from_wire(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|kind| kind.wire_name() == name)
+    }
+}
+
+/// 未安装能力的 opaque 节点 payload。
+///
+/// 原样保留作者 wire 的 `kind` 与 `value`：可读入、写出并 round-trip，但不参与
+/// validate、compile 与 execute。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnavailableNodeConfig {
+    /// 未安装能力的 wire kind。
+    pub kind: String,
+    /// 未安装能力的原始 payload。
+    pub value: Value,
+}
+
+impl UnavailableNodeConfig {
+    /// 创建 opaque payload。
+    #[must_use]
+    pub fn new(kind: impl Into<String>, value: Value) -> Self {
+        Self {
+            kind: kind.into(),
+            value,
+        }
+    }
+}
+
+/// Flow 节点配置：内置能力的 typed config，或未安装能力的 opaque payload。
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FlowNodeConfig {
     /// HTTP 请求。
     Http(HttpSpec),
@@ -433,20 +484,118 @@ pub enum FlowNodeConfig {
     Condition(ConditionConfig),
     /// bounded for-each。
     Loop(ForEachConfig),
+    /// 未安装能力：只保存与 round-trip，不可 validate/compile/execute。
+    Unavailable(UnavailableNodeConfig),
 }
 
 impl FlowNodeConfig {
-    /// 返回与 active config 一致的节点判别值。
+    /// 返回内置节点判别值；未安装能力返回 `None`。
     #[must_use]
-    pub const fn kind(&self) -> FlowNodeKind {
+    pub const fn kind(&self) -> Option<FlowNodeKind> {
         match self {
-            Self::Http(_) => FlowNodeKind::Http,
-            Self::Js(_) => FlowNodeKind::Js,
-            Self::Extract(_) => FlowNodeKind::Extract,
-            Self::Mapper(_) => FlowNodeKind::Mapper,
-            Self::Merge(_) => FlowNodeKind::Merge,
-            Self::Condition(_) => FlowNodeKind::Condition,
-            Self::Loop(_) => FlowNodeKind::Loop,
+            Self::Http(_) => Some(FlowNodeKind::Http),
+            Self::Js(_) => Some(FlowNodeKind::Js),
+            Self::Extract(_) => Some(FlowNodeKind::Extract),
+            Self::Mapper(_) => Some(FlowNodeKind::Mapper),
+            Self::Merge(_) => Some(FlowNodeKind::Merge),
+            Self::Condition(_) => Some(FlowNodeKind::Condition),
+            Self::Loop(_) => Some(FlowNodeKind::Loop),
+            Self::Unavailable(_) => None,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FlowNodeConfigWire {
+    kind: String,
+    value: Value,
+}
+
+#[derive(Serialize)]
+struct FlowNodeConfigWireRef<'a, T: Serialize> {
+    kind: &'a str,
+    value: T,
+}
+
+impl<'de> Deserialize<'de> for FlowNodeConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = FlowNodeConfigWire::deserialize(deserializer)?;
+        let Some(kind) = FlowNodeKind::from_wire(&wire.kind) else {
+            return Ok(Self::Unavailable(UnavailableNodeConfig {
+                kind: wire.kind,
+                value: wire.value,
+            }));
+        };
+        let payload = wire.value;
+        let decoded = match kind {
+            FlowNodeKind::Http => serde_json::from_value::<HttpSpec>(payload).map(Self::Http),
+            FlowNodeKind::Js => serde_json::from_value::<JsConfig>(payload).map(Self::Js),
+            FlowNodeKind::Extract => {
+                serde_json::from_value::<ExtractSpec>(payload).map(Self::Extract)
+            }
+            FlowNodeKind::Mapper => {
+                serde_json::from_value::<ControlledMapper>(payload).map(Self::Mapper)
+            }
+            FlowNodeKind::Merge => serde_json::from_value::<MergeConfig>(payload).map(Self::Merge),
+            FlowNodeKind::Condition => {
+                serde_json::from_value::<ConditionConfig>(payload).map(Self::Condition)
+            }
+            FlowNodeKind::Loop => serde_json::from_value::<ForEachConfig>(payload).map(Self::Loop),
+        };
+        decoded.map_err(D::Error::custom)
+    }
+}
+
+impl Serialize for FlowNodeConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Http(config) => FlowNodeConfigWireRef {
+                kind: FlowNodeKind::Http.wire_name(),
+                value: config,
+            }
+            .serialize(serializer),
+            Self::Js(config) => FlowNodeConfigWireRef {
+                kind: FlowNodeKind::Js.wire_name(),
+                value: config,
+            }
+            .serialize(serializer),
+            Self::Extract(config) => FlowNodeConfigWireRef {
+                kind: FlowNodeKind::Extract.wire_name(),
+                value: config,
+            }
+            .serialize(serializer),
+            Self::Mapper(config) => FlowNodeConfigWireRef {
+                kind: FlowNodeKind::Mapper.wire_name(),
+                value: config,
+            }
+            .serialize(serializer),
+            Self::Merge(config) => FlowNodeConfigWireRef {
+                kind: FlowNodeKind::Merge.wire_name(),
+                value: config,
+            }
+            .serialize(serializer),
+            Self::Condition(config) => FlowNodeConfigWireRef {
+                kind: FlowNodeKind::Condition.wire_name(),
+                value: config,
+            }
+            .serialize(serializer),
+            Self::Loop(config) => FlowNodeConfigWireRef {
+                kind: FlowNodeKind::Loop.wire_name(),
+                value: config,
+            }
+            .serialize(serializer),
+            Self::Unavailable(config) => FlowNodeConfigWireRef {
+                kind: &config.kind,
+                value: &config.value,
+            }
+            .serialize(serializer),
         }
     }
 }

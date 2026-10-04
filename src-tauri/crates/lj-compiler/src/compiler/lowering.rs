@@ -2,9 +2,10 @@
 
 use super::{
     BTreeSet, CollectionSelector, CompilerError, ConditionConfig, ControlExpression, ControlRegion,
-    EffectDeclaration, EffectKind, ExecutionPlan, ExecutionPlanParts, FlowNodeConfig, IntentEntry,
-    LoopIterationLimit, NETWORK_CAPABILITY, NodePorts, PlanEdge, PlanForEachConfig, PlanNode,
-    PlanNodeConfig, RuleDefinition, definition_hash, ports_for_node,
+    EffectDeclaration, EffectKind, ExecutionPlan, ExecutionPlanParts, FlowNode, FlowNodeConfig,
+    IntentEntry, LoopIterationLimit, NETWORK_CAPABILITY, NodePorts, PlanEdge, PlanForEachConfig,
+    PlanNode, PlanNodeConfig, RuleDefinition, definition_hash, ports_for_node,
+    unavailable_capability_diagnostic,
 };
 
 pub(in crate::compiler) fn build_plan(
@@ -81,7 +82,7 @@ fn lower_nodes(
             id: flow_node.id,
             inputs,
             outputs,
-            config: plan_node_config(&flow_node.config)?,
+            config: plan_node_config(flow_node)?,
         });
     }
     effects.sort_by(|left, right| {
@@ -108,13 +109,14 @@ pub(in crate::compiler) fn effect_kind(config: &FlowNodeConfig) -> Option<Effect
         FlowNodeConfig::Mapper(_)
         | FlowNodeConfig::Merge(_)
         | FlowNodeConfig::Condition(_)
-        | FlowNodeConfig::Loop(_) => None,
+        | FlowNodeConfig::Loop(_)
+        | FlowNodeConfig::Unavailable(_) => None,
     }
 }
 pub(in crate::compiler) fn plan_node_config(
-    config: &FlowNodeConfig,
+    node: &FlowNode,
 ) -> Result<PlanNodeConfig, CompilerError> {
-    let config = match config {
+    let config = match &node.config {
         FlowNodeConfig::Http(config) => PlanNodeConfig::Http(config.clone()),
         FlowNodeConfig::Js(config) => PlanNodeConfig::Js(config.clone()),
         FlowNodeConfig::Extract(config) => PlanNodeConfig::Extract(config.clone()),
@@ -134,6 +136,11 @@ pub(in crate::compiler) fn plan_node_config(
                 config.index_binding.clone(),
                 max_iterations,
             ))
+        }
+        FlowNodeConfig::Unavailable(config) => {
+            return Err(CompilerError::validation(vec![
+                unavailable_capability_diagnostic(node, config),
+            ]));
         }
     };
     Ok(config)
