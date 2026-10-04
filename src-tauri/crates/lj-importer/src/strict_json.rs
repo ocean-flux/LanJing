@@ -40,19 +40,23 @@ enum FieldType {
     ObjectOrString,
 }
 
+/// 规则字段的取值语义：决定提取表达式走哪一套白名单。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RuleResultType {
+    /// 普通规则字段：必须是 current adapter 可执行的提取表达式。
+    Rule,
+    /// 下一页规则字段：允许空声明，表示来源没有下一页。
+    NextPageRule,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct FieldSpec {
     pointer: &'static str,
     field_type: FieldType,
     required: bool,
-    rule_result_type: Option<&'static str>,
+    rule_result_type: Option<RuleResultType>,
     support: ImportSupport,
 }
-
-/// 普通规则字段：必须是 current adapter 可执行的提取表达式。
-const RULE_RESULT_TYPE: &str = "rule";
-/// 下一页规则字段：允许空声明，表示来源没有下一页。
-const NEXT_PAGE_RULE_RESULT_TYPE: &str = "next_page_rule";
 
 macro_rules! field {
     ($pointer:literal, $type:ident, $required:literal, $support:ident) => {
@@ -69,7 +73,7 @@ macro_rules! field {
             pointer: $pointer,
             field_type: FieldType::$type,
             required: $required,
-            rule_result_type: Some(RULE_RESULT_TYPE),
+            rule_result_type: Some(RuleResultType::Rule),
             support: ImportSupport::$support,
         }
     };
@@ -78,7 +82,7 @@ macro_rules! field {
             pointer: $pointer,
             field_type: FieldType::$type,
             required: $required,
-            rule_result_type: Some(NEXT_PAGE_RULE_RESULT_TYPE),
+            rule_result_type: Some(RuleResultType::NextPageRule),
             support: ImportSupport::$support,
         }
     };
@@ -518,7 +522,7 @@ fn is_integer_string(value: &str) -> bool {
 
 /// 下一页规则字段允许空字符串/null 声明, 表示该来源只有一页; 其余仍走通用规则白名单。
 fn rule_expression_is_accepted(field: &FieldSpec, value: &str) -> bool {
-    if field.rule_result_type == Some(NEXT_PAGE_RULE_RESULT_TYPE) && value.trim().is_empty() {
+    if field.rule_result_type == Some(RuleResultType::NextPageRule) && value.trim().is_empty() {
         return true;
     }
     rule_expression_is_supported(value)
