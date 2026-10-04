@@ -75,19 +75,19 @@ impl JsBudgetCeiling {
     /// 下限不是形式：时间/输出预算为 0 会造出「必然超限」的死配置，内存预算低到
     /// runtime 都建不起来。两种情况下都按边界值执行，而不是把非法值原样交给引擎。
     #[must_use]
-    pub const fn clamp(&self, requested: JsBudget) -> JsBudget {
+    pub fn clamp(&self, requested: JsBudget) -> JsBudget {
         JsBudget {
-            timeout_ms: clamp_u32(
+            timeout_ms: clamp(
                 requested.timeout_ms,
                 JsBudget::MIN_TIMEOUT_MS,
                 self.timeout_ms,
             ),
-            memory_bytes: clamp_u64(
+            memory_bytes: clamp(
                 requested.memory_bytes,
                 JsBudget::MIN_MEMORY_BYTES,
                 self.memory_bytes,
             ),
-            output_bytes: clamp_u64(
+            output_bytes: clamp(
                 requested.output_bytes,
                 JsBudget::MIN_OUTPUT_BYTES,
                 self.output_bytes,
@@ -102,16 +102,12 @@ impl Default for JsBudgetCeiling {
     }
 }
 
-const fn clamp_u32(requested: u32, floor: u32, ceiling: u32) -> u32 {
-    let bounded = if requested < ceiling {
-        requested
-    } else {
-        ceiling
-    };
-    if bounded < floor { floor } else { bounded }
-}
-
-const fn clamp_u64(requested: u64, floor: u64, ceiling: u64) -> u64 {
+/// 把请求值收进 `[floor, ceiling]`。
+///
+/// 不直接用 `Ord::clamp`：它在 `floor > ceiling` 时 panic，而这里的两个边界来自
+/// 两份独立声明（引擎下限与 host policy 上限），宁可返回下限也不要让非法 host policy
+/// 把执行路径打崩。
+fn clamp<T: PartialOrd + Copy>(requested: T, floor: T, ceiling: T) -> T {
     let bounded = if requested < ceiling {
         requested
     } else {
