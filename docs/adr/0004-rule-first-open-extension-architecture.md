@@ -1,62 +1,59 @@
-# ADR 0004：规则优先的开放扩展架构
+# ADR 0004：规则优先的来源扩展架构
 
 - 状态：已采纳
 - 取代：ADR 0003
-- 影响范围：规则包、来源输入、规则编译、规则编辑器、脚本节点和 Source 生命周期
+- 影响范围：规则编辑、来源安装、规则编译、受控脚本、Source 生命周期和 capture/replay
 
 ## 背景
 
-LanJing 本身是规则驱动的本地媒体工作台。规则已经是用户增加来源和媒体处理能力的主要扩展机制。
+LanJing 是规则驱动的本地媒体发现与阅读工作台。用户增加来源和媒体处理能力的主要方式应当是定义规则, 而不是开发、安装和管理通用插件。
 
-如果再把 node、source、editor、service、runtime 和前端页面统一包装为通用 plugin system, 会重复规则的职责, 并引入与当前产品阶段不匹配的安装、升级、隔离、跨插件状态和前端扩展成本。
+通用 plugin system 会重复规则的职责, 并引入 PluginHost、插件目录、跨插件 service、独立状态、动态加载、前端扩展和多 runtime 的长期成本。当前产品没有足够证据证明这些成本是必要的。
 
-Legado 的主要扩展模型也是来源定义、规则 DSL 和来源脚本。新版把书源脚本与前端插件分成两条独立路线。LanJing 借鉴其来源包、自包含文件、作者工具和版本声明, 但不把规则 JSON 或来源脚本误称为通用插件, 也不照搬无沙箱脚本和覆盖式更新。
+Legado 的主要扩展模型是来源实体、规则 DSL 和来源脚本。新版把书源脚本与前端插件分成两条独立路线。LanJing 借鉴其来源文件、选择器、导入改写和作者工具, 但保留自己的结构化 Definition、revision、权限、immutable Plan 和 capture/replay 不变量。
 
 ## 决定
 
-### 1. 规则包是一期开放扩展单位
+### 1. 用户规则是一期扩展边界
 
-一期对外开放的是 `Rule Package`, 不是通用 plugin package。
+一期对外提供的是规则定义和可导入的 Rule Package, 不是通用 executable plugin package。
 
-Rule Package 可以包含:
+用户可以通过规则定义:
 
-- Source Definition metadata
-- 规则图 Definition
-- node、value type 和 port descriptor
-- 配置 schema 和 canonicalization
-- 可选的受控 script node 配置
-- editor descriptor
-- 兼容的 source input adapter metadata
-- 版本、来源、摘要和更新声明
+- 请求和分页。
+- HTML/XML/JSON 内容提取。
+- XPath、CSS、Regex 和 JSON selector。
+- 字段映射、清洗、条件、循环和合并。
+- 标准媒体模型的字段输出。
+- 受控 JS 变换节点。
 
-第三方作者基于稳定 Rule Contract 制作 Rule Package。用户可以导入、审阅、保存、验证、安装和更新它。
+Rule Package 是规则、来源 metadata、版本声明和可选脚本配置组成的可导入/导出文件。它不是动态二进制, 不能声明任意宿主 service, 也不能注入前端代码。
 
-规则包不能直接获得 SQLite、Tauri、React state、文件系统、进程、event sequence、revision、archive 或明文 credential。
+### 2. Rule Contract 服务于规则编辑和编译
 
-### 2. Rule Contract 取代通用 Plugin Contract
+Rule Contract 提供稳定的 namespaced identity、可扩展 envelope、descriptor schema、port、配置 canonicalization 和诊断。
 
-规则扩展使用稳定的 namespaced identity、可扩展 envelope、descriptor schema 和明确的 contract version。
+规则节点可以声明:
 
-开放的能力包括:
+1. 输入和输出 port。
+2. value type 和兼容关系。
+3. 配置 schema、默认值和 canonicalization。
+4. compiler lowering 到 immutable Plan operation。
+5. 所需的受控 host capability。
+6. 用于编辑器渲染的声明式 metadata。
 
-1. node descriptor、value type descriptor 和 port descriptor。
-2. 规则配置 schema、默认值、canonicalization 和诊断。
-3. compiler lowering 到 immutable Plan operation。
-4. 受控 effect 和 host capability 声明。
-5. Source Definition 到标准 Rule Package Draft 的输入转换。
-6. 声明式 EditorDescriptor, 用于配置字段、端口和诊断投影。
+这些 contract 首先服务 LanJing 自己的规则编辑器、导入器和 compiler。它们不承诺第三方实现 Rust trait、动态 Rust ABI 或任意 runtime module。
 
-核心保留 scheduler、取消、权限交集、credential ownership、revision、事务、capture/replay 和标准媒体模型。
+新增规则能力应通过通用节点和规则配置表达, 不增加核心能力专属的前端页面和 runtime dispatch 分支。确实需要新增宿主能力时, 另行设计窄的 host adapter。
 
-新增规则能力只增加 namespaced descriptor 和 package 内容, 不增加核心能力专属 enum、dispatch 分支或 React 专属组件。
+### 3. 来源扩展经过既有 Source 生命周期
 
-### 3. 来源扩展优先于通用运行时扩展
-
-来源扩展的完整路径为:
+来源规则的完整路径为:
 
 ```text
-Rule Package
-  -> Adaptive Source Input
+Adaptive Source Input
+  -> Source Definition
+  -> Rule Package / Native Rule Document
   -> Install Candidate
   -> 审阅和授权
   -> Source Revision
@@ -64,69 +61,73 @@ Rule Package
   -> 标准媒体模型
 ```
 
-Source input adapter 只能解析、转换和验证输入, 不能直接创建 Source Revision 或绕过安装事务。
+source input adapter 只能解析、转换和验证输入, 不能直接创建 Source Revision 或绕过安装事务。
 
-一期兼容 Legado JSON 和后续可定义的自包含规则文件。Legado 的字符串规则、XPath/JSON/CSS/regex 选择器、替换规则和来源仓库索引可以作为导入和作者工作流的参考, 但 LanJing 内部仍使用结构化 Definition、编译和 immutable Plan。
+一期兼容 Legado JSON, 并可支持自包含规则文件。Legado 的规则字符串、XPath/JSON/CSS/regex selector、替换规则和来源仓库索引可以作为导入和作者工作流的参考, 但 LanJing 内部仍使用结构化 Definition、编译和 immutable Plan。
 
-### 4. 脚本只作为受控规则节点
+### 4. JS 是受控变换节点, 不是通用插件 runtime
 
-需要代码逻辑时, 先提供受控 script node, 而不是独立的通用 plugin runtime。
+规则无法表达局部转换时, 使用受控 JS 节点。首期 JS 只处理当前节点输入、规则变量和结构化中间值, 返回结构化结果。
 
-脚本运行在 Rust 管理的 QuickJS 边界内, 只能通过稳定 host API 使用被授予的 network、opaque credential slot、clock、random、state、logging、diagnostics 和 cancellation。
+JS 运行在 Rust 管理的 QuickJS 边界内, 受限于超时、取消、内存/输出预算和稳定错误映射。首期网络请求优先使用独立 HTTP 规则节点, 以保持权限、凭证和 capture/replay 语义一致。
 
-脚本调用必须遵守资源预算、权限交集、capture/replay 和取消规则。脚本不能注册任意 service、注入前端页面、修改规则生命周期或动态改变 scheduler。
+JS 不能访问 SQLite、Tauri、React state、任意文件系统、环境变量、进程、event sequence、revision、archive 或明文 credential。
 
-是否增加新的 host capability, 由后续 ADR 或 contract version 单独决定。
+未来如果有明确需求, 可以为单项 host capability 增加受控 API, 但不因此恢复通用 plugin system。
 
-### 5. 前端消费规则描述, 不执行插件 UI
+### 5. 前端实现规则工作流, 不实现插件管理
 
-前端实现规则和来源工作流:
+前端一期实现:
 
-- Rule Package 导入、审阅、验证、安装和更新。
-- Source、Source Revision 和授权管理。
-- Native Rule Document 的编辑、保存、诊断和恢复。
-- 根据 EditorDescriptor 渲染插件节点的字段、端口和诊断。
-- 对未知或缺失 descriptor 的节点进行 unavailable 展示和安全 round-trip。
+- Rule Package 导入、导出、审阅和验证。
+- Source、Source Revision、授权和诊断管理。
+- Native Rule Document 的编辑、Explicit Rule Save、诊断和 Recovery Draft。
+- 根据规则 descriptor 渲染字段、端口、默认值和诊断。
+- unknown node、value type 和 payload 的 unavailable 展示与安全 round-trip。
+- 规则预览、执行、取消、capture/replay 结果和失败状态。
 
-规则包不能注入 React component、路由、Tauri command、WebView script 或 App Surface 布局。
+规则文件不能注入 React component、路由、Tauri command、WebView script 或 App Surface 布局。
 
-### 6. 版本演进采用新增优先
+### 6. 版本和安全不变量保持不变
 
 - 已发布的 identity 不被覆盖。
-- 不兼容的 schema 或 contract 必须显式升级版本。
-- 未知 node、value type 和 payload 可以展示、保存和 round-trip, 但不能 validate、compile 或 execute。
-- Rule Package 更新必须经过 Install Candidate 和 stale 检查, 不能覆盖式静默更新。
-- Rule Draft Revision 失败不能替换 Effective Rule Revision。
-- 规则执行使用绑定的 immutable Plan、descriptor digest 和 Source Revision。
+- 不兼容 schema 或 contract 必须显式升级版本。
+- unknown payload 可以展示、保存和 round-trip, 但不能 validate、compile 或 execute。
+- Source Update 必须经过 Install Candidate 和 stale 检查, 不能覆盖式静默更新。
+- Rule Draft Revision 校验失败不能替换 Effective Rule Revision。
+- execution 绑定 Source Revision、descriptor digest 和 immutable Plan。
+- capability 取 host policy、Source grant、规则声明和 invocation grant 的交集。
+- plaintext credential 不进入普通 rule input、脚本 state、日志、诊断、事件或历史记录。
+- 所有受控外部 effect 都必须 capture, replay 禁止 live fallback。
 
-### 7. 暂不建设通用插件平台
-
-一期不包含:
+### 7. 一期明确不建设
 
 - 动态 Rust ABI、dylib、cdylib 或独立进程 plugin。
-- 通用 PluginHost、跨插件 service、registration lease 和 plugin catalog。
+- 通用 PluginHost、plugin catalog、跨插件 service 和 registration lease。
+- 第三方 executable plugin SDK 和任意 plugin package runtime。
 - 任意前端 UI plugin、页面路由、WebView 注入和自定义 App Surface。
 - 在线 marketplace、自动下载和云端分发。
 - 任意文件系统、环境变量、进程和原生平台调用。
-- 无沙箱任意 JS、浏览器自动化和反爬绕过。
+- 无沙箱任意 JavaScript、浏览器自动化和反爬绕过。
 
-如果未来出现无法由 Rule Package 或受控 script node 表达的稳定平台能力, 再为该能力设计窄的 host adapter, 不恢复通用 plugin system 作为默认扩展入口。
+未来如果用户规则和受控 JS 确实无法表达某种稳定平台能力, 再为该能力设计窄的 host adapter, 不把通用 plugin system 作为默认扩展入口。
 
 ## 验收
 
-一期必须由核心之外的 fixture Rule Package 完成:
+一期必须由用户可创建或导入的 fixture Rule Package 完成:
 
-1. 新 node、value type、port 和 editor descriptor 的导入、编辑、保存和诊断。
-2. 新来源规则的 prepare、Install Candidate、授权、Source Revision 和标准媒体输出。
-3. 受控 script node 的正常完成、错误、超时、取消、权限拒绝和资源超限。
-4. Definition canonicalization、immutable Plan、descriptor digest 和 unknown payload round-trip。
+1. 新规则节点、value type、port 和 editor metadata 的导入、编辑、保存和诊断。
+2. 来源规则的 prepare、Install Candidate、授权、Source Revision 和标准媒体输出。
+3. 受控 JS 节点的正常完成、错误、超时、取消、权限拒绝和资源超限。
+4. Definition canonicalization、immutable Plan、descriptor digest、Definition hash 和 unknown payload round-trip。
 5. capture/replay、禁止 live fallback 和凭证脱敏。
-6. Rule Draft Revision 与 Effective Rule Revision 的失败隔离。
-7. 前端管理工作流在桌面和移动目标保持同一 wire contract。
+6. Rule Draft Revision、Effective Rule Revision 和 Recovery Draft 的失败隔离。
+7. Legado JSON 导入覆盖规则转换、凭证脱敏、失败不污染和 Source Update 审阅。
+8. 桌面和移动目标使用相同 typed wire contract 完成核心规则旅程。
 
 ## 后续扩展
 
-后续可以新增规则包、选择器、来源适配器、受控 host capability 和 editor field, 但必须保持上述 Rule Contract 和 Kernel/Runtime 所有权边界。
+后续可以新增规则节点、选择器、来源输入适配器、受控 host capability 和 editor field, 但必须保持 Rule Contract 和 Kernel/Runtime 所有权边界。
 
 ## 参考
 
@@ -134,4 +135,3 @@ Source input adapter 只能解析、转换和验证输入, 不能直接创建 So
 - [Legado docs](https://docs.legadoteam.org/guide/introduction.html)
 - [Legado rule parser](https://github.com/LegadoTeam/legado-rule)
 - ADR 0002: versioned source and rule lifecycle
-- ADR 0003: rust-first rule plugin architecture, superseded by this ADR
