@@ -19,7 +19,7 @@ LanJing 的内容由来源规则（Legado JSON / Maccms URL）经网络抓取，
    Rust 侧自定义协议处理器代理真实网络请求。
 2. 网关按资产所属来源规则注入防盗链头（Referer / UA / Cookie）。
 3. 磁盘缓存 + ETag 条件请求；重复打开同一资产不重复走网络。
-4. 网关请求必须复用 `lj-node-http/src/ssrf.rs` 的 SSRF 防护，
+4. 网关请求必须复用 `lj-node-http/src/target.rs` 的目标解析与 DNS pin，
    不得另起裸 HTTP 客户端绕过。
 5. CSP 白名单补充 `lanjing:` 协议。
 6. 按需降采样（`?w=` 参数）后置实现，但协议形态现在就预留。
@@ -29,8 +29,9 @@ LanJing 的内容由来源规则（Legado JSON / Maccms URL）经网络抓取，
 - 防盗链是网络源内容的结构性约束，不是个别站点的怪癖；没有网关，
   图漫应用面与封面展示都无从谈起。
 - 自定义协议比「前端 fetch 转 blob URL」更省：WebView 可直接按 URL 渲染
-  `<img>` / `<video>`，缓存语义清晰，且天然成为 SSRF 与凭据注入的唯一关口。
-- 复用现有 SSRF 防护而非绕过：资产 URL 来自用户安装的规则，属于不可信输入，
+  `<img>` / `<video>`，缓存语义清晰，且天然成为凭据注入与请求不变量（scheme 白名单、
+  逐跳 DNS pin、体量上限）的唯一关口。
+- 复用现有请求路径而非绕过：资产 URL 来自用户安装的规则，属于不可信输入，
   网关恰好是强制校验点。
 
 ## 后果
@@ -40,11 +41,14 @@ LanJing 的内容由来源规则（Legado JSON / Maccms URL）经网络抓取，
 - 缓存目录的清理策略与容量上限需要随网关一同定义。
 - 外部方案的「零拷贝直通 GPU 纹理」不成立：custom protocol 返回字节流，
   仍需 WebView 网络栈解码；网关的收益是防盗链 + 缓存，不是零拷贝。
+- 复用 `target.rs` 不等于复用目标白名单：本项目的请求不限制地址段（环回与私网可达，
+  风险已接受，见 [SECURITY.md](../SECURITY.md)），网关复用的是 scheme 校验、DNS pin
+  与体量上限。
 
 ## 备选方案
 
 - **前端直连源站**：403，不可行。
 - **前端 fetch 带自定义头再转 blob URL**：Tauri WebView 的 fetch 同样受 CORS 与
-  头限制；且缓存、SSRF、凭据都散在前端，已否决。
+  头限制；且缓存、请求不变量、凭据都散在前端，已否决。
 - **Rust fetch 后经 IPC 返回字节 / Base64**：33% 膨胀 + JSON 序列化开销，
   大图与视频不可接受，已否决。

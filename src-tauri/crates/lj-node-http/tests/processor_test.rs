@@ -1,15 +1,13 @@
 //! lj-node-http 集成测试。
 //!
-//! 覆盖 SSRF 校验、URL 模板渲染、URL 编码、字符集解析、`convert_response` 等核心路径。
+//! 覆盖目标解析与 DNS pin、URL 模板渲染、URL 编码、字符集解析、`convert_response` 等核心路径。
 
 use std::collections::{BTreeMap, HashMap};
-use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use lj_capability::IntentInput;
 use lj_node_http::processor::{HttpEffectAdapter, convert_response};
-use lj_node_http::ssrf::is_blocked_ip;
 use lj_node_http::util::{parse_charset, render_url_template};
 use lj_rule_model::{Error, InvocationPath, PolicyCapabilities};
 use lj_runtime::{
@@ -19,39 +17,45 @@ use lj_runtime::{
 };
 use uuid::Uuid;
 
-// ── SSRF 校验 ──────────────────────────────────────────
+// ── 目标解析与 DNS pin ──────────────────────────────
 
-#[test]
-fn ssrf_block_loopback_v4() {
-    assert!(is_blocked_ip(&"127.0.0.1".parse::<IpAddr>().unwrap()));
-}
+#[tokio::test]
+async fn plan_http_effect_reaches_loopback_target() {
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
-#[test]
-fn ssrf_block_aws_metadata() {
-    assert!(is_blocked_ip(&"169.254.169.254".parse::<IpAddr>().unwrap()));
-}
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/loopback"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("loopback body"))
+        .mount(&server)
+        .await;
 
-#[test]
-fn ssrf_block_alibaba_metadata() {
-    assert!(is_blocked_ip(&"100.100.100.200".parse::<IpAddr>().unwrap()));
-}
-
-#[test]
-fn ssrf_block_rfc1918() {
-    assert!(is_blocked_ip(&"192.168.1.1".parse::<IpAddr>().unwrap()));
-    assert!(is_blocked_ip(&"10.0.0.1".parse::<IpAddr>().unwrap()));
-    assert!(is_blocked_ip(&"172.16.0.1".parse::<IpAddr>().unwrap()));
-}
-
-#[test]
-fn ssrf_block_loopback_v6() {
-    assert!(is_blocked_ip(&"::1".parse::<IpAddr>().unwrap()));
-}
-
-#[test]
-fn ssrf_allow_public() {
-    assert!(!is_blocked_ip(&"8.8.8.8".parse::<IpAddr>().unwrap()));
-    assert!(!is_blocked_ip(&"1.1.1.1".parse::<IpAddr>().unwrap()));
+    // 生产 adapter(逐跳 DNS 解析 + IP 固定)不再拒绝环回与私网目标。
+    let capture = HttpEffectAdapter::new()
+        .execute_http(
+            http_effect_request(format!("{}/loopback", server.uri())),
+            CancellationHandle::new().token(),
+        )
+        .await
+        .expect("生产 adapter 应能请求环回目标");
+    let EffectOutput::Http(response) = &capture.output else {
+        panic!("HTTP effect 必须返回 HTTP output");
+    };
+    assert_eq!(response.body, b"loopback body");
+    let EffectWitness::Http(witness) = &capture.witness else {
+        panic!("HTTP effect 必须生成 HTTP witness");
+    };
+    assert_eq!(witness.dns_targets.len(), 1);
+    assert_eq!(witness.dns_targets[0].host, "127.0.0.1");
+    assert_eq!(
+        witness.dns_targets[0].addresses,
+        vec!["127.0.0.1".to_string()],
+        "请求必须发向本次解析并固定的地址"
+    );
+    capture
+        .validate()
+        .expect("环回目标的 capture 必须通过安全 witness 校验");
 }
 
 // ── URL 模板渲染 ──────────────────────────────────────

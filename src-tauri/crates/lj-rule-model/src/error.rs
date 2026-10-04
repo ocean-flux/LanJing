@@ -28,9 +28,6 @@ pub enum Error {
         /// 上限。
         max: usize,
     },
-    /// SSRF 防护:目标地址被阻止。
-    #[error("SSRF 防护: 目标地址被阻止: {0}")]
-    SsrfBlocked(String),
     /// JSON 序列化/反序列化错误。
     #[error("JSON 序列化/反序列化错误: {0}")]
     Json(#[from] serde_json::Error),

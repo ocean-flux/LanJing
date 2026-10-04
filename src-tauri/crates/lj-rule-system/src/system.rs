@@ -63,7 +63,7 @@ impl RuleSystem {
     /// 打开真实 C2 Event Store，并私有装配 compiler、`PlanRuntime` 与 Plan effect adapter。
     ///
     /// delivery channel 与 runtime 并发上限必须为正值，以保证 stream 背压有界。`local_fixture`
-    /// 仅在 test-support 配置中关闭 loopback SSRF 拒绝，仍使用真实 SQLite、artifact archive 和
+    /// 仅在 test-support 配置中关闭逐跳 DNS pin，仍使用真实 SQLite、artifact archive 和
     /// adapter。
     ///
     /// # Errors

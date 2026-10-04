@@ -15,7 +15,7 @@ use lj_runtime::{
 
 use crate::util;
 
-use super::redirect::{execute_direct_response, execute_ssrf_response};
+use super::redirect::{execute_direct_response, execute_pinned_response};
 use super::request::{
     HttpRequestError, effect_input_to_node_data, resolve_request_url, safe_request_headers,
     safe_url, template_input,
@@ -26,23 +26,21 @@ use super::request::{
 /// live mode 仅在此处解码 execution-only source secret，并将其标记为 sensitive request
 /// headers；replay 在 runtime 层直接读 archive，因此不会调用本 adapter。
 pub struct HttpEffectAdapter {
-    /// 是否启用 SSRF 防护(默认 true,测试可关闭)。
-    ssrf_enabled: bool,
+    /// 是否逐跳解析并固定目标地址(默认 true,测试可关闭)。
+    pin_targets: bool,
 }
 
 impl HttpEffectAdapter {
-    /// 创建生产环境 effect adapter（SSRF 防护开启）。
+    /// 创建生产环境 effect adapter（逐跳 DNS 解析 + IP 固定）。
     #[must_use]
     pub fn new() -> Self {
-        Self { ssrf_enabled: true }
+        Self { pin_targets: true }
     }
 
-    /// 创建测试环境 effect adapter（SSRF 防护关闭，允许访问环回地址）。
+    /// 创建测试环境 effect adapter（不做目标解析，直接请求 witness 里的 host）。
     #[must_use]
     pub fn new_test() -> Self {
-        Self {
-            ssrf_enabled: false,
-        }
+        Self { pin_targets: false }
     }
 }
 
@@ -107,8 +105,8 @@ impl HttpEffectHandler for HttpEffectAdapter {
             error: None,
             duration_ms: 0,
         };
-        let result = if self.ssrf_enabled {
-            execute_ssrf_response(&spec, &url, &credentials, Some(&cancellation), &mut witness)
+        let result = if self.pin_targets {
+            execute_pinned_response(&spec, &url, &credentials, Some(&cancellation), &mut witness)
                 .await
         } else {
             execute_direct_response(&spec, &url, &credentials, Some(&cancellation), &mut witness)

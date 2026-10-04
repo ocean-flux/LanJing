@@ -11,7 +11,7 @@ use lj_rule_model::{ExpectedDataType, HttpMethod, HttpSpec};
 use lj_runtime::{HttpEffectWitness, HttpExecutionCredentials, HttpRequestWitness};
 use thiserror::Error;
 
-use super::redirect::{execute_direct_response_with_limit, execute_ssrf_response_with_limit};
+use super::redirect::execute_pinned_response_with_limit;
 use super::request::{HttpRequestError, safe_url};
 
 /// 深链导入响应体硬上限：2 MiB。
@@ -26,13 +26,10 @@ pub enum ImportFetchError {
     /// 初始 URL 不是不含用户凭据的 HTTP(S) 地址。
     #[error("import_src_url_invalid: 仅支持不含用户凭据的 http/https 地址")]
     InvalidUrl,
-    /// DNS、SSRF 或 redirect 目标校验失败。
-    #[error("import_src_target_blocked: 导入地址未通过网络安全校验")]
-    TargetBlocked,
     /// 整次拉取或底层请求超时。
     #[error("import_src_timeout: 获取导入内容超时")]
     Timeout,
-    /// 请求构建、发送或响应读取失败。
+    /// 请求构建、发送、响应读取或目标解析(DNS/redirect)失败。
     #[error("import_src_request_failed: 无法安全获取导入内容")]
     RequestFailed,
     /// redirect 缺少安全 Location 或超过五跳。
@@ -53,24 +50,23 @@ pub enum ImportFetchError {
 struct ImportFetchPolicy {
     body_max_bytes: usize,
     timeout: Duration,
-    ssrf_enabled: bool,
 }
 
 const PRODUCTION_POLICY: ImportFetchPolicy = ImportFetchPolicy {
     body_max_bytes: IMPORT_BODY_MAX_BYTES,
     timeout: IMPORT_FETCH_TIMEOUT,
-    ssrf_enabled: true,
 };
 
 /// 拉取一个供导入预览使用的 UTF-8 JSON 文本。
 ///
-/// 仅允许不含用户凭据的 `http`/`https` URL。请求复用 production SSRF/DNS pin 与手动
-/// redirect seam，解压后的 body 最多 2 MiB，整次操作最多 30 秒。函数不会携带来源安装
-/// capability，也不会返回响应 header、body 片段或底层错误详情。
+/// 仅允许不含用户凭据的 `http`/`https` URL(任意可解析的主机, 包括环回与私网)。
+/// 请求复用 production 逐跳 DNS pin 与手动 redirect seam，解压后的 body 最多 2 MiB，
+/// 整次操作最多 30 秒。函数不会携带来源安装 capability，也不会返回响应 header、
+/// body 片段或底层错误详情。
 ///
 /// # Errors
 ///
-/// URL/SSRF/redirect 校验、超时、非 2xx 状态、body 上限、响应读取或 UTF-8 校验失败时，
+/// URL/目标解析/redirect 校验、超时、非 2xx 状态、body 上限、响应读取或 UTF-8 校验失败时，
 /// 返回不包含 URL query 与响应内容的 [`ImportFetchError`]。
 pub async fn fetch_import_source(url: &str) -> Result<String, ImportFetchError> {
     fetch_import_source_with_policy(url, PRODUCTION_POLICY).await
@@ -114,27 +110,15 @@ async fn fetch_validated_import_source(
         duration_ms: 0,
     };
 
-    let response = if policy.ssrf_enabled {
-        execute_ssrf_response_with_limit(
-            &spec,
-            url,
-            &credentials,
-            None,
-            &mut witness,
-            policy.body_max_bytes,
-        )
-        .await
-    } else {
-        execute_direct_response_with_limit(
-            &spec,
-            url,
-            &credentials,
-            None,
-            &mut witness,
-            policy.body_max_bytes,
-        )
-        .await
-    }
+    let response = execute_pinned_response_with_limit(
+        &spec,
+        url,
+        &credentials,
+        None,
+        &mut witness,
+        policy.body_max_bytes,
+    )
+    .await
     .map_err(map_http_error)?;
 
     if !(200..300).contains(&response.status) {
@@ -146,12 +130,14 @@ async fn fetch_validated_import_source(
 
 const fn map_http_error(error: HttpRequestError) -> ImportFetchError {
     match error {
-        HttpRequestError::TargetValidation => ImportFetchError::TargetBlocked,
         HttpRequestError::Timeout => ImportFetchError::Timeout,
         HttpRequestError::Redirect => ImportFetchError::RedirectInvalid,
         HttpRequestError::BodyTooLarge => ImportFetchError::BodyTooLarge,
-        HttpRequestError::Cancelled
+        // 目标解析失败(无主机、DNS 解析失败、redirect 目标不可解析)对用户就是「拿不到这份
+        // 导入内容」, 与请求/响应读取失败同类: 复用既有请求失败码, 不另造目标阻断码。
+        HttpRequestError::TargetValidation
         | HttpRequestError::Request
+        | HttpRequestError::Cancelled
         | HttpRequestError::ResponseRead => ImportFetchError::RequestFailed,
     }
 }
@@ -168,11 +154,10 @@ mod tests {
         fetch_import_source_with_policy,
     };
 
-    fn local_policy(body_max_bytes: usize, timeout: Duration) -> ImportFetchPolicy {
+    fn test_policy(body_max_bytes: usize, timeout: Duration) -> ImportFetchPolicy {
         ImportFetchPolicy {
             body_max_bytes,
             timeout,
-            ssrf_enabled: false,
         }
     }
 
@@ -194,10 +179,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn import_fetch_reuses_production_ssrf_for_loopback() {
+    async fn import_fetch_reaches_loopback_with_production_policy() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/source.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(r"[]"))
+            .mount(&server)
+            .await;
+
         assert_eq!(
-            fetch_import_source("http://127.0.0.1:9/source.json").await,
-            Err(ImportFetchError::TargetBlocked)
+            fetch_import_source(&format!("{}/source.json", server.uri())).await,
+            Ok("[]".to_string()),
+            "环回地址不再被目标限制拦下, 生产策略应直接拿到内容"
         );
     }
 
@@ -219,7 +212,7 @@ mod tests {
 
         let body = fetch_import_source_with_policy(
             &format!("{}/start", server.uri()),
-            local_policy(1024, Duration::from_secs(1)),
+            test_policy(1024, Duration::from_secs(1)),
         )
         .await
         .expect("本地测试 seam 应跟随手动 redirect");
@@ -237,7 +230,7 @@ mod tests {
 
         let result = fetch_import_source_with_policy(
             &format!("{}/large", server.uri()),
-            local_policy(128, Duration::from_secs(1)),
+            test_policy(128, Duration::from_secs(1)),
         )
         .await;
         assert_eq!(result, Err(ImportFetchError::BodyTooLarge));
@@ -258,7 +251,7 @@ mod tests {
 
         let result = fetch_import_source_with_policy(
             &format!("{}/slow", server.uri()),
-            local_policy(1024, Duration::from_millis(20)),
+            test_policy(1024, Duration::from_millis(20)),
         )
         .await;
         assert_eq!(result, Err(ImportFetchError::Timeout));

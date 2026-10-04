@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "HTTP effect adapter：网络请求与 SSRF 防护"
+description = "HTTP effect adapter：网络请求与目标解析(DNS pin)"
 
 [lints]
 workspace = true

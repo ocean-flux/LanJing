@@ -1,19 +1,20 @@
-//! 手动 redirect、逐跳 DNS pin 与 SSRF 防护。
+//! 手动 redirect 与逐跳 DNS pin。
 //!
-//! 自动 redirect 永远关闭。每个 hop 都先解析并验证 scheme/host/DNS target，再发送请求；
-//! redirect 指向内网、IP 变化或不可安全解析时必须失败，而不能沿用前一跳的 pin。每个实际
-//! target 和 hop 都写入安全 witness，供 archive 追溯。
+//! 自动 redirect 永远关闭。每个 hop 都先解析并固定 scheme/host/DNS target，再发送请求；
+//! redirect 指向无法解析的目标时必须失败，而不能沿用前一跳的 pin。每个实际 target 和 hop
+//! 都写入安全 witness，供 archive 追溯。
 
 use lj_runtime::{
     EffectCancellation, HttpDnsTargetKind, HttpDnsTargetWitness, HttpEffectWitness,
     HttpExecutionCredentials, HttpRedirectWitness, HttpResponse,
 };
 
-use crate::ssrf;
+use crate::target;
 
 use super::request::{
     CONNECT_TIMEOUT, HttpRequestError, MAX_BODY_SIZE, REQUEST_TIMEOUT, build_request,
-    convert_response_cancellable_with_limit, safe_url, send_request, ssrf_http_client, test_client,
+    convert_response_cancellable_with_limit, pinned_http_client, safe_url, send_request,
+    test_client,
 };
 
 /// 最大 redirect 跳数(KTD8)。
@@ -64,14 +65,14 @@ pub(super) async fn execute_direct_response_with_limit(
     }
 }
 
-pub(super) async fn execute_ssrf_response(
+pub(super) async fn execute_pinned_response(
     http_spec: &lj_rule_model::HttpSpec,
     url_str: &str,
     credentials: &HttpExecutionCredentials,
     cancellation: Option<&EffectCancellation>,
     witness: &mut HttpEffectWitness,
 ) -> Result<HttpResponse, HttpRequestError> {
-    execute_ssrf_response_with_limit(
+    execute_pinned_response_with_limit(
         http_spec,
         url_str,
         credentials,
@@ -82,7 +83,7 @@ pub(super) async fn execute_ssrf_response(
     .await
 }
 
-pub(super) async fn execute_ssrf_response_with_limit(
+pub(super) async fn execute_pinned_response_with_limit(
     http_spec: &lj_rule_model::HttpSpec,
     url_str: &str,
     credentials: &HttpExecutionCredentials,
@@ -90,7 +91,7 @@ pub(super) async fn execute_ssrf_response_with_limit(
     witness: &mut HttpEffectWitness,
     max_body_size: usize,
 ) -> Result<HttpResponse, HttpRequestError> {
-    let mut current_target = validate_target(url_str, cancellation).await?;
+    let mut current_target = resolve_target(url_str, cancellation).await?;
     let mut redirect_count = 0usize;
     loop {
         record_pinned_target(&current_target, witness)?;
@@ -109,7 +110,7 @@ pub(super) async fn execute_ssrf_response_with_limit(
             owned_client = builder.build().map_err(|_| HttpRequestError::Request)?;
             &owned_client
         } else {
-            ssrf_http_client().map_err(|_| HttpRequestError::Request)?
+            pinned_http_client().map_err(|_| HttpRequestError::Request)?
         };
         let request = build_request(
             client,
@@ -128,8 +129,8 @@ pub(super) async fn execute_ssrf_response_with_limit(
             return Err(HttpRequestError::Redirect);
         }
         let next_url = record_redirect(&current_target.url, &response, witness)?;
-        // redirect SSRF invariant：每次 Location 都重新解析、DNS pin 和策略校验，绝不复用旧 target。
-        current_target = validate_target(&next_url, cancellation).await?;
+        // redirect 不变量: 每次 Location 都重新解析并固定 DNS target, 绝不复用旧 target。
+        current_target = resolve_target(&next_url, cancellation).await?;
     }
 }
 
@@ -184,14 +185,14 @@ fn record_direct_target(
 }
 
 fn record_pinned_target(
-    target: &crate::ssrf::PinnedTarget,
+    pinned: &crate::target::PinnedTarget,
     witness: &mut HttpEffectWitness,
 ) -> Result<(), HttpRequestError> {
-    let host = url::Url::parse(&format!("http://{}", target.host_header))
+    let host = url::Url::parse(&format!("http://{}", pinned.host_header))
         .ok()
         .and_then(|url| url.host_str().map(ToString::to_string))
         .ok_or(HttpRequestError::TargetValidation)?;
-    let addresses = target
+    let addresses = pinned
         .addrs
         .iter()
         .map(|address| address.ip().to_string())
@@ -209,17 +210,18 @@ fn record_pinned_target(
     Ok(())
 }
 
-async fn validate_target(
+async fn resolve_target(
     url_str: &str,
     cancellation: Option<&EffectCancellation>,
-) -> Result<crate::ssrf::PinnedTarget, HttpRequestError> {
+) -> Result<crate::target::PinnedTarget, HttpRequestError> {
     if let Some(cancellation) = cancellation {
         tokio::select! {
             () = cancellation.cancelled() => Err(HttpRequestError::Cancelled),
-            target = ssrf::validate_url_and_pin(url_str) => target.map_err(|_| HttpRequestError::TargetValidation),
+            pinned = target::resolve_and_pin(url_str) => pinned
+                .map_err(|_| HttpRequestError::TargetValidation),
         }
     } else {
-        ssrf::validate_url_and_pin(url_str)
+        target::resolve_and_pin(url_str)
             .await
             .map_err(|_| HttpRequestError::TargetValidation)
     }

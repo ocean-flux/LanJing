@@ -18,7 +18,7 @@ use super::contracts::{EffectFailure, EffectInput, EffectOutput, QuickJsOutput};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HttpDnsTargetKind {
-    /// SSRF 防护已完成 DNS 解析并固定目标地址。
+    /// 已完成 DNS 解析并固定目标地址。
     PinnedDns,
     /// 目标本身是 IP literal，未发生名称解析。
     IpLiteral,

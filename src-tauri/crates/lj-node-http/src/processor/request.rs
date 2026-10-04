@@ -30,7 +30,7 @@ pub(super) const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// 单次请求总超时(含 DNS/TLS/传输/响应,reliability #4)。
 pub(super) const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// 测试模式共享 `Client`（无 SSRF、手动 redirect、连接池复用）。
+/// 测试模式共享 `Client`（不做目标解析、手动 redirect、连接池复用）。
 ///
 /// 不启用 reqwest cookie store；来源凭据只能由 execution-only header 显式注入，避免
 /// 共享 client 在不同 source cookie namespace 间泄漏响应 cookie。
@@ -48,16 +48,16 @@ pub(super) fn test_client() -> Result<&'static reqwest::Client, Error> {
         .map_err(|message| Error::Other(message.clone()))
 }
 
-/// SSRF HTTP 模式共享 `Client`（禁用自动 redirect，连接池复用）。
+/// 手动 redirect 模式下共享 `Client`（禁用自动 redirect，连接池复用）。
 /// HTTPS 场景需 per-host resolve，不适用此共享 client。
-pub(super) fn ssrf_http_client() -> Result<&'static reqwest::Client, Error> {
+pub(super) fn pinned_http_client() -> Result<&'static reqwest::Client, Error> {
     static CLIENT: LazyLock<Result<reqwest::Client, String>> = LazyLock::new(|| {
         reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(CONNECT_TIMEOUT)
             .timeout(REQUEST_TIMEOUT)
             .build()
-            .map_err(|error| format!("SSRF HTTP reqwest client 创建失败: {error}"))
+            .map_err(|error| format!("redirect 模式 reqwest client 创建失败: {error}"))
     });
     CLIENT
         .as_ref()

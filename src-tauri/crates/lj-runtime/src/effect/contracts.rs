@@ -57,7 +57,7 @@ pub enum QuickJsOutput {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HttpEffectErrorKind {
-    /// DNS/SSRF target 校验失败。
+    /// URL 或 DNS 目标解析失败。
     TargetValidation,
     /// request 构建或网络发送失败。
     Request,

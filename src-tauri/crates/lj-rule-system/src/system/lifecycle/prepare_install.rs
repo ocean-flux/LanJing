@@ -49,9 +49,6 @@ fn import_fetch_error(error: ImportFetchError, trace_id: &str) -> RuleError {
             "import_src_url_invalid",
             "仅支持不含用户凭据的 HTTP(S) 导入地址",
         ),
-        ImportFetchError::TargetBlocked => {
-            ("import_src_target_blocked", "导入地址未通过网络安全校验")
-        }
         ImportFetchError::Timeout => ("import_src_timeout", "获取导入内容超时"),
         ImportFetchError::RequestFailed => ("import_src_request_failed", "无法安全获取导入内容"),
         ImportFetchError::RedirectInvalid => (
