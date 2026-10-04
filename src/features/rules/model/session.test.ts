@@ -27,9 +27,13 @@ import type {
 } from '@/shared/tauri/rules';
 
 const invoke = vi.hoisted(() => vi.fn<(command: string, args?: unknown) => Promise<unknown>>());
+const listen = vi.hoisted(() => vi.fn<(event: string, handler: unknown) => Promise<() => void>>());
 
 // 读路径带 isTauri 守卫；测试里固定为运行在 Tauri 中。
 vi.mock('@tauri-apps/api/core', () => ({ invoke, isTauri: () => true }));
+
+// 预览执行订阅 execution event 流；这里注入假 listen，事件由测试主动投递。
+vi.mock('@tauri-apps/api/event', () => ({ listen }));
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -902,5 +906,151 @@ describe('createRuleEditorSession', () => {
       { x: 42, y: 52 },
       { x: 42, y: 232 },
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 预览执行（startPreviewRun / cancelPreviewRun）
+//
+// 事件订阅用假 listen：这一层要证明的是「订阅先于启动、按 execution id 折叠、
+// 终态收订阅」，不是 Tauri event API 本身。
+// ---------------------------------------------------------------------------
+
+/** Execute 尚未发出时的占位 resolver；调用它本来就是测试错误，不静默跳过。 */
+const unresolvedExecute = (): void => undefined;
+
+/** 假事件流：记录 handler，返回可断言的退订函数。 */
+function mockEventStream() {
+  let deliver: unknown = null;
+  const unlisten = vi.fn<() => void>();
+  listen.mockImplementation((_event, handler) => {
+    deliver = handler;
+    return Promise.resolve(unlisten);
+  });
+  return {
+    emit: (payload: unknown) => (deliver as (message: { payload: unknown }) => void)({ payload }),
+    unlisten,
+    subscribed: () => deliver !== null,
+  };
+}
+
+function previewEvent(sequence: number, kind: unknown, executionId = 'exec:1') {
+  return {
+    execution_id: executionId,
+    sequence,
+    trace_id: 'trace:1',
+    occurred_at_ms: 1_700_000_000_000,
+    kind,
+  };
+}
+
+/** 一次预览请求；测试只关心这组固定的目标与输入。 */
+const PREVIEW_REQUEST = {
+  sourceId: 'source:test',
+  intent: 'Search',
+  input: { type: 'Query', value: '关键词' },
+} as const;
+
+describe('createRuleEditorSession 预览执行', () => {
+  beforeEach(() => {
+    invoke.mockReset();
+  });
+
+  it('先订阅再 execute，并把 started/诊断/终态折叠成运行态', async () => {
+    const stream = mockEventStream();
+    let resolveExecute: (value: { execution_id: string }) => void = unresolvedExecute;
+    const executeResponse = new Promise<{ execution_id: string }>((resolve) => {
+      resolveExecute = resolve;
+    });
+    invoke.mockImplementation((command) =>
+      command === 'execute'
+        ? executeResponse
+        : Promise.reject(new Error(`unexpected command ${command}`)),
+    );
+
+    const session = createRuleEditorSession();
+    const pending = session.getState().startPreviewRun(PREVIEW_REQUEST);
+
+    // Execute 还没返回：订阅已经在，启动阶段的事件先被缓冲。
+    expect(stream.subscribed()).toBe(true);
+    expect(session.getState().execution.status).toBe('running');
+    stream.emit(previewEvent(1, { kind: 'started' }));
+    expect(session.getState().execution.traceId).toBeNull();
+
+    resolveExecute({ execution_id: 'exec:1' });
+    await pending;
+
+    expect(invoke).toHaveBeenCalledWith('execute', {
+      request: {
+        source_id: 'source:test',
+        intent: 'Search',
+        input: { type: 'Query', value: '关键词' },
+        mode: { mode: 'live' },
+      },
+    });
+    expect(session.getState().execution.executionId).toBe('exec:1');
+    expect(session.getState().execution.traceId).toBe('trace:1');
+
+    stream.emit(
+      previewEvent(2, { kind: 'diagnostic', code: 'js_timeout', message: 'JS 执行超时' }),
+    );
+    stream.emit(previewEvent(3, { kind: 'completed' }));
+
+    const { execution } = session.getState();
+    expect(execution.status).toBe('succeeded');
+    expect(execution.diagnostics).toEqual([
+      { code: 'js_timeout', severity: 'error', message: 'JS 执行超时' },
+    ]);
+    // 终态后订阅被收掉：事件流不再需要为这次运行服务。
+    expect(stream.unlisten).toHaveBeenCalledWith();
+
+    // 其他 execution 的事件不影响本次状态。
+    stream.emit(previewEvent(4, { kind: 'failed' }, 'exec:other'));
+    expect(session.getState().execution.status).toBe('succeeded');
+  });
+
+  it('启动失败进 failed 诊断面，且不向调用方抛错', async () => {
+    mockEventStream();
+    invoke.mockRejectedValueOnce({
+      stage: 'execution',
+      code: 'source_not_installed',
+      message: '来源未安装',
+      trace_id: 'trace:1',
+      retryable: false,
+      diagnostics: [],
+    });
+
+    const session = createRuleEditorSession();
+    await expect(session.getState().startPreviewRun(PREVIEW_REQUEST)).resolves.toBeUndefined();
+
+    const { execution } = session.getState();
+    expect(execution.status).toBe('failed');
+    expect(execution.failureCode).toBe('source_not_installed');
+    expect(execution.diagnostics).toEqual([
+      { code: 'source_not_installed', severity: 'error', message: '来源未安装' },
+    ]);
+  });
+
+  it('cancelPreviewRun 只对进行中的运行发 cancel_execution', async () => {
+    mockEventStream();
+    invoke.mockImplementation((command) => {
+      if (command === 'execute') return Promise.resolve({ execution_id: 'exec:1' });
+      if (command === 'cancel_execution') return Promise.resolve({ changed: true });
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
+    const session = createRuleEditorSession();
+    // 没有执行 id 时取消是空操作。
+    await session.getState().cancelPreviewRun();
+    expect(invoke).not.toHaveBeenCalledWith('cancel_execution', expect.anything());
+
+    await session.getState().startPreviewRun(PREVIEW_REQUEST);
+    await session.getState().cancelPreviewRun();
+
+    expect(invoke).toHaveBeenCalledWith('cancel_execution', {
+      request: { execution_id: 'exec:1' },
+    });
+    // 取消是请求：状态要等 runtime 的 cancelled 事件落定，这里仍是 running。
+    expect(session.getState().execution.status).toBe('running');
   });
 });

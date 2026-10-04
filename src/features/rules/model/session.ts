@@ -13,6 +13,24 @@
 
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import {
+  cancelExecution,
+  executeRule,
+  listenRuleExecutionEvents,
+  type ExecutionEvent,
+  type ExecutionId,
+  type IntentInput,
+} from '@/shared/tauri/execution';
+import {
+  attachExecutionId,
+  beginExecutionRun,
+  failExecutionRun,
+  IDLE_EXECUTION_RUN,
+  isExecutionRunFinished,
+  recordExecutionRequestFailure,
+  reduceExecutionRun,
+  type ExecutionRunState,
+} from './execution';
+import {
   cloneJson,
   createBlankDefinition,
   createInitialState,
@@ -163,6 +181,20 @@ export type SessionState = {
   core: NativeRuleAuthoringState;
   /** 仅供画布消费的一次定位请求；不属于文档语义或布局，也不进入撤销历史。 */
   revealRequest: { nodeId: string; sequence: number } | null;
+  /** 预览运行态：不属于文档语义，也不进保存 / 撤销历史。 */
+  execution: ExecutionRunState;
+};
+
+/**
+ * 预览运行请求。
+ *
+ * `sourceId` 是已安装来源：`execute` 只跑已安装来源的已编译 Plan，本地草稿不参与，
+ * 因此预览运行不能当作「未保存改动生效」的验证。
+ */
+export type PreviewRunRequest = {
+  sourceId: string;
+  intent: StandardIntent;
+  input: IntentInput;
 };
 
 export type SessionActions = {
@@ -181,6 +213,17 @@ export type SessionActions = {
   }) => Promise<NativeRuleDocumentSummary>;
   save: () => Promise<SaveNativeRuleDocumentOutcome>;
   validate: () => Promise<ValidateNativeRuleDocumentPreview>;
+
+  // 预览执行（不改文档语义，也不进撤销历史）
+  /**
+   * 启动一次 live execution 预览。
+   *
+   * 先订阅事件再发启动请求：启动返回前到达的事件按 execution id 补叠，
+   * 不会丢掉 `started` 与启动阶段的诊断。
+   */
+  startPreviewRun: (request: PreviewRunRequest) => Promise<void>;
+  /** 请求取消进行中的预览；终态由 runtime 的 `cancelled` 事件落定。 */
+  cancelPreviewRun: () => Promise<void>;
 
   // 状态变更
   dispatch: (action: AuthoringAction) => void;
@@ -265,11 +308,19 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
       return documentId;
     };
 
+    // 预览运行的事件订阅：同一 session 同时只留一条，终态或下一次运行前收掉。
+    let previewUnlisten: (() => void) | null = null;
+    const stopPreviewListener = () => {
+      previewUnlisten?.();
+      previewUnlisten = null;
+    };
+
     return {
       summary: null,
       effectiveSemanticRevision: null,
       core: createInitialState({ definition: createBlankDefinition('') }),
       revealRequest: null,
+      execution: IDLE_EXECUTION_RUN,
 
       async loadDocument(documentId) {
         const detail = await getNativeRuleDocument({ document_id: documentId });
@@ -396,6 +447,63 @@ export function createRuleEditorSession(options?: { newNodeId?: () => string }):
             validation: { ...get().core.validation, status: 'error' },
           });
           throw error;
+        }
+      },
+
+      async startPreviewRun({ sourceId, intent, input }) {
+        // 同一时刻只跑一次预览：上一次订阅先收掉，避免两条流折进同一个状态。
+        stopPreviewListener();
+        set({ execution: beginExecutionRun() });
+
+        // 订阅先于启动：execute 返回前到达的事件先缓冲，拿到 id 后再补叠。
+        const buffered: ExecutionEvent[] = [];
+        let activeExecutionId: ExecutionId | null = null;
+        const fold = (event: ExecutionEvent) => {
+          const current = get().execution;
+          const next = reduceExecutionRun(current, event);
+          if (next !== current) set({ execution: next });
+          if (isExecutionRunFinished(next)) stopPreviewListener();
+        };
+        previewUnlisten = await listenRuleExecutionEvents((event) => {
+          if (activeExecutionId === null) {
+            buffered.push(event);
+          } else if (event.execution_id === activeExecutionId) {
+            fold(event);
+          }
+        });
+
+        let executionId: ExecutionId;
+        try {
+          const response = await executeRule({
+            source_id: sourceId,
+            intent,
+            input,
+            mode: { mode: 'live' },
+          });
+          executionId = response.execution_id;
+        } catch (error) {
+          // 启动就失败（来源未安装、意图不支持、IPC 异常）：走同一诊断表面，不抛出去
+          // 让调用方再报一次。
+          stopPreviewListener();
+          set({ execution: failExecutionRun(get().execution, error) });
+          return;
+        }
+
+        activeExecutionId = executionId;
+        set({ execution: attachExecutionId(get().execution, executionId) });
+        for (const event of buffered) {
+          if (event.execution_id === executionId) fold(event);
+        }
+      },
+
+      async cancelPreviewRun() {
+        const { executionId } = get().execution;
+        if (executionId === null) return;
+        try {
+          // 取消是请求，不是状态转换：终态由 runtime 的 `cancelled` 事件落定。
+          await cancelExecution({ execution_id: executionId });
+        } catch (error) {
+          set({ execution: recordExecutionRequestFailure(get().execution, error) });
         }
       },
 
@@ -555,4 +663,9 @@ export function selectCanUndo(state: SessionState): boolean {
 /** 能否重做。 */
 export function selectCanRedo(state: SessionState): boolean {
   return state.core.redo.length > 0;
+}
+
+/** 预览运行态。 */
+export function selectExecutionRun(state: SessionState): ExecutionRunState {
+  return state.execution;
 }
