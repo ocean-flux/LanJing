@@ -1,0 +1,324 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:9b5392117f7acfbccc67ac6d3640b730471715c13fc5fda62d6d3843b99a9606",
+  "claims": [
+    {
+      "id": "claim_a4fb0f8b2f384a8a9eb72ce940f4181b",
+      "statement": "execute 的固定顺序: normalize_continue_action → start_execution_snapshot(写 Started Event + revision pin 并载入快照) → flush_persisted 校验 → runtime.execute → 登记 CancellationHandle 并 spawn detached run_session → 返回 ExecutionSession(events, cancellation, storage)。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/execution.rs#L46-L109",
+          "version": "repo-lines-v1:sha256:6f7f43cfc1fc5a5a2990cd5c2cfdcc15764bc093f541e0973c9ca0a9b46c905d:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3ZWJlOGM4NWFjMTc0ZDQyNmY1YThmM2I4MWRmMGZjYmRhNDQxZDRkMmZkNDEyOTBlM2MxYWEwZWY0NWIzYmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhM2RkNTg3N2I3MGY3OTIwZTgwNjUzOGM4YzM2MjcxMGQ2NTExYWVkOTY3Nzk4NmNiMTRiZTQ3NjVmYzc4M2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY4YTI5ZWU0ZDk1OWVhYWQ1NWM1NzU4ZWViZWJkZWE4ZmE5MjMwZjRlNWNiZjVlNzNhNmZjMGY1ZTU4YWU1MzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1MjJkNGJjNDVhYjdiY2E1NWNkNzRjYjYyMWY4Zjk0ODFiN2Q1MjgzZmFkZDMxMTcyMThkYTg3Nzg0ZDVlODgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7666ec1e2e404e84a6983869f9b6088c",
+      "statement": "start_execution 在一个 writer transaction 里写 Started Event 与 execution 投影(含 status='running'、source_revision、plan_hash、archive_available、gc_state), 并通过 ArtifactLink::Existing 把 package 与 plan 两个 artifact 挂到该事件, 使「这次执行用了哪个 Plan」可追溯到字节; source_identity 不匹配时返回 IdempotencyMismatch。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/execution/start.rs#L46-L60",
+          "version": "repo-lines-v1:sha256:b9f498770ee8e2e0214dfbea723366b526a18c30ccdbcef17518caa7c85b3780:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU1N2Q2ZTMxYmYyMTI4NjBhYjM3ZmEyMWM1YmI1NTQ2NzY4ZGRjNzg1M2M0ZmU3YWYwYzc3MzRmM2Y4MGYzNTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MGU5ZWM5MTBhNjJkMmZkNzIzYTk2MWIyZWM5ZmVlZWU1NzhiZTUyZDIyZjc1MGEwNzU5YzU2NWIwM2I4MWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY2ZDE3YzM5ZTA1MWNjNWJhOGM4ZWYwMjg0ODA5YzhiYjFiN2FmZjk4M2EwOWM0NWI3MjcyMzQ3YWE3MjE1NDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4YTk5ZDA1MmUwOGMwZWRiMWY2MzNjMTFhYjJiNWRmYmZiNGYxNDY1OGRkZTQwNzdkN2RjMDliM2ExY2ZjYzMifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/execution/start.rs#L9-L45",
+          "version": "repo-lines-v1:sha256:7c02b59915fe0c8101cc95502e0831e5043143d19023f88b61ef6bdc33df417b:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlOTdmMWRlYWY1OTNlMzAyM2E4MTVmMmMwZTM2OGRlYWVjMTE1OTE3MDY2MjI4MGUzMGFmNzA0MzQ5NGU4YWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiYWI3Njk0ZGY5ZGI0ZjgwZjdmYjAyMjFiOTAyYjk0ZjYyNDc4YzJkYTIzODQyNGYxMTJkZmI0ODFiOWY4NWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyMWIzNTI2ODdhYTVhZDU4MjVlM2RiMTNmYjIxNjRkMjg4MTNlODNlNjI1ZmFkMzVhM2JmYzA2YzRhNzkyOTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_2cd26529deec4898a571e28a8410ed1e",
+      "statement": "起始 flush 拿到的最后序号必须等于刚写入的 record.revision, 否则构造 RuleErrorStage::Persistence / execution_start_sequence_mismatch 并立即 finish_started_execution_failure; 从该点起任何失败都会写 ExecutionStatus::Failed 终态再返回, 不会留下永久 running 的记录。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/execution.rs#L351-L377",
+          "version": "repo-lines-v1:sha256:b9ecb8ef2db3a2b4e8de45f2f8740fac0d974e4408d297b4952f40acc679895d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4Y2IzMDQzZjJkYjE3ZTZlYzM5OGY2MzI5Nzk3NDhjMmYzNzRhMjM4NzI3MDJjNGRmMjI2NWIyZTE4YTI5NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZmMGQ3NTk1MGRmMGZmOWEzZWU5NjYzOWRjYzhmZjVlYWVkYjQwZDY4MmJlYTkyNjIyYjUyMGRkODg3ZDkzZTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyZmY5YzBkMTAzNWNkYzI4MjQ3ZDZhNWM2NDE4NDNhZjU5YjgzM2RlNzRkZTZhZTNhN2MwNTBmY2VlOGM0MjIifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/execution.rs#L59-L84",
+          "version": "repo-lines-v1:sha256:dcec864df6b88c6f86accf5724e15cf0421f70529771192f109a456856d57677:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2Y2ZiYTRmMzFiYzk4Y2U5NmU0Nzc0YWRjYzdmYTIwZWYzZjVmZmVkMTdjZmIxYjgyNTM5NzVlZmQ2NWUzYjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhYjViNGI4ZjFiNTJmMTIxNzI4ZjUxYzI2YTU2ZTU0NDgxYzFlY2VkMzU4NjY1NTBiOTc5OGU0ZGIxYjhiYzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk4OWQ1NzQ0MWJkMjg1ZDEwOTRmMzc5NjAyMWJlNTlhNTVmN2JkY2FjOTIwMzJkMTI4ZTNiMWE2Yjg3NmRjNTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_78bdd9b755e949e599f0d8860128f9de",
+      "statement": "run_execution 先发 Started(事件序号从 1 开始并逐事件递增), 取 execution 级许可(取许可失败也会发一个终态), 然后 execute_path, 最后由 terminal_sent 保证只发一个终态; 丢弃 delivery stream 只置 receiver_gone 停止投递, 不隐式取消 execution。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L123-L163",
+          "version": "repo-lines-v1:sha256:eec7599835b9708d4103660444a54dd3ca3a1ed3d046d957f288021e521b5c14:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzZWVkMjVlNjYzMzMxZTAzMmExMDgxNWU0ZDEyZGJjYmM2ZmEzYzdkMWQ1MzcwNDFiZWFkZTYzZGQ2YzQwMDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmNzEzZTIzOWEwZTdhMWQ5OTA4YWU1ZDcwOWIxMWVkZjM0NDllNWU2NmY1N2YzMjU2MjY1ODQxMTRiNzdjMjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMTRhOTZjZWQ0OTg5NWFmYmNhM2FjMDFkMTQ1ZTIwYzI3NDYwZmM3OTY3OGY2YzBjZTdhMzA1Y2IyYzk2MzkifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L80-L119",
+          "version": "repo-lines-v1:sha256:2627d2bb916e121b8ec68f0ef74dc6a9ef2063c8e628e7fcc6614c3cb58dabf4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2OTRjOGU4ZTQzM2VmYjQzY2U1M2QxNTU3MjIyNDQ3NzY2YTdhNjU2MDkxNGQ3MTJiYWZlNmUzOGEzMzZhYWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMzMDFjNjNlMzRjY2NkMmY1ZGJiM2RiMjhjYzg2ODNjZDY0YThiNGE0NzkwYTdlNGIwN2I2ODQ5YWMwMTJhYWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmNzEzZTIzOWEwZTdhMWQ5OTA4YWU1ZDcwOWIxMWVkZjM0NDllNWU2NmY1N2YzMjU2MjY1ODQxMTRiNzdjMjYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d797268d20614b9388c6cbc1ec90a96b",
+      "statement": "execute_path 把 IntentInput 注入 entry 节点的 LINEAR_INPUT_HANDLE, 按 path.node_ids 顺序逐节点推进(每个节点前检查取消), Loop 节点取 path.loops 的 control program, 其余交给 execute_non_loop_node; 若 mapper 节点从未产出 delta 则判 InputTypeMismatch「当前控制路径未到达 Mapper」——完成的定义是产出过一次媒体图增量。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L165-L244",
+          "version": "repo-lines-v1:sha256:7054b01515f098f76483179fefef32f8e610fc4d9e21885f9c1ddb38c4cab1c1:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhM2VkZjI2NjE2ZDIzZTk4MWY3OTIyYjg4ZTRiN2UwMzQyZWI4MzcyOGEyZmE3YWQ5YjgxODk3ZjU4ODk2MzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhYjNlODBjMTMyMDRmNDA2ZDgzZTlkY2JkZDhhNGMyNWI2MzliNDNmMTFlNGJmYzlmN2M1ZWI2MjRjYzQ3NWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzNTI0NmM3NWFjM2NlZTQzMTQ1YTI5N2IyMmJiNTQxYTU2MjdkMjgzZTNhNDU4MWMxZTA2M2M0OTdmZmIwMGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c23c006f1eb745e09f6f189930fcfc08",
+      "statement": "端口状态是执行局部的: PortState 只在内存里维护 FlowPortRef → RuntimeValue, route 时若同一 input 收到第二个活跃 producer 直接返回错误字符串「同一 input 收到多个 active producer」, 作为编译期端口校验的运行时兜底。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/state.rs#L11-L54",
+          "version": "repo-lines-v1:sha256:0d2d5bf56feb2aa64b87516410d91445f80da5a84b93f1d9bb8cada0642a0438:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3ODgxNTgwZDdiNDkwMGQ1YmFjNWQ1YTcxN2FlMTE0YTJkNzQyZDEyNjBkNzM0ZWMyY2FmN2ZlYWI2NDc2NzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjZWE0MDkzN2VjZjFmMjBhMmE4NzRlYTUwZDY1Yjg3YTA4YzA5NDhiOGZjMjY4OTNmZTFjNGUwZmUyMmI5MjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM5YWUxNWM0NDhjZWUyMDdlNGFlMzE0ODA4NWM5ZTdlMmYxYjUyNDIzYmQ1MDdkMDg5Y2Q1ZmQ5MTNjZjQ1MzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_79fc16e6620546fdad3d599991a5de3b",
+      "statement": "live 的 durable-before-advance 五步: 调 handler → EffectCapture::from_live(失败 CaptureWitnessInvalid) → capture.kind 与 JS 输出形状必须符合 Plan 声明(否则 CaptureWitnessInvalid) → archive.persist_durable(失败 CaptureFailed) → 收据五字段(effect_id/invocation_path/fingerprint/output_hash/witness_hash)匹配(否则 CaptureReceiptMismatch); 只有全部通过才发 EffectCaptured 且下游才能读到输出。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/live_capture.rs#L10-L121",
+          "version": "repo-lines-v1:sha256:c02d56476289b0afcba9689b780637550fe5d2684cff87b6c93defec6ad083c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkY2E0OGZmY2I1YWRhOGE4MmU2YWNkZDZkMGYyMzNjZGI4Y2IyODRiZTZjM2FiY2NmZDc5YmI5YjkwNTFkNjI5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0ODkzZjQwZTM3ODFlYjg5NmM4MmQwNDZhMDgwNjdhMTFlMzVjZGYyZjFkZmFmMjZmZWE5MGI4ZGI2Njc2NDEzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJmZGU4Njg5N2ZiNTBlZTk0M2I2YjVmOTc3OGZhNDQwYWRlOWEzZWFjZGNjNGRjNDY4YTIzMDE5ZWExZGVhMzU0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIn0"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/outcome.rs#L44-L57",
+          "version": "repo-lines-v1:sha256:e04ca222cdce0e59327ee1f26d2343277afc08c29f8aca7a0b0ba7978176999f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmNmNkNmU3NTRkZmJmZDA1YTlkMWJkNTgyNzMwYzFkYTc4Y2U5NmM5YjAzNjY2ZGVkZWRkYTIzNmNmMTFkY2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_61ddafb4993346718939f65eff91c904",
+      "statement": "live 的顺序理由与收尾: 注释写明已发生的外部 effect 必须完成 commit/rollback, 收据匹配前既不能发 EffectCaptured 也不能让下游读输出; 捕获后发现已取消则返回 Cancelled 而不是 Completed, 已提交的 delta 保持先于 Cancelled 的可观察顺序。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/live_capture.rs#L109-L120",
+          "version": "repo-lines-v1:sha256:1fbda0ae666f99bc8bdc6ae64467493bd8967c969e0d23792ab959feac8a12aa:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlOTNkM2FkYTkyNjA0MzJiOTgxMjk3MDcyYWY0MDI2YjNkODkwYmFlYzNmY2ZhMDkwNGNlNzU0ZTY5MGNmZGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjNGE3YTg1ODBjZjQyZjk3Zjg1YjNkMTU3YjVlNWEzMGMzZjFkNDYxYmM0MWEzZjMzNTVlNWQ1NzU3ZTgwOTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjNGQxNjU4NjUzNjAzMjQ3YzkxOWRiOTcyNDc1YzRmODI1YTdlN2Q5N2I0MzljYmEzZDUyNzg0NjFmZDE3ZDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM3OTRkMDJhODEyMTk0NGQxNzZkMjY1ZTliYjljYzU5ZjZhYjg5MGJjYWRmOGFlZmRlYmRiYmI0ZjJlYTg0NDQifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/live_capture.rs#L66-L67",
+          "version": "repo-lines-v1:sha256:5bd7b9ba896f393d205dca0f7ce85748c7078f1be317b4b944a5b878d55305f8:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGFmYjE2MDc3ODA0ZDk3M2Y1ZThkYTY0NDVmZTVkNzVkNzM3Mjg5MGJlYzE2MjRjMGI2Y2ZlY2I0OWY2ZjI2ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTU1N2E3NTVjNjU3ZjM0M2ZjZDhjOWFmZGViZGQwM2Y4ZmQzYTM0OGYxOGYyY2JlMzM2YjlhMmMxNWU4MWRhNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWI0YTM0YWVjYmM3ODJhM2MxZTRmMTY5YTYzNDUwNTlkMTY4NTgyZDJlZGUzMDAyMjdhYjg1MjdkM2M2MDIyMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTE3MDFmNzVlYzdhOWM2NzllZWYyNGU2Mjg3Yzk1YTk4N2M3NTI0ZDhiZWYwMGM3OWUxNmQ5ZGJlOWE1OGVhZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_86ee73a59b704a659a6d0bc528177af6",
+      "statement": "typed failure 也走同一条 durable 路径: HTTP 非取消类失败被归档为 EffectOutput::Failure 使 replay 复现同一次失败而非重发网络; 控制轨迹(Loop/Merge)由 persist_or_replay_control 独立持久化, Live 下收据的 invocation_path 与 trace_hash 必须匹配(否则 CaptureReceiptMismatch), Replay 下逐字段比对。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs#L118-L138",
+          "version": "repo-lines-v1:sha256:efd14399993c811d36dd9910292cc691c77b388c3f5b6f4f0c375e79bf25a64d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzMjkxNWIyMWQ4YzgzNDQ3NGU0NzY4YjE0ZTE3NDEyNmFmZTk5ZTU1ZDFlNTJmNWRlNzgwYzE2ZDQzYjc1MWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2ZWIzMjQzYjUyZDVjMmIzMTI2ZWQ5Mzg2NWQwYmU4ODE2MjA1OTdhNjEyN2QwMDBiODUyNGRkMWRkMDY1YzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/control_archive.rs#L9-L63",
+          "version": "repo-lines-v1:sha256:0655779f2a930313955bfd3b474dd43500a4519c5a2a2edfdb557f8c8a4797bd:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0OWE2MzA0ODcxZjRlYjBmMjdiMjYzMmRjNGZiNmViZGI5MjEzMjQ0OGNhNTRmZTlmNDZkMDBjOTEyZGM2M2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNmNzUyY2E1MjM0ODViNTY2YWNlMGFlNWViMDAzOTRjNmRjMmFlMmEyZWY4NWU0NTczZGQ2ZWUwMmNmZDkyNGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc3ZTlmYzgzZjRjODBhNTBhZDM2NDE2Y2U5YTJlMmRlN2YxNDMzMzcyNjk0MTI5ZTNmNzU2ODVkNWM0MmMxMmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_350a921899a547fa831bace639a1c3a2",
+      "statement": "唯一的 session runner run_session 在模块头列出五条不变量: 每个 execution 只有一个持久 terminal(runtime 流异常结束也会尝试写 Failed); MediaGraphDelta 必须先由 C2 在 Event + projection transaction 中提交再向 delivery 发送; 取消只阻后续 effect; delivery stream 被丢弃不能取消 execution; catch-up 只接受严格连续的 C2 stream sequence。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/session_delivery.rs#L1-L9",
+          "version": "repo-lines-v1:sha256:a20696baab45e43ac13eae122587a8222bd0e5f57f7f848bda82f351ce901ffd:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2E4NDAzZWJjZWViYTA2YTE0YmNmNzllZjBhMWQxYTkxZDk3NmU0Yjg2OTJjZjdlY2RkNmVlYmMzZDk1MzMzNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmNiMTMzMTI4MTgyMDQxYTBjYzgyYmY4ZDllZTViMTA0NDRhODdhYzNjMGVhODZmM2NkOTI3NzkyYzFlYTgwZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWNkMTQxM2M3YmNlM2MzZDNjYTI0MjViYjQwOWEzMDk4ZTVkMzM0NjZiYzlmYzFlMTEwZjhiNWUwMzgwMTMxZiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/session_delivery.rs#L47-L60",
+          "version": "repo-lines-v1:sha256:2d77bb87763e39cf013bab112f5b19fbaf17d217e4bf833fc571cbd01d07162c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc3NTMxMGNiNmUzZGI0NjBjMGFmNjlmZWZjNjdmNzBjNmE0ZTk4M2VhOWMxYWQwNGJlMjI2MmU5ZmI5ZWY0M2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkZWU3NTkwZjQ0MDZiNmQ2ZjE3ZjIzM2RmYTZiYmRhYzdhNjA1MDA1ZTgxNTBhMjM2MjRiZTBhMjA5ZDlkNzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRiZTQ0NzI1N2E5Y2FiNzJiYjBjM2RkMDhiMjQzNWE2NjEyNTZkYWJjYTM4ZTM3YjljOWVhYWUzMGZlM2U3ZmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUxNDA2MmZmMjNkYTNhOWViNzJjNTQ5NTk4MmY3NWQ1MGYwNDQ1Mjc0ZmE2OTdhMTVkNTRkZWZjOGIzYWVkYjEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_accdd5a88509449388286538da5f1c99",
+      "statement": "commit_delta 调 storage.commit_execution_delta 后先 flush 再投递; 存储侧在同一事务里校验 delta 资源的 source 归属(validate_delta_source)、用 append_event_transaction 写 Event 与投影、更新 execution revision 与 global_seq; expected_version 是乐观并发, 版本不符即 VersionConflict 且无隐式合并。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/session_delivery.rs#L262-L292",
+          "version": "repo-lines-v1:sha256:ac8ce9f3536819e2af28f1d2e19ffaf3b0299fdbf2637acec6ad5b44eee5cb1e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyZTUxMTA4MmRiYzVjNzA0NjQ4OWZmODBmZWEyMTZlMDRlOGZmYWVkZGU4NzlhOWIwMDk0ZWYzNTVhNjRjNmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1NTgxNjE4NTA2MDZlNzdmYmViNTM1YTI2ZjA1YmNiZDFkOTRhZDdiMjY1ZDhjODZhZjNjOGMwMWY2MTY5M2MiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmOTFiMDNlMDM3ODFhYTA1OWE3ZTA0YzEwMjFkZTgxNThmMGFhMzlmYzUzOGY0NWY3YTU2NTU1MTg4YjczNzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzNzUwNWRmMWFmNjFhZWEwNWQ3NWU5ZjRjOWYwZjNiMmEyODYwZmYyMDljMTZlZjAwZDFiZGU1NWZlMGQ1ZDEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/execution/commit.rs#L1-L45",
+          "version": "repo-lines-v1:sha256:d12d92e60078adae1b2a5db341afd290c7af00f22006e3294acd0198b5657821:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5NjVhZTQ5ZGRjMmQ5MjVhNTIyZjk0ZTY0YjZmNTYzZTNiMDUzYzU1NTI0YzljMTAxZDcwMWI3OGU3MGJjNGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI5ZGM0NzU1M2FlY2M5NTM4YThjZWUyNzhlZjEyMWY3MzQ2ZTNmOTQ1ODRhYjVjMDI4ZGUzNDM4YWZmOWUyYzcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/projection/write.rs#L85-L105",
+          "version": "repo-lines-v1:sha256:19e3106c1bbb0a463731fe8397053904a3a8f22a7e2fb4a23f279b4d7e7ae743:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5MjZlODM0ODRmMzcyOWJjN2M0ZTY3OTE0ZjBlN2JlYzYxMDVjYWMzNWY2MjZkYzQyNDNmYmFhMGY3MTcwYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM1ZjZmNDY2ZTU5Y2ZjMzA3MDNjNDVmNzJhZjY1ZGU1NGFjMzYzZDM1NGNjMWEzMzMwMzUwYWNkNDUyNDM0YzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5YWM5NDQ5MjVlMjY4OTE1NzlmNzAzMjZjZWQ0ODU2ODcwMGY0ZmIyY2Y4MDlmMDdkMDQ3OWMyYzEzMmI0YzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_304471b7979046ff958f63ed64f9cdbf",
+      "statement": "终态的层内唯一性: process_finish_execution 拒绝把终态写成 running, 已终态的执行再写不同终态返回 InvalidInput「execution 已处于终态」; global_seq 由单写入者下的 event_counters 递增; ExecutionStatus 为 Running/Completed/Failed/Cancelled/Incomplete 且 is_terminal 为 !Running。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/event/mod.rs#L421-L435",
+          "version": "repo-lines-v1:sha256:ef57596a090fe817ac8cd3a9cf2e9a54198de5fa18c3705ef61b2d084fed0f84:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllNjE0MjAwOWUyNGE3Y2M3NDE0NDgyMjc3MmQ3NzQ3Mzk3MzNiNTMwNTk5Y2VhYTNhNjQyOWU1MjU5ZmM5M2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2YzFhODVmMmJiYjY2NzQyYjY4MWVkY2VlNGE3ZmZjYzk4Y2U5NjliMTA5ZmZkMjNmZjRmZDJlN2FhNTY5NzgifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/execution/commit.rs#L47-L101",
+          "version": "repo-lines-v1:sha256:a806d2bb6ca24cfa28e7d6226fb726cdf9214324da265b6040c22d3c60bd667d:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlYzRhNzhlOTI0NzEwNDcwMzA3Y2RmMTk4YTlmNjI2NTZlODdiYTYwYTBlN2Q1NGI5MzU2OWNjZmUzZDgyMWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ2NjAzNjM5ZWZkZDE2MGY0NTdkOGI0ZDA5Zjc2YWU5NTUxOTZmMDViYzA3NDNlZjRlMDA2NjRlYzYzNjA0MjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwMmY2ZmYzNTc0YTE2MjhiOTFkODM1ZWZmYTMxZDc4MDdmZGZkNWM5YTk5MTllNmMxZWM4NjU2NzdhMmU5ZGEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/types/execution.rs#L87-L105",
+          "version": "repo-lines-v1:sha256:add33a4c6cebc9438d66729484f0410f5f8c05906d9dba04112cd4eb8bb0925d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0MjFkOTNmYmMzNjdmNTFlZjQ0NzAyNzM5YjYwYjRhZTA2NmRjN2RkNTFjMGNkYTRkYzMxY2M3MDVkZjdmMmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIzODUwOWQ2NTliOTY0MTRkOGZhM2Y0NDc5MmYyY2RkMzAwNDNmNjZhY2ZmYWEwMzgzYTEwNzk5MDU1OWY2MjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjYzFiMDBmZWYxOWYzODA3OWM2NTM2MzA4NDk3YzBjMGM3Yjc0NzIxZDNmMGNjMDJkYTdkMjk1NzRhYmI0OGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_de31a26f03604c9eb801f7189a75170f",
+      "statement": "进程崩溃恢复走另一条路: 启动恢复的 mark_interrupted_executions 把所有仍为 running 的执行改成 incomplete 并补 finished_at_ms, 由 EventProjectionStorage::open 在打开数据库时调用; 它只更新投影、不追加事件。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/maintenance/recovery.rs#L67-L76",
+          "version": "repo-lines-v1:sha256:36346666832fdb4fa18d7cc60b07b7f1609edec0673ccbe42724d82dbcebcd45:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwOGU0NTZlNzYxODg4YWQwZmFiMWVlZjZhZGFhMjMyMzI0ODY3ODFhMzc1MmE4MDNkYjIxNTMxOWZmZGMxNWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NDBhY2ZiMDczNzM1M2EwMDMzOTUzMGM3NmE5OTFiM2U3ZTQ3MjFiNzI3NGJkNjBjZmE5ZjU5OWMxMWNhN2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/storage.rs#L39-L60",
+          "version": "repo-lines-v1:sha256:937dc0ebcd5c64b8a7aabbfc0049c9e2535dd16cd80a7542bffe42d749d3baa1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkNWViMDRlODM2ZTU3OWFlNjI3MWQxMzNmZTYyZmI2MjZkODk4ZTIzNDMzNGE5ZmJkZTlmZWJiZDM2NDcxNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFlYjlhNmRmOTQ2YWJhMDVmYzU5MDYzNWM3Mjk3ZDczMmNhMzFmZWVmZTgwNTFmODg5ZGFiNjI4YTE1ODk1NzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjNzU5NDJmMzgzZWQ3OTMxNzI4OGYxMGUzZDFlNzM2YTYyZTllNTdmMTk5MjZiOThhMDRmOTM2OWIxZjhjYzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFiNDlmMzk5MmRjYzJkZDFlNTM4NDZhYzVhOWM3YjNhNDRhMWEwODc3NjE2ODdmNmQ3MjNjODRhYmM4MjkyZTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_836f6676317742b59aaac7bde78fa29a",
+      "statement": "两条失败落账路径: runtime 事件流异常结束时 runner 仍尝试写一个 Failed 终态; 而运行时错误走 persist_runtime_failure——先 append_diagnostic 写诊断事件并 flush, 再 finish_execution(Failed), 因此错误原因与终态都在事件流里。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/session_delivery.rs#L187-L187",
+          "version": "repo-lines-v1:sha256:d5e8a24993a6b6f26949c8e6989d3acd6259ffe3c31eba0deab40a6834d9cac4:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDVlOGEyNDk5M2E2YjZmMjY5NDljOGU2OTg5ZDNhY2Q2MjU5ZmZlM2MzMWViYTBkZWFiNDBhNjgzNGQ5Y2FjNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDVlOGEyNDk5M2E2YjZmMjY5NDljOGU2OTg5ZDNhY2Q2MjU5ZmZlM2MzMWViYTBkZWFiNDBhNjgzNGQ5Y2FjNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTFmYjNmYzIyNGUyZjA3ZDJhMGEzNGFhYzcxODQ1ZTU3OGI2NDZmODE4M2Q2NjMxZGJjYmEzNGM2NGQyMDkxOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGJmYzBiZGFkZDYzMDIyY2Y0OGM5MDhmN2Q5YzZmMTcwZDUzYjU5ZmIxNjc0NWFkNmIzMzJmMjVjNWNkNTg2ZSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/session_delivery.rs#L295-L331",
+          "version": "repo-lines-v1:sha256:e16ada47a3df07b6cb9002a10e7345f9d54bed05490e8a23ae27e71a286fedbb:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0NWNmMzFlYTM0N2FiZWZiMTYzZTllMmU3YTdhYWJkYjYzNDkxNzJlZjE3ODkzNWVkZjhlMDRiYmJkZGQ1MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVmZjNjNjM3MWNmMDA5MjM1NDAyNmI0ZGVhNTM1MWViNmRhZmI3NjZjMzg5Mzg3Y2ExZjk4M2FkMGE5NmE3ZTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ1OGI2Y2YwNWYxNzg1MTE5MjZmMmNiMmNiYTA4NDVkYmI3ZWQ1YTVkMjM1YWY1ZDNkNTlhMGJiOWM1NjU2ZjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4bdcaa4125cc45b0a4e8df7b705e0d17",
+      "statement": "replay 的分叉条件只有 ExecutionMode: start_replay_execution 从历史 pin 建 archive 并明确不读取 current source; runtime 在 spawn 前把凭据重置为默认, 使静态凭据不进入 replay 任务; runtime 只见 Arc<dyn EffectArchive> trait seam, 把它接上具体实现的唯一位置是 facade 的 runtime.execute(..., Arc::new(storage))。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/execution.rs#L63-L64",
+          "version": "repo-lines-v1:sha256:b3c9900b1b77513658f5f6b99d046775a6867f77c2777c7484972398c8942074:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGZlNTgyZDgwYzc3NzRiNzlmYjM1NjExYWYyYmFhYzkxNjM3YzcxNGYwOTc3MTNmZmQwNmVkMTA4YmNiMDRmNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2I2ZTM2YzUwNDNiOWNlMWNlMjNkN2MzOGE1YjY0YWUwN2FhZDdmNWM0NWQzZWE2ZGRjZTFiMDVhYTQxOGUyMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjYzNDYyYzQ0NjQ4NzE5MmY0YmFmMmQxODY1NzRhZDllMmIyYjQ2MmM3OGM1ZjExMDZiZWVhODJkNGYwNTdmNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmViMTFlMjA4ZWM3ZGNjNGNhNTYwODZlYzg5MGZiZGU4MDQ4N2U3NjQzYWRmMmM4NDc2NzE4MDUxZWIwOGEzYyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/storage/execution.rs#L31-L45",
+          "version": "repo-lines-v1:sha256:0d48e043437fe2cb0a724b69c32086148503342264568d3d0108905735ff7ffc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0YzMxNGMxNDhhZmU5MTEzZGI2MGVmOGEzYmNkMDk2MDZmYTRhNjQ1NmI2MWUyYzQ0MzNkNWRhZWFmZmE4ZjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiMjBlNzhiOGRlMmI1ZDBlYzRlNDgwN2I0ZTNhODFmYzIyYjczMTQ4Mzg2ZWVmNzM1ZjZjYzFlMTIyYjRkZWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0Njg3ZjcyMDNmNDNlMjU1MDIwNmM5ZWNiZDBhYzJhNDRmMjA3ZTYxMThmMjUyMzMyMmNiNWI1YmU1MWQ2ODIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_76887e2a0c2d491aabf572269235f03f",
+      "statement": "execute_replay_effect 是 archive-only: load_replay 缺失 → ReplayCaptureMissing; execution_id/invocation_path(node_id)/kind/输出 kind/JS 输出形状不匹配 → ReplayRecordMismatch; fingerprint 不等 → ReplayFingerprintMismatch; 重算输出 hash 不等 → ReplayOutputHashMismatch; validate_replay_integrity 失败或 witness 无法重绑当前 Plan/输入 → ReplayWitnessMismatch; 成功后发 EffectReplayed, 已取消则 Cancelled, 归档输出为 failure 则 EffectFailed。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/replay.rs#L101-L120",
+          "version": "repo-lines-v1:sha256:b5009bffb9fae46f12705970fc2b28d6f18aa1e2a02a1e505fd5afcef52ddfa2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyYTAxZDE3MDE4ODA5YzI0MDUxMDIxN2FhZDM1ZWRlMjA1ODA1MDQzODFhNmRiZGY3OGU3NDYzYmRjZTgwNjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0MTRmYmEyNWMzMmU1OGExYzU4YzI3YjVlYjdmODZmZTlmOTc3ZjY0YjIxY2UyOTgyYzQwOTMzY2M1ZmM1NDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzMTUyOTVmYWViM2RkNTZkODU5ZDE0ZjU1OTg5Yzg0NDMxNmEzZTg1NjVlMDM5MDU2MGI3MTYxYzc4ZmVhY2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2Y2Q2NDEyODliOWM3ZDlhYjZjNzE1YzQwODE4MWEwN2ZlNTM3YTQ3MWNjNDUzYmI4MDc3ZjYwMDMwYzVkZmUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/replay.rs#L12-L100",
+          "version": "repo-lines-v1:sha256:9b7785f64fd704502c002be5684555a233a35e714837e29ff1dddef47713c9d1:eyJzZWxlY3RlZExpbmVDb3VudCI6ODksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1M2U5YjcxOWRiNWU5NzdhOWEyZTcyZTFkZWIxMWM2MTNkZjQzMDkwYzcwNjY1ZjA1MTMyMTA5Yzk1NGYwMmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0MzYzYmZiYmM0YzA5OTAwNzY4ZjNhMTk3Yzk1ODM5MzcxZGY2NzBkN2M2M2U1NmZiY2VmMzU0MDExN2ExNmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4YzlmYTM3OGQwNzQ4MWIwZDBmMmVjMzEyZGMzZGE3Y2I5MjJlY2I1MzhlNGJmNDI1MThhOTljMGRjYTY0YWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7a869dbef6d748a4aa4bd38236e39e26",
+      "statement": "replay 的强度写在注释里: 不只手校验 archive 自洽, 还把 witness 重新绑定当前 Plan、exact invocation 与输入, 任何不匹配都是硬失败且绝不调用 live adapter 补救; 模块头一句是「archive-only exact replay 校验; 本模块不调用 live handler」。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/replay.rs#L1-L10",
+          "version": "repo-lines-v1:sha256:a7b67563e80ba70072e81e11a3bdc146da0ed716c402339eea120525575c2e77:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyYmYzZjU4ZTI5NmUwYmIyNWExNjdiYzRjMzQ0MDUxMDVlZjU3ODY5MjM3OTIyZTIzNGQwMDQ3OThmMTgxNTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhMWQxYTYzMzkwMjI5Yzc5ODM0N2U4M2EwNDA1NDQxYzk0MDAwMzUyODRhZDE2OGMxYmY2Y2RmMWQ3MGEzNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhNjBkZDY5MDU3YWZhYTY0NGQ2ZWZiZTc2OTAwMTkxYTI2OTg0OTM3NzE3NzcyNGNhYWIyYWJlMDAyZmM3ZDgifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/replay.rs#L88-L89",
+          "version": "repo-lines-v1:sha256:62e3e61164818b693c5ea56837741a826eff718a9b8a21c1e82fb4323fe9fed3:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWM0MDYyNzNlMjI1YTIyMjNhODZiMTRmMWVmZWFkZWIzMTVmNDc1MDYwNWUxMDdhMGIxNzdjMGMwNDhmNWI0MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2JkOTI3YzEzYTU0ZmMwZGI4YmY2ZmI4YzViYjJkNTcxMTRmZDcyMjlmYTg0ZWExMGVmMWUzY2JlZTA0NDlkNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTMxNTI5NWZhZWIzZGQ1NmQ4NTlkMTRmNTU5ODljODQ0MzE2YTNlODU2NWUwMzkwNTYwYjcxNjFjNzhmZWFjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDMxNjUwNDJjOWYwNmI0YTc4ZDRmN2EwMDI1MzI2ZWNlNWJlMWE0NjBmOTQ2MjRhNGMxNThhMGJiOTI3ZTU2MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b414ade6c4ac4b25aa86482c2ce4bec1",
+      "statement": "replay 不变量有具体用例: live_and_replay_preserve_typed_outputs_without_live_fallback、replay_missing_capture_fails_with_single_attributed_terminal、replay_rejects_tampered_quickjs_script_input_and_output_witness_hashes、replay_rejects_tampered_extract_input_witness_hash、replay_missing_extra_and_tampered_control_invocations_never_call_live_handlers。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/control_contract.rs#L175-L175",
+          "version": "repo-lines-v1:sha256:1466edfc129e08e1af1721084813e89a1c38640dca33c0c64355443369dbff59:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTQ2NmVkZmMxMjllMDhlMWFmMTcyMTA4NDgxM2U4OWExYzM4NjQwZGNhMzNjMGM2NDM1NTQ0MzM2OWRiZmY1OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTQ2NmVkZmMxMjllMDhlMWFmMTcyMTA4NDgxM2U4OWExYzM4NjQwZGNhMzNjMGM2NDM1NTQ0MzM2OWRiZmY1OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjEzNTQxMGNiNDQzNDJiOWEyYTRhMWM3NTFmNTE2NmRiMjI3YWI3NzAwODQxOTE4ODYwY2Y0NGE5ZDgwMDFjMSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/replay_contract.rs#L162-L162",
+          "version": "repo-lines-v1:sha256:61d7868e14a7d535ac661916554fead6d32e8251a5c0719c7d68b789a97df917:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjFkNzg2OGUxNGE3ZDUzNWFjNjYxOTE2NTU0ZmVhZDZkMzJlODI1MWE1YzA3MTljN2Q2OGI3ODlhOTdkZjkxNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjFkNzg2OGUxNGE3ZDUzNWFjNjYxOTE2NTU0ZmVhZDZkMzJlODI1MWE1YzA3MTljN2Q2OGI3ODlhOTdkZjkxNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzVkZWMwNWEyMzNiOTBhYTNkN2I3OWY5NTUxZWFlMzc2ZWYyMmI2ZmJlNjU0MzZkY2ZlOTY4Yzk3OTBhNzVlYyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/replay_contract.rs#L304-L304",
+          "version": "repo-lines-v1:sha256:f5c190c7fe2b80e87f13562c9776d67af9ba0974ebab996c40dd568981e86b4a:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjVjMTkwYzdmZTJiODBlODdmMTM1NjJjOTc3NmQ2N2FmOWJhMDk3NGViYWI5OTZjNDBkZDU2ODk4MWU4NmI0YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjVjMTkwYzdmZTJiODBlODdmMTM1NjJjOTc3NmQ2N2FmOWJhMDk3NGViYWI5OTZjNDBkZDU2ODk4MWU4NmI0YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWQxMWRmYjJmNDFkZDc2MDhmMzg5YjY2YmQ2ZDg0MWNiNDVhYzdhNDVhNjZmOGNhNTZmODIyMWVhNmJhODYxNSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/replay_contract.rs#L53-L53",
+          "version": "repo-lines-v1:sha256:5c96ec93c8fb86c9a1d052f990f79877d820508ef8e04dc70aa1b403d4d4e50b:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWM5NmVjOTNjOGZiODZjOWExZDA1MmY5OTBmNzk4NzdkODIwNTA4ZWY4ZTA0ZGM3MGFhMWI0MDNkNGQ0ZTUwYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWM5NmVjOTNjOGZiODZjOWExZDA1MmY5OTBmNzk4NzdkODIwNTA4ZWY4ZTA0ZGM3MGFhMWI0MDNkNGQ0ZTUwYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTdiNGFmMmZjYjA3YzIxNzIzNmRhOTU0MmMzZjdmNzAxNjYzNjJhY2U1NmEyYjI4NWMyYTMxNDMyNGI1ZjkxYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6978058550fc4191be605f3be1725963",
+      "statement": "调度与取消的用例: cancellation_stops_new_effects_and_emits_only_cancelled、effect_error_becomes_one_failed_terminal_with_attribution、bounded_event_channel_backpressures_before_downstream_effect(投递阻塞反向限制执行速度而不是在内存堆积)、loop_global_hard_max_is_inclusive_and_overflow_starts_no_body_effect。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/control_contract.rs#L521-L521",
+          "version": "repo-lines-v1:sha256:c8f288ec348646c1509ca9d98da9fedcc05e2f4394d1aa38bd81b8f357133fbd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzhmMjg4ZWMzNDg2NDZjMTUwOWNhOWQ5OGRhOWZlZGNjMDVlMmY0Mzk0ZDFhYTM4YmQ4MWI4ZjM1NzEzM2ZiZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzhmMjg4ZWMzNDg2NDZjMTUwOWNhOWQ5OGRhOWZlZGNjMDVlMmY0Mzk0ZDFhYTM4YmQ4MWI4ZjM1NzEzM2ZiZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2YxMjkxOTA5ODVmZmQxOWQ1MjZjMmVmNDk0MTBkYzU1MTMwMjE5NjQyZTMxZmZiNzQzOTQ2ZTNlMTlhMGUwOCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/scheduling_contract.rs#L187-L187",
+          "version": "repo-lines-v1:sha256:ef1a4057cadeffb83215e671a96e916de4fb6964fb040e3ba5d0da6638ba0e26:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWYxYTQwNTdjYWRlZmZiODMyMTVlNjcxYTk2ZTkxNmRlNGZiNjk2NGZiMDQwZTNiYTVkMGRhNjYzOGJhMGUyNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWYxYTQwNTdjYWRlZmZiODMyMTVlNjcxYTk2ZTkxNmRlNGZiNjk2NGZiMDQwZTNiYTVkMGRhNjYzOGJhMGUyNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWY1N2M5Zjk5ZTEzNjRmMGMyMDY2NWFmMDZiNDQwYzg4YTM5MTUxYWJmNzA3MTUwZjdhYThlMjhkMTEwNzJkZCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/scheduling_contract.rs#L255-L255",
+          "version": "repo-lines-v1:sha256:67405d61f0bb88bde2b14b60a0f092f0dc5572411f8c113248928334d0c7b69b:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjc0MDVkNjFmMGJiODhiZGUyYjE0YjYwYTBmMDkyZjBkYzU1NzI0MTFmOGMxMTMyNDg5MjgzMzRkMGM3YjY5YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjc0MDVkNjFmMGJiODhiZGUyYjE0YjYwYTBmMDkyZjBkYzU1NzI0MTFmOGMxMTMyNDg5MjgzMzRkMGM3YjY5YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWY5NzIxNDFjZTMzYmNkNzgxOTU1YTQzYjkwMzA5NmZmZjY0OWQyOTI1YTM2YjU0YWFiYThmOGM2ZjhhZmNkYSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/scheduling_contract.rs#L6-L6",
+          "version": "repo-lines-v1:sha256:012c60cfb13219fe336e685f62dbf05336174deb0d21d1db1ffa838a3ad8a3dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDEyYzYwY2ZiMTMyMTlmZTMzNmU2ODVmNjJkYmYwNTMzNjE3NGRlYjBkMjFkMWRiMWZmYTgzOGEzYWQ4YTNkZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDEyYzYwY2ZiMTMyMTlmZTMzNmU2ODVmNjJkYmYwNTMzNjE3NGRlYjBkMjFkMWRiMWZmYTgzOGEzYWQ4YTNkZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjdhNWJhMTRlMzlkYjM4YWI3MDZhNGNmMjJmY2M1ZWQxNDlhMDBlMGUxOWY5MjYzM2Y1MDYxZjE4MWQ5OWNjMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTZhZDY3N2Q0NjA4Y2IyNTUzMjI1YzJjNzA5NTk5MWZkZWYwYjlhMmJhMTc3NzIyZjI0MTQ3NGVhZDEyZjE1OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_68051f3d117a4e1ba2aadfd750b055bf",
+      "statement": "存储侧 replay pin 与投影规模门: execution_replay_pin_uses_verified_artifact_and_rejects_tampering、replay_start_keeps_historical_source_snapshot_after_source_update、replay_pin_survives_restart_and_rejects_tampered_snapshot, 以及 d12_thousand_resource_event_projection_transaction_gate。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs#L492-L492",
+          "version": "repo-lines-v1:sha256:3ec739cfe43b1676fbc4f58ddf0c546e9008589803fb8f1340055aa9db39efca:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2VjNzM5Y2ZlNDNiMTY3NmZiYzRmNThkZGYwYzU0NmU5MDA4NTg5ODAzZmI4ZjEzNDAwNTVhYTlkYjM5ZWZjYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2VjNzM5Y2ZlNDNiMTY3NmZiYzRmNThkZGYwYzU0NmU5MDA4NTg5ODAzZmI4ZjEzNDAwNTVhYTlkYjM5ZWZjYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGU5OWU2MmQ3YmY1YTM2Mjg2ZTc1OTU3YjRkMTMyNzQ4N2MzZWMzZTgxNTQ2NGNkMTg3NGU5OGVmMzZiNmE4YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjBlMTUxZjM0NmNkOTY0NTZkN2QyMGE5NjA1MTk1ZWJkMzJmNTg5YjZkNzEyYTlkN2QxNmJlMjEyNmMzYTM0OCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/replay_contract.rs#L10-L10",
+          "version": "repo-lines-v1:sha256:18aac34dbb6c0997a70fa8ac1d616d5944eb61ddb78c507d3192bdedf0453824:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMThhYWMzNGRiYjZjMDk5N2E3MGZhOGFjMWQ2MTZkNTk0NGViNjFkZGI3OGM1MDdkMzE5MmJkZWRmMDQ1MzgyNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMThhYWMzNGRiYjZjMDk5N2E3MGZhOGFjMWQ2MTZkNTk0NGViNjFkZGI3OGM1MDdkMzE5MmJkZWRmMDQ1MzgyNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTk3NDZiNTE2N2RjYjQwOTJmNzI2OGM0ZGNiMzcwNDgzZmE1MjdlZGNiMWRlOWU2MjI4NGY4MzU2NTUwMmQyMiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/replay_contract.rs#L321-L321",
+          "version": "repo-lines-v1:sha256:cb5800066c9d9ac16c9efe9b215db020375d367036c653fd6364aee3c1da2a8e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2I1ODAwMDY2YzlkOWFjMTZjOWVmZTliMjE1ZGIwMjAzNzVkMzY3MDM2YzY1M2ZkNjM2NGFlZTNjMWRhMmE4ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2I1ODAwMDY2YzlkOWFjMTZjOWVmZTliMjE1ZGIwMjAzNzVkMzY3MDM2YzY1M2ZkNjM2NGFlZTNjMWRhMmE4ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDJkZTJkMTYxZDFiYmZhNDdjNmE2MTlhNjc5NmE4Nzc5MWJjODExY2IwOWI0MWRkNTlkN2Y5MzYwNmY4ODMzNiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/replay_contract.rs#L69-L69",
+          "version": "repo-lines-v1:sha256:c2284b94c2ced55d2251452ad316e4ce62d077382283931efb6874b39911d0f5:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzIyODRiOTRjMmNlZDU1ZDIyNTE0NTJhZDMxNmU0Y2U2MmQwNzczODIyODM5MzFlZmI2ODc0YjM5OTExZDBmNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzIyODRiOTRjMmNlZDU1ZDIyNTE0NTJhZDMxNmU0Y2U2MmQwNzczODIyODM5MzFlZmI2ODc0YjM5OTExZDBmNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTc2OWY4OTdhNDU4ZjI5ZjMxOWZjYWEyYmFiMzM2Y2M0ZTFjMjhiZTE3NTZkMzdhOWNkNWNlYTYzMzU4MDZjMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1d51d60d4df743898e03b58bf8e12a8b",
+      "statement": "投递失败不影响执行正确性: Tauri 层单条事件投递失败只 warn 不取消 execution, 中断后靠 catch_up_execution 从 C2 事件流补齐(它按 after_sequence 取回并逐个 emit, 若最后一条是终态则清理取消注册表)。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/commands/delivery.rs#L20-L54",
+          "version": "repo-lines-v1:sha256:bef4cf1230a3946b156fd08dc88a106eea2f7805f33a79ba7c30d2a7bacb3db6:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0ZDJjYzJlM2JlZTk2ZWIxYTE4Nzg0MTNkNmU3NzU1NTI4MTAyYjgzZDNjYWFmY2RkNzFkMTRlZDg1NDk5ZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5NmY4Y2IwODNmYTgwMGE0ZGNkMjk2OTcyMmQ3YjkyNjg2YWRkOWViZTM2NTU0OTJmYTY3MmIxYTdjZWQyNDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiOGVhNDM2NGY3ZjI1MWFlMWUwYzgyZjAyZmViNzNmNjkzZDc0YzM4NTdmYTM2NWI4OGZkOGJjNzQ3NGIyZDgifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/execution.rs#L98-L140",
+          "version": "repo-lines-v1:sha256:662582918672e0eefd22f14f40028761ae2d0472883db669a128b6fb1a9632a7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.0",
+    "at": "2026-10-04T10:14:16.110Z"
+  }
+}

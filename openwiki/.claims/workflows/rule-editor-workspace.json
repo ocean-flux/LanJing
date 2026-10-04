@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:48978e7fb152644bdc65a17c1959bce08461ffcf25940bbd23be9d337fcf973a",
+  "claims": [
+    {
+      "id": "claim_9f0b6d00531d4d73b334e08e8856dd00",
+      "statement": "RuleWorkspace 是文档切换宿主, 每份文档一个 session 实例(用 documentId 作 key 重挂载, 切换文档不继承上一份撤销历史); EditorSurface 是可拖拽的两栏画布+检查器加诊断区, ReactFlowProvider 放在这一层, 分栏宽度按「编辑器偏好而非文档 layout」持久化。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/EditorSurface.tsx#L1-L17",
+          "version": "repo-lines-v1:sha256:b13534babc8dd09f2cc4572009fe85a20a72cbf5f31e1f78ec2cf966d6bf7018:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2NGNjMmY2MDdmNGJmYjEzYzNlNjI4MDBjZGYxZWNkNDBkZTBkNzg3ZDlkM2FiZTRiZDUzMmUzZWRiNzE1YTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4NjA3ODVlY2E2MGM4MTBmNzE5MjQ5YjYzMWMwZTdkYWJmZmZiZmIwZGNkYzAzYzMwZWU3ZmNlZDczZDg3NDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJmZjkzYjQyOGY4ZTJmYzhhZGFmOTg4NWZjNGM2ODFhMTE2YWE3ZDk0NGFiYjdkZTliN2IyZWFjNmQxYWZjMmQifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/EditorSurface.tsx#L35-L40",
+          "version": "repo-lines-v1:sha256:c1affbf616fbbd4b0ac75b5420cad48930a24a7335e630741901f65e283c85a9:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDRjYjRiZWNlNjk0ZjExNTM4ZGViNjk5MjYzYTVhOGU3OTQ5YzczMThkNGI4ZWY4ZTQ4ZTc4NzM0ZTZiNDIzNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2EzZTQ2Zjk0Mjc2YjZmNmY0ZWQxZjAyYWY3OGJlZjZhMmVlMWM0MzlkZDU1ODRiOTczOTQ4MzEzMjE0ZDJiNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDY2MDE1Y2JiYzEwYzFlZmFiODRiOTYyNTA5ODBiYTdkNmUwNGQ2MDhiODE5YTEwNjQwZDVhNjMwODhhYmNiNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmFhNThjYzQ2OTlmMjM5M2JkMzZlYzkyNzYzY2UzNGM2ODNmNWU5OTM5YjJmZmVmOTk0ZjU0OTlkMmFkOWU5NCJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/RuleWorkspace.tsx#L1-L4",
+          "version": "repo-lines-v1:sha256:893765336f14abca5af770cdb91dd018f7199efccb33fd01ddaa7370a4cc47fb:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDVmNzlkNzIwNWRjZDVkMzQzODdhMjNlOGFmOWIzNzM2MzJlNzY0MmU5YTk3ODVhNGIyNmVmNTFlZTIxMDg2MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWNkNmZiNzkzZTZhYmNiNmZhNjhlMjZmMWU0ZDI1NDVhMDhkYTYxNjJhNzU1ZDM1NGMzODcyNjVkM2I2Y2ExMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjRiM2ZmYTg2YWEwNjQ0ZGJmYjhkYmMwMDVhNGM2ODBiNzAyZWI1ZjJmNjMyYjgwNzBjNWNmMzA3NjUxODVjYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d38cfc09255b4a1bab4b2020a2246053",
+      "statement": "分层是纯函数模型层 → zustand vanilla store → React context 绑定: core.ts 是不可变 reducer 并声明四条不变量(credential 值不进 history、selection/viewport/intentFocus 不进 history、semantic 命令标记 domain、epoch 在 saveRequest 递增并校验); use-session.tsx 只做 context 与选择器订阅以避免高频变更重渲染整棵树。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/core.ts#L1-L15",
+          "version": "repo-lines-v1:sha256:8718f5edb34195259015512b61925e2ac973a1dd949de0e7a3b1aa1215c5789e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2Y2E3ZDY4MzI1OWZlMzViN2VkNTIyMzI0ZGI2MzM1NGYzMjczM2FkNDUxZGNiMWJmN2EyNjU0ZTY3NGZlZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI2ZmYzMDVkMjViYmRkNWY4ZjljNTgyMDJjZDllMDQwZDdjMGNkYTg5MTI5ZjRhMzRjMzk0NTUzZWYyYTI2MzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxNDZkODNjMGU1Mzc4M2Y3MGIxYWM3Mzc0M2U3MGFhYTBmNDRlYTAzMWRjNjU2ZjBiYWZlNjgzZDAxZmJkMGYifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/core.ts#L223-L255",
+          "version": "repo-lines-v1:sha256:0abfddd0fb3ed29280d39b59c94c51ca682a038e3e75d92e4b7a6c739af74a59:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyYmEyMDhkMGU4ODY3Y2U5NGQ0MzE5ZDQ3NjFkNjkwMTVhNDNjMWU3N2M0YWNkMDYxMjI0NTQ4NTJjZGJjYTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3YWIzOWM1NTAxYjdiNjVmYjk4NGM3YTA0NDg2NTY5YjkxNDU3YmJlY2EyNzdhYzRiM2ZmMTBlMjc3ZTg0ODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2ZjcwNzZlZWMwNTk1NWNlNjY1Yjc4NzRmY2IwZTA4MjM0ZTc2MWQ5ZGU4YjFkZDA1ZGRiN2I5MWIxNDExOWMifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/use-session.tsx#L1-L13",
+          "version": "repo-lines-v1:sha256:21e61d7716a4084e5a4aad3a120a6d66deb5bb16319f923fdddd58b80b29a323:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4YjcxMmY0Y2Y3OWI1N2NlOGIxNDE1ZGZjZDkyMGUyMGYzOWU1N2Q3ZmRlMTRhZTA3NTUyYWUzZDkwYzQ5YjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1NzM0OGNkOWFiMDllNDcwMjNmMmFlZmNiYzQ3ZjNhYjFhNzdhZmM3NmZkYWVkOTgzMTlmNWUzN2UyYWRkZDEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_432134c423c0409884a9bb788a9c49e9",
+      "statement": "semanticToFlow 是只读投影: 节点 kind 同名映射、位置优先取 layout 而末保存节点用确定性默认网格、边 id 由语义 identity 派生而不产生每意图副本、intentFocus 只影响 focused/dimmed 标记; 节点数据同时携带诊断与聚焦标记, 因此画布能直接渲染问题与焦点外节点。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/flow-adapter.ts#L1-L13",
+          "version": "repo-lines-v1:sha256:0bb48b18c4e6d368661d72dab717a5066d9cbfa293efabd3451cfb1cabf52583:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjY2JiMjBkY2ZlMzdlOTdjMzliOWEzNTFkZjcxYzVjYTY5YzA3OTJjNmJiYmU0ZGJmMjhhNTQ1NjhlYTA0ZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3NjU5MmRlNmQxZTI0N2FlOGExZGQyN2EyMWY4YjA4ZDk4ODlmODBhOGM2NDYwY2QyMWU0ZjY0Y2Y5NTczMjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJjNTBlZDA4Y2Y1MDE5MDg1ZjAxMzZjM2ZjYjA4NjdmOGYyMTg1NWIwZDc1MDRiMDBjMmZmNDU0YTQ1ODNiZTUifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/flow-adapter.ts#L44-L66",
+          "version": "repo-lines-v1:sha256:052adf4c4e45afbf2b854d0c4813334632c3df61efc07e2c36dda3cb67dbcf23:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5Y2EwNTFmNjY1ZGU4MjE1ZjJiNWJiNWYzOTU1MTA2MGJjMmFlODhiNWM5MzZhMjU2ZjNhZjI1NjlhNDVlYzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA4MWU0Nzc3MTg1YmEyNWI3YWFjZDJjZmJiMWFiMWViZDAzYTkzOTE4YmZkYmY5NGFkZmJmMTQ0YTY5OTAxZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZjN2MxNTY0YTczZTBjMTE2MjI0Y2Q3ZmU2MzU2YTJlNDUwZTM5NTQzY2M4MGFlZjUxMWYxNjgzZTIyNThhYmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_886b3d92085a4c05ba217ae260cc00a2",
+      "statement": "投影结果用 WeakMap 按 core 引用缓存, 理由写在注释里: selector 每次返回新对象会让 zustand 的 Object.is 判定为变化而陷入无限重渲染; 这条约束是「core 不可变」设计能成立的前提。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/session.ts#L478-L499",
+          "version": "repo-lines-v1:sha256:a17b7492b44b276202f65afdaee75f036c1663bf19fe35893e97579f560e37dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhM2IyY2RmYjBhODcwNjUwYzc3ZDJkNzA2NjNlOGFmM2JjZGVhZTA3ZTFjMWE5ZjE4YmViODEzNTdmM2FjZDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ4ZjIxZmUxNTU4NGUwNDJlOWQ0MTg2YmM1MDc5YmZkZjk1NjU1N2IxNWZmMjhiM2VhZDc5NjdmY2M1ZmQ2ZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwMmViNDI3YjY2ODZjMTRiNDNjOTA0N2Y2YWM1NWM3OGFkZDg5ODE1NzhmYTUwNGYyNzE1MDY5ZDlhMTc2ZjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_27e9184dbac4477b8d3b94c8c9834414",
+      "statement": "连接门禁把拒绝原因收敛成十种稳定码(missing-handle/unknown-node/unknown-handle/self-loop/incompatible-ports/duplicate-edge/entry-occupied/back-edge/loop-yield-occupied/intent-mismatch); 模块头明确它是纯 TS 且校验失败不产生任何 semantic 变更, 组件层在 dispatch 前调用。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/connection-gate.ts#L1-L5",
+          "version": "repo-lines-v1:sha256:a04615e02e48eb43d352c9f162df1dac847e44c438d5cc0320503c6c674f631d:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGE2ODljNzVkZTZhYTcyNTk3OTljNjE2YTZhMDNjNDA3MTk4MDZmMjM2MjkxNTU4NTBhYjA0ZjhjMjY2MDNmOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTQ2NmZiY2IzYjgzMDFiMTY1OWZhMWQyOWQ5NTBmNWIyNTVhOTliMGUzOWVjMTVkY2FjYTljM2FmMzY1MjM5NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWMyNDhiMDVhYTllODQ5MDBhMWJiZjU1NjA0NjlmMjQ5MTEyNTQ2OWJhOTRhMDE1ZDIyZTU3ZDU1NWYxMzBhMCJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/model/connection-gate.ts#L37-L58",
+          "version": "repo-lines-v1:sha256:f7d9b6c68e1d8757da878fa568f131021a1a679c03b3fed524e3efc63a12a1ec:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4MWJiN2E1MzU4Mzc0YWU0NTgyNGU1NzU2MDk1NTljN2U5MjQ3ZjA5MWZlOWI5Y2ZhNzU5ZjhmZjk5ODVlYmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxOTEzZWI3MDIxYjZmM2VkOTQ4Zjg1YTMyZDAxNjkxNDBhN2IzNzUyNTJhYTUzOTM0YTk2OGMxYzg0OWY2MWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5MmRkZGJmZTkwNDY1MWY4NDZjNGQ4MWU0MTc4ZWI1NTk0MGEyNmEyNzQ0NDdlY2ZlZDhmNDIzYmMzOWZlOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ0MmYwYzY1YjVjNDkxOGM1YWNkM2RiMTAzMDQxYjA3Zjg1YjdhZGNlMjk3Njc0YWNkNDIzMmQ4Njg0ZjZmZDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_14660bed60844815b8f929169fc5c965",
+      "statement": "门禁的判定顺序与语义: 句柄完整性→端点存在→自环→句柄属于该节点类型的动态端口合同→类型矩阵→语义边 identity 去重(重连时排除被替换的旧边)→Loop yield 只能一条 structured return→HTTP 入口单入边→回边拒绝(把新边加入后目标可达源则拒, 唯一例外是 Loop structured yield backedge)→焦点激活时源节点必须在焦点子图内。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/connection-gate.ts#L101-L115",
+          "version": "repo-lines-v1:sha256:48ea1fa49fe91052ec565b07c8b416b662ca5049566fe5fab70ca868adf5a4d3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZGZiZmM4NjNjMzk0MDExYjY2MDljYmI1MTdlYjQ1ZmFlNzM3ZGM5ZmJjYjliZDc1ZDIzYTJiNDAyNjE3MTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyMDQwZTA5NWE5NGUyYWRhNzRlNDIxZjM3MTg3NTFhOTFhODEwYmZkNjZmNDhmNGU5MzljN2I3NDgwZWI2NzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRiOGZlYTVjMjcwZTk0Y2YxYmNhNTZiOWIyMGUwMDA3MGFhZTk0YzRkYjhiZjJjNDc0NTNkZTRjZDg3YjQ3NmIifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/connection-gate.ts#L136-L207",
+          "version": "repo-lines-v1:sha256:e3520426149c88d33bf2dd84409efcec2f8d35d1ba655d60798a352b04adc75b:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwNjEzOWZlZGQ1ZDgwZDVkN2U3MDNmM2FlOWZhOWQzNDZmMjIxZGQ5OTIxNmRmMDA2YTM3YmFjY2VlMGNhYTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUwYTM2ZWU3ZTYxMjAxNzg0NGI0ZmZkNGYwZDk3NjU4MTBjM2I0NWU1NGZmNjdkMjJiZDcyYjVmZWI2NjI2MmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNiNTY0NmE3YjVmMzViN2Y0NGFmM2RiMzU5ZjAwNDBhZWNjODk3NGJhOTIxN2I0MjgyZjJjOTgyNDhlMTIxYmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1f1e6c879c984bd3b4a87c554ad6be30",
+      "statement": "ports.ts 是编译期端口合同的 TS 镜像: PortType 五值与 compiler 的 PortValueKind 对齐, PORT_CONTRACT 只覆盖七类节点的空配置回退, 动态端口由 getNodePorts(kind, config) 推导(Merge 按显式 order 给输入并在缺省时生成 input_${index+1} 与 in:${index}, Condition 每分支一个 branch:<index>, Loop 四个句柄); 兼容判定就是 input.accepts.includes(out.emits)。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/ports.ts#L1-L12",
+          "version": "repo-lines-v1:sha256:75386999d1a857f58d618c918f2d0d5633138f97d5c186a5e677723806f75a56:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI1NzljNjhjYTVmNTQyNjgzYWZkMDY0Y2Q5OTQ2NTlhZDY0YzFhYjE4MzMzNmI0MTY0ZGJhMDIyYmIzZDA5ZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlZWE2NTVmOTVkNzUyYzhlZDVhNzYxZDJjODE5ZGI1YjFiMWI3NjkyZWU1ZmY0NTkxMDg1MjA0MTY0OTMyMjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU5ZWJkOWRkZDBkMDI4YzMzNGMyOGMzNjQ5ZWEyMjRlOTJkNDQ4MzZhMTM4MGFhYzRiZjBjMjQxNGM3NTU1MjQifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/ports.ts#L253-L268",
+          "version": "repo-lines-v1:sha256:a4058b787ffa801a34a90c8874d1c85f53eb03218e0f87ba1642afb7f852bbad:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEwYTlkM2EyMzgxZDZhYTA2NjllNTk3M2RjOTE0ZWFjY2Q4MTg1MTFmNDFmZDEyMDIzNTAxNDI0MTVjM2EwOTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzZjYzZGFiMjBmZGUxYWY2YTI5ZTcwOTdmYWM4Y2RmMTYxN2ZmYzJkZWMzMjVjNjg1Y2JkMjJkODA0ZmU4ZjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlZjM4N2JhZmRhYWFlOGZmODA5YWYxNGUxMzBiOTA2NzE0MWMzYmUwNDQyNWFjN2QyNWI1Y2M3M2JmODEzZjIifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/ports.ts#L394-L396",
+          "version": "repo-lines-v1:sha256:30506086ad786290eeb08e5b661e35ab91fbe7130aabc98972f385bc9600d74a:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmM3MWIwOGEyNTk5YzkwNDQxNWFiYjg0YmQ1NTc0OWZkMjAzNTUwNDVjNWFiNTkyOTQzMTZlMzI3NzQ5ZDE3ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODk2NWYxMWM3NjcyZTE0ODk4OGYyOGFhNDIzY2Q4OTAwMTgzZTczYTBlNWUyY2I1ZGY2MWZhMjA3OGU0OGNiZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTZmMzBiZDU4ZGE1NGVjMzlhMWM2YmFjNmYwYWQwMjlmOTdiZDM2ZGIyNzk1Njg2NTRlYzc0OGMzM2E5NmM0MSJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/model/ports.ts#L74-L74",
+          "version": "repo-lines-v1:sha256:b804e9f4ff5ab3c9fea113447a1eeec8ed89a00023066a865714552c36690e1f:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjgwNGU5ZjRmZjVhYjNjOWZlYTExMzQ0N2ExZWVlYzhlZDg5YTAwMDIzMDY2YTg2NTcxNDU1MmMzNjY5MGUxZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjgwNGU5ZjRmZjVhYjNjOWZlYTExMzQ0N2ExZWVlYzhlZDg5YTAwMDIzMDY2YTg2NTcxNDU1MmMzNjY5MGUxZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjc1N2VjZWVmNmNmMTEyNDc0YjIxYzk4MjA0N2Q1MGY5Y2FlZWU2Y2UyYWQ0YjViOTRhMTcxZmY2MThkNGMxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODhiMzM3M2U5OTg1ZmJhY2NlMDA2YzZjNDM5ZGZmYWQyODMwNTdiMGE2Zjc5YjllNzNkNWFiZWNiYWNmN2Q4YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_02956268edd243418c0be976bb9628bb",
+      "statement": "句柄命名由前端拥有: 检查器新增 Merge 输入时写死 input_id: input_<n> 与 handle: in:<n-1>, 与端口推导的缺省值一致; 注释还说明编辑过程中 input_id 与 handle 可以临时重复, 只有下标唯一, 因此中间态的非法结构是允许存在的。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/inspector/node-panels.tsx#L340-L345",
+          "version": "repo-lines-v1:sha256:c5f631ac2e714bca1ee20d80fe8592c87e6b5e1bf01285974c9952fcb269f4bf:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTM5OTEzNGE1NjU1MzkyZTk3Mzg0MDI0NzIzNGIzN2Q3MGE5YzExN2Q4ZWYzNDJiNzYyZDliN2JkNTBhNmM5NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWM1YjYwMTdiZTQ2MDdmNjJhMDQ3MWQyZGQ5ZTEyNTMyYzQ1MDNhODcyZWE1ZDJjOTdjN2RjYWYwNjhiNjFmOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjRkYzYyYzlmYmVkMzdmYzU5MzQzZjdjMzgxNzBiM2I1OWYyM2NiZDdkZWYxNWM3N2YzOWY5OTBjZjY4NWY1ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGNjYWM2ZmY3MjgxMTFhMzViODVjZThjNzRiMmM3M2Q3MjA5ZTAyMGY0ZDJkNWIwYjU5MzViMWZjNTZlNWY2MiJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/inspector/node-panels.tsx#L353-L353",
+          "version": "repo-lines-v1:sha256:1b0bea5d2b25b39c38067d5fb982535f86741d815865c683913852c77196f119:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWIwYmVhNWQyYjI1YjM5YzM4MDY3ZDVmYjk4MjUzNWY4Njc0MWQ4MTU4NjVjNjgzOTEzODUyYzc3MTk2ZjExOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWIwYmVhNWQyYjI1YjM5YzM4MDY3ZDVmYjk4MjUzNWY4Njc0MWQ4MTU4NjVjNjgzOTEzODUyYzc3MTk2ZjExOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDUyZGQwNDFiODljZDYyNDlmMjA5NjFkMjkyY2U0MjQxNmE0MmE2OTY2M2I2NDkxYThmOWVjNTRlMmY4MjlmZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmZiM2NmMzdkNmY2ODY4ZTEwNzA4ZTU2ZGQxYjc3OGMwN2U4OTMxMGVhMDY4ZGE1YmFmNDU2YzFlMjgzM2M4MCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3fbe3cfc64684dbea452136dd08eb655",
+      "statement": "Loop 区域在 TS 里被重新推导: 区域由 collection 入边、唯一 body 出边、唯一 yield 入边与至少一条 done 出边界定, body 成员为两个可达集的交, 并使用与编译器同名的诊断码(LOOP_NOT_FOUND/LOOP_ENTRY_INVALID/LOOP_BODY_INVALID/LOOP_YIELD_INVALID/LOOP_DONE_INVALID/LOOP_BODY_BYPASS/LOOP_CROSS_REGION_EDGE); 它只产生投影不写回语义。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/flow-adapter.ts#L375-L408",
+          "version": "repo-lines-v1:sha256:7816a0a5ab450d64c2d58dd5a5899138b17ec94b471fcf854e785afb660c17a3:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkMGZiMWVlZDhmMjhmZWE0MzdmYmVjNjcxMjM1MDg0YjAxZTQ5YmM1ZDRjZDViMjcyNWUxMjhmNzQ3OTNmYzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4MTQ2ZDljZmJiZjcwNjdlMGNmMWIxMDQzYmIxNmM4ZTI3ODNmYjk2ZTFkMTM2ZWFjNTU1ZjYwM2E2NGRkYzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2MWNiODA3NWNkNWI4NTQyOTgxMWQxYWNkYzg4ZGNlZWY3ZmI1OTE0NjMwMzk3YmQ2YTcyNmJlOTQ0YjEwYzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAzY2Y4ZDJkMjdjMGUyMDczMDlmMmFmMGUyZDllMjE3MTU1ZGM4MTcxYjkyNDkxYzNhZjAxMGMyMzEyNjIxMjcifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/flow-adapter.ts#L423-L460",
+          "version": "repo-lines-v1:sha256:52bcca93c445e6037ccf11466f40adba478ce6a1fd6a6a2e93b43fa7b955d8aa:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4ZDAyNjZhMGUwZDZiMmFlNzdhMjU3ZDY4MDUyN2IzOGQyNDQyOWM4M2MwMDI1MzU2YmVhZTM4YjlhZThmOTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5MzMzYTViMGJhYzgzYzgyNThkOGViMzZiNTViOThiNTlmOWFiZDRlOWU4OGE4Y2ZhYTY0YzkzY2M3YjllMjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJmZWE0YjlkYzgwZWVkYWVjZTg0ZjZkM2I0NzU1MzYxZTU0ZDAwYTQxNmUyNGMzMzZhOTE1NjRhNmUwNGE4NjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlZjNlNTE1ZjM1YzY3NmRmMTU5NTZmM2JlZjAxMDY2NDM4YmY0N2MyMzVlNjk5NzEzZDA3Y2VlMmY4YmI0OTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bda1745bc46a49a690b4053c6834c4e8",
+      "statement": "布局被当作不透明值: wire 侧 layout_json 是字符串, layout-json.ts 只承担字符串→unknown 并明确坏 JSON 视为无布局让画布退回默认排布而不是让文档加载失败; core 只对 layout 做快照比较与回传。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/core.ts#L225-L229",
+          "version": "repo-lines-v1:sha256:489744dbf9439276617ed57382a988423019f8fc434d4cb85b6d1f561ce41b64:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWFhMWYzMTYyYTYwOTIyMzQ3NjA0NDgzOTg3OTRkNzNhNDQ5ZTNhNWFkZDlmNTU0NmY1MjgxOTg5OGIyOTAzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjMxYTBhZGU0ZTQ2ZjBhM2I4YzAzOWVlZDkxN2ZhYmU0MmVmOGY4NTJmNjFlMTg5NjY1MGYyYmZmMjNkZDEwOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRiOTFlODIxNTk3NzhlYzI4ZTRkNzZkNzNlODgzNTliNDIzZmUyMTAwZjk1MTc4ZTA2ZDkwNzViYmMwMGUwNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjE5ODFhM2Q4NDY0NmMyYWFmODYzYmJmOWU5ZTI4YzY0MTRmYmI4MzZlMmM2YzExM2M4Nzg0YjdhNjU4N2VhYyJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/model/layout-json.ts#L1-L20",
+          "version": "repo-lines-v1:sha256:a91c6d9cfb1ba567f123e2f5b62da084078b132600c7a77b39bc7864d6f0356e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2NmIxNTI5ODk0ZDA1ZGQ4YWQ4M2NmMWIwMGZlYThiZGRiODY2Y2VkOWNkMGJjZTY2MDg0Njk2MDM0N2U4NmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiZTQ1Y2RmZWNjZTk0NjczNTA4YTU4ZDE4NDNiNjRjMTAxZDgxOGE0YWRmZjJkY2IwN2M1NGU0NjYyNzNkMDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE2NzM2NmVlNmRkZDZkZDZmNDhlYWIxY2JmZjhiMmRlZGVjYjk3NTFmODVlNTgzNTAxNmYyZjNiZGUwMTBkOWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e7055d5362d24804ae4de9f0509f2273",
+      "statement": "自动布局用 ELK layered/RIGHT/正交路由(层间距 168、同层节点间距 72、feedbackEdges 开启 等), layoutNativeRuleFlow 动态 import elkjs 并在无节点、ELK 抛错或返回坐标数不等于节点数时回退确定性网格; 结果经 layoutNodes 写进 core(进 dirty.layout 并可撤销)再等一帧 fitView。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/FlowTopBar.tsx#L76-L86",
+          "version": "repo-lines-v1:sha256:b5082ec1a179562da4e42e1ca3eed5a77730eec0202b51864714e1dacd308e45:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQxNjdhZGIzMTY3NWQ5NTE1YmM1ZGU0YmRjMWUxMzY1MjUzY2YxNGQ0ZjJmYjAxZjk4NjJhNDYwYzU0MWJjMGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NWNjNTU3NjQxNGMwNmYxY2Q2NjhlOTAwY2FmZjQxYzEzMjAyOWQzMzY4NTFmZjFjMTk1Y2Q3N2VkYWQ4N2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJjYjMxYjJiM2NkMmE4NDU1YzA2ZjIzYzlhZDFjZjQ5YWMyZTY4OTY4NTgyNzYyNmNkYTliNGJlZWZkNTBmYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwZmY5YmM4NTBkMDRlZjM2ZmQyNTc3Y2I4NjJhN2Y2ZTBhN2ZlMjRlOThiM2QzMDI3MDkxOTkxNTFhMTFlMDYifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/flow-layout.ts#L193-L208",
+          "version": "repo-lines-v1:sha256:2c56c2f826da2ff915f9b8dcba3c2b7ecccc157a7f4391ab3486738b88d631f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE5OTQwZWUyNzg5ZWM1N2M3YWRlNmJkYjM1MzYzYzhmZDljZGY3Yzc0OTgyZGM2NzkyZmFlNTFhZjM5Y2VmMzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjViNDFiNTUxMjU0NGNjYzljZDRmZGVkMGU2Mjc1YTQ4OWNlYTUwNmZlYWIxODQ3OWFjOGM1YTk5MTVmNzcyNmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmMDM0MzY2MWM3NGIxMTlmYzY2OTRhZTlhMzFhMTM5MjRjMTI3NWJmNGRhMjJmZDcxYTUxZGNiMDI3OTk5ZDcifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/flow-layout.ts#L5-L19",
+          "version": "repo-lines-v1:sha256:dbae3010f39f51f5ba39bdc6d4e9f74a577ed78369a2b4461f79811358ddefb4:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE3ZTQwOTc4NzUzMjNhYTY2YmFiMjczM2FlYmM5YWZkOGY2ODllY2FjNDZkZjIyYjBiOTE0MzFiNjY4NzFmMzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhMWQxYTYzMzkwMjI5Yzc5ODM0N2U4M2EwNDA1NDQxYzk0MDAwMzUyODRhZDE2OGMxYmY2Y2RmMWQ3MGEzNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3ZTA0NjY1ZGE5MjIwMmY5OTk2NjQ4OGIzMGQxODllNWI3NDA3MmU4NGUyYThiOTdjNDc4MzYxNTVkNmZmNTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJhYTU3YTUxYjExYjRhMjFhY2VhYjgyYmQzMjQ5MzY5NDY0NGI5MzAxYzBhMjU5NzA5Y2EwNjU3ODhlMzE0MTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_27ec6e46f2ca4645b7bbe3e815f26798",
+      "statement": "撤销重做只覆盖 semantic/layout 命令且连续同节点 move/collapse 合并为一条历史; session 对外分为文档生命周期、状态变更与画布便捷操作三类, revealRequest 被单独标注为仅供画布消费且不进历史; 粘贴/复制专门说明 id 重新分配并重写端点, 语义与布局与历史在一次命令中同时落地。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/core.ts#L927-L953",
+          "version": "repo-lines-v1:sha256:9965b3e1e75f40dedb1db1e4216f5e42d6273862ec112b319ca4f30c9f475539:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4OTNiYTFhMDFhOWNhZjZjMTk2OTMzMDk2YWRlMzkyMzAxYjlhYmZkYjVkYmQwYWNjYzIyY2Y5MzQ1MGY0ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4ZTQ0N2VmZGY2MDBkMTE4Nzg3MjMxMmM5NzY2N2I4NzVlMTA5NzUzNzliMTkxMTMzYzI2MmMzMDg1YTFmYmMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiZjdjZmVmY2Y0YzVmYTI2ODZkMGRiYWUxOWE2NmUyN2ZlZDllY2NjZTFkMDQxYTUwZjBlNjY4MmU2ZmJlZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYxOGVkZmU2ODc1YzRhNWRmNjJhNTExOWJkMDM4ODExNDQ3MTIzMjkxYjJlOTVhZGE4Y2RlOGNkM2ExNjUyM2UifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/session.ts#L133-L195",
+          "version": "repo-lines-v1:sha256:4cd71cad7150cd0a4a3de8ac020e6b7d831d8aab3a1317da5824ea6ea9f9ed46:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzOGFhMzNkYWYzZWVkYmI0NDVjZTFlZGRlOWU0Y2IxMDZlZWEzOTI3MGYxNTg4ZTE1NmNmOGNiYmViMmI4YTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdhNjMyZDBiN2VmZjcwNzVhYzA1ZDc0ZTNiNGNlYTdjYzJhMWRlMWM0ZjM4NWFjODJlZjJjM2JhNDI1MzhjM2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUwZTE1ODdiYWM5NDNjN2IxMDZjM2FiNTFjMDgxMjRiODY5NjYxYWMyZmFmOTgyY2Q3OTk3MzdjNGMzZDA3OTkifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/session.ts#L185-L193",
+          "version": "repo-lines-v1:sha256:eb8ae72c9a2f8234ea2f5a073f57f64fba0bf61b4c0a88b8146f3202d2c2e12d:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjFlZDcwNTA2ZGNkMWY5Y2M5ZGY4YjYzODRkNGNjNThmMmViNzdhYmQwY2EzMjhlMmRlMTI5NjA2MTBlNzE2NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWQ2MzgzMWZhNGJmZTc2MTMxZGFmZTYwOTIxNzlhYmZhMTU5ODRlMTg0MmM3ZTM2OGM4NTMxY2UzOGE0OTg1MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWE4MGY5YTViNTU4NDE5M2M2ZWEzM2E0Yjg4NDFkOGE2MzM4ZWYwNzUyMWIxNWVlNmY0NzliZmZmNmE2OGMxMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWZhNDUyYjFiYTE3ZjQ1ZjIwYWY0YzZhNDkxNzFmMjFkOGM1ODcxZWJlZTEwZTAzZWU0ZTRlMGEzYWEwODBlZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e06ce5cf14aa41f5bc0fb00ba78fcc2c",
+      "statement": "工具栏只调 session action: 保存成功弹 rules_saved、失败弹 sessionErrorText; 校验按钮在 hasUnsaved 时禁用, 且 validate 在语义有未保存变更或冲突时直接抛 SessionError('document_semantic_unsaved')——它校验的是已保存的 revision。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/EditorToolbar.tsx#L33-L111",
+          "version": "repo-lines-v1:sha256:d991a7a9c4334948e5f813c05e15ae8834fa85d9859248a9b43ffe8557177b68:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlNzZlYjkyNTJmOTg4NTk4OTVlNjFlZGRhYTEzZDYwNjk4MTRmZmNiMTcxMGRhY2JmZWQzNzgyMDcwN2U2NmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1ZTAzYzljMzhjYjAzZThlZmI5NTgyMmU4ZDE4ZDg2ZjRhYWExNDcyMDZmZDllOTAzYThmYTU4MzQwMDUzODMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4MGYxMWJiZjYyODY0OTU0ZGJkYmJkOTQ3NzdkZjg2YmY4ZmRkMjk0MmY5MzBkMzRkOGEyM2I0ZGM0MzZiYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmNWFkMTUxYzFiYjE0OTY0MTM3MDg1MmRlMDY2NTgyNjFjYTE0ZDc5Yzg0ZGEwMWU5YmZmYjE2ZmQzYjY5OTgifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/session.ts#L321-L345",
+          "version": "repo-lines-v1:sha256:17268b930b85f7e4e1af390181674c20e46a71a300a8a2d09f5fa858017b9dfd:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4OGVkMTk3NTgyYmE2NmMwZjkxYWU1NDI2YzdjNmY5NTQ0MGQ0NjhmNWY1NTJmMmYzZTA0MWQ2NjMxMTI3NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwNjM3ZGQwYmNmY2M2ZDllMDExMzRmYTk0ZmVmYzFjMzczNjgxNzFjZjg4ZDAwYzU4NWUxZDIzM2Q4ZTJmOTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA2Zjg2ZDgxNTFiNTRkMmNiYjliZTBiYzJhNmE4Y2JjMmNiYWVkYTk5ODRiZjkzOTMwYmZjZmNiN2U3MWU0ZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU3YzljZmVmYWE0YjdiOGY0OTBkN2JhNWFiYWZkNThkNzkxYzQxZGI3OTkxMDNmY2U0Mjc2NDRkM2ZiMTI0ODEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f66f690ac3a84841947d9218ad6b602b",
+      "statement": "检查器按 core 的单个 selection token 分发到节点/边/端口/Loop 区域四种面板(解析在 flow-adapter, 端口选中不把节点标记为 selected); DefinitionPreview 是只读预览并承担脱敏职责——序列化 Definition 时把键名匹配 /credential|secret|password|token/iu 的值打码, provenance 的 masked_text 由 Rust 脱敏, 且明确不显示凭证明文与执行 Plan。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/DefinitionPreview.tsx#L1-L17",
+          "version": "repo-lines-v1:sha256:963a7fa88039b945c59f049b85d96a63403b4f71a4f45f285b51cba341a87295:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2MjYwZDA5YmNjYmEzY2Q5NDJiNGQ0NzkxMjlkMjkxMmRlNzk0YTUzNzg1YWNmMzZmZmY3MzM3NmVjYTNjYTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0OTUzZDZmMjUyOGIxYjhkZTQxYTcwNTE4MWE3MWNhNTlhZWRlZDczZGM4MzcxMDcwYzg4NmE3NDg1MjcwOWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxMzFiM2M1MTczOTJjMmI1OGM0ZjNmMWEwNDYxZjdhMDM5MzY4NGE3ZDE2OTZlM2U2ZmY3ZDIwZDQ3ZWM1MWQifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/inspector/Inspector.tsx#L1-L60",
+          "version": "repo-lines-v1:sha256:11197f4c3b41322b7122ee7fe050b713f0a2e0240656e4ca8223fc88d71f09c2:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI3ZmQ2NjFmYjQ0YTIzNDIyOWYzZGI0NDUzOTVlNjY4OWM0ZTk4ZGM4ZGY2YTljNWJiYmMxNTllMTU4MDVkZDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwYjA3MzY5OWEwMmJkMjFlNTg0Nzg3ZWQ2ZWVlOTRlOWUxNjFlN2E0NTIxNGVjNTAwZTBlYzU3ZTI3ZDhhN2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgzOTFjZWU5OTZjZTg5N2E5NmIyNDJmNTRhZmI0NTg2YWQ5YTNhMjRhYmQyNDY0NGViMzc2MWUzOGZmNTExMDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_17243f129b03489db6b4fef52838065e",
+      "statement": "导入路径在本地先预检: parseNativeRuleDefinition 只接受 current RuleDefinition 合同并有 5 MiB 上限; core 的不变量还把「credential 值不进 action/history 持久化」与「credentialReplace/Clear 的一次性明文不跨 save 驻留」写成模块级约束。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/core.ts#L7-L11",
+          "version": "repo-lines-v1:sha256:6712a98f0f0018f2ea5b1be392395a5b65d01e394e87dc12a0ff5f263c31d1e3:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjI3ODQ1MmFjYzc1YzAzYWZiZTI5NGY4YTAyMmQwMTQwYTRjZDVhZTAwMmU0NjcyNjEzNmUzMjRiMDFhNDNkOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDNmNzc2ZGQ3OTU3MjU1MDc3NDVhMzBlYWQyNGY3MDMwMjNkMzNlZjhjZDUyMmE3ODM0YmIyODBkMTA2ZGVjYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjk3ZTU1ZDY2NDU2ZjVjNTRiYjI2MTJhOTEwZWMxMTU4N2JlMTg3NzVmNTg1ZTRmNDkyNzYxMWUxYWI3ZjUyZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWYzNGRmZWUwYTI3YzU4NWQzODk0YTM3ZTE4ODQwMjZhMjFhMzI4OWRkMWFhOTI5ZjdmZjQwZmRjZDI3Mjc5YiJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/model/native-import.ts#L1-L6",
+          "version": "repo-lines-v1:sha256:02f24f563a42bffa56eabe05e4bdb48415ff9870efe732c6e501331f5e19ba7c:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDM2NTQ2MTM2OWIyNDdiMzNkYjdmYjEwMTNjMmYxNDljY2ZjMmEzNmQ0ZWEzZTZlNTE1YzQzNGM2YThhNTg4NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGU2Y2Q0ODRkMDgzYjJlMzQ0MDhiZTg1ZjMyMmIwMDBiOTY3ZmFjNzRhYjQyNzI5ZmNkNmNjMmJiMTI4ZTYyOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d6e7f6803a5b4fa7a169cfddef7691bc",
+      "statement": "画布侧两个调用点: isValidConnection 只返回布尔不落状态(不产生任何语义变更), 而落边前那次会记录拒绝原因用于提示; 位置变更经 layoutNodes 写入。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/RuleFlowCanvas.tsx#L253-L268",
+          "version": "repo-lines-v1:sha256:feb2f3f0b7f77d92bf878a86a79672ab4faba1573876ac9f0e3a68b7da92e03c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiZTFjZjFhZjM1Yzk0NjhmNGE2ZDhkMDVjMDNkZTBlYjFiM2FkMjY5ZTQzNzBmNWM5NmEyMWU3OGFhMjNiMjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJkMDExNmNjNDQ0ZWNlNDliNDIyZGU3ZmIxNDgyZGI2ZGU3NWZhMDMwYWMwOTI4MTUxNzZiMWIwZWU4Njk1MjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIxM2E1ZGYxNDc4MGYzYjMxOGExYzE4ZWM1NzYyMjUzNjEwNTAyNzVkNGNkYzExMGJkMjgyY2Q3MmM2NjYxZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZmZWY2ZDcxMjlmOWIyMGQ0YjBiOTE2MzY0MWZiMzFhZmZjNGEzOGU5ZWI2ZDJlZDQyZWUzZGNlMDYwNWFjZDIifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/RuleFlowCanvas.tsx#L286-L289",
+          "version": "repo-lines-v1:sha256:c0c9e500f8a95f892bdcec47f362dcb48a4ddffeaa8b003f00297fba68faabcc:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzVkMjk0NmNlZTVmZGZhMTY2N2UyOGEwNTgyYjNmM2VlNTk2OWI5MzIzNGJhYjQzYjEyYjg1NTlmYTc5Yjg5ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzI1NWU1NTlkYjM1ODU2ZDlhNjE0N2E1ODkwMDQ0MGZmOTRlNzY5NWMyMzFmNTMwMWZhODBkNGZhYzc1OTI1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTNhOTM2Y2Q4YzMyZDJlNjVlMzgyYjM0MWVjYzAwZTcwMjY1YzBmMzJhM2QyYzUwMTBhYzNhNzk5ZTEwYTNlZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTdhYzA2N2NlYTRlZmI2Nzg1ODA1ZmZmODE4M2JmMGNmZTUyMjIxMzVjMzdlMjVkODBhMjYxNjBkNTBiNDc0MSJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/RuleFlowCanvas.tsx#L486-L492",
+          "version": "repo-lines-v1:sha256:719bc3141c84049507668ff367a256154c9be048244b1143c324b372aef45a8a:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGY4YWRlNGM4MmI0OWY1MTE4OGIwN2Y1ZTczY2VhOGJjODRmYTEyNDNkMzgzNzdkZTgwODQzOGViYzk1ZGU4ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjA2YjIwNGJiZTQ4ZDcwYWQ3ZmY1ZGY0ZTZhYWRlNGMxNDFlYmM1ZTcxYzBiNTczY2FkNGM2OTUwNjg5OTcyMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTA4NjU3M2UyMmJlMzI5ZDM2OTYzYTY5ZDY1YWM2MmY5ZDY5NjliNmZmNGYzZWZjMzU3NGM4MTYwODk2Zjg1YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzBmMGY2MzJmYTY3NTE3ZTRlNjc4ZDMyMGUzMzEwYWIxOTQ0ZjNiYTYzN2NiYzM4M2FmZGU5ZDc0NmZlMThiZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8494b2833ad545fc935ebe0f83464c65",
+      "statement": "术语遗留: flow-adapter.ts 与 connection-gate.ts 的注释仍写「Svelte Flow」「无 runes」等 React 迁移前的说法, 而实现已使用 @xyflow/react; 这只是文档残留, 不影响行为但会误导读者。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/EditorSurface.tsx#L6-L6",
+          "version": "repo-lines-v1:sha256:68316643b5127e97e90ea2c86bdc62bda79c2a2feea5048eda6d2c32aa537140:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjgzMTY2NDNiNTEyN2U5N2U5MGVhMmM4NmJkYzYyYmRhNzljMmEyZmVlYTUwNDhlZGE2ZDJjMzJhYTUzNzE0MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjgzMTY2NDNiNTEyN2U5N2U5MGVhMmM4NmJkYzYyYmRhNzljMmEyZmVlYTUwNDhlZGE2ZDJjMzJhYTUzNzE0MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2MwNDVjOGQxMTdmNzZkODgyMzU1OGI0MmZjOGUzZjAyM2UxZTViNjI0ZjRjNDc0NzM1NjgwNmY3Y2QxZWEzMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjVjYmEyYmVkNjlmNmFhMDY4YWRhYzUxODc2YTJhYjE4M2RlMGU3ZGVkOWM4M2RlNjc3NzliZmNmNzYxOWQ1YiJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/model/connection-gate.ts#L12-L18",
+          "version": "repo-lines-v1:sha256:edaefa8d2cdf62871bee32bfd27ddf30c032b11be94a73306f3019ff17205d33:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJjNWZhOTViODVjY2I3ZjdmYmIyZmZkYTFkZjUzNGVmZmIyN2NmNDcyZGJkOWZiMjdmNWU3ZTM0MzNiM2EyOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGE2NzExMTRmNjJiODljMTYxYWJmNjZkYWEyNzVmYzBlY2M5ZGQzYmZlYjAzMDU5YTlmMjQ1OGI3ZGZkZGU5MSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTFmYjk1ZjQ0ZDdiOWE0ZGYwOWQ4ZmFlN2ExM2Q5NmY3NmI2MDk0NjdkNGE5ZDMyZTUzOWY2ODUwNmFhMDdkOCJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/model/flow-adapter.ts#L1-L4",
+          "version": "repo-lines-v1:sha256:407d30b0752fe51589f06a36140275500b4b86f36ad4380cb24f395d32de0fd1:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGNjYmIyMGRjZmUzN2U5N2MzOWI5YTM1MWRmNzFjNWNhNjljMDc5MmM2YmJiZTRkYmYyOGE1NDU2OGVhMDRkMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDljODhmMjFkNTNmYTFmZmVjMTViMWQ2OTcxYWE0YjFlYWE5ZWI0OTRmYmM3YjZjYWRkMTMyZDBhZTY0OTYwNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjljYzFlOGRiZThlZWEzZjM3NTZlMmQwNjE3MTFjNTY5OGExY2M4MmI5NzgwZjU3ODkxZmY2MGQwMTUzZTcxZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1cc89e1c820844ba8d9818e91a921f04",
+      "statement": "前端矩阵与编译器 ports 是两份实现: 编译器从 Definition 里的显式 config 推导并校验结构(如 Merge input_id 非空与唯一、order 覆盖 0..n-1), 前端只为了即时反馈判断边能否连; 仓库里没有跨语言断言两侧一致的测试(TS 测试只对 TS 侧断言), 因此两侧是否同步属未验证。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-compiler/src/compiler/validation/definition.rs#L174-L192",
+          "version": "repo-lines-v1:sha256:05dd752460a373541f0a101292fd790ae0ab4b15b410610d5ff9c7fc2061b306:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2YWFjNjNkYWNjYTY3ZGJkMmQ5ZGUwYzcwNzJlMmRmYmU3NWIxOTJkOTMzNjIwYTU0YzI2ZDc2YWFkMDVjYmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2OWE1YjlhNDdjN2M2NmRjYWVjYTJmNzEzODliOGE4Y2U2MjNlYmRjNzI1YWI5ZGViNzJhNDY3NmQyMzVhYTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0NzM1ZjFmNjRlYzE5ZWMzM2ZmMjVlZTNiZDI3NGIxMzM0Mjc0MTYxNWJjODUzYmNiMmY4ZTU5MmQ4Y2EwOWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAyNzEzNGU5ZTkyOGNmNzkzNjNkMmU0OTc2NWIyNmJhNTllMzExOTY5NTIxZGYzNzdiZTNiOTA1NzM4M2ZhNzgifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/ports.test.ts#L1-L10",
+          "version": "repo-lines-v1:sha256:c928c813149d91e688812c2defd2a13954110b7108034caf82beca404c853075:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxNTNjMzBiYzIwZGE1ZmVmYjA3ZTEwYzcxYjU4NmFiY2JkY2E1NjNkNTViZGEzMWI3NzYwZjY4ZGQxOGYzMTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhMjQ1YjdjZjVkZmNhNjU3YzFmZjZjYzc0YmI0NjBiYmM3YWU1MDU5ZTA2MTIxMWRlNGI3MzFkZDJlYWEzNTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyZGVmZjkwOWUyZDk5MTE4YTc4ZGY0NGRlZTYyYjkxYjQxNWNjNjgyZTE4NGJkN2Y5MDllYjc5NTEwM2RiYzYifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.0",
+    "at": "2026-10-04T10:14:16.110Z"
+  }
+}

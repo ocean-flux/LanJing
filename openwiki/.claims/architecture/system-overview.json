@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:a57273a29370bbfc7de7f7eaa8c3ecab82a3041982428e8a843c80b02acca456",
+  "claims": [
+    {
+      "id": "claim_1ff0ec3b337943c1a699619af308fed3",
+      "statement": "产品是双层结构: 工作台层(境场/应用入口/来源与规则/资料库/设置, 用 base-lyra 母版追求克制)与应用面层(/apps 下沉浸式页面, 唯一共享约束是色值来自四个 appearance pack); 工作台层已实现, 应用面层目前只有 AppsHome 占位列表与五个 enabled:false 的 surface。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0004-app-surfaces-and-workbench-layers.md#L12-L24",
+          "version": "repo-lines-v1:sha256:47338960ed6fe1b68de96c0fc46afeb6bd16a1bcf6979714053918fb83bb1b63:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0NWMxNzkyMjg5OGU1OGE2ZjQzZWQxZjJiZjJjNmQwOTcxMTU3ZTMzM2M0OWM4NzQwN2E0Mjk0NTI3YjYxZmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiMGU3ZTMwMzRjZDFhYjMwNTJkNDRiZThhNzhhMjllNmQwOWQ0NDg1NzhiN2M3YzliY2U3NzkyOWMwOGQ0YzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQzMjQ5ZGEwMGJlNTc1MDM4MDdlZTcyMGE1MDkxNjg1ODQ2YzE4NTM4YjhmMDMxZWNjZjI5MzU0NTRkOGU0MWUifQ"
+        },
+        {
+          "resource": "repo://src/features/apps/AppsHome.tsx#L15-L21",
+          "version": "repo-lines-v1:sha256:25255741348f1386e031c621743b5a713678e1c00c2f8a0177b6fd32b0793f5b:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmM0MjQzYjZiYmQ1ZTE2YjRiZjlhZDAwYmU1NWUwZWVkZjZmNWY5MDI3MWM1MjgxNWZkNTQ5MmNhMjdlYzRjNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjAyZDJjMGQ2ZGM1ZTc0ZDkyZmExNGI5MWRiZWEyNjQwOTBiZWIzNWZkYjkxODhkOWIzNDExODFkY2U5ZjRjZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWMwNTRlMjJjM2RkMjg4YTU3NGE0ZDgxZmJiMThiYTk0ZGQzYzM0NzI3NGYwYWU1MzY4YTAzNWZlZmViYzEyOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDIzZDE5NzMyNGQxYWYzODgzNDhkZjQyYTJlNzUwYThlMjM4M2JhY2ZhZWRlYzFmNmFjYTliYzk3ZDYxYjY1ZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f6fd2fcea5314b2b98dc761e6528d3d0",
+      "statement": "Tauri 根 package 只依赖 lj-rule-system 与 Tauri 插件, 不直接依赖 storage/importer/runtime; 这是门面之外不越层的编译期体现。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/Cargo.toml#L97-L113",
+          "version": "repo-lines-v1:sha256:1a92ba3a953d81cfe125dce5894d9db40e2b34ecb02176c1e570a5d447bea4b0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyZGY2YzcxNGM5OTRkMDhkYzg1YWFmZmU2MWVjNjRlMDI1NWJlMmI4YmY2Y2NhYzc1NmYxNzkwYWM5OTQwYzUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjNjU5ZjIyOWM1YzYxYmU2ODA5NmJhYWRlZGM4OGNjYzk4MTY3NjQ2MTY5ZDRmNjY3MDc0YzRmYjM3NTAxMTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlYWM3NDUwMzViZGM3OTY5OGU1ZThkZGJkN2Q0Mjk3ZTFjYWVjYmFmYTdmMDViMjFkNGQxNDcwOGU2ZWNkN2EifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/lib.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:c2b74f5e8d35a03139d1666fafa9c9bae481173abaaab3db50332fec23e16dbb:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2UxOGNjYjQyNjg1ZmY4ZWIxMjdmODNiMTFiOTkxZjJkMTkwOGVkZjU4ZDQ1ZTY5YzIwYzk1MDkxMDNiMDIyZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGVkZWM5NDRlMmJiMTc4NDhjNWQxODdlMzgyODNiMjZlNWU4MzdhODVjNTJmZTA3YzE0MTAzNTAzODIxNDJlYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDBjNGJmZmYxN2FkMGVkZWQ0MDAxMjQwYmNkMmVjZmFjYmNjMjk1OTA0N2ViYWU5OWYzZGY0OTY4ZGI4MjMyMCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_23f4f4ad54c54d609bc9536b84d28d56",
+      "statement": "依赖方向上有两条被刻意维持的「不依赖」: lj-rule-model 不依赖 compiler/runtime/storage 以便规则合同被任何层引用而不带入运行时假设; lj-runtime 不依赖任何存储 crate, 只要求 EffectArchive trait, 由门面层在调用时注入 storage 作为实现。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/lib.rs#L1-L4",
+          "version": "repo-lines-v1:sha256:afd4c8d91e40a32707b063a4ba989f7061c715d81160b4db3848c2fad6c4a496:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjZjOTc3Y2NlZmZjMzM0NmRiZmUwYWYyODhkYjYwMjRiOTI5NTVhODljMzg3MGU4MGM1YjgyNGNmODQ0ZDEzNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmE5NGIwYTVkZWY4MTY5MDljODg5ZjY3YmY2ZDE5MmNiZDkwZTcxZmM3MzBlYjZhODVkYzEyOWU2N2I4MGExMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjMxOTUwYWZkNmZkYWNhMjc1OTc3ZTAzY2FmMDVlMWM5OWFlNDM0MTAwOTlmNmZhM2VjZTM2NzI4MjhlMDA1YiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/execution.rs#L95-L109",
+          "version": "repo-lines-v1:sha256:82d9a814691bbd9984d992662a27858600ebb7dbf632754d8ff2f2aeac277bb6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0NGY5NjFlOTE5ZTVhNzIxYjk3MzA5NzNiNTc4YjAyODdhZDMwZTc1ZDI3YWYwZDA4ZjQ0OTcyMzVlZmMzYzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhM2RkNTg3N2I3MGY3OTIwZTgwNjUzOGM4YzM2MjcxMGQ2NTExYWVkOTY3Nzk4NmNiMTRiZTQ3NjVmYzc4M2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0M2VmNGRkZjg2MWYxMTE1OTQzNWQ0MzUxYjg1NTNmYTE2NzZhNDY0NzQzYjI2ZDI3MGYzMjlkODBmOWM1N2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1MjJkNGJjNDVhYjdiY2E1NWNkNzRjYjYyMWY4Zjk0ODFiN2Q1MjgzZmFkZDMxMTcyMThkYTg3Nzg0ZDVlODgifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L371-L384",
+          "version": "repo-lines-v1:sha256:c29a3a2acdd138d1c8b4d72f4cf7e8ba74d4c4a5fb7372db70ea90ca1ac19d3e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyOWNlYmNhNzY2YTJlMTg2ZmJiZWRjODBiMWM3MzM3ZDc5MzRlZTQ0NTdhYmEyY2Q0ODdjZmVlMmNlMjI4ZmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOWVkMzY0M2VlMTIxYjZlYjJjZmM5NmM2ZDQ5ZjJmZjQ4MDBlODFhNTQ2NmNmNjVkNzhhZDU5NDE0NTgyNWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE0ZTg3OTVlYTJhOGYzZDNkZGNmMDY2MWQyMDgxNTJjOGMwMDNmZTMyZjJjZjcwNWU3OTFhZDhiMmUzZGZlMzIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_49a8cf3d6faf4c688f82c9bc7294c5c7",
+      "statement": "ADR 0003 固定四层所有权: Plugin Host 负责 manifest/依赖解析/注册/scope/生命周期/权限 broker 与 runtime adapter, Rule Kernel 负责 Definition、Draft/Effective Revision、credential ownership、校验不变量、编译编排与事务端口, Rule Runtime 只执行 immutable Plan 并负责 scheduler/取消/event/durable capture/replay, RuleSystem 只作为 composition facade; 插件不能直接修改 revision、credential owner、capability grant、event sequence、archive 或 storage transaction。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L38-L45",
+          "version": "repo-lines-v1:sha256:e816888ca778b3a4da48f33d6cd73899427c931b8a544e4e27837f16272172f0:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjIyMmMwNzQ1MjMyYTU3ODgzZjU1Yzc5YjQ2NjAxYTY2YWI4MzJhMTQ1ZWIyNTEwMDVhOGI3MmQxZTkyODA0ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZkMTJiNzUxYWI3OGU0MzhiYzA2MWIzZGE5NTZkMDc3MzlkNGVlN2Q2NGVmZTRmMGZjM2M0OGMwYzFiYmY2OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2I5MzIzMDY4ZWMzZTRmNmE3YTViMDk3Zjk5M2MxNzYxMmE4ODZkNDRiODU4YmEzYWI1ZmFmNjJjYzA4NmE1MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWVlZTEzNjFlMDZiMTk2Y2RmM2MzN2VmZmNiY2I5Mjk5YWFhYjE3NTUwNDc1YmM4ODIwMzUyNzQ0YTNkOWViYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_415cb6b89b2a4340bf77d2488e13bf52",
+      "statement": "Plugin Contract 与 Plugin Host 两层已实现到「内置 capability 的规范身份、Manifest 声明与原子注册 + 冻结 + 按 operation identity 解析」为止; handler contract 迁入 plugin-contract、manifest 校验/依赖图/plugin lock、registration lease/activation 回滚/drain 均未实现(注释指向 issue #36/#37/#38/#40/#41)。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-plugin-contract/src/lib.rs#L1-L18",
+          "version": "repo-lines-v1:sha256:e61be2ff8fde9b77a9ab2739c19e689322ad9c0108339cb4de177f241ed00995:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlNjRkNWE5ZmIzOTczNDM0NjZjZDgxMGNjZGUzMGU5NzYwZmE1NzA1YTVkYjBhY2I1NDlkOGY4OThmZDZlODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4NzhlMTk1MDAxNmFjZWJlMTU5MzdkYTFhMjQyZDAzMGFlNTllNDkyNDJmNTBmMTVhNzcyOWUyMDVjZDU0YzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plugin.rs#L44-L103",
+          "version": "repo-lines-v1:sha256:eb14558c2b2b1a64c0173f83a41b69e85bccb383b19c5ba04e05b48ed5afb500:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhOGI4MDkxMDY4MWZiMGU4MWRiYjk4OWU4N2U4ZWU4YjM5YTIxNzQzYmM0MzA0ZjYwZTcwODBmMzEwOWZmM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cc559c150bb74199bc1a6c4242cb80dc",
+      "statement": "lj-storage-migration 依赖 lj-compiler 与 lj-rule-model, 因为 v2 迁移在回填 effective 语义快照时要用 compiler 校验判定哪些旧快照合法。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L15-L26",
+          "version": "repo-lines-v1:sha256:64626705900addd9439c5cf58fecbcf7924b696b73d96c0b5e9c622234401e69:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkYzcwM2Q5YTY1ZmNlMmUyNGQ3ZTQzYjc4YjNmZDMwOTQxZmJlNTgwYjE5MTc0YTgwZjJhNWY0Y2E0ODk2MzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRiNDM4N2QyODU5ZmE2MDJkMTRlMDcwOWU3Yzk4YmIzZjQzYTJiYWMzZjQ0ODBlNTE4ZjhlZWQ5ZmQwMmYxZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmMjdiZTVkODA4MzViYjBlOTU3NWZjNGJiMTU1N2U5YzRhY2FkOTczZDBmYTk0MTUwMzQzMmMyZjEyMTYyOGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_917925276ed240749c3ceaae16884af3",
+      "statement": "RuleSystem 的「不拥有领域语义」在代码上表现为: 不缓存 Definition/Plan(只以 durable receipt 为真相)、不自己写 SQLite、不对外返回 Definition/Plan/artifact ref/secret, 只把请求翻译成 storage/compiler/runtime 调用。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system.rs#L36-L49",
+          "version": "repo-lines-v1:sha256:3d7ceff6633e21776adced0e5cf1f74f4d2e7e4c8310e41cd09ce3329431b56e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzMjAxNzA4NDBlNmMyYzI1MjI0ZTNmMTJiN2I0NTIyYTlkNmI0OTRiZDNkMWZlMmQ1OTI2NGNiY2NkOTVlOWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmMmFkMWQ0M2NjOWQxNThmNDcyZGM3NDhlNWZhODBjOWEwMGE1NDNmOGIzYmFmZTIyNjIwNDc5MjcxZGQxNDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBkZmU1MzQzOGNlNmJiMzY0MzNlMGRkMmZlMTZmNDE3YjVjYjFmODZhOGU1YzNiYTUyNTAwODE4MDNlZWIwNmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmZTc3ZGZhZjkwMWYyMjc2MzdlM2NjMjZkNTM0MmZlN2E1Y2QyY2VmMTM5NjQ4NjM0OWY3MjVkMWYzMTI2NTgifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/query_adapter.rs#L1-L8",
+          "version": "repo-lines-v1:sha256:3058d5c41bae41d61e3e3351820921d1c99b4d4d4143f5057d529d16e696a2ce:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTFjZTNiNjllNzA2OWQzZDU1YzY5OGFiNmQwMDRlNDg5MGJhYmI1ZTZmZmU1OTI3NGE3NzljOTljMGMyNzE5YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjRhM2RkZWFjMjI0MDNhMjM0MDUzYmQzY2I2OWM2MTBiODQxMWMwZGJiMzNkNjI3MzE1YzdhMTk0MzgxMGFiOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmRhYWEyZDBhZjEyMzI2YjA0N2Q3OTk0ODNhMGJkMDM0YmE1ZTdiOWU3ZjJkNmM3ZWE1N2YwODBjYThlMzA0MyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_305689d8564f44d2974298a9d3855336",
+      "statement": "来源安装链路跨四个 crate: lj-importer 把来源格式解析翻译成 RuleDefinition, lj-compiler 做 canonicalize+validate+compile, lj-runtime 用 validate_plan 再确认运行时可接受, lj-storage 做 candidate staging; 编译通过不等于运行时接受。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-importer/src/lib.rs#L1-L13",
+          "version": "repo-lines-v1:sha256:33b8f72c00de438a56b3e4122777fc43c213fe87be6d2087d1f04af2a2a285ff:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyZTM5ZmIyMDQxN2ZkZTgyYWEyMGM2MDJhOTM0MTY5MDY5ZmRiMzk5YzBjMTVlMzk1ZWY5YzE1NDYxZTA2M2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhMWQxYTYzMzkwMjI5Yzc5ODM0N2U4M2EwNDA1NDQxYzk0MDAwMzUyODRhZDE2OGMxYmY2Y2RmMWQ3MGEzNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L159-L190",
+          "version": "repo-lines-v1:sha256:4c7603f1072fd8a86f3e5bf74a46e6e5f73cef2fd9a2e0f01ea3fcd299c3987c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3OTJlZGI0YWE0NDM2ZjhlMDVlZTZhZjc3MzAxNDMxYjRhM2RlOWFhMDU0MjRlYzAxNTY5NTA3OTJkODE4YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiMjBlNzhiOGRlMmI1ZDBlYzRlNDgwN2I0ZTNhODFmYzIyYjczMTQ4Mzg2ZWVmNzM1ZjZjYzFlMTIyYjRkZWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyMGY1MTk3MTc0MDgwOTA5ZDllNDg1ZWVhZmI3YWY1YjY4MDEzMWUzMjk5OWMyNjhhMWU1ZmMyYjk5M2IzMmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a9fb7f91a3c748028c7aa78be0edd9ad",
+      "statement": "规则保存链路是: 前端 wire → save_native_rule_document → lj-compiler::validate 决定 Draft 或 Effective + definition_hash → lj-storage 在语义域/布局域各自带 expected_revision 的一次事务内写入; 校验失败不替换 Effective Rule Revision。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/hash.rs#L30-L35",
+          "version": "repo-lines-v1:sha256:63bc20fcd5547e3a49782651ad545d91054942067515fdb2ac77b747779bf76b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGU2MjhmYTA2M2FhZGJkZmYxMzM5ZmI2MzE4NThlNzRiNDI0MTgzNDY5MmU4Mzg1ZTE3OTQ5ZjY5NzI1MTk1ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWFlNWEzMjAzZDNlZDJjZTZkNjgyZDc1ZTVhNzI5ZDVjMGYxYTQ0NDJmODQzN2JkZGVlMDdkZDQ0NTQ5MTg3NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzhmNmJjYzQwZmJkNWYxMjIzMmVjNGNkNWRkYmIwZWZlNGM2OWFhYmJiNTM4ZDc3ODdmY2FlM2JlYzMzYzc3YSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs#L270-L372",
+          "version": "repo-lines-v1:sha256:98f0a7b561de53104a13193292c76930e81e200d6273802a01b9dbf253be4fe8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJjOGFjZjFkYTU3ZDA1NmNkNWQ5NTBiM2FkMmMwNDg3ZmIzOTAyNmU2MDExOWQyNjEzYmRiMWUwZWFjZWQ1NjZlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2OTM0ZWZlN2Q1MzA2ZTNkYzE1NWQwNGE1ZTcwMDMyMzVjYmE2MjJiNjUyYjRjZmEzMWUyMjEwM2VmNzAwYWRkIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI1NzE1YjFmNzU3MDJjOGFlZmNiMDcyNjc4MjMxMjNhMzdlYzZjODg0MzExMDQwNGJjYzM4Y2ZjZmU4MTU0OTQ0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0ZWZlODMwZWFkZDZiNzVhZDAyN2Y1ZmEwMzhiMzRiZTUwNGYwZmMxMzYzMGQ2NjMxMzQ4ODgxZDA3MjUxM2I0In0"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/types/document.rs#L118-L124",
+          "version": "repo-lines-v1:sha256:5267f40f074846a0499abd8ae22ad2fcc6fc9d83208ac4ecb53a3ae1625f17e0:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmJmNDkzYjI0YTY3Zjc0ZDFiZDliZGUwZGQxNTA1OTY2MWJjYTQ2ZDc1NDVjNmM0YmY4Y2FkMGQzYzdjYWNmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWZjZDBmYjY3YWZiZGFlNjJjNzhhYjkzZmE1YWFjNjliZTgxYWEyYjE3OTdmMWNjZjk2Y2ZiNDU5NTdjZWIzNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWU0OWFlY2Q4MWRkYjFmZjg0MzU5NGM5ZTIwOWI1MmE5NWMzMmU3YTVlMTBjY2UyMjlkMWQ0ZTI0NmYzNTVkNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjQxMTg3ZDQxNWIyZjQyMDVhZDI0MDEyYmVhZDdmMjQzNWE3MWM1ODA2NzAwNTdkNmNlNTQ2NjQxY2EyYzRhNiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b7a200dd7f34441abcf3beda63fec5ee",
+      "statement": "规则执行链路是: 先持久化 execution 起点, 再调 PlanRuntime 逐节点执行(经 lj-node-http/js/extract 适配层), 同一 storage 作为 EffectArchive 做 durable-before-advance, 最后由 session_delivery 在同一事务提交 Delta 与投影后再投递; 可恢复性由这两个「先持久后推进」保证。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/execution.rs#L46-L110",
+          "version": "repo-lines-v1:sha256:58cbac551992049a3a61b1e1d294df1404df83bc3b7a408067c6134140c6e70b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3ZWJlOGM4NWFjMTc0ZDQyNmY1YThmM2I4MWRmMGZjYmRhNDQxZDRkMmZkNDEyOTBlM2MxYWEwZWY0NWIzYmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZhMjBhMzkzNmY3ZDgxMmU1OWQ3OTIxZWE4ZTVhNDQ0MjI1Y2ZiM2E3ZTVhN2ExMjg2M2M4NDg4ZTU0NTEzMGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY4YTI5ZWU0ZDk1OWVhYWQ1NWM1NzU4ZWViZWJkZWE4ZmE5MjMwZjRlNWNiZjVlNzNhNmZjMGY1ZTU4YWU1MzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ0OGExMzQ3Y2IzNGMwNGM1NTNkZTc1Zjg4ZDllMjk5ZDc5MDhkMTljN2E5ZjQzY2EyMjNjMzc4ZTZlZmZkMjYifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/session_delivery.rs#L261-L292",
+          "version": "repo-lines-v1:sha256:378c1f50b54978a481afe5a81654aac8d2c9b2594ffbca35cf2134d363fa9982:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5ZTc1YzhhZjgxYmQzNGE1ZWMzNWI1NjBkYjI1ODZjMTg1ODM0N2RkZTU5OGQ1NjE2MjQ3M2E2MTFmYmY0MWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1NTgxNjE4NTA2MDZlNzdmYmViNTM1YTI2ZjA1YmNiZDFkOTRhZDdiMjY1ZDhjODZhZjNjOGMwMWY2MTY5M2MiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5NmY4Y2IwODNmYTgwMGE0ZGNkMjk2OTcyMmQ3YjkyNjg2YWRkOWViZTM2NTU0OTJmYTY3MmIxYTdjZWQyNDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzNzUwNWRmMWFmNjFhZWEwNWQ3NWU5ZjRjOWYwZjNiMmEyODYwZmYyMDljMTZlZjAwZDFiZGU1NWZlMGQ1ZDEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/live_capture.rs#L10-L122",
+          "version": "repo-lines-v1:sha256:4dde66f8f8ce68c530befc0bfee79b8105ab6068e47aec7d06617fc15e0c896a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkY2E0OGZmY2I1YWRhOGE4MmU2YWNkZDZkMGYyMzNjZGI4Y2IyODRiZTZjM2FiY2NmZDc5YmI5YjkwNTFkNjI5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJmZGU4Njg5N2ZiNTBlZTk0M2I2YjVmOTc3OGZhNDQwYWRlOWEzZWFjZGNjNGRjNDY4YTIzMDE5ZWExZGVhMzU0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_131a31bfcaf24b37b1c33a28dda920b3",
+      "statement": "ADR 0001(UI primitive 选 Base UI、母版选 base-lyra)已实现: components.json 记录 style base-lyra 与 iconLibrary phosphor, 业务代码用 render prop 替代 Radix asChild。",
+      "evidence": [
+        {
+          "resource": "repo://components.json#L3-L13",
+          "version": "repo-lines-v1:sha256:2a63a279f4ae85a27d1bb0e9c3a0cfb408e61160385ae3bf9887e4280aa03325:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4MjQ2M2MyN2JiZDhkNjAwZGJlZjNiOTNmMTIzYWM3ZDA5NDVhNTlhN2ZjZDEyN2M2OTlkMmNiYmE2MTIyZWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhYWVjYTQ2MWM0NzNlYzJkM2UyZDliN2E5ZWYwMDRmODNlZWUzNWJlNmNkOWZhYTc2NjM0MGJmMzAyNmEzODUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoyLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ2MGU2YzI0M2M5Y2Q0MTNiNzA0M2M3ZjkzNTdjMTAxNmVkYTZkODIzZDdlODVjYTIwYmNjOTc1NDQyZDllNTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlNzMwZWQxMDc0ZjNjM2ZjNTQ1YTdmMTUzYjdiNjVkZmQwYTRlMDM3YTk0MGZmYWE0N2IzMGY3ZDY2ZTZjNGIifQ"
+        },
+        {
+          "resource": "repo://docs/adr/0001-base-ui-and-base-lyra.md#L19-L28",
+          "version": "repo-lines-v1:sha256:82b3f04da925bc7ba3ccc55b467fd833469b20ddcbcb8e045b74074896f8bfe7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjNDZhNDVjMmRjZDk5N2U1MDNlNzk5ZGUwNjliOWFjYTQ5OTRmNTljODg4YjBhOWFiYjQ3OGVjYjgzNzJjM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxYjVlYjBjNmUyNTQzMjkxMzBiOWU5Y2VhM2Y5YzYxZDI1OTU4ZDExMjAyNjZiNmQ5NjQyNmE3MDJmNDEyYjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE2NTM5NDI1OTRjZmQ1NTUxYWRlNDE0YmEyNTc1YTkwZjRkYmZmMTI0NGNmZDJiYzIzZDRkYTNhZDdlNGQ5MzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY0ODQ0Y2Q3ZjM3OWFhZGU3NTljMzJkZGM2MDMwZDMzZjNhNDg2ZjQzYmRiYmYzNDdiYTgwM2QxMWM0ZDY2MTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_d046e326eb8249adb8f7f0d489bb4e73",
+      "statement": "ADR 0002(版本化审阅式生命周期)大部分已实现: candidate 与 revision/rollback、Draft/Effective 自动晋升、凭证 owner、收藏置顶不变量均有代码与迁移支撑, 其中 v2/v3 迁移专门为 Draft/Effective 语义与历史补齐表与回填。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0002-versioned-source-and-rule-lifecycle.md#L14-L24",
+          "version": "repo-lines-v1:sha256:e1b587a4262647998f264ea792455b9f78a5c12158d3e9f6a60ad830f3cb500b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyYTBmN2Y0OTYzZmM3MTczNjc5YWZjZjE0YjRkOTE1NTM4YjkzYzdmZTI5NzBkNTY1ODhjZGYzMjk2OWI2YTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2MmM2M2Q5MDc3NTgwZGE0OTY0OTMzNjA3ZTVkZGMwNmVmYmU5NDI0OGZiZWYwNDkwNjU3NmMyMDIyMGI4ODkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFkODMzMDg4Y2M2YTdlMDM5MGVlMzFlMGMyMDkxYmU5NThhZmQ3MDIzYmU4NjVhZmYwN2FmMjBhOGZmNjA2MzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQwNTJhNTEyN2RjODI4ZTlmYjE3NTI4OGNkNWFhYzVkYzRlNDI4NzMzNjNhNzA5ZGRmNzRjYWJmNzg3M2M3MzAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L20-L24",
+          "version": "repo-lines-v1:sha256:2edc242731abfcde9a3df0a667a34ef526f85fd2fb0a45881aca2ff8288885de:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjhjMDE5MjNkNzM2YzVhM2UxMzkwNDY2Njc3NjFmYzU3OWJjMGNkNzA5ZDMwOGZiODkwMDdiNDkxNDVmOWE4MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmFhZThhMGNhNzZmOThmN2I3ZGM3OTg0OTUxZDYzZTU3ZGIzYzY0NTU3OWNhNTFiYWQ2YTUzOWQ2MTRlZGJiZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWM1ODU4NWI4ZmMyOGM4NjhjYWFmNzcyYTdlNmYyZDE1MDkyZDI1YzM4Zjc3ZWJhMGFiYjZjODVjMjRiZmZjMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_ad5e06ee290b45c19660286faefeed4a",
+      "statement": "ADR 0003 中尚未实现的规划包括: 用 descriptor envelope 替代核心闭集 enum(未知 plugin node 只能 round-trip 展示为 unavailable, 不能 validate/compile/execute)、分域 plugin registry(NodeDescriptor/NodeCompiler/EffectHandler/SourceAdapter/EditorDescriptor/service contract)、权限为 host policy ∩ source grant ∩ plugin manifest ∩ invocation grant 的交集、以及 plugin host 的 discovered→…→disposed 生命周期状态机与 RegistrationLease。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L104-L136",
+          "version": "repo-lines-v1:sha256:7e7cfa64db71bf819f42930f416d63160f683c78ea6a42c05e0f9806b592cc38:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliZDg1ZGY5NzlhYTMxOWI0Mjc0MzlhNzMzM2M1MTZlZmZmMzhjMzNjYTdiM2QxNzY1N2RhNzI1OTYxNDMwNTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlZjc2NDgwNGIwNWY5N2ZmY2RjZjgxMDk2ODExN2Q0YTk0ODY0ZjgyNmY1ZGVlYTEzZDVhNjFkMDNjM2I2NjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhN2Y4NTI2NjdlZTNhZDgzMjEzYjYwMWQ2YTFmOTlmZTA3M2I4M2UyZWY1ZTlhNGUwNjI0YzFmY2UyNDU0ZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhYTJiMThkZGU5OWVjYjVkYTQ1YjE0ZDg3ZjRhOWQ0NmVmODg4YTdlNTBkMjBmNGZhMzNiYzIxMjZlN2JmNWYifQ"
+        },
+        {
+          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L138-L148",
+          "version": "repo-lines-v1:sha256:031b771880475721ac3b4dcf1165f8298fbec86130752296ba58ca53a1ad5c78:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4MDcwYzJhMWRmZWMyODE4ZTBkNzY1OTViMTg1YzM2YzBiNDM4Njc0NDk5YjVmNWVhOTdlZTNmZTBmYjgwNzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4MjBlOGZhYTJjYmM1YmJjNjUzN2IxYTJjM2YwMzhlNTYyODAxOTUxYTQwNzQwMDMwNTQwZDM2N2ZjNjczM2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmMzA4ZmZiMGEwZmJlMDBhZjIxZTc0OTU4NDY5MDBlMTdiOTQ3ZTBhYmUwYmIzYWM1MDMzM2FhMTk5YjkzNjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwZDgwZmExNjljNTAwYzdiNjU3YjFmODQyZjRhMDAyYzBjZmM0M2YzMmEzNGQxNjAzZjJjNGYyNzEzMWFkZGMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_91d400e2ab6e4e149b55b072ebe603fd",
+      "statement": "当前整体边界: 前端只有工作台层, 应用面/翻页引擎/资产网关未实现(ADR 0004-0007 均只有文档); Rust 侧插件机制只到内置 capability 注册与冻结; QuickJS plugin package 与 marketplace 不在范围内。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0003-rust-first-rule-plugin-architecture.md#L56-L68",
+          "version": "repo-lines-v1:sha256:25d0424f624a1fcb4bfe87192d5ac972b313405ebed13f5894799bd065e84acd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxYjk0MTE1MDAzZTYwYjA4NGU3NzIyN2U2MzljN2JkODRhM2VjZTY2MGEzNTU2ZGQ5ZGQ2NjAyMTJlMzk3NzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIxMzYwZmE4YjEwZjFmZjM4YjA2MGVlMDc4NDA0N2VmYmUyN2UzM2Y4NzVkNGY4OWY2NWRiMDFkOWVmYjFhNmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwODYwYzQ1ZmY3YzNiYjI4ZDgwYTYyYWI2NTVlYjEzMTEzYzgwMjUyM2U4NTZkNTI2NjBlMDU2ZmY0Yjc3NTUifQ"
+        },
+        {
+          "resource": "repo://docs/adr/0004-app-surfaces-and-workbench-layers.md#L25-L32",
+          "version": "repo-lines-v1:sha256:c455a592b34346aa992962d2ceea3d139302ffdaef3be278947d5ad6cc903f91:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTQxNzFiZGQ3ZGJiMzhiYjIzMDY1ZDYzYWY2ZWE4YWM1M2UyNDhkMDEyNjhkOWMwNWQ0NmZiMWRjOTcyNDNlYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjVmN2E1YzBiNDVkMDNhZDk0ZDBlYTc5NGQ2MmUzMmJlNmI4NDgyNjZjZmNiZGU4MmM3MTQzZmEzNmM2MzZkNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjg5NmZmMWIxYzg2MGI4MzliNGI5Nzc1NmE0ZmQ1YTdkOGY3NTMwZWI3OGYxYjI5MmI2YWU5ODJmNTYwNmJkOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWRmMGQ0MDk3NzUxNDFiYTJkNTkxYWFjZmNjZTcwZGZkY2IyYmZlNmY2OWI2MDhjNTkzOTU5OGFhNmIwMWY5YSJ9"
+        },
+        {
+          "resource": "repo://docs/adr/0005-turn-engine-and-pagesource.md#L14-L26",
+          "version": "repo-lines-v1:sha256:62b55d054d71f49ed58fb67a7456ea33dbcf916aae45a1e3c9a16326e3b3301e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ5ZThiOGJmNjlhM2RiZTk5ZjVkZjBmOGM3ODc1MmU5ZTA1NmMzZjdmOGM0Yjk4NzA5MWNhMDQxMDgxMGE4OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZGNjYmNjOGFhN2NmZDEzN2NjYmJlYjI2YmNlNDM4ZTkwNjM4ZTY4MzUyODM1MDQzMDFhOWFlYzQyNTk5ODMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmMTRhN2UyYmI1MWFkZGI3NDdkMDhiZjFjZThlY2JjM2ZkZjdkN2UyNDIyNzNmOWE1OGJlMTY2MzBjOWE2YWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxOGExOWRkZDM2M2NkMGEyY2YxN2UzYTZjZWY4ZjVlZDc5ZjY4OTU0MDVlYmNiNzZiODNjMDFkMzBiYTI4Y2YifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a0a0f27bc0e048d4bd0b24236245e56e",
+      "statement": "Maccms 来源路径有实现入口(import_url/import_document/definition)但没有 fixture 与测试文件, 而 Legado 侧有 synthetic fixture 与 legado_test.rs, 这是该范围内最明显的测试缺口。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-importer/fixtures/legado_synthetic_source.json#L1-L1",
+          "version": "repo-lines-v1:sha256:a6fb08fda1acb957b6116bd37811a1fe41a01611c0631edbf786d6889a27a55c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZmYjA4ZmRhMWFjYjk1N2I2MTE2YmQzNzgxMWExZmU0MWEwMTYxMWMwNjMxZWRiZjc4NmQ2ODg5YTI3YTU1YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZmYjA4ZmRhMWFjYjk1N2I2MTE2YmQzNzgxMWExZmU0MWEwMTYxMWMwNjMxZWRiZjc4NmQ2ODg5YTI3YTU1YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjdmMWYwNTc3NzdiMTU3YTZkZjVlMzkxODAwZDc3ZmQxNjhhOWM2OGFhMjk1NTIzMmE0YmQyMDE4NTJlYWI0MiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-importer/src/maccms/mod.rs#L26-L106",
+          "version": "repo-lines-v1:sha256:0618db23d98fc1aa68ad6c20aa18fb428f4eda801becfb17b4270fe2083765a3:eyJzZWxlY3RlZExpbmVDb3VudCI6ODEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjZWZkODU0NDZlNzBkOGY1OThlZDQ0OGJjYmIwNWM3M2Q3MmQ3NjJmMDc2OWZjNjk2YjBhYmQ3OWExZjY2OGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmNTc3YmE2NWI4ODIzYWYxZmNiMDIxZWY2ZjVmNjkxODllZTZhNWIwNjU4ODZmMGM5MTM2NmEyMTE1NmEwMzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2MTQ1Y2YxMGEwZWVjOThiYWJhMjIwMTI3OTlmN2Q4MjRhM2RiNTMyZTgyNTU4ODBlMzk5YWM1ZWFkNWQ3NmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlMDEyZDAyYTAzODFlNmQxOTljMzNlY2E4ZjI4YTMwODJiMGMwZWEzODIxOGNlZTg1OWQxNWNjOGI4NzBhOWMifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-importer/tests/legado_test.rs#L1-L60",
+          "version": "repo-lines-v1:sha256:368b5e95f7bf0c1d43bf04b12b7a960e6f98186504c7f14a0567d6cfef983c6a:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2ZWE4ODkyNmFlZDY1YmY0MGQwZWRiNmNkZWNhY2ExOTRlNDA4ODQxYTMwZWVmZmVkMDlmZmE0ZGZjNjkzM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNDhhZjA1NzczYzNlMDRkZTUyMDZjZDBlNTgwNDk3ZWRhMjAxNjI2OWJhYWEwOWZkMmIxZDk5ZjEwZDU3MTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyN2MyNjU3NDhjMGIwYWZkYjA1ZGM4YWY0OTEyMTAzZjNiZTk2MTg5ODY0OWVmMzU4YmVlNmY3ZmI3ZDFmMmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6bff8673d75b44d29d6d13335caef22e",
+      "statement": "产品概念的规范定义在根 CONTEXT.md, 采用术语 + 定义 + _Avoid_ 的写法; 它与代码的关系是词汇表定义用户可识别的概念、类型系统定义机器表示, 当术语在代码里没有对应类型时说明该概念尚未提升为领域合同。",
+      "evidence": [
+        {
+          "resource": "repo://CONTEXT.md#L1-L12",
+          "version": "repo-lines-v1:sha256:28d0358b43ca36ac152b784cf42e280031762130c29665b8587f3927efa39c74:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhNjUwZTM5YjE3MzgxYmQ4ZmFjMjdhOWU0ZmQ0NjJjZDgxZGQxNDJkNjM0NjY0OGUwN2Y3YzViYjcwMDJlMzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzYjUxNWJkMTc4NzA3Y2IyODExZDRlYzE1Y2U4MGE5MTViMmVlODYyOTA1ZmQzZDZiMTQ4NTY3ODM3MDg3NDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk5MGZjZjlkOTU2OTY1M2I2M2JlZWMwNTY5NzFlYjllY2EzZWI5YzkwNTEzM2UyMjhhZDQwNzVkMjQ3NDY2NjIifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.0",
+    "at": "2026-10-04T10:14:16.110Z"
+  }
+}

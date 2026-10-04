@@ -1,0 +1,334 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:5f08b8c928e24afb0cd6d9d4ab804a5ee1b781822837b66452dc32bc47354883",
+  "claims": [
+    {
+      "id": "claim_676ce2fc14b84bdbb5840f547af276af",
+      "statement": "前端不是信任边界: capabilities 只给 main 窗口 core:default / core:event:default / mcp-bridge / dialog / zustand / deep-link / opener / core:window 与四个窗口动作, 没有 fs/shell/http 权限; CSP 里 connect-src 'self' 阻断跨源 fetch, 唯一放行外部取数的是 img-src 的 https:。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/capabilities/default.json#L1-L16",
+          "version": "repo-lines-v1:sha256:3840ada79ff7125d698c5d37ddc75c2acec17571ff562f8264bbbf9641dd99be:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ZmIwOGZkYTFhY2I5NTdiNjExNmJkMzc4MTFhMWZlNDFhMDE2MTFjMDYzMWVkYmY3ODZkNjg4OWEyN2E1NWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmZmI0YTUwZmI0YWE5OWQ2MjExOTczNTA5YjVjMTIwNGU1NGFjYTBiZTBlOWZlNzg2YzMyNWY0OTY3OTg3YWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwNDMyNDk5ZDYyYTBlODQzNDg2NzhkZDRjMGU3NWE2N2M2YTBkM2U2NTRmYTc2NTI1ZmJmNjU1NDhmZDFmNjMifQ"
+        },
+        {
+          "resource": "repo://src-tauri/tauri.conf.json#L30-L36",
+          "version": "repo-lines-v1:sha256:44f2248cab6ef8669f75910382edb6f84fd7098a58388b402e85e255e6dbca96:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTE0MTYwNDliZDQxMGM1NmZmN2Q2Y2U3ZmU3NDNmMzcyNjZlMTU0YzBjM2Y5ODU5OTgxN2JmMjE1ZjUwZjlhNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzUxNmJkYWI0YjE0MDc3OWI2N2U1ZGM1YmI3MjI3MTI5ZDY1NzljNTMyZjliMWZiZmYyY2QwNDE4NmFhNTcwMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2JkMWFkZGRhZmM1YjBlMjdhYTc2ZDgyOWM1ZjMyNDllZGNkMzBmNjRmZDdiZWYwNTE1ZDU0YTExMzA4NmFkYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_7757650693164c27b434c1c2f51ff944",
+      "statement": "SSRF 判定范围: IPv4 阻断环回/链路本地/私有网段/未指定/广播/0.0.0.0/8/CGNAT 100.64.0.0/10 与两个云元数据端点 169.254.169.254 和 100.100.100.200; IPv6 阻断 ::1/::/fe80::/10/fc00::/7(ULA)/IPv4-mapped 与已废弃的 IPv4-compatible 形式。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L113-L118",
+          "version": "repo-lines-v1:sha256:01c1757193ac3281ca573825a8a4248b9b32d343ac699f7ba6222ffa2b4e804a:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTA2MTc4ZjNmOTI5MTM4ZWJjY2NmYmJjZDE5MGUxZjY2NTE2NDMwMDA2MGQxZWEyMTQyMzIzZjk1M2ViOTBlMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGFhZGVmMzEwNmJhMTgwZDhkOTQ4ZDMyZWVjNWU3MWJlNDRmZjA5NjZmZTBlZDA3OWQ4MjVlMTFlZDI0ODQyNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWFhZDgwZGM2NDBjZjVmZjAxZTEzMTljYjA1NTg3YTFjNGQ1N2YwOThmYTE5YzE3ZjVjZDIxNjlhNmNkMWRjMiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L70-L111",
+          "version": "repo-lines-v1:sha256:9f2fd58aaf25484667ade5be569821f488757251ddd99fd6b09d8b4079896a7a:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwMDYzNDYxZmU4Yjc5ZGIzZGE0MzkxYzU4Yjc3MDMzNjJlNWQwODA2NGQ5ZDEzMjhmMzQ5MWJhNmE3MDEwZTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwNDlhODY2M2QxMTBiZDhiMzQ2NDdlZjY0YTI5NDEyZDYyNTdmNzc4ZDI0NGMyNDhiMTZjYWRlYTk1ODBjNzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxMGQ2OTM4M2I2NDVjNDczY2Q3M2Y2ZWRmYzQ4NzcyMmE4M2UwMDAwYzQ5M2RkNGZiNDg2NWJiMjYzODZhOTYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ba7255c071404ed59423db1acaa95324",
+      "statement": "防 DNS rebinding 的机制: 自行异步 DNS 解析(hickory, 外层 tokio::time::timeout 兑底 10s)后做 SSRF 校验并固定 IP; HTTP 走 IP 直连 URL 消除 TOCTOU 窗口, HTTPS 用 ClientBuilder::resolve 固定 IP 并保留 SNI 与证书校验; 解析结果放在 PinnedTarget(url/host_header/addrs)。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L27-L29",
+          "version": "repo-lines-v1:sha256:ef97d4bc5258a1fed8ba5e506f4d223d041edfb5b6cd3b114d7d544218ebab00:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzJkZTc2ODYzODJjNjYwM2QxOGE1OWM3YWQ0NTI0MzFlMjljMDlhZDYwOTk1YWNhYTM1MjgzNTliZDZmMDQyMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjEzNzYyNmJlNjQzOWFhZTkzNTcyZDhlOThiODhiMDVmYjg2YmQ3NjI4Yzk4ZjMwOWFhNGM3MjIwOTMyNmU4OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDk4NjM4NWMxNjU4ZjlhNWYxZjFlNGMzODRiYjc3NGJmMjI3YmEwZGZjM2JmNTBhYTlmN2E3YmFiMDg3ZjY1ZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTZmMWVhMjQ4NWVmZjEzZDI4MjRkZWJlOGRmZTFkYWYxOTFkOTQ1YTFjMzc0ZDAxYjAyNTE0MTRiY2M3NzMwMSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L53-L66",
+          "version": "repo-lines-v1:sha256:324e8214fe4ca88782013d1ffe3fe48a81f649267eb225e6bcbb46520a1bcd3f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczODBiYTY4MGNlYmE3NzFhMDI0OTI5ODMyMWFjZmEzOGVhNjRjMzEwNTM0ZTgzOGY2MTEwMWMxYTNkNjNmOGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyMGZiMjRmNzZhYjE1NzJjMzAzNTEyYTkxNWU0NzdlMzgyOTZlZDI2NjYwYzc4MGZmMzBiMjA1ZDEzN2I1YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwNDlhODY2M2QxMTBiZDhiMzQ2NDdlZjY0YTI5NDEyZDYyNTdmNzc4ZDI0NGMyNDhiMTZjYWRlYTk1ODBjNzYifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L6-L18",
+          "version": "repo-lines-v1:sha256:ee5d5dc83c51279a2f4a63b285ea4b8b0da898ea5735d32bbee8ba24cec274ff:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyOGU0M2MxYjk5ZDBiNmFjNzQ0MTYwOWQ0ZWI0YzI0Njg0YmQxNzJiMWEzYTE1YWY5ZDZhMWUxNGFmZjQ2NjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4ZDNhMWNiNWIwM2QzMGU3MmY5ZDk2ODhlNGM3OTNhZWZkZDQzZjQzZWJhNGU1ZDIyNWNkMDE0OGJlOTI0MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUyNDVkOWVjN2QwMGVjOWM4ODAzZjQxNTA2MzA2MWU1MDM1Y2Q0NWY0YjI2ZTEyYmFjNDczYzQyYmYwNDhiNWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkMGEwYTUyMTc3YjAxNDE4OGMzMzJlNzZmZTA4MjJlMmQxM2RjYzRlN2E0N2U0NjhmM2UzOTUyNjllYmZiOWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_fed6ad82adc34996ab6b2d875122d1fd",
+      "statement": "redirect 的核心不变量是逐跳重校验: 自动 redirect 永远关闭, 每个 hop 都先解析并验证 scheme/host/DNS 目标再发请求, 跳数上限 5, 且源码注释明写「每次 Location 都重新解析、DNS pin 和策略校验, 绝不复用旧 target」。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/redirect.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:281f74a3ba81a734804a8ca6ecf84d64683eb072f73a300478c66c757f7ed337:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2IyNTk4MThkZmFjNmEyMDk4NmY4ZDg3M2M0MTZiNDk3NDZmZGY1YjQ1NmQ3YzA5ZDc3YzU4OTZjZWJjNzE3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZjMzM0ODhhNjAyOGRlODUxNDg1YjNjOTZhMTNhYWQ3OTY2N2I5YmE4MWFkMmJjODg0MmFmNDgzNDlmZGYwYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGRhNzUwMmI5ZWJkNmEwZjI2NTQzMzM3MGZiZjMxZmU0ODQ1ZTgwOTljMmFlNjhlMTg2MzRmNGI2YjE3M2ViMyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/redirect.rs#L126-L133",
+          "version": "repo-lines-v1:sha256:4095b70b4b1d4798e8d13f54e53142176ac91ea51490503705eb1ae2f62a25fa:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2EwZTYyNGFhNjFiMmNhZjhlNjM2NjFhNDYyNjIzY2FhMGIyNWNhNjY4YjdlMmU4ODcwOTAwZThmMjhmNjY2MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzQ2NmQ1M2I5MzljOTJkM2Q3ZTFlNWI5YjM1MTVmOGRlMWFkOTRlMjkzNGM5ZDRkYTFlNGYwNzBiY2VmOTczOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWQ2ODYzYTM1ZTM0OWY5MDAyYmU4ZTMwMjIxMDJlODU4NzE2MzA3YWMzZTlhNmQ5NGI3YzcyOGRjYTIyOTQ3NCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/redirect.rs#L20-L20",
+          "version": "repo-lines-v1:sha256:6791bdf1614c5489475560d4f62fa395ebbdb37871cf0fc2877885c3a1f8989f:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjc5MWJkZjE2MTRjNTQ4OTQ3NTU2MGQ0ZjYyZmEzOTVlYmJkYjM3ODcxY2YwZmMyODc3ODg1YzNhMWY4OTg5ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjc5MWJkZjE2MTRjNTQ4OTQ3NTU2MGQ0ZjYyZmEzOTVlYmJkYjM3ODcxY2YwZmMyODc3ODg1YzNhMWY4OTg5ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDQ0MDY5YTBkNzk3MDc2YmFiOWYyYzlmNzcwZGFmNzg3MGY1MmZjYTQ1MTNjMDc2NDMyZmE4OWVhMTE0MGFiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmEwMDIwMzIwYmFlMzkzZDg1OWY3NjUxYmUwNDU4NWE5MWE5YjI5NzE5YTYxNmRhZjAyMGIwNjZkMjFlYTg4YiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9103e4547fb546e3bb843a1968304106",
+      "statement": "体积与时间上限: body 流式读取累计计数, 超 16 MiB 返回 BodyTooLarge; 连接超时 10s、单请求总超时 30s; 两个共享 client 都显式 redirect Policy::none(), 且不启用 cookie store——原因是共享 client 不能在 source cookie namespace 之间泄露响应 cookie。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/request.rs#L25-L31",
+          "version": "repo-lines-v1:sha256:b598975ecad1230aaa0ace9f431ce11c541c8f24d4736683ab4a1fc923603fbe:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmVlMmVjNWRlZDY0NDliMWRhYjM0YWNhZmMxZGQwNTJhZTNiYWI1NDIxNDQzN2E3OTg5MmM0YTU4MzQ2ZGQ4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWQ3NjY0NzJjODMwYTk5YmQ0MGZiOGM1ZjlkOTdmOTg5YTFiYmY0MTMxY2JkMTBiNjcxYzMxY2NiNzQxZGYxZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjRjMzcwMTA3NGFiOGRhNWNmZWM4OTQ5ZTQ2YjMxOTEzMWU2Njg1MDg4NzgwNzc5YjQxMWFkYjQ3ZmVjYmU5ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGIwNmY4YmMyZmQ3ZDc5MDA5OGZhNjE2MjAwNGZmYzRiZTI2MTk2OWMyOTg2MzU0NTYxNjFhMzM1ZGYzZWYwMCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/request.rs#L39-L59",
+          "version": "repo-lines-v1:sha256:a642493462705d1e27ca204107b25c594bb39281ac0abf2193c6adc6331881d1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc3NjM0NzgxN2IzZGIzODc0NjVmZTBhODNjZTZkZTIyNmI0OWEwZjlhMmY1ODI4MWQ5ZjUxZWZlYTM5NWRiMDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1Y2JkMjI0ZDNkNTA0Mzg0NmJlNjYyZDkzOTAyOWY0Y2JjNzYzNWQxYzcwOWRjMmRmNGUxMWZkMmIzYWVkMWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY5ZjlhYWE4MDhkMTY5ZDc0OWIxZTNlNGU1ODY0ODRiMzk0MGQwOWUyYjNkODZmZjQ5NjBiYzVlNGViNWZjN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUyNzdmYzc1NjA3MDllNzY4MzcyNGY0ZjI0YTMxNzJhMjlmNTQzOWJmNWEzOGEyNmZmNmZkNzAwMzUxNGM1Y2IifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/request.rs#L410-L416",
+          "version": "repo-lines-v1:sha256:600968c1ef41f4d8dc804f544c7f3b5546308004a0722579290e88791b3fd1f5:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmZlNDcwZjlmNGM3NThmZTkzZTg5ZmNmOGIxMmFmMzJhMjgxZjUzZjU4ZWJiNjM1OTc1YjYwNmNhM2M5OGE3ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2M3NGQ3ZjNmMmEzOWI1N2NiYmU5NzMyNmVhODhiOGZiNWI3ODdlZTc3MjA0NzhmMzQzYjJkNDg3MmMwMmM1MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjhhMWM4NTIwMDk0YWI1OThlNDllZjRkZjc0MGRmN2JiZTZjMDU1MmUwMTdmNTEyM2I2NGFlZTVjNjdiNGJhYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTg5ZWJmNGMxMGFlNzY3YThkZDRiYzQzN2IwOTk5MDlkZGU2NGQ2NDBiNWUyZTE5MGFmZTVjZGNjYzE3MzgwYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e415c831602c4c81bf8c90d69ec29ba7",
+      "statement": "非取消类 HTTP 失败(含 TargetValidation/Redirect/BodyTooLarge)被归档为 EffectOutput::Failure 而不是丢弃, 即失败本身是持久化且可 replay 的; 对外只给固定泛化文案(HTTP effect 执行失败), 不携带底层 reqwest 文本; 取消则直接返回 EffectError 而不产生可归档结果。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs#L118-L138",
+          "version": "repo-lines-v1:sha256:efd14399993c811d36dd9910292cc691c77b388c3f5b6f4f0c375e79bf25a64d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzMjkxNWIyMWQ4YzgzNDQ3NGU0NzY4YjE0ZTE3NDEyNmFmZTk5ZTU1ZDFlNTJmNWRlNzgwYzE2ZDQzYjc1MWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2ZWIzMjQzYjUyZDVjMmIzMTI2ZWQ5Mzg2NWQwYmU4ODE2MjA1OTdhNjEyN2QwMDBiODUyNGRkMWRkMDY1YzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs#L142-L156",
+          "version": "repo-lines-v1:sha256:ee922c7f9074242a3111b243f32c8c2ad7f7d59f7657d4147970e5da993349eb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkNjk2MWM2NTdhNmI1YjE3NzcyMjQ4OTU1Yzc1MWQ3MzBiZDY2MmQ3M2RhMTBmMjU4MWM3MDBjNDAzYTNkYmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_cbb958b783764c069b4ca27fde79485a",
+      "statement": "SSRF 的开关性弱化: HttpEffectAdapter::new() 开启 SSRF 而 new_test() 显式关闭以允许环回, 实际用哪个由配置(local_fixture_http)而非编译期决定; 非测试构建若打开该配置就会关闭 SSRF。深链导入走独立的 import façade, 复用同一套校验但用自己的预算与错误分类。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs#L28-L47",
+          "version": "repo-lines-v1:sha256:b7d383f2bc852db12fa7c161dc59e0a1db8bbdeffdf90de5a802bc67cb2c3e0b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4Mjc4ODdiMzRmYjJkYzM4N2Q0OWMyYzE0ZjhmNDVmMGI1ZjFiMjg3YjMzZjc0ZjA5YzNiOTk1Mjk5MTlkOGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkxYjMyYWVkZGFiNTZjZGIxODBlNWM1NGRjODg2ZGNmN2I0NjIwZDNiNjFkZDA1Zjg2ZGFkMzU5MGM1ZmM3ZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRiZmRjMDE1YjU1ZTc3YmUxMzU0OWIxMjZmMzc0MmJkNGE2NmRlZjZlNWI3ZTc2ZmZjNmMxY2EyMDE2NGQ0MzAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/import.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:e4c6a072a651ce3ca49580a1f9979aa277b3bb9b66dbf71eaa9b5399ff2673de:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjU5M2Q1YTk5YjU1ZTUxOTU4YzE3YTA1Mzk4OGFhY2I2OTEwMzRhOGVlYWY5NTU5OGFlNmYzMzY2MDBhNmNhNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjUzMDU5YzlkOGJjYzcxNWRiMzNjNzJiZTViNDExZGNlYWQzNTI2ODMzZTJlNGM1ZGFmMjFkNmUxMWYyNzkzYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzM4NWFmOTVlM2IxN2I4MWEyZjdlZWYwYzE1OTgzNDAzMzAxM2QxNGJmOTQ3NWZiNjIxYmE3ZmY0ZmNhNjU5NCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_61d2981567c642059a8faff14cf5483e",
+      "statement": "深链导入发生在任何规则被信任之前: 响应体硬上限 2 MiB、整次拉取 30s, 错误收敛为 import_src_url_invalid / target_blocked / timeout / request_failed / redirect_invalid / http_status(只暴露状态码) / body_too_large / invalid_utf8, 不接触安装 grant、来源凭据或 candidate。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/import.rs#L17-L21",
+          "version": "repo-lines-v1:sha256:34a914b083e84ab0def567d969db8076081e68007531228ed750fdb465bd82ad:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDkzNTg1YzI2NzY4YTk5ZTU5OGJkODJhOGEwNmUxZWU0MmYzZjdmZTg0ZjBhMGMzZDkzOTlkZjFkZTI2NGI4MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmY1NmJmNzUxZWE2OWE1Nzc5OWJhOGU5YTQ3NTEyZGJhNmQxNzExNTMwMjI2NWI2NWYxZDI2ZDE1OTAzNjVlMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTYyNWI2ZWRlZDYwNjE2Zjg1Yzk1ZjBmZTQ2YmVjYTEyMjlhMzgzMWZmZjI4MWE4ZjZkOWMyYmIyNzc5ZWJiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGRlNjk0YTk1MmZjNzY3ODY3ZjkwMzI3MmFiY2IyZTdmMDJjYmRjMWJjY2I4YTBjNTZhOTI5ZWY3OWQzOGU1NyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/import.rs#L23-L50",
+          "version": "repo-lines-v1:sha256:fbbc4cf38a8840f1906aed8a62b5a65c646f5f8a24741bc70a8c18df2fa80e3d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyNWYwNWQ2ODc0MjY1YjM1ZmY2MzZlOGY1MTY2NTVjMzBlYzJmYjlmYjJjMGQ3Y2Q3MzYzMTU0NThhMTU4ZGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgyMWYyNGQzOWFiMDJiNTBlMjA5ZGU2OWY4ZjM4MDlhMDVkYzJkNmJhODFhNTE3MDdmM2RiZTk3YjgzMjQ5MmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2NjNlNWUzNzc0YjE0YjY5MDU2ZGQ4YTk1OTgwMzZlZmEzMjA3ZTllMWZlNjBjYTk3YmQ5ZDY2Y2IwMzIzMmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_06da827a4acf4915ae797c506d22a693",
+      "statement": "SensitiveNamePolicy 把 header 名分三档处置: Blocked 为 Proxy-Authorization 与 Set-Cookie(前者改变代理 hop 授权边界、后者只属 response), Credential 为 Authorization/Cookie 以及名字含 token/secret/api-key/apikey, 其余为 Public; 名称比较大小写不敏感且把 _ 与 - 视为同一分隔符, url_contains_sensitive_query_name 只 percent-decode 后检查参数名。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/sensitive.rs#L12-L47",
+          "version": "repo-lines-v1:sha256:1a8e96870117d2127c9c65d26c5c0d0dfe59c543da07ecdf3ce4d8aab46bd926:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5ZDE4MzU1NTI4Nzc5ZjdmNjNmNDQ5NjQ5MTAyYzhmNTExZjU4NmVhMTZjMjVmOWJkYWU0ZDNhMDBmNmFkNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkOTc0ODNiYmM1NjNjOTQ1ZWU4ZDYyOGRiYTYyYjZiMGEwN2Y2YTVkYjBjNzNkNWQyMjJkNGZmODFjZGQ3YTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3OGZmNjk3NDkyYmQxZGQxZjAxMWZhMmUxMzRlZmM3YmUyY2JjYWNkNWM4NjA4Y2ZjNDcwOTNiYTQ1YzIzNDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhNGU0YzM3MzkyOThjNTliNWZiZjAwYTgxYTdlYTRkOWVhNTM4NTcyMmI4MWUxNDQ2Y2ExZWZiMTkzNzhmOGEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/sensitive.rs#L49-L75",
+          "version": "repo-lines-v1:sha256:141c6146d94c2f7d50748d85f2114801f57b47c324c7247eafa48aa0e359d1d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkYTMwODAyYmJkZDAxNDEzMGQwMTRkMzkzNjBlNzUyNGU1YWRmN2Y2OTdmMTdjZThiZTA2MzJhMGI4N2ZhNGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIyNjhhMDNhOTc0OWUzZmZiZjU2ZDI2OTAwZmJmMzg3MGIyMDc1OTU2MTcyNWFkZjEzNGJiNGNlZTU4NGFmYzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5NDUxMWQ1MzM4M2UzNjNhOWE0MDRhYzY5NTA2MjFjNjY1OGE3NDIwYjczMzExOGU5MDRlYTZlMWE1ZTJhOGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkxOTllNjY3MGViYjg3MWNkZGVkMWQzYjg0NmVjNmQ3ZTdhYzFlNmI2ODViMDY1YjE4NDM1NGM1NjJmNzE5YmEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e3a686c738cd4ad69f1ea25631e31f2c",
+      "statement": "凭据槽不能覆盖 Host / Content-Length / Transfer-Encoding / Connection / Proxy-Authorization(否则规则可改写寻址或走私代理授权), 且凭据 header 插入时用 HeaderValue::set_sensitive(true) 标记, 让 reqwest 自身日志也不打印它。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/request.rs#L149-L158",
+          "version": "repo-lines-v1:sha256:eece31e78130c6ce1197a34eb4eea5a68c1ab15e20dd4e940b8d1d04261b3b33:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwMTgzYjM3YTgwOGMxODBmNGQ5MjIyMzI2MjU0MTJkZjE4Y2NiYWFhMjc4NTI3M2JiM2M5NDNlNWE3Mjk4MWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJhMWI0ZjdjZjgxZTg2MjViZDQwMTFkMThlODczMWZkMjUxM2Q1MWU2ODBlMTlhN2JjM2Q5OTNlOTBhY2UzZmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmMTNiYTk4YzRlNmE5ZTNkZTNjYTJjNWIyZDY1NWJiNTMzODhmZWU1Y2ZhZmJkNzgzMGE2NTk3ZDAzMTUxY2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM1ZjZmNDY2ZTU5Y2ZjMzA3MDNjNDVmNzJhZjY1ZGU1NGFjMzYzZDM1NGNjMWEzMzMwMzUwYWNkNDUyNDM0YzQifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/request.rs#L162-L168",
+          "version": "repo-lines-v1:sha256:cf80b4a71bf466c3eeb29b38d66ea0c5543941b2750b1bd13b5be85555714477:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjc3ODZkYjQ2OTAyNGE2NTk5ZDA3NTI2MTZhMGY3Y2IwMDZhMDQ0M2M4N2UxMTFiYTcyMmYwN2RmYWQyNzZhMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzVmNmY0NjZlNTljZmMzMDcwM2M0NWY3MmFmNjVkZTU0YWMzNjNkMzU0Y2MxYTMzMzAzNTBhY2Q0NTI0MzRjNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmZjNzM2ZTczOGI0YWRlZDQ5NmNhNTljMzBkMWVlYTRmZjc1MWM3N2M3NTk1ZmMwODI5YTMzYTFhMDAwYjRjZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_95a0406832af406a9795c82306123f14",
+      "statement": "witness 是构造式脱敏: safe_request_headers 丢掉非 is_safe_header_name 与 SensitiveNamePolicy::is_sensitive 的名字, 只留小写名与 BLAKE3 摘要并排序; HttpRequestWitness.safe_url 在类型文档里限定为仅 scheme/host/port/path(禁 query/fragment/userinfo), 由 safe_url() 构造并拒绝带 userinfo 或非 http(s) 的 URL。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/request.rs#L286-L312",
+          "version": "repo-lines-v1:sha256:603dd4513128d4f40a3646ec9d12af8fb5645262d3802e933e4617873d9996b8:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc4MDBmOTg3NWI2YjE3MDM0NGNiNDBhYTYzMDNkYmUzNmY2YzM5MTgxYTdkNWZlZjc0NjFmZDU1NzJlYjQ4MDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdiODNjZjA3YWU5MzQ3MGM2YjE5N2I4N2I3MzMzYjBhNmM4ODdlOTc2NTkxYzJhZDhhOTdlYjU3NzAwN2RjMTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4MWVhMzI5NTY1NWMxMzU5ODEzNzgxZTdjZjg4M2RlYzJkZTdjYmY2ZWU2YWI1ZWRiM2M1NTFjNDUzOTVkZjUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/request.rs#L314-L343",
+          "version": "repo-lines-v1:sha256:7802d37e793856d1d0ca2251a74d20008fb2f19dc307e6b70a319405261f7391:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzN2I1ODRjOTRkM2ZkMDBiYTgxZjgzOTk5YWFmN2I3NDk4YThhNjVhMjNjOWFmNTMzMGQ2NWJkMDVkMjNkNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA5YzMwZjVmYTQxODk3NjBmZTRhZWQ4MzBlN2ExOTNmYjRkMzg0MmMyYjc1ZTRkZGMwM2VlYjE2YTEwYmRiNGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFiOTEyYTU3MTM4NDMxMmRjYmM1MGQ5MmUzYjQ0NjU2OTY1ZGRjMGM5NjJkYzY1NGE4NTM4ZTk3MzhjZTRjYTYifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect/witness.rs#L31-L41",
+          "version": "repo-lines-v1:sha256:d0b4d49068d0eb0e285a0e1902bdf9ddb234e8af5ae26c5d9eca05049754b31d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdmODFlNzQ1YzM1M2ZlNWI4OTQ3MzE0YWM5MmZiMGM2Mzc4ZGRlMzQwNjIzYzhmYjJlZGJmZmM5OGYyN2NkMGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2NWZlYmVkOTk3NGMxMGVmOWQwNjRmNWI1NzI2Yzc0MDFjZDhkYzFhZWRlNGUyOTdlYzZlOGE0OWFhYTAwMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyMzc4MTJkMDdlOTlmMGRiZWYwZmM1ZGRiNDkyZDQzYTIzMDI2ZGIxNzNlOGY0NTllYTYxOGY2YjhkYjQ4MmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM1ZmI5OGM1NDZhYmRjNDEzMTNiNTIyOGY0OThkNmVlYmZmNmE1MzUzNjllYjI0ODIzODA1N2QxZjI5MWE3NGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_98f35a45cd3d4988bd2468c6f0a2ee85",
+      "statement": "request body 默认被视为 secret, 只有未来拥有明确 proven-safe 合同的 adapter 才能降低敏感等级; EffectError::message 契约上不得包含 cookie/token/完整 URL query/body; 且注释明确失败仍须经 durable archive, 以免 replay 走偏。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect/contracts.rs#L265-L265",
+          "version": "repo-lines-v1:sha256:7e66866f1176624b1b732b291139573762503fafcc1ad6d0f3f06350a825dae6:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2U2Njg2NmYxMTc2NjI0YjFiNzMyYjI5MTEzOTU3Mzc2MjUwM2ZhZmNjMWFkNmQwZjNmMDYzNTBhODI1ZGFlNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2U2Njg2NmYxMTc2NjI0YjFiNzMyYjI5MTEzOTU3Mzc2MjUwM2ZhZmNjMWFkNmQwZjNmMDYzNTBhODI1ZGFlNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWRjN2U2MWQ4NjVhOWNhZjBlMWJhZTVkNDExZGQ2MDRmMjY4MTYwMGNiZWExZDU2NWUzODRhNTY4MzNmNDFhZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYThkNDMzMWJhYzlhYzFjYzc4ZWJhNzBmNzZmMWI2ZDIyNWUzOWRlOWRmMTJjYzlmZmJiYTYyZTY4M2RjMjdhZCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect/contracts.rs#L68-L68",
+          "version": "repo-lines-v1:sha256:d7e8fc092d0460ddadc6a66737fd56453b0b9a9e5baefbb15c44b9834325a651:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDdlOGZjMDkyZDA0NjBkZGFkYzZhNjY3MzdmZDU2NDUzYjBiOWE5ZTViYWVmYmIxNWM0NGI5ODM0MzI1YTY1MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDdlOGZjMDkyZDA0NjBkZGFkYzZhNjY3MzdmZDU2NDUzYjBiOWE5ZTViYWVmYmIxNWM0NGI5ODM0MzI1YTY1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmIzYjU5MWYzNDVhNjM4OGNkYjM1NjU2MTczZDU5ZjUzMjE1YjgwZTZhYmFlY2E0NWI0ZjRhNDQ1MDk1MTYwZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWFkNDE2YmE1MDg4ZWQ5ODljNmEzZmQ5M2Q2NmQ2YTZkYWUxNzFjOTc2MjcwNDU1MDFiMzJkM2ViODNlZjk4MSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect/witness.rs#L228-L231",
+          "version": "repo-lines-v1:sha256:e9bd58e869d67b8b605f6d7d80d8cac261cf3cb74ce9ae8de3c1977b4c0f53b5:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGJiNWU5NGVhNGM5MTA0ZjYxMjQ5ZDUxYTA2MjQyNTNmMGFhYTFiMjM2M2VlNDc2MDNjYmJiNDEzNGM3YmU0ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDZiN2ZlMjkxOWM4MmFmY2Y1Y2ZlY2I3YmI4M2ZiMDc5Y2U2NWQyMmRjOThjM2VkZWFjNDFjNTc3Yjg1NWY4ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjBhZjg0NDc3ZjVhMTA5ZjcxNTlmZDljYjMyMDVjMTgyNGZlMzAyYTFkNzhlZGU0NTVhYjdlNWNmYmJjYjhlYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c3e5af5c307f4d8db308be4b55bf990d",
+      "statement": "facade 的错误映射把不变量写成模块级约束: 任何 message/diagnostic/trace 都不得包含 body、cookie、token、完整 URL query、Plan JSON 或 opaque payload; runtime_failure_error 把 CapabilityDenied 映射为 RuleErrorStage::Capability 的 runtime_capability_denied, 把 OperationUnavailable 映射为 Internal 的 runtime_operation_unavailable。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:80e52ed9e88e853d63e8bd6490529f29425b4e571531f5e019e88de427fdda42:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZkMTQ0MmRlNWRjOTk1NDdlZDExYWNkYzNjY2YzZjVmOWIzN2UwZTFlYzZlNWRhNWYxYzRkODE1YjI3YTM1MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk3YjFhODNkZWU2MGU2YzUwY2Q4ZmY2NjYxZTIxM2U0MDU4NTkwYTZiM2NiYWI3MzYyZWY5ODI2MTUwYmJkYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDUzNzM5MmY5NmNiOWNlZDVkOGE2ZTk1NDFkZDVmODlhMTE1ZDAxYjlkZWExNmIxYzkzMzc0OWFiNWI1OGI5MiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L15-L26",
+          "version": "repo-lines-v1:sha256:e9b2032a8afc110d0d43d354dd52fe401d71684569e700c6ba4af20aebdccab2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ZDlhNmJkYWQyNWNmMDAxYTY3ZTdkZjQzNmFlYWRkMmUyNjFhYmFmODRhZjA5ZjAwMGIwMTBiODRkODg2NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0MzNkMGVhOWVjZjJmMzljOWE1MDQwNzM5NWVlNDExNzJmZTY4MmM5Yzg4NWEzNTA4Zjc1YmRlZTE1MWVmZmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJjMTE1NmM5Mjk0ODhlNGYzZTcxOGYxY2JkMDQ3N2JhNjIzZjc3YjdmYWNmYzRiOWVlZDVjNjI1YzRkYzUwOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwZDBjMDYzNDg5ODQ2YTAwY2MwZDI2ZmFmMzRlMjRlOTFlY2UxOTU2ODUxZDk2MjZhYWZjMzUwYWI4YTE3ODIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e47d59e47e2b4eeaa3ffef82eb95907b",
+      "statement": "脱敏不变量有跨层测试而不仅是注释: 集成测试用 source-static-secret 与 ?q=修罗 两个哨兵值, 断言序列化的 HTTP witness 与投递事件流都不包含它们, 并进一步断言临时目录里不存在明文(assert_no_plaintext_secret)。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/legado_rule_system.rs#L520-L530",
+          "version": "repo-lines-v1:sha256:07c551ed0824956b059fd11b72c9106417d7bf7b0c5653b8d49f9a54889b6719:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2Y2M0MjZlYzFmZDdjYjY5ZjQ0ZGQyNWQ5NWEwOTIyZDdhOTY2Mzk3MjI1YmFiZWQ1OGNiODY4OWQ2Y2Q2NTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU0ZmM3MmM0ZmE5Y2ZmMmFhNjc1ZmEyMjQ5MTdlOTExZTQ5YzZlY2I1ZGFjNzhlNzA3OGVlYWNmOWFmMDEyZDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2Zjc1NjY3NzhiNTIyMmY5ZGUzYzlhZDRmOTc5NmE2NTZhZDY1ZWQ3M2RlZmI1YTM2NTRlODE5NGVkMDFiYzEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/legado_rule_system.rs#L742-L749",
+          "version": "repo-lines-v1:sha256:74f9358dc1379a23ec4e115e610251c0d0ffe6c8d11e4eb9210ac4917806915c:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWJkODM5N2M3MTdkOTg2NTc4ZjJlOGJkY2QxOWFkODE4Yzg4NjYyMDE2NzRlMmRjNTYwY2IzODI5MDZiMDM1YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGQzOWJiZjYzOGU0YmRiZWIwMzY2ZTBjZGM4NGNlNjc0MTE4NmIzY2UxNTNiMzAyYzA3YzgyZDUyZmFmYzU5YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2NjZjE1ODMwMDg4OWIyNWUyZWJjNjhiYzk4OWM5NWQ4ZDU2OTk2MGRlNGM1OWIyMzdmZDg4Nzg5NmNhODY2YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjNiMTNkMzZjMjVhZjEwMjc0NGYzYTY0YjEzMzFjNDE2NTdhMjQ1MzEwNTc3YjY0MDA3NjBmOTVlYjYyMDBmMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_83572b979e6549158ceaacfa68c66d5f",
+      "statement": "SSRF 与脱敏的测试位置: processor_test.rs 的 ssrf_block_loopback_v4 / aws_metadata / alibaba_metadata / rfc1918 / loopback_v6 / allow_public 覆盖判定范围, shared_policy_blocks_unsafe_request_credentials_and_redacts_response_witness 与 plan_http_effect_marks_request_body_secret_and_witness_redacted 覆盖凭据与 witness, plan_http_effect_records_real_manual_redirect_hop 覆盖逐跳记录。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L25-L56",
+          "version": "repo-lines-v1:sha256:2b33aa310148ff2737c4a543e5d54fb6fe1449f5bab77c755bae0c2ac9ce691d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzZTk5YTExZjFjYWZjNzI1NmI5MWY0ZjhjNTkwMDA3NjhmMzBiYjM5ODhhMThlMjM2NDhhZjU2MzFmMzUwYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3MjUyMGRiMjY2NDdiOGNlM2MwMTJlMmJhYmIwNzUzM2NiMzg5MTcyNDE2MzdlMDI1NGEzYTI5MmY0OWIzY2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRiN2Y3OThiYWJmNTk0YTZmYzcyYzkyMmViNzI1OWRkZmNjNTZlNjZkMGUwYWIxNDBmYjJhYWU3OTcyOGIyN2IifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L400-L400",
+          "version": "repo-lines-v1:sha256:c1581c5faa2c2c6cc8ca05f9a9e92ec4244c0589d20f725d87a1e2b80fdfcd28:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzE1ODFjNWZhYTJjMmM2Y2M4Y2EwNWY5YTllOTJlYzQyNDRjMDU4OWQyMGY3MjVkODdhMWUyYjgwZmRmY2QyOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzE1ODFjNWZhYTJjMmM2Y2M4Y2EwNWY5YTllOTJlYzQyNDRjMDU4OWQyMGY3MjVkODdhMWUyYjgwZmRmY2QyOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGQzNzhiOWQzNWJlYTBhNjA3OWFhMjk2ZWY5ODFmYWVmNjE2ZTUwOTcyNTQ1M2Q5ZmM1ZGY4NmYzNzMzZjA1YyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L493-L493",
+          "version": "repo-lines-v1:sha256:e57f947bbdad4b73c3b6236549a1e5d84446681e8529f48a0f877430f3de6a60:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTU3Zjk0N2JiZGFkNGI3M2MzYjYyMzY1NDlhMWU1ZDg0NDQ2NjgxZTg1MjlmNDhhMGY4Nzc0MzBmM2RlNmE2MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTU3Zjk0N2JiZGFkNGI3M2MzYjYyMzY1NDlhMWU1ZDg0NDQ2NjgxZTg1MjlmNDhhMGY4Nzc0MzBmM2RlNmE2MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGQzNzhiOWQzNWJlYTBhNjA3OWFhMjk2ZWY5ODFmYWVmNjE2ZTUwOTcyNTQ1M2Q5ZmM1ZGY4NmYzNzMzZjA1YyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L548-L548",
+          "version": "repo-lines-v1:sha256:f4ce9c1875bcdfb1104ca0719bf18594271c44a4923ee6dd17df40f22c6f6e8b:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjRjZTljMTg3NWJjZGZiMTEwNGNhMDcxOWJmMTg1OTQyNzFjNDRhNDkyM2VlNmRkMTdkZjQwZjIyYzZmNmU4YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjRjZTljMTg3NWJjZGZiMTEwNGNhMDcxOWJmMTg1OTQyNzFjNDRhNDkyM2VlNmRkMTdkZjQwZjIyYzZmNmU4YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGQzNzhiOWQzNWJlYTBhNjA3OWFhMjk2ZWY5ODFmYWVmNjE2ZTUwOTcyNTQ1M2Q5ZmM1ZGY4NmYzNzMzZjA1YyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c0abfde37e442d28822349bbfbcb4fe",
+      "statement": "凭据静态存储的防 oracle 设计: 文件版本常量为 2、信封形如 [version][12B nonce][ciphertext]; key_verifier 拒绝非 32 字节密钥, 返回带 domain separation 前缀 lanjing-vault-key-verifier-v1 的 BLAKE3 且不能用于推导任何明文; write_secret 生成随机 SecretArtifactId 与随机 UUID 派生的 blob locator(非内容哈希), ciphertext_hash 为整个信封的 BLAKE3, 因此不能形成可预计算的明文对照。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/artifact.rs#L127-L137",
+          "version": "repo-lines-v1:sha256:eeda3c49fcdc00876b05a4a28403d5259bbe39349ffcdbc231ce4f5a052ac487:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2NDdiMWJjNjRlODMwODE2MzkwOGE5NjlmMWYzNTliZmEyZGRhNjdhZGZjMzZkYjFiMDU5NjM4Y2M2ZTM2NTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0OWYwZDY0YjAzYzdiZWY3MThlNmI3MzU2M2E2ZDhkZWVjNTQzZjZlMzg0MmViOTMyMTk1ZGEyMjVlNDc3NDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI5NDMyYjQwY2IxNTFlOTdlMWFjMjAzM2RkMDJhMzYzMDUxZTBmMzU0ODg4ZjUwYTI3NzFkMzVmMTAyNWI4NGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4ODI5MjIwMGUxMzlmMzBmMGI1OWI0ZGFkNzQ3NzhhZTZkNGFiZjEwNjBhNGY2ODA4MDI3MDBjOGRlNjJiNDIifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/artifact.rs#L140-L171",
+          "version": "repo-lines-v1:sha256:f290ad00f3df2519038d68d1601a08345c53fdef51d8e7bd2b94bdf87e6f3995:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyNTJhZDUwYzZiYzNhMzRkYzBiMTM2ZWY5ZjNiNjE2OWY4ZWQwY2NhOWQ2MzRmNjk4ZGNmZWUyYzQwZjUxZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEwNDY5YjA2Y2U1MTJiZjJjYTQxM2RmZmE3MTY4Y2Q3YTk5ZmNiODAyMDQ4NWVlN2EwMmM3NDg3OGRhMmI0MjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFhMWJhODMxZjIxYTFlNjRiMDVkYzJhZDVhMjk3ZmY4ZGZlZmQxM2Y1ZDZlMTUzNGNjNzI1ZmQxMzNiNGZhMWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1ZjYwNTk5YjZkNDE0MWYxZDMzZDY1MjljMjE5Mjc4MzQ0Mjk5ZmQ1YzY2NTkyYWQwYTE5ZmY5ODdkYzk3YTAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/artifact.rs#L172-L196",
+          "version": "repo-lines-v1:sha256:986fda3b3f0ca101f63afee4a8a7918d4229a994458bfffa579cab1496097b30:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4ZTIyOTE3ZGMzYjQwZGY5MDBjZGRjMTE5OGFhMmQwNGZmMThjZWZkM2VmZDJjZmQxYjRkYzJmOTgwY2QwODEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmMWZhMmQzODMwODNjN2U2MTY1YzljZDE4OTRiM2NmODE3YmE2NzhhZTFjNmRiNmM2YmZlYWYyZTQwOWVlZDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQwYjllOTM4NGYyNjIwY2JlYWVkOGUwZTIwMDYyMTU3OWNmYzBiOTE4NjM5Y2IxNjU4OTkxYzVkNmY2NjU4MDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzMWU4ZDhkZTI0YTdjMTJiYTFiMTQyMGFhYTczNTk3OTY2YjIyNWJiZTZlMGQyMWQzZjI0ZjllMzE3M2MxNGIifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/artifact.rs#L21-L21",
+          "version": "repo-lines-v1:sha256:5d9a58b09edf40334bea369b2de1668cc5e44fd7b02410af484f605f5afa0c4d:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWQ5YTU4YjA5ZWRmNDAzMzRiZWEzNjliMmRlMTY2OGNjNWU0NGZkN2IwMjQxMGFmNDg0ZjYwNWY1YWZhMGM0ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWQ5YTU4YjA5ZWRmNDAzMzRiZWEzNjliMmRlMTY2OGNjNWU0NGZkN2IwMjQxMGFmNDg0ZjYwNWY1YWZhMGM0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjZjYTM1YzMxMjFhM2Y2ZWJiMTgzODNjOTJhYjI2ODM1OWNmYmQwNzc5YzNjODRhNDBmZTliYmQ0ZmQ0YTk2ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTA3YTExMjdjMjYzMzhmYzNmYjc1ZGQ1NzRlZTAzMzhjOTUyNDU2NzE1ZDRkMjY3MWFlYTU3YWI1ZDAwZTAzMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a67e1cbf458f415e9d09ea33d701b1e9",
+      "statement": "SQLite 只保存随机 SecretArtifactId、随机 blob locator、key ID 与随机 nonce 密文 hash, owner row 是 ref-count 的唯一证明, 明文只在 artifact port 的局部值中存在; 主密钥来自 keyring(复用已安装的默认 store 或安装平台 store), 不可用映射为 KeyringUnavailable、临时锁映射为 KeyringLocked。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/keyring_init.rs#L34-L45",
+          "version": "repo-lines-v1:sha256:bef916c9b1ad984f674c9b6b38e48de33dbd1150db442439b990d58e1a85daca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyYjQ3NTQxNGRlYmEwNzUyNTM3MTNkOWY1MDQxMTAzZjMxNmNlNjFhODJiOTc2MGEwM2U3ZWEwMzczNTIyYTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlNTQyYTE0ZGM0NGU2N2VjN2M3MzAzZmQ0NjNhNmRjYmQxZWU2ZDUzY2E0YWVmMDg2NzBiOTRhNDZhMjQ3ODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZmNmQ2NTRkNTY1ZmMxZjc1NjhmNjZhZDM1ZjdlZjk5MWZiMjY5NDdiNzNmNGU5OGU4ZGZmNTE2OGFlOGI0OTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/secret.rs#L1-L5",
+          "version": "repo-lines-v1:sha256:f7800a24fe01ad715038f7fb8b579fd6a8d9f7c40b29e8f0d9e2168ee5ba301e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjcwNzQ5YWU2ZDQ2MzY2MDZmMjZiNDI4NzMyOTAxNGU5NzE0MjU5ZjU3NjY4NmQ0N2E1ZmM3YWYwZWI4OWQxMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWE5MDYzMGNjNTBiNWE2NGIwZjhmMTdmYTFlMWZiYmQxNGQzMmRkYTIxYWE5NjRhYzI5MTEzMGYyYmQ0YTRiZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzRjMWY0NjdhZjU3YzhiNDdlOTViOTg4YTI4ZDFiNmVmZDU2YzdmN2ZhNTczMWJkZmFhZGQzMmFkNGI3ZmI0MCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_f19162c4da8840fe9c001598774e2e63",
+      "statement": "执行侧资源上限: QuickJS 内存 16 MiB 与超时 5000 ms(超时由 watchdog 触发 QuickJS interrupt), Loop 迭代受节点 max_iterations 与硬上限 MAX_LOOP_ITERATIONS = 256 双重限制, body 与 redirect 另有 16 MiB / 5 跳上限。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-js/src/processor.rs#L26-L29",
+          "version": "repo-lines-v1:sha256:85c4106c4192c66eab6a328d1a0bcd8196b8872a5c2043906e66f526b45d3e21:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWRlNGRkODk1NmU0MGVkNjI4MzE0Mjk3NmFiMGNkZTBiZTEzY2IzOTI2ZDg1ZmI4ZDNlM2NkODJjYTZkNTFkZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGU2MTQ3YzE2YzgxZTJiZWFiNWI3MTkyODVjNzQ5NTk5MzI0ZWZjNTQwNDg5YzA4ZGE4NDRjNjY5NjY5MzUxMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDRhMTI3ZjUzZDZhNGFiZDk3M2JjMjE4ZDY2MjYwN2NkNDFmZTdjNzg5MjhlODlmN2Q4YTU0NTRjNTAyOWExOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTQ5YmZiMDM3NjMxYjBmNDZhMjRlYjg2NmU3YzA1ZjlhOThjMjY1YmM1MTYwMGM1ZTBkY2FmMWFmMGZiOTcxOCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-js/src/processor.rs#L263-L263",
+          "version": "repo-lines-v1:sha256:cb26442e855e0789e1fa9d6ba14a563fcc95274e293f5f2029585df6c116b3b3:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2IyNjQ0MmU4NTVlMDc4OWUxZmE5ZDZiYTE0YTU2M2ZjYzk1Mjc0ZTI5M2Y1ZjIwMjk1ODVkZjZjMTE2YjNiMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2IyNjQ0MmU4NTVlMDc4OWUxZmE5ZDZiYTE0YTU2M2ZjYzk1Mjc0ZTI5M2Y1ZjIwMjk1ODVkZjZjMTE2YjNiMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjQ1ZmMwMDYyODU5YWEwMGFjYTRmZTY3YTMyOTc1NzhjM2UxNWIzNjkzNTE1NzAzMDY0Mjc2ZGY2YmU5ZGZlMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTc4OTAxMGExYTUxYjc0YmQxMTc5NGMzODUwYWMxNTFmOWQxNjk3MTIyYmU0ZDM1OWNhZWY3ODY3YjczZThjNSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/definition/config.rs#L12-L12",
+          "version": "repo-lines-v1:sha256:bca18fd9c23bca700e3ceb66c6304d0f40818284dcb5ba835d70984a5fa382c4:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmNhMThmZDljMjNiY2E3MDBlM2NlYjY2YzYzMDRkMGY0MDgxODI4NGRjYjViYTgzNWQ3MDk4NGE1ZmEzODJjNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmNhMThmZDljMjNiY2E3MDBlM2NlYjY2YzYzMDRkMGY0MDgxODI4NGRjYjViYTgzNWQ3MDk4NGE1ZmEzODJjNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWVhNWFiZjY5YjhmMTgyODE1MWEyOGMxZjkzNjhjOWI1ZDNkZTJjMmRmYzM1ZmU4YzYxYmVhYzJmNDkwNTc0MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDMyMmZlNTMzOWVlOTZhNDFmNzZlNjBhMTA0MzQ2MDU5NjlmNzhmMjdjZjNlZjlkMzRiNmVjMjNlYjM5ZWMwNyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/loop_execution.rs#L51-L51",
+          "version": "repo-lines-v1:sha256:139466a87bf22b454565805aa349d1c0024465e7af04c368d940790a6c293706:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTM5NDY2YTg3YmYyMmI0NTQ1NjU4MDVhYTM0OWQxYzAwMjQ0NjVlN2FmMDRjMzY4ZDk0MDc5MGE2YzI5MzcwNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTM5NDY2YTg3YmYyMmI0NTQ1NjU4MDVhYTM0OWQxYzAwMjQ0NjVlN2FmMDRjMzY4ZDk0MDc5MGE2YzI5MzcwNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjM5MjI2NDJlODE4ZmMwZTk0MGMzZDkxZTJiYTdkMWM1MWUxNGQ5ZTlhMzRjZmQyODk3ZDBhN2MzZWFkMmZmZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWZhZTY5Yzg4YzI0ZmY3YWIyNTY4ZTFiZDdkYTFhNDIxZWY0NjQ5YzQ2YjhjYTg4YjJjNGQ2NGNiN2NlYWI3MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d6fc2dc0489d4378a8baac65bf2e5e33",
+      "statement": "capability 在每次 effect 前被强制检查(check_capability 与 enforce_capabilities), 拒绝时产生 CapabilityDenied 并映射为 RuleErrorStage::Capability; 插件 handler 缺失时是 OperationUnavailable 而不会静默回退到另一个 handler。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/capability.rs#L38-L38",
+          "version": "repo-lines-v1:sha256:eb793d925109728011ea20cdf5d54fb0d6b4f68596bda1a9ff2ddf4d0d42ea53:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWI3OTNkOTI1MTA5NzI4MDExZWEyMGNkZjVkNTRmYjBkNmI0ZjY4NTk2YmRhMWE5ZmYyZGRmNGQwZDQyZWE1MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWI3OTNkOTI1MTA5NzI4MDExZWEyMGNkZjVkNTRmYjBkNmI0ZjY4NTk2YmRhMWE5ZmYyZGRmNGQwZDQyZWE1MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWQ4MTE3YWRlMDMyN2I5Y2VlZDUzMmZjZWE5OTExMmZmYTNlZmJiNDY1NmUxMDZkOTcyYzI5OTBiMzlkZThkNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmRkYjQwMmU4ODBjNWJkNDZkMjkyYTliMGU4ZGY3Yzg3NjUzZWYwY2FhZDY5MzE2ZTcyYjMyNDRjNjg5MTBhMSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/dispatch.rs#L152-L152",
+          "version": "repo-lines-v1:sha256:0ffd8d5d9cdb286738eb40cb48fdae218885c0591e97ae60a1e49beff9e9c2c4:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGZmZDhkNWQ5Y2RiMjg2NzM4ZWI0MGNiNDhmZGFlMjE4ODg1YzA1OTFlOTdhZTYwYTFlNDliZWZmOWU5YzJjNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGZmZDhkNWQ5Y2RiMjg2NzM4ZWI0MGNiNDhmZGFlMjE4ODg1YzA1OTFlOTdhZTYwYTFlNDliZWZmOWU5YzJjNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTllNzYzNTVjZjExOTk0ODBjM2Y5OTgzNmIxNDg2Yzg0MWQ4OTFmYWFkOTA0YzYwOGUwOTMwMjJkMzc1N2FlZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjg1NWY0MjU5NDM5Njk5NWFkOTQ4ODlmYjU5YTg4ZDVlYmI4MjUzODkzYmIzMWJmYWUzZTVlN2ExNTJiNTNmNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_35a7c4e2a54049b2aaf0fff51a77580d",
+      "statement": "已决定但尚未实现的边界: ADR 0007 的 lanjing:// 资产网关不存在(全仓库无 register_uri_scheme / lanjing://), 因此若有图片, 走的是 CSP 放行的 https: 直连路径——而那正是 ADR 0007 判定为缺陷的路径; ADR 0003 的插件系统边界(manifest 校验/依赖图/租约/回滚)归 issue #36-#41, HOST_CONTRACT_VERSION = \"1\" 当前只声明不比对。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/Cargo.toml#L1-L20",
+          "version": "repo-lines-v1:sha256:028265565d89f9bbbf9083cee50f9bfe0f8cb1ec5fa84039906043f02779706f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzNGUxMDJjODYxZjk5NGQyYWFjZTkxMTRkMzkyZGJjMTYyMTkwZTAwYmU4ZmUzNTdkNDcyMTUwY2E0Mzk2MTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1OGY2NTc2NzlhZjQwMWZmOTQwOTRjMzFiMTQ1MzNiNWUyNmZmZTJlNGRlMmJiZTVkMmNiZGI5MmYwNDUyNTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/state.rs#L1-L8",
+          "version": "repo-lines-v1:sha256:253e3e824acfded9d315e0db6219341499d3015e397c843728b39646408ac98f:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDRhNjlkZjBjMDZlNGM3MThjOWJiMWVkNDM5ZDI4NDkwZTZkNWJkYThiNmY1YTg1YWM4NDhiYzNhZjQ5YmEyMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYzIwZGNiODZiZjdhYTllZDM1MzA5OTUyOWQ4MDE4MmY0MWNjNzY5YWI5ODI4YTIwNjliMzE5OTQ2ODdiOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDU0ZmEzMDlhNDJlOTQxMTQ3N2NiZTJkOGNjNDNjYjNkZDlkNjdhYjAzNzM5ZDA3NzBhMTRkNTUyNTRhNTMxNiJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.0",
+    "at": "2026-10-04T10:14:16.110Z"
+  }
+}

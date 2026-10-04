@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:5c380aad9c2cc09feba40633f6a5500ef2c025053e33e6d2c6ad4661e939390a",
+  "claims": [
+    {
+      "id": "claim_10a7f283bd47417e87108b0aad2b9b75",
+      "statement": "Tauri 壳的插件装配: Windows release 关闭控制台; debug+desktop 才注册 localhost_only 的 mcp_bridge; desktop 才注册 single_instance(依赖声明带 cfg(macos/windows/linux)); 其余 deep_link/dialog/notification/opener/os/zustand/window_state 始终注册, 其中 zustand 用于 @tauri-store/zustand 的后端。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/Cargo.toml#L114-L115",
+          "version": "repo-lines-v1:sha256:ad48729b185da6c1b4cbbe8e9ff10b5b149563c1b0614624cd71b45bb63c6410:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmYxMDkzZTZiYzkzM2E3MGY2OGZlMTQ2MjEzYThkYmIxMGM5MjZmNzhkM2IyNTU3Yzk3MzUwOTU0ZWU1OTdmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2IyYzNlNmFhODg3MDA2OWVkNzgwODgyNmFlOWU3OTIxZTU5NTYzMjg0YjE5MjIxZWRhMWI3MjZmZjRkZDg4MiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjVlZDJhMGY1YmM1N2Q2NjI0OTk3MTE4NzJiNjA3YmY0NTgzZWM0MDFhYjc1NzlmOWI5ZWQzNmFiZjcwMTUzYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmU2YzA2NGNkNDFkNDVhOGUzNzcxN2YyMWEwMjNiM2MyYWM4NDEwOWUwMzhmN2IyMjMzNzkwYTBhYTE1MTFjMyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/src/lib.rs#L68-L90",
+          "version": "repo-lines-v1:sha256:5a7a4cc5cffe6d47d44b673d3ea397d8b6dab6a37eef1d54af14a2a000c8e72c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5YTQ3MDBkMzEyMmE3ZGIyZjIxMGVlZjRlOTMxNmQyZDVmZmQwNDkzMjhlZTllMDYyMTk4ZTJjOTkxNzgyNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExMjNiZmQ4ZWU4ZTcxODk2MGU3YTQ2MWMyZDQ5N2NhMjNmNWRjZjc2MGJhMGI1ZTBmZjU0Y2IyMTc0YjUwMDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmYTkxOWI2NmM5NjMyMmUzYWIxZDA0ZWY1MDA1MjU5NTY4MzU4NDBlN2RmOWNlMTkyM2QwM2ZkODE4YWQ3ZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczMDEzNjE5YjkxM2M3MjlmMmZhNGZmZDM3YjY3Yjg3ZTQ2Yzc0ZTY4MDk0N2FhMTI3NmE2ZmY4NWViNTAzNDcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/main.rs#L1-L6",
+          "version": "repo-lines-v1:sha256:1fb26fc9bb724dc51bcbc0e72822caa2a5c367c3771d954743d9cea6556fa99b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWI2NGY5Y2VlN2MwN2ZkZDZlMTE2ZTBiM2Q1MWZhYWMzMTc0ZTcyMDMzMjZkY2RlZWUxZWIxNGQ0Njk2OTlkNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_66ab4a0654344de5916957976eed2295",
+      "statement": "setup() 在 windows/linux 上显式 register_all 注册 deep link scheme, 取 app_data_dir 建目录, 用 tauri::async_runtime::block_on 同步打开唯一的 RuleSystem::open(RuleSystemConfig::desktop(db, artifacts)) 并 app.manage(AppState); 数据库不可用会在启动阶段直接失败而不让 UI 带半可用状态启动。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/lib.rs#L91-L111",
+          "version": "repo-lines-v1:sha256:dec53d028f0891214bd9c61f843041ce899894743f6bfcb9faeb8bb0c939a5cc:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxN2MxYTA3MGVjNGVkYWE4MWExZTdkNDA2ZWZjMDYzZDcxMWFmMDgxYmUyNjFhZTI1ZThkNGQ4Yjc3ZjJhY2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA4NGZiOTE0YTY3ODQzZmE3MzE5OGE1N2Q5NzkwMTNjMTdjZmRjZGExMWYyN2MwZGQ1ZjVjYWE0MzI4NTQ1NTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxMzFlNTllZTJkZGVkZGU1NjI3NmIxYTY3YjZhMzY2Y2I0MjA0YTE4MmZmMjRkOGIxOTQyOWY4MGQyMzFmNmMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_bdc10d4760a2417b9ae152f717f6a659",
+      "statement": "AppState 只持有 Arc<RuleSystem> 与取消注册表 Arc<Mutex<HashMap<ExecutionId, ExecutionCancellation>>>; Tauri 层不持有 Plan、线程池或数据库连接, 业务编排全部在 RuleSystem 内。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/commands/state.rs#L8-L23",
+          "version": "repo-lines-v1:sha256:b2a50f7e8abd135d021e29d256adda3c9744648db5592742ec817cf1fc303385:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmMyMGRjYjg2YmY3YWE5ZWQzNTMwOTk1MjlkODAxODJmNDFjYzc2OWFiOTgyOGEyMDY5YjMxOTk0Njg3YjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVjNmZiNzdhODFlODk3M2RjMjM5YjM1NTc2ODU3ZTBkNGZlMzZlMjBmNDJjZTZjYTZhYWY4YzQwMjZmYTE1NmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6edb3350eba84bc1986dd09bf7bbab1d",
+      "statement": "命令清单由 lanjing_commands! 宏定义一次并被两个消费者展开(generate_handler 与测试用名单常量), 测试断言名单与期望完全相等、无重复项、恰为 25 项, 且不得出现任何 source_document 前缀的旧命令名。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/lib.rs#L117-L170",
+          "version": "repo-lines-v1:sha256:ab81d54b93251421da0852097c20f4a97a2bde3e275d64a2873737bfe4cbac95:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1Y2Y1ZmMyM2YyYTZkMjNjM2VhNTFlNzJmNWU4OTZjNzU1NWZiYWEwNWNkNWIxZWExODJiZjk2MThhOGU4MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0ZTRhMTE2ZWQ5NDAwMGE4MDJlMjAzYTNiYTZlMTNhODg0YjQzMTZmNmE2NGFkNjc0OTA2NmMwMDFiMWIwY2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/lib.rs#L14-L60",
+          "version": "repo-lines-v1:sha256:f4c8d013df7e68f88830a223f1c1e3c67eed0d72d117a7460a2e27d3ff7e3eb0:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljM2Y4M2FmYzQzMDlmMDQ0ZDE5NmVlNWY0M2Y0MDc4YzIwOTE4MmI3NGZkY2NjZjY3N2E1MGY3OWU0ODI1MjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxYTUxM2M3NmEwY2FhOTFhODBjMTY4ZDA4ODZhOTkyZDY1NzIzOTMwNjE0MGJiMmMyMGM1ZDZlOGNiMTk5NDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4YzRkZWRkMWJmMDAxMWQ5ZjkzMGE5YmZjNWM1ZGQyYjM0ODkyZGNhOWUyMDUyMjk3ZDJmMTEyZmZhMThiNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlmMDFjZDgwNDQ5ZGNmODA1MjhmNzQ0NmJhMjZhMGUxNDE4YjUxMmFmMTVjM2NjN2MxZDE1MDMwZjc5NWFhYzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_24072be441ed4fe39b870ece40b04168",
+      "statement": "25 个命令分四组: import/install 4 个(fetch_import_src/prepare_install/prepare_source_rollback/install)、execution 3 个(execute/cancel_execution/catch_up_execution)、query 8 个、document 10 个; 每个命令都是薄包装, 取 State<AppState> 转调 system 方法并返回 Result<_, RuleError>。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/commands/document.rs#L19-L110",
+          "version": "repo-lines-v1:sha256:d8ac760daee15141852f365a292c124708bca51007399e2316059a2971006351:eyJzZWxlY3RlZExpbmVDb3VudCI6OTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1Y2Y1ZmMyM2YyYTZkMjNjM2VhNTFlNzJmNWU4OTZjNzU1NWZiYWEwNWNkNWIxZWExODJiZjk2MThhOGU4MWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwNzcxMmVmYjUxYzU0NTUyMzdlNzg3MGIyYzZlZTI1NDc1OGY1Y2E2ODE1OWE3NzM0YTM4YzI1YTA3ZmJlZTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZlYmU2OGQzNzM2N2JmNGZkZTgwNTVhNGQ3Y2UxY2RjMDRiZjY1M2Q4ZGViY2EyOGI3NDJmNjg5MGNkYWZjN2UifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/execution.rs#L43-L140",
+          "version": "repo-lines-v1:sha256:1cf771e12b9f24a70d7dded08a1a028802afdd6c41aae3723b9b6d7395139d5a:eyJzZWxlY3RlZExpbmVDb3VudCI6OTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlOGEyZmJlNjE5NWRjOWUyNDdmY2YxOTNmMmZkYWU3MzZlN2JkMWUyNzFiMjEwMzE0MDFmODcyYTY5MTFiZjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/import_install.rs#L47-L80",
+          "version": "repo-lines-v1:sha256:c3b7d4c27a47a179651126c1afa984dd6331ee920e70d456ab942254f404203d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/query.rs#L12-L110",
+          "version": "repo-lines-v1:sha256:5cf4879f4aecbc0093012c0e895c21ad1fdc8772795a3b6e0ff8d89f9e0aec5f:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYzY2Q4MjIzYWZiYTAzZTQ4M2MwMDRkNzNjZWFiNjYxYmYwMzU0MzRlM2M2OGFhNDc4MGNkNzgxNjNmMzgyNjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_f946f23304ca4752b775dc284878dc02",
+      "statement": "execute 启动 runtime session 后把取消句柄登记到 AppState, 后台 spawn forward_execution_events 通过 Tauri 事件 rule-execution-event 推送, 并立即返回 { execution_id }; 单条事件投递失败只 warn 不取消 execution, 看到终态后从注册表移除条目, 而事件流在终态前结束则保留注册表条目并 warn。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/commands/delivery.rs#L20-L54",
+          "version": "repo-lines-v1:sha256:bef4cf1230a3946b156fd08dc88a106eea2f7805f33a79ba7c30d2a7bacb3db6:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0ZDJjYzJlM2JlZTk2ZWIxYTE4Nzg0MTNkNmU3NzU1NTI4MTAyYjgzZDNjYWFmY2RkNzFkMTRlZDg1NDk5ZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5NmY4Y2IwODNmYTgwMGE0ZGNkMjk2OTcyMmQ3YjkyNjg2YWRkOWViZTM2NTU0OTJmYTY3MmIxYTdjZWQyNDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiOGVhNDM2NGY3ZjI1MWFlMWUwYzgyZjAyZmViNzNmNjkzZDc0YzM4NTdmYTM2NWI4OGZkOGJjNzQ3NGIyZDgifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/delivery.rs#L9-L9",
+          "version": "repo-lines-v1:sha256:9034a06a7f6f80859e460f37fac59ef0259a697c4c5458c4b69c6591d6925f75:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTAzNGEwNmE3ZjZmODA4NTllNDYwZjM3ZmFjNTllZjAyNTlhNjk3YzRjNTQ1OGM0YjY5YzY1OTFkNjkyNWY3NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTAzNGEwNmE3ZjZmODA4NTllNDYwZjM3ZmFjNTllZjAyNTlhNjk3YzRjNTQ1OGM0YjY5YzY1OTFkNjkyNWY3NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzAxYTEzYTRiZjIwNTllODMyODQ4MjhmYzcwNzJkMDU2NDFhMzQyMDAwYzMwYzNjZTJhMmJjYWQ2ODk4NzhmNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTI5NTVmYzI1MGRmMzJiNzBiZjY4N2E0OGZkMDk5ZDc1N2U3YTNkZDA3MDM3OWQ2MjJiZmVjZDNmNDYzNGRhNCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/execution.rs#L43-L74",
+          "version": "repo-lines-v1:sha256:94b3c1f99382ee0531646ff4b4157c1a246266aadcd1ae379cafd768827f49c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlOGEyZmJlNjE5NWRjOWUyNDdmY2YxOTNmMmZkYWU3MzZlN2JkMWUyNzFiMjEwMzE0MDFmODcyYTY5MTFiZjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY3N2M5N2RkMTZhNzBhOTBlYTk4ZWYxN2JmZDJiODc0OGY0OWMwYTgwZWQ3MmIxNDczODhhMGUzM2E0ZmRlYWEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_1413bd05a5364e20983710bced79f304",
+      "statement": "cancel_execution 从注册表取句柄调用 cancel() 并返回 changed 表示是否首次改变状态(幂等); catch_up_execution 按 after_sequence 取回已持久化事件逐个 emit, 若最后一条是终态则清理取消注册表, 返回 replayed_count 与 delivered_through_sequence。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/commands/execution.rs#L76-L96",
+          "version": "repo-lines-v1:sha256:1fed76a6ee994212e7f32f4689381b78c6f8e74bf30540c6f8937b4c2d21f20d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYxMGExZjk5NWU0OTNkNTFkZjYyNjY3ZDlmYmNjOTc3YTBhODk4MTRmY2QwMzY3OGE2YzcyMmE2Njg1YjkwNWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4ZWY0OTAxYzBjMGI2NWRjYmQxN2JmY2YyNmFjNzI3N2I3NzA4NWI4NzU1YjgzNDgxYWNhYWQ3MmJlZmY1ODYifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/commands/execution.rs#L98-L140",
+          "version": "repo-lines-v1:sha256:662582918672e0eefd22f14f40028761ae2d0472883db669a128b6fb1a9632a7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9680d43e68a141f1877ac1887782f419",
+      "statement": "前端 wire 层只在 src/shared/tauri/ 里 invoke, 三个文件共 19 个 wrapper: sources.ts 6 个、library.ts 3 个、rules/wire.ts 10 个(与 document 组一一对应)。",
+      "evidence": [
+        {
+          "resource": "repo://src/shared/tauri/library.ts#L39-L55",
+          "version": "repo-lines-v1:sha256:cbb828e4facbd71aa5169ae126a023cf4655932fa8827685c3e63125d3327dae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkZjRkMzg1ZGY1OWYzODA3MWFlYTNmMGVlYzI4MzRlYjAxYzk5YzdkNTE3OTUzZjExNDJlOTFhNGEzYmZmYjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxZmYxMzViYjc2ZmM2MjU2YTRmNTE0OWI2ZDk2M2JmYjM0NDU4MmNjY2NkOWNlNzAxOGU1NjkzOGZjZjQ0ZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhOGE1MThlZWI3NjQ1NGJiYzIxOTAyZDU3OGI5MzZhZTQ1OTdlMGE4NDlkOTViYzE0ZDk4YjkyYmZmYWMzZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmOGY0OThmYjQzYzIzOTAwYjQzODVhODY0YmYxNThiNTUyMTBmN2Y4NzI4OTY2NGNlNmVhYTEwZGVmOWM4OWUifQ"
+        },
+        {
+          "resource": "repo://src/shared/tauri/rules/wire.ts#L304-L367",
+          "version": "repo-lines-v1:sha256:be8fd26d2ce51242765199a44857d61ebda6a8765f973d037991b3d3baca8ce8:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkM2NkNDQ5NmVlMmQ1NGFmM2Y2ZTdiMmQ1ZjY5NTMzNmE5YzZmNjRiNWQ5M2E4YWQxYTk0ZGY3Yjk2MzFiMTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxM2JiNjE3NTE5ZDAzODJlNjMzNjg1ODNkMTcyNTVhZDVmZDE1NjFmMGJkZTVmOGRjYjE0ZmUzMDNiMzI3NDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJiODc2MzM1MmU5YTZjMzE1MTZiZGNkODk2MTMwMTdmYjJmOGM2ZjcxN2QyZTJkY2RhNzhmMjBmYzFkMTBjODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://src/shared/tauri/sources.ts#L78-L118",
+          "version": "repo-lines-v1:sha256:dfc35ac053c94ffa391f88bdf5a88caee697eeca0d10732c85f4570a11eb0a5c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5ZmQ0ZjkwZmNhYjlmYjMxZDJkNjk3ZGM4OWRlZGJmNjY4ZmVlMGQ4Njg1ODVmZGM3ODA3ZWIwMDM1MjI5MDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzNjJhOTQ4YmI2MTc2MTJiYjVkYjk5NWFlZDc0MzM4ODQ3NTZkNzI1MjgwNGRkYjlkNDQxMWQ5OWFiMmU5NWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8bfff816013e4c0b913142b5b766f42f",
+      "statement": "25 个已注册命令中有 6 个没有前端调用点: execute、cancel_execution、catch_up_execution、get_media_item、list_media_units、list_media_assets(在 src/ 内检索这些名字无命中), 因此尽管后端执行链路完整, 当前没有任何前端路径能发起一次 execution。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/lib.rs#L14-L42",
+          "version": "repo-lines-v1:sha256:9eefe56be673123b430e7a6fd97dcdf16592e60f7073417baed8a2ee35a02f6b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljM2Y4M2FmYzQzMDlmMDQ0ZDE5NmVlNWY0M2Y0MDc4YzIwOTE4MmI3NGZkY2NjZjY3N2E1MGY3OWU0ODI1MjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1MjJjNDJjZDE5YzZkMDNkODA4YzQ1MjcyMDU1MjgyNWI3ZWExYzViNDkxYjIxODUxMWNhYzc0MTVjZjlkOWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4YzRkZWRkMWJmMDAxMWQ5ZjkzMGE5YmZjNWM1ZGQyYjM0ODkyZGNhOWUyMDUyMjk3ZDJmMTEyZmZhMThiNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk0Njc2ODc1NTBiYzA5MjhjYWFlYjI1NDk5YzYzZjgzYTYwNzQyYzZjMTYwMGRmZTBiYmI4YmIxMjc0MjU1OTQifQ"
+        },
+        {
+          "resource": "repo://src/shared/tauri/library.ts#L39-L55",
+          "version": "repo-lines-v1:sha256:cbb828e4facbd71aa5169ae126a023cf4655932fa8827685c3e63125d3327dae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkZjRkMzg1ZGY1OWYzODA3MWFlYTNmMGVlYzI4MzRlYjAxYzk5YzdkNTE3OTUzZjExNDJlOTFhNGEzYmZmYjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxZmYxMzViYjc2ZmM2MjU2YTRmNTE0OWI2ZDk2M2JmYjM0NDU4MmNjY2NkOWNlNzAxOGU1NjkzOGZjZjQ0ZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhOGE1MThlZWI3NjQ1NGJiYzIxOTAyZDU3OGI5MzZhZTQ1OTdlMGE4NDlkOTViYzE0ZDk4YjkyYmZmYWMzZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmOGY0OThmYjQzYzIzOTAwYjQzODVhODY0YmYxNThiNTUyMTBmN2Y4NzI4OTY2NGNlNmVhYTEwZGVmOWM4OWUifQ"
+        },
+        {
+          "resource": "repo://src/shared/tauri/sources.ts#L78-L118",
+          "version": "repo-lines-v1:sha256:dfc35ac053c94ffa391f88bdf5a88caee697eeca0d10732c85f4570a11eb0a5c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5ZmQ0ZjkwZmNhYjlmYjMxZDJkNjk3ZGM4OWRlZGJmNjY4ZmVlMGQ4Njg1ODVmZGM3ODA3ZWIwMDM1MjI5MDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYzNjJhOTQ4YmI2MTc2MTJiYjVkYjk5NWFlZDc0MzM4ODQ3NTZkNzI1MjgwNGRkYjlkNDQxMWQ5OWFiMmU5NWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_69ce3ffc6f904003ade806818a94c8f0",
+      "statement": "library.ts 的 projectLibrary 是纯前端函数: 把投影过滤为收藏/置顶/最近打开/有进度并排序, 不调 IPC, 属于展示层而非 IPC 边界。",
+      "evidence": [
+        {
+          "resource": "repo://src/shared/tauri/library.ts#L58-L72",
+          "version": "repo-lines-v1:sha256:c75f30267441811113733c842cb25a196663d5fc263ab2ea1512969751318b59:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjN2E3YmJkMmViMDcxZThmYjRmN2I0YmJiZTQxMWQxNjk2M2Q0OTdlMDE4MDk2M2Q1OGU0YzY5YzA3NjY3YzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA5MzQzZDU3NzBjOGU5ZWI2MjFlZGFkOGI5MjNjZDBiN2RjYjcwYzAwNDUyMjg5ZDc0YTY3ZjMyMTExNzE3MzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_3239aeac308e4761bc139e84d568a5b9",
+      "statement": "wire wrapper 在非 Tauri 环境下有明确降级: isTauri() 为假时读操作返回空值(get_library_projection 返回 {global_seq:0, entries:[]}、loadMediaItems 返回 []), 写操作返回 rejected Promise(library_update_unavailable), 使浏览器开发模式不会崩在缺 IPC 上。",
+      "evidence": [
+        {
+          "resource": "repo://src/shared/tauri/library.ts#L39-L56",
+          "version": "repo-lines-v1:sha256:146ccc1d7b0ebebf6e93e0db3f8255bfd68f0e3412b1db17a1df2e20e67ee951:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkZjRkMzg1ZGY1OWYzODA3MWFlYTNmMGVlYzI4MzRlYjAxYzk5YzdkNTE3OTUzZjExNDJlOTFhNGEzYmZmYjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhOGE1MThlZWI3NjQ1NGJiYzIxOTAyZDU3OGI5MzZhZTQ1OTdlMGE4NDlkOTViYzE0ZDk4YjkyYmZmYWMzZmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI0ZjQxNjQ1ODI0ZTJkM2Q2Y2YyNzIyY2RiMzliNDIzNTM0OTA1NGY0MjYyMDRkZWUyZGEwZjk2MTlmYmJmNzAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_25d9bb86f1304d84a625d3a3eb56e570",
+      "statement": "capabilities 只对 main 窗口授予 core:default、core:event:default、mcp-bridge:default、dialog:default、zustand:default、deep-link:default、opener:default、core:window:default 与四个窗口动作(close/minimize/toggle-maximize/start-dragging), 没有 fs/shell/http 等插件权限, 因为网络出口在 Rust 侧。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/capabilities/default.json#L1-L16",
+          "version": "repo-lines-v1:sha256:3840ada79ff7125d698c5d37ddc75c2acec17571ff562f8264bbbf9641dd99be:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ZmIwOGZkYTFhY2I5NTdiNjExNmJkMzc4MTFhMWZlNDFhMDE2MTFjMDYzMWVkYmY3ODZkNjg4OWEyN2E1NWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmZmI0YTUwZmI0YWE5OWQ2MjExOTczNTA5YjVjMTIwNGU1NGFjYTBiZTBlOWZlNzg2YzMyNWY0OTY3OTg3YWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwNDMyNDk5ZDYyYTBlODQzNDg2NzhkZDRjMGU3NWE2N2M2YTBkM2U2NTRmYTc2NTI1ZmJmNjU1NDhmZDFmNjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_305a88d4549c4601950f9fd826c75b79",
+      "statement": "CSP 为 self-only 加必要例外(default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'self'; object-src 'none'), img-src 里的 https: 是当前唯一允许的外部资产来源, ADR 0007 规划的 lanjing: 尚未加入; 窗口为 1440x960 最小 768x720 且 decorations:false, macOS 覆盖为 decorations:true + titleBarStyle Overlay + traffic light 位置。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/tauri.conf.json#L30-L36",
+          "version": "repo-lines-v1:sha256:44f2248cab6ef8669f75910382edb6f84fd7098a58388b402e85e255e6dbca96:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTE0MTYwNDliZDQxMGM1NmZmN2Q2Y2U3ZmU3NDNmMzcyNjZlMTU0YzBjM2Y5ODU5OTgxN2JmMjE1ZjUwZjlhNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzUxNmJkYWI0YjE0MDc3OWI2N2U1ZGM1YmI3MjI3MTI5ZDY1NzljNTMyZjliMWZiZmYyY2QwNDE4NmFhNTcwMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2JkMWFkZGRhZmM1YjBlMjdhYTc2ZDgyOWM1ZjMyNDllZGNkMzBmNjRmZDdiZWYwNTE1ZDU0YTExMzA4NmFkYiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/tauri.macos.conf.json#L1-L18",
+          "version": "repo-lines-v1:sha256:8a201bd444ccba7139b98480aa11e6e8d470b48fca1616270fb64825e5ac5ec3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2ZmIwOGZkYTFhY2I5NTdiNjExNmJkMzc4MTFhMWZlNDFhMDE2MTFjMDYzMWVkYmY3ODZkNjg4OWEyN2E1NWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b8cdea8254af4c8b8968732c056825b0",
+      "statement": "deep link 的分工是: Rust 侧不解析、不记录 argv、不建第二个 queue, 只在第二实例被拒后聚焦主窗口(避免泄漏 URL query); URL 由 tauri-plugin-deep-link 的 getCurrent/onOpenUrl 拥有, 解析全在前端 deep-link-parse.ts, 再由 App.tsx 的 Startup 按 intent 导航或报错。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/deeplink/mod.rs#L1-L18",
+          "version": "repo-lines-v1:sha256:250663893135c1fd1bd15498f50fe04af4e58069693ed01cfce6f81db5604f15:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlY2QwYTdlOTcyYmNkYjA2NjQyYjEwYWM3ZjIwMWIwNzIyZDg3ZjdjMzIyMzlhMjUzYTRhYjhiMWZmYmUyOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        },
+        {
+          "resource": "repo://src/App.tsx#L29-L58",
+          "version": "repo-lines-v1:sha256:032e0e9c590882de7b794ad5b893a7612b8f29a07da28722da1397c80b54716c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5NjZmYmZhODg5OThkYTc0NjU2YzUwMTk0OTU2YzI1ZjA4NDk0NTc2NjBjMDA5ZmU2M2QxZTlmYTlkYzkzMWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NzY5MTRiM2MyMWQwYzEzN2YyM2I5MzNiNTU3MDQ4YjdiYThhMWMxMGIxNjk4ODhiZTc0YzMzMzEzMTYyMDQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIwNzRjZTRiMzlkNTVjMTIzOTJlYWFlNTg5NTIzNTExMTU2MzM5MjI0OTNkNDBiMjE1NGFkYWYyYzIzNTk5OTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ3M2U1MDQxNDQ1MmYwYTFjNmIzMzVlMTk4ZTBiNGFlMjZjZTZlMjQ3ODdlZmNlMDdlOTVmNDY5NzdkYWU4MjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_70593bf0504b43aea6b9ce8d4a2c7316",
+      "statement": "deep link 支持 legado/yuedu/lanjing 三个 scheme(desktop), 单实例的 deep-link feature 会先把已配置 scheme 的 argv 转交给 deep-link plugin, 因此 focus_main_window 拿到的是已交接过的事件; 单实例与窗口聚焦只在桌面目标编译。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/lib.rs#L71-L80",
+          "version": "repo-lines-v1:sha256:a256cfb42e14e283aab12589a2556da24285c5a7617273bf1a879f948102c1f9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwZWY3MThkYzM3ZTYxOTAyZDAxY2MzNzQxOTM3OTI1NzNjOThlMjcyZDUwMTI1NmE3NGNhZmIzOGEyNTZiY2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjNzQ2ZWEyODM0MTgzOTIzYjViNGIxY2EwOThmMmM0MWE1NWMyY2NkNGVkZWRiZjMyZWM1OTQ1MWUxYWE5NzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4OTUyZTQzZTNiN2MzNjNmMWI3MjhhZDdkNDFjNDFjODRlMGNmODI1ZDE4NjExNmZhODgyOTU1MmI1ZWY5NDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE4M2QxYmMxYmZlNjZiOGY5NWMwY2Y5OTYyNzc5ZTJmNTE1MjFkNDRjYjQ3OTcyNmM0ODRjOTNlNDc2ODM3NzkifQ"
+        },
+        {
+          "resource": "repo://src-tauri/tauri.conf.json#L9-L16",
+          "version": "repo-lines-v1:sha256:c0cd2508be08819b1ceeda0d65c364077f4762db1d7214e523455a8f74d03680:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmU5OGI1NTI4ODgzOTQyYTQ2ODAwOWFlYTg0MzhiZjA0MjExNmM1MjQ1ODVlNTk1OTE5OGVjZjhlOTAyYmI2MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWI2MmY2MGQ4NTkwYTU3OWNmNDZmOGQ2NzM3OGM0YzU3MmI5NjJjZWNjZGI5MGM3YTVmN2I0MmI5NjA3ODJhNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2IxNzQ5ZDA5YTI3M2Y4YzA5YjI0MjgwNGZjOGVmODAxNzk0NTVhMjdlYTJjNjM0MGU4ZGY4MDZlMWZhMzZjOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmJhNGRkNjI1Njc2NGE5ODNlYWY0NmUxNGViMzdjZmU5OWUwNWUzNGFlOTM3YWJhYTkzNzI5YjA1ZDkxNTg0ZCJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.0",
+    "at": "2026-10-04T10:14:16.110Z"
+  }
+}
