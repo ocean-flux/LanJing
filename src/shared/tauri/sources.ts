@@ -62,10 +62,14 @@ export interface SourceRevision {
   installed_at_ms: number;
 }
 
+/** 后端依据已安装状态判定的来源操作。 */
+export type SourceOperation = 'install' | 'update';
+
 /** Prepare_install 返回的安全候选；不含 Definition、Plan、body 或 secret。 */
 export interface InstallCandidate {
   id: string;
   expected_installed_revision: number;
+  operation: SourceOperation;
   profile: SourceProfile;
   required_grant: CapabilityGrant;
   diagnostics: InstallDiagnostic[];

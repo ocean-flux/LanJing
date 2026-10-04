@@ -119,8 +119,9 @@ function candidateItem(candidate: InstallCandidate): CatalogItem {
   };
 }
 
-function isUpdate(candidate: InstallCandidate, sources: InstalledSource[]): boolean {
-  return sources.some((source) => source.source_id === candidate.profile.id);
+/// 更新与否以 candidate 声明的操作为准, 不再由前端比对已安装来源推导。
+function isUpdate(candidate: InstallCandidate): boolean {
+  return candidate.operation === 'update';
 }
 
 function previousSource(
@@ -232,7 +233,7 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
             {
               item: candidateItem(candidate),
               candidate,
-              isUpdate: isUpdate(candidate, state.sources),
+              isUpdate: isUpdate(candidate),
               previous: previousSource(candidate, state.sources),
             },
           ],
@@ -305,7 +306,7 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
           return {
             item,
             candidate,
-            isUpdate: isUpdate(candidate, state.sources),
+            isUpdate: isUpdate(candidate),
             previous: previousSource(candidate, state.sources),
             failure: null,
           };

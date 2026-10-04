@@ -17,7 +17,7 @@ use super::super::error_mapping::{compiler_error, runtime_error, storage_error};
 use super::super::{RuleSystem, now_millis};
 use crate::{
     CandidateId, CapabilityGrant, InstallCandidate, InstalledSource, RuleError, RuleErrorStage,
-    RuleInput, SourceId,
+    RuleInput, SourceId, SourceOperation,
 };
 
 pub(super) struct PreparedRuleInput {
@@ -335,6 +335,7 @@ fn candidate_from_summary(summary: CandidateSummary) -> InstallCandidate {
     InstallCandidate {
         id: CandidateId::from_uuid(summary.candidate_id),
         expected_installed_revision: summary.expected_installed_revision,
+        operation: SourceOperation::from_installed_revision(summary.expected_installed_revision),
         profile: summary.profile,
         required_grant: CapabilityGrant::from_policy(summary.required_grant),
         diagnostics: summary.diagnostics,

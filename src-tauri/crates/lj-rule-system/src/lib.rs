@@ -24,8 +24,8 @@ pub use types::{
     ProvenanceSummaryView, RenameNativeRuleDocumentRequest, RestoreNativeRuleRevisionOutcome,
     RestoreNativeRuleRevisionRequest, RevisionConflict, RuleInput, RulePackageInspection,
     RuleSystemConfig, SaveNativeRuleDocumentOutcome, SaveNativeRuleDocumentRequest,
-    SemanticActivation, SemanticSave, SourceId, SourceRevisionSummary, UnavailableNodeSummary,
-    ValidateNativeRuleDocumentPreview, ValidateNativeRuleDocumentRequest,
+    SemanticActivation, SemanticSave, SourceId, SourceOperation, SourceRevisionSummary,
+    UnavailableNodeSummary, ValidateNativeRuleDocumentPreview, ValidateNativeRuleDocumentRequest,
 };
 // 标准媒体模型经 façade 再导出，避免根 package 依赖 lj-media path。
 pub use lj_media::{MediaAsset, MediaItem, MediaUnit};

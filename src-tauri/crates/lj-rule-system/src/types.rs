@@ -8,7 +8,8 @@ mod query;
 
 pub use candidate::{
     CandidateId, CapabilityGrant, InstallCandidate, InstalledSource, RuleInput,
-    RulePackageInspection, SourceId, SourceRevisionSummary, UnavailableNodeSummary,
+    RulePackageInspection, SourceId, SourceOperation, SourceRevisionSummary,
+    UnavailableNodeSummary,
 };
 pub use config::RuleSystemConfig;
 pub use document::{

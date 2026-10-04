@@ -147,6 +147,8 @@ pub struct InstallCandidate {
     pub id: CandidateId,
     /// prepare 时固定的 installed revision。
     pub expected_installed_revision: u64,
+    /// prepare 依据已安装状态判定的来源操作。
+    pub operation: SourceOperation,
     /// 稳定来源资料。
     pub profile: SourceProfile,
     /// 最小 capability grant。
@@ -159,6 +161,27 @@ pub struct InstallCandidate {
     pub plan_hash: String,
     /// UTC epoch milliseconds 到期时间。
     pub expires_at_ms: i64,
+}
+
+/// 来源操作: 由 prepare 依据已安装状态判定, 调用方据此区分安装与更新。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceOperation {
+    /// 首次安装来源, 此前没有已安装 revision。
+    Install,
+    /// 更新已安装来源, 基线是 `expected_installed_revision`。
+    Update,
+}
+
+impl SourceOperation {
+    /// 基线 revision 只有已安装来源才有, 因此它本身就判定操作类型。
+    pub(crate) fn from_installed_revision(expected_installed_revision: u64) -> Self {
+        if expected_installed_revision == 0 {
+            Self::Install
+        } else {
+            Self::Update
+        }
+    }
 }
 
 /// 已安装来源的安全摘要。

@@ -19,7 +19,7 @@ use super::super::RuleSystem;
 use super::prepare_install::PreparedRuleInput;
 use crate::{
     CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, RuleErrorStage, RuleInput,
-    RuleSystemConfig, SourceId,
+    RuleSystemConfig, SourceId, SourceOperation,
 };
 
 fn init_mock_keyring() {
@@ -397,6 +397,93 @@ async fn prepare_install_rejects_package_with_unavailable_capability() {
             .await
             .expect("list installed sources")
             .is_empty()
+    );
+    drop(system);
+}
+
+#[tokio::test]
+async fn candidate_declares_install_for_unknown_source_and_update_for_installed_one() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+
+    let first = system
+        .prepare_install(package_input(&definition, "v1"))
+        .await
+        .expect("首次安装必须可准备");
+    assert_eq!(first.operation, SourceOperation::Install);
+    assert_eq!(first.expected_installed_revision, 0);
+    let installed = system
+        .install(first.id, CapabilityGrant::network_only())
+        .await
+        .expect("首次安装必须提交");
+
+    let update = system
+        .prepare_install(package_input(&definition, "v2"))
+        .await
+        .expect("已安装来源必须可准备更新");
+    assert_eq!(update.operation, SourceOperation::Update);
+    assert_eq!(update.expected_installed_revision, installed.revision);
+    drop(system);
+}
+
+#[tokio::test]
+async fn rollback_candidate_is_declared_as_update_of_installed_revision() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+    let first = system
+        .prepare_install(package_input(&definition, "v1"))
+        .await
+        .expect("首次安装必须可准备");
+    system
+        .install(first.id, CapabilityGrant::network_only())
+        .await
+        .expect("首次安装必须提交");
+    let source_id = SourceId::from_identity(first.profile.id.0.clone());
+
+    let rollback = system
+        .prepare_source_rollback(source_id.clone(), 1)
+        .await
+        .expect("已安装来源必须可回滚到历史 revision");
+
+    assert_eq!(rollback.operation, SourceOperation::Update);
+    assert_eq!(rollback.expected_installed_revision, 1);
+    drop(system);
+}
+
+#[tokio::test]
+async fn stale_candidate_is_rejected_after_source_revision_moves_on() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+    // 两个 candidate 都以"尚未安装"为基线, 第一个提交后第二个基线就过期了。
+    let first = system
+        .prepare_install(package_input(&definition, "v1"))
+        .await
+        .expect("首个 candidate 必须可准备");
+    let second = system
+        .prepare_install(package_input(&definition, "v2"))
+        .await
+        .expect("第二个 candidate 必须可准备");
+
+    system
+        .install(first.id, CapabilityGrant::network_only())
+        .await
+        .expect("首个 candidate 必须提交");
+
+    let error = system
+        .install(second.id, CapabilityGrant::network_only())
+        .await
+        .expect_err("过期 candidate 不得提交");
+
+    assert_eq!(error.stage, RuleErrorStage::Candidate);
+    assert_eq!(error.code, "candidate_stale");
+    assert_eq!(
+        system
+            .list_source_revisions(SourceId::from_identity(second.profile.id.0.clone()))
+            .await
+            .expect("已安装来源必须仍可读历史")
+            .len(),
+        1,
+        "过期 candidate 不得追加 Source Revision"
     );
     drop(system);
 }

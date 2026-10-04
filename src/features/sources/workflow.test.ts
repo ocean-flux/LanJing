@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createSourceWorkflow, type SourceWorkflowAdapter } from '@/features/sources/workflow';
-import type { InstallCandidate, InstalledSource } from '@/shared/tauri/sources';
+import type { InstallCandidate, InstalledSource, SourceOperation } from '@/shared/tauri/sources';
 
 function installedSource(sourceId = 'source:legado:one'): InstalledSource {
   return {
@@ -20,10 +20,15 @@ function installedSource(sourceId = 'source:legado:one'): InstalledSource {
   };
 }
 
-function candidate(sourceId = 'source:legado:one', network = false): InstallCandidate {
+function candidate(
+  sourceId = 'source:legado:one',
+  network = false,
+  operation: SourceOperation = 'install',
+): InstallCandidate {
   return {
     id: `candidate:${sourceId}`,
-    expected_installed_revision: 4,
+    expected_installed_revision: operation === 'update' ? 4 : 0,
+    operation,
     profile: {
       id: sourceId,
       title: '待安装来源',
@@ -117,7 +122,7 @@ describe('source workflow', () => {
   it('marks an existing identity as an update and resets grant after stale install', async () => {
     const workflow = createSourceWorkflow(
       adapter({
-        prepare: async () => candidate(undefined, true),
+        prepare: async () => candidate(undefined, true, 'update'),
         install: async () => {
           const stale = new Error('stale') as Error & { code: string };
           stale.code = 'candidate_stale';
