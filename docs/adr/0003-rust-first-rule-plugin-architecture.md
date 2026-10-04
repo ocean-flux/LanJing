@@ -9,8 +9,8 @@ LanJing 的规则系统需要支持高内聚、低耦合和丰富的插件 API�
 
 - `FlowNodeConfig` 和 `PlanNodeConfig` 是闭集 enum。
 - `EffectKind` 只有 HTTP、QuickJS、Extract。
-- `EffectHandlers` 直接持有三类 concrete handler。
-- `RuleSystem` 直接组装 storage、compiler、runtime 和 node adapter。
+- #35 已删除 `EffectHandlers`, 但 registry 的 `EffectHandler` 仍只有三类 concrete handler.
+- `RuleSystem` 已通过 frozen registry 装配内置 adapter; 编译, value 和前端目录仍依赖能力闭集.
 
 新增一个规则节点或 effect 会同时修改 model、compiler、Plan hash、runtime dispatch、archive 和 adapter。只增加 QuickJS host call 虽然入口很小，但不能支持新 node、value type、effect 或 source adapter，也不能满足真正的插件扩展需求。
 
@@ -63,6 +63,8 @@ Rule Runtime
 - JS plugin 不进入 Tauri WebView。
 - 当前 QuickJS rule node 与 JS plugin 分开管理。可以共享底层 engine adapter，但不能共享 plugin registry、权限 scope、生命周期状态或持久化状态。
 - 首期不引入 WASM、独立进程或其他脚本 runtime 作为 plugin 基础设施。
+- 完整系统支持随应用分发和从本地文件导入的 QuickJS plugin package. 导入先校验 manifest, 依赖, 平台, 预算和权限, 再运行受限注册代码; artifact digest 只证明内容绑定, 不代表可信作者或授权.
+- 本地安装, 配置, 启停, 版本更新, 卸载和重启恢复属于同一系统. 在线 marketplace, 自动下载, 动态 native binary 与开发文件监听 HMR 不在范围内.
 
 ### 4. 插件 API 采用分域 contract
 
@@ -76,6 +78,7 @@ PluginRegistrar
   ├─ RuntimeRegistry
   ├─ SourceRegistry
   ├─ EditorRegistry
+  ├─ ServiceRegistry
   └─ EventRegistry
 InvocationHost
   ├─ NetworkPort
@@ -94,8 +97,9 @@ InvocationHost
 3. `EffectHandler`，其输入输出、权限、取消、capture 和 replay 规则由 host 约束。
 4. `SourceAdapter`，只能产出标准规则 package draft，不能创建或提交 Source Revision。
 5. `EditorDescriptor`，只提供声明式配置、port metadata 和诊断映射，不注入 React component。
+6. 显式依赖的 typed service contract. service 使用稳定 identity, 版本和输入输出 schema, 在 generation 构建时绑定 provider; 不提供动态字符串 service locator.
 
-command/query 使用显式方法。事件只用于生命周期、诊断、进度和明确声明的 transform pipeline，不能通过监听器隐式改变核心结果。
+command/query 使用显式方法. typed event 只观察生命周期, 诊断和进度; 需要 transform 的流程使用单独声明并校验的 command contract, 不能通过监听器隐式改变核心结果.
 
 ### 5. Definition、Plan 和 identity
 
@@ -161,6 +165,10 @@ discovered
 
 注册返回可撤销的 `RegistrationLease`。激活失败时逆序回滚已注册项；dispose 必须 exactly once。active execution 持有 lease 时，handler 不能被卸载。停止流程先拒绝新调用，再等待已有调用结束，最后释放 scope-owned disposer。
 
+生命周期转移串行化, 同一实例只允许一个在途转移. 并发停止等待同一次清理结果. 清理按依赖逆拓扑与同 scope 的资源逆获取顺序完成; 一个 disposer 失败仍继续清理其余资源, 汇总错误而非只记录日志. exactly once 指每个清理动作最多尝试一次, 不承诺失败的 disposer 成功; 无法终止的 native 调用不能被假装释放.
+
+新组合在 staging generation 校验, 注册和初始化, 全部成功后原子发布. execution 准入原子获得 generation, 确切 plugin lock, policy context 与 lease; 旧 execution 不混用新 handler. 正常 drain 等待在途工作, 权限撤销则立即禁止新的受影响 host call 并触发取消, 两者不混用.
+
 Manifest 至少声明：
 
 ```text
@@ -178,6 +186,32 @@ plugin state policy
 capture/replay compatibility
 artifact digest
 ```
+
+### 8. 完整系统的交付边界
+
+#22 的完整规格取代仅完成内置 handler 查表的验收上限. 内置 HTTP, QuickJS rule node, Extract, Mapper, Merge, Condition, Loop 与来源格式 adapter 全部走公开 SDK; Kernel 保留可验证的通用控制 IR 与标准媒体出口, Runtime 不按内置 node identity 调度.
+
+Definition, Plan, Value, operation, source detection 和前端 descriptor projection 都必须开放. 新增插件不得增加核心 enum 变体, lowering/dispatch 分支, 内置 ID 映射, 静态 ports/defaults 或专属 React component. 真实的插件节点编辑, 保存, 生效, 执行, 取消和 replay 是交付要求, 不以只读 catalog 代替.
+
+资源所有权区分 app, plugin generation, source/document, execution 和 invocation scope. 注册, 读取, 调用, 订阅和释放绑定同一 scope. 跨插件 service 调用继承原调用者的更窄授权并同时受 callee manifest 限制, 不能代调用扩权; 关闭后的 opaque handle 和迟到结果不能继续发起 effect.
+
+capture 同时记录 operation completion 与 operation 内每个受控 host effect, 含嵌套 service, network, clock/random 和 state 读写. 完整封存 trace 不依赖当前插件激活即可回放; replay 不运行 live handler, 不读取当前插件 state, 不产生持久写入, 缺失或损坏的描述与材料只返回错误.
+
+package catalog 区分 installed, desired-enabled, active, failed, draining 和 unavailable. 提交前更新失败保留上一 active 组合; 提交后发布故障报告 committed-but-unavailable 并拒绝新准入, 不能谎称回滚. 持久 selection 与内存发布使用明确提交点和恢复记录, 提交后不再执行可失败的 plugin callback. staging state write 隔离, 初始化不允许外部网络副作用. 卸载保留规则, 来源和 capture, 插件 state 的清除单独确认.
+
+state schema 升级只在 staging copy 做受限确定性转换, 绑定原 revision/epoch 并用 CAS 防止覆盖并发写入. 不兼容转换先 drain 旧 state lease; 失败保留原 state, 句柄不因新组合发布而重定向 namespace. 不把开发规则数据无迁移的决定扩大成插件升级可丢失用户状态.
+
+插件更新不能静默重绑 Source Revision 或 Effective Rule Revision. 采纳新 lock 仍需 Kernel 重新校验/晋升或来源候选审阅. artifact 回收只被真实 lease 与显式保留的可执行版本 pin 阻止, 历史 lock/descriptor/trace 不永久 pin 代码. 旧 live 绑定无法使用时标 unavailable, 历史快照不改写.
+
+候选 origin 区分 adapter 转换与封存 Native/Source Revision. 转换 provenance 和执行所需 lock 分开, 从封存 package 回滚不要求原 adapter. 最终候选校验到领域提交持有短 admission guard, 与 generation 更新和撤权排序; lease 只保证实现存活, 不能替代准入校验. Host 不获取 Kernel 事务所有权.
+
+来源输入在普通 adapter detection/conversion 前完成可信摄入, 抽取已识别凭证并只交付公开 projection 与 opaque slots. extraction 使用开放的声明式合同与受审计的可信 provider, 不是格式闭集; JS manifest 不能自授可信资格. 未能分类的敏感输入拒绝送给不受信任 adapter, 不声称能发现任意未知文本秘密. 历史 replay 读取敏感 capture 仍校验当前访问政策与 owner, 不凭历史 lock 恢复已撤销授权.
+
+Rust native plugin 是可信同进程代码, SDK 合同不等于安全沙箱. CPU deadline 与取消对 native callback 是协作式; 仅可捕获 unwind panic. QuickJS 的 host module, 每次入口检查, heap/stack, interrupt/deadline, 输出与异步任务预算由宿主强制, 但不承诺 engine 严重故障不会影响宿主.
+
+验收必须由核心外的 Rust fixture plugin 与本地 QuickJS fixture package 完成陌生 node, value, operation, service, editor 和 SourceAdapter 的端到端流程, 证明无需修改核心. SDK 模板, package validator, 权限/生命周期失败矩阵和本地管理恢复均为必需交付. 五目标平台需编译/打包与设备或模拟器的核心旅程 smoke; 未实跑项单列 human validation 并保持父 effort open, 不能以 desktop 结果替代.
+
+这个选择吸收 Cordis 与 DeepSeek Harness 的插件组合和 scope-owned registration, 保留 LanJing 的权限交集, 领域提交, 凭证归属与可回放不变量. DeepSeek Harness 的可信 host code 和 Cordis 的 Context 隔离都不是受限 QuickJS 的安全实现模板.
 
 ## 后果
 
@@ -209,8 +243,14 @@ artifact digest
 6. capture/replay 绑定 plugin identity 和 operation；replay 缺少 capture 时不能 live fallback。
 7. SourceAdapter 只能进入 prepare → candidate → install 流程。
 8. QuickJS plugin 的 module loader、host API、quota、watchdog 和 cancellation 在 Rust 与 JS 两侧都有 contract test。
+9. 核心外 fixture 新增 node/value/operation/service/editor/source adapter 不修改核心闭集或前端分支.
+10. generation 更新, 正常 drain, 权限撤销, 并发清理与 disposer 失败都验证真实资源状态.
+11. package 安装, 更新失败, state 保留/清除和崩溃恢复验证持久提交与残留资源.
+12. operation 内多个 host effect 的封存 trace 在插件未激活时可 replay, 且不产生 live I/O 或当前 state 访问.
 
 ## 实施顺序
+
+以下是依赖方向, 不再是按层完成即验收的清单. 实现用端到端 tracer bullet 穿过开放契约, 内置与外部插件, 规则生命周期和编辑器, 随后补齐 generation/service, 本地管理恢复, QuickJS 与来源适配; 安全准入和 capture 必须随每个切片交付. #22 旧子事项在重新拆分前不代表可直接执行的 frontier.
 
 ```text
 0. plugin-contract：stable IDs、manifest、envelope、错误和 capability contract
@@ -221,6 +261,8 @@ artifact digest
 5. QuickJS plugin runtime 和 Rust host API
 6. authoring session、declarative editor descriptor、semantic projection
 7. SourceAdapter 与 prepare → candidate → install
+8. 本地 package catalog, 管理界面与重启恢复
+9. 核心零修改扩展实验, 旧闭集删除与跨平台完整验收
 ```
 
 ## 领域词汇范围
