@@ -5,7 +5,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createBlankDefinition } from './core';
+import { cloneJson, createBlankDefinition } from './core';
+import { getNodePorts } from './ports';
 import {
   createRuleEditorSession,
   selectCanRedo,
@@ -21,6 +22,7 @@ import type {
   NativeRuleDocumentSummary,
   RuleDefinition,
   SaveNativeRuleDocumentOutcome,
+  SaveNativeRuleDocumentRequest,
 } from '@/shared/tauri/rules';
 
 const invoke = vi.hoisted(() => vi.fn<(command: string, args?: unknown) => Promise<unknown>>());
@@ -78,6 +80,24 @@ function mockOutcome(
     layout: { revision: 2, conflict: null },
     ...overrides,
   };
+}
+
+/**
+ * 含未安装能力节点的 Definition。
+ *
+ * `payloadText` 是作者写入的 opaque payload 原文（键序敏感），用于断言保存/重开
+ * 之后逐字节一致。
+ */
+function definitionWithOpaqueNode(payloadText: string): RuleDefinition {
+  const definition = cloneJson(mockDefinition());
+  definition.flow.nodes = [
+    { id: 'node:custom', config: { kind: 'custom_reader', value: JSON.parse(payloadText) } },
+    {
+      id: 'node:http',
+      config: { kind: 'http', value: { method: 'GET', url: 'https://a.test' } },
+    },
+  ];
+  return definition;
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +353,60 @@ describe('createRuleEditorSession', () => {
     expect(state().core.dirty.semantic).toBe(true);
     // Conflict 快照按 Rust 返回原样保留
     expect(state().core.conflict.semantic).toEqual({ expected: 1, current: 5 });
+  });
+
+  // -----------------------------------------------------------------------
+  // 未安装能力节点：展示 / 编辑 / 显式保存 / 重新打开的 round-trip
+  // -----------------------------------------------------------------------
+
+  it('未安装能力节点的 opaque payload 经编辑与显式保存后原样重新打开', async () => {
+    const payloadText = '{"selector":".entry","flags":["a","b"],"nested":{"depth":2}}';
+    const session = createRuleEditorSession();
+    const state = () => session.getState();
+
+    invoke.mockResolvedValueOnce(
+      mockDetail({ definition: definitionWithOpaqueNode(payloadText), semantic_revision: 1 }),
+    );
+    await state().loadDocument('doc:1');
+
+    // 展示：投影保留未安装能力节点与作者原文；descriptor 查不到 → 空端口而不是崩溃。
+    const projected = selectFlowProjection(state()).nodes;
+    expect(projected.map((node) => node.type)).toEqual(['custom_reader', 'http']);
+    expect(getNodePorts('custom_reader', { selector: '.entry' })).toEqual({
+      inputs: [],
+      outputs: [],
+    });
+
+    // 编辑：移动未知节点、在它旁边新增普通节点；未知节点的 payload 不被改写。
+    state().moveNode('node:custom', { x: 120, y: 40 });
+    const addedId = state().addNode('mapper');
+
+    invoke.mockClear();
+    invoke.mockResolvedValueOnce(
+      mockOutcome({
+        semantic: { revision: 2, conflict: null, activation: 'draft' },
+        layout: { revision: 2, conflict: null },
+      }),
+    );
+    await state().save();
+
+    const [[, saveArgs]] = invoke.mock.calls;
+    const { request } = saveArgs as { request: SaveNativeRuleDocumentRequest };
+    const savedDefinition = request.semantic?.definition as RuleDefinition;
+    const savedNode = savedDefinition.flow.nodes.find((node) => node.id === 'node:custom');
+    expect(savedNode?.config.kind).toBe('custom_reader');
+    expect(JSON.stringify(savedNode?.config.value)).toBe(payloadText);
+    expect(savedDefinition.flow.nodes.map((node) => node.id)).toEqual([
+      'node:custom',
+      'node:http',
+      addedId,
+    ]);
+
+    // 重新打开：按后端回存的 definition 重建，opaque payload 逐字节一致。
+    invoke.mockResolvedValueOnce(mockDetail({ definition: savedDefinition, semantic_revision: 2 }));
+    await state().loadDocument('doc:1');
+    const reopened = state().core.definition.flow.nodes.find((node) => node.id === 'node:custom');
+    expect(JSON.stringify(reopened?.config.value)).toBe(payloadText);
   });
 
   describe('dirty分域', () => {
