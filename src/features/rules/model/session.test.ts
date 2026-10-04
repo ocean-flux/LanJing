@@ -409,6 +409,66 @@ describe('createRuleEditorSession', () => {
     expect(JSON.stringify(reopened?.config.value)).toBe(payloadText);
   });
 
+  it('未安装能力节点：校验出稳定诊断且不产出 Plan，展示与保存仍成功', async () => {
+    const payloadText = '{"selector":".entry"}';
+    const session = createRuleEditorSession();
+    const state = () => session.getState();
+
+    invoke.mockResolvedValueOnce(
+      mockDetail({
+        definition: definitionWithOpaqueNode(payloadText),
+        summary: mockSummary({ semantic_revision: 1, layout_revision: 1 }),
+        effective_semantic_revision: 1,
+      }),
+    );
+    await state().loadDocument('doc:1');
+
+    // 展示：未安装能力节点仍在投影里（descriptor 查不到, 但可展示）。
+    expect(selectFlowProjection(state()).nodes.map((node) => node.type)).toContain('custom_reader');
+
+    // 校验：后端给出稳定诊断且不产出 Plan（plan_hash 为 null），
+    // 诊断面必须原样保留后端 code, 不换一个通用错误。
+    invoke.mockClear();
+    invoke.mockResolvedValueOnce({
+      valid: false,
+      revision: 1,
+      definition_hash: 'hash:def',
+      plan_hash: null,
+      diagnostics: [
+        {
+          code: 'NODE_CAPABILITY_UNAVAILABLE',
+          severity: 'error',
+          message: '节点引用了未安装的规则能力 custom_reader',
+          span: { path: '/flow/nodes/node:custom/config', start: 0, end: 0 },
+        },
+      ],
+      profile: null,
+      capability: { network: false, system: { fs: false, env: false, process: false } },
+    });
+
+    const preview = await state().validate();
+    expect(preview.valid).toBe(false);
+    expect(preview.plan_hash).toBeNull();
+    expect(state().core.validation.status).toBe('invalid');
+    expect(state().core.validation.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'NODE_CAPABILITY_UNAVAILABLE',
+        severity: 'error',
+        message: '节点引用了未安装的规则能力 custom_reader',
+      }),
+    ]);
+
+    // 保存仍成功, 但只作为 Draft: Effective Rule Revision 不被替换。
+    state().dispatch({ kind: 'setField', field: 'base_url', value: 'https://draft.test' });
+    invoke.mockClear();
+    invoke.mockResolvedValueOnce(
+      mockOutcome({ semantic: { revision: 2, conflict: null, activation: 'draft' }, layout: null }),
+    );
+    const outcome = await state().save();
+    expect(outcome.semantic?.activation).toBe('draft');
+    expect(state().effectiveSemanticRevision).toBe(1);
+  });
+
   describe('dirty分域', () => {
     it('layout action only sets layout dirty', () => {
       const session = createRuleEditorSession();

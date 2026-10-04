@@ -72,6 +72,10 @@ const nodeTypes: NodeTypes = {
   merge: RuleFlowNode,
   condition: RuleFlowNode,
   loop: RuleFlowNode,
+  // 未安装能力（kind 无 descriptor 声明）没有专属组件。`default` 兜底成同一个
+  // `RuleFlowNode`：端口按 descriptor 解析，查不到即空端口 + unavailable 摘要，
+  // 未安装能力节点因此仍可展示与选中，而不是退化成 xyflow 的空白节点。
+  default: RuleFlowNode,
 };
 
 const edgeTypes: EdgeTypes = { semantic: SemanticEdge };
