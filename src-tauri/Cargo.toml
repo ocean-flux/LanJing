@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "crates/lj-capability",
+  "crates/lj-plugin-contract",
   "crates/lj-rule-model",
   "crates/lj-media",
   "crates/lj-compiler",
