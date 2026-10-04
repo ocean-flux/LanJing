@@ -7,6 +7,8 @@ use super::{
     execute_replay_effect, failed,
 };
 
+use crate::plugin::builtin;
+
 pub(in crate::plan_runtime::scheduler) async fn execute_effect(
     context: &mut EffectExecution<'_>,
     node: &PlanNode,
@@ -98,7 +100,21 @@ pub(in crate::plan_runtime::scheduler) async fn execute_effect(
     };
     match context.request.mode {
         ExecutionMode::Live => {
-            execute_live_effect(context, invocation)
+            // handler 在 invocation 准备阶段从执行绑定的 frozen snapshot 解析；replay 不需要 handler，
+            // 历史 capture 不因 registry 变化而失效。
+            let Some(handler) = context
+                .registry
+                .effect_handler(builtin::effect_operation(&declaration.kind))
+            else {
+                return Err(failed(
+                    context.request,
+                    RuntimeFailureCode::OperationUnavailable,
+                    "frozen registry 缺少该 operation 的 handler",
+                    Some(node.id),
+                    Some(effect_id),
+                ));
+            };
+            execute_live_effect(context, invocation, handler)
                 .instrument(span)
                 .await
         }

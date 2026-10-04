@@ -5,6 +5,7 @@
 //! token、完整 URL query、Plan JSON 或 opaque payload。
 
 use lj_compiler::CompilerError;
+use lj_plugin_contract::PluginError;
 use lj_runtime::{PlanRuntimeError, RuntimeFailureCode};
 use lj_storage::StorageError;
 
@@ -17,6 +18,11 @@ pub(super) fn runtime_failure_error(code: RuntimeFailureCode, trace_id: &str) ->
             RuleErrorStage::Capability,
             "runtime_capability_denied",
             "运行时拒绝未批准的 capability",
+        ),
+        RuntimeFailureCode::OperationUnavailable => (
+            RuleErrorStage::Internal,
+            "runtime_operation_unavailable",
+            "执行绑定的 registry 缺少该 operation 的 handler",
         ),
         RuntimeFailureCode::EffectFailed => (
             RuleErrorStage::Effect,
@@ -83,6 +89,20 @@ pub(super) fn runtime_failure_error(code: RuntimeFailureCode, trace_id: &str) ->
         stage,
         code,
         message,
+        trace_id.to_string(),
+        false,
+        Vec::new(),
+    )
+}
+
+/// 将 plugin contract 与注册错误映射为调用方可见的安全错误。
+///
+/// message 只包含稳定错误码，不包含 plugin payload 或 identity 以外的声明内容。
+pub(super) fn plugin_error(error: &PluginError, trace_id: &str) -> RuleError {
+    RuleError::new(
+        RuleErrorStage::Internal,
+        "plugin_registration_failed",
+        format!("内置 plugin 注册失败: {}", error.code()),
         trace_id.to_string(),
         false,
         Vec::new(),

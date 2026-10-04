@@ -1,7 +1,7 @@
 //! live handler 输出、witness 与 durable receipt 校验。
 
 use super::{
-    Arc, EffectCapture, EffectExecution, EffectOutput, ExecutionEventKind,
+    Arc, EffectCapture, EffectExecution, EffectHandler, EffectOutput, ExecutionEventKind,
     PreparedEffectInvocation, RunOutcome, RuntimeFailureCode, captured_output_failure,
     effect_error_outcome, failed, invoke_live_effect, js_output_matches_declaration,
     receipt_matches,
@@ -10,6 +10,7 @@ use super::{
 pub(in crate::plan_runtime::scheduler) async fn execute_live_effect(
     context: &mut EffectExecution<'_>,
     invocation: PreparedEffectInvocation<'_>,
+    handler: &EffectHandler,
 ) -> Result<Arc<EffectOutput>, RunOutcome> {
     let PreparedEffectInvocation {
         node,
@@ -26,7 +27,7 @@ pub(in crate::plan_runtime::scheduler) async fn execute_live_effect(
         effect_id,
         input,
         js_code_override,
-        context.handlers,
+        handler,
         context.cancellation.token(),
     )
     .await

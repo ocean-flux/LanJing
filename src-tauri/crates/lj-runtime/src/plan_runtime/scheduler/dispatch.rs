@@ -2,11 +2,13 @@
 
 use super::{
     Arc, CapturedEffectOutput, EffectCancellation, EffectDeclaration, EffectError, EffectErrorCode,
-    EffectFailure, EffectHandlers, EffectInput, EffectKind, EffectOutput, ExtractEffectRequest,
-    HttpEffectRequest, MediaResourceId, OwnedSemaphorePermit, PlanExecutionRequest, PlanNode,
-    PlanNodeConfig, PolicyCapabilities, QuickJsEffectRequest, QuickJsOutput, RunOutcome,
-    RuntimeFailureCode, Uuid, failed,
+    EffectFailure, EffectInput, EffectKind, EffectOutput, ExtractEffectRequest, HttpEffectRequest,
+    MediaResourceId, OwnedSemaphorePermit, PlanExecutionRequest, PlanNode, PlanNodeConfig,
+    PolicyCapabilities, QuickJsEffectRequest, QuickJsOutput, RunOutcome, RuntimeFailureCode, Uuid,
+    failed,
 };
+
+use crate::plugin::EffectHandler;
 
 pub(in crate::plan_runtime::scheduler) async fn acquire_permit(
     semaphore: Arc<tokio::sync::Semaphore>,
@@ -33,51 +35,34 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
     effect_id: Uuid,
     input: EffectInput,
     js_code_override: Option<&str>,
-    handlers: &EffectHandlers,
+    handler: &EffectHandler,
     cancellation: EffectCancellation,
 ) -> Result<CapturedEffectOutput, EffectError> {
-    if let Some(code) = js_code_override {
-        return handlers
-            .quickjs
-            .execute_quickjs(
-                QuickJsEffectRequest {
+    match handler {
+        EffectHandler::Http(http) => {
+            let PlanNodeConfig::Http(spec) = &node.config else {
+                return Err(handler_config_mismatch());
+            };
+            http.execute_http(
+                HttpEffectRequest {
                     execution_id: request.execution_id,
                     source_id: request.source_id.clone(),
                     node_id: node.id,
                     effect_id,
                     trace_id: request.trace_id.clone(),
-                    code: code.to_string(),
+                    spec: spec.clone(),
                     input,
                     capabilities: request.capabilities.clone(),
+                    base_url: request.base_url.clone(),
+                    credentials: request.credentials.clone(),
                 },
                 cancellation,
             )
-            .await;
-    }
-    match &node.config {
-        PlanNodeConfig::Http(spec) => {
-            handlers
-                .http
-                .execute_http(
-                    HttpEffectRequest {
-                        execution_id: request.execution_id,
-                        source_id: request.source_id.clone(),
-                        node_id: node.id,
-                        effect_id,
-                        trace_id: request.trace_id.clone(),
-                        spec: spec.clone(),
-                        input,
-                        capabilities: request.capabilities.clone(),
-                        base_url: request.base_url.clone(),
-                        credentials: request.credentials.clone(),
-                    },
-                    cancellation,
-                )
-                .await
+            .await
         }
-        PlanNodeConfig::Js(config) => {
-            handlers
-                .quickjs
+        EffectHandler::QuickJs(quickjs) => {
+            let code = executed_js_code(node, js_code_override)?;
+            quickjs
                 .execute_quickjs(
                     QuickJsEffectRequest {
                         execution_id: request.execution_id,
@@ -85,7 +70,7 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
                         node_id: node.id,
                         effect_id,
                         trace_id: request.trace_id.clone(),
-                        code: config.code.clone(),
+                        code,
                         input,
                         capabilities: request.capabilities.clone(),
                     },
@@ -93,9 +78,11 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
                 )
                 .await
         }
-        PlanNodeConfig::Extract(spec) => {
-            handlers
-                .extract
+        EffectHandler::Extract(extract) => {
+            let PlanNodeConfig::Extract(spec) = &node.config else {
+                return Err(handler_config_mismatch());
+            };
+            extract
                 .execute_extract(
                     ExtractEffectRequest {
                         execution_id: request.execution_id,
@@ -111,14 +98,15 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
                 )
                 .await
         }
-        PlanNodeConfig::Mapper(_)
-        | PlanNodeConfig::Merge(_)
-        | PlanNodeConfig::Condition(_)
-        | PlanNodeConfig::Loop(_) => Err(EffectError::new(
-            EffectErrorCode::Internal,
-            "非 effect 节点不能调用 effect handler",
-        )),
     }
+}
+
+/// frozen registry 中的 handler 与 Plan 节点配置不一致时的内部错误。
+fn handler_config_mismatch() -> EffectError {
+    EffectError::new(
+        EffectErrorCode::Internal,
+        "registry handler 与 Plan 节点配置不匹配",
+    )
 }
 
 pub(in crate::plan_runtime::scheduler) fn executed_js_code(

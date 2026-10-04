@@ -105,7 +105,7 @@ impl RuleSystem {
                 base_url,
                 credentials,
             },
-            self.state.handlers.clone(),
+            self.state.registry.clone(),
             Arc::new(self.state.storage.clone()),
         ) {
             Ok(session) => session,

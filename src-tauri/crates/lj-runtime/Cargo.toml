@@ -13,6 +13,7 @@ workspace = true
 lj-rule-model = { path = "../lj-rule-model" }
 lj-capability = { path = "../lj-capability" }
 lj-media = { path = "../lj-media" }
+lj-plugin-contract = { path = "../lj-plugin-contract" }
 futures = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }

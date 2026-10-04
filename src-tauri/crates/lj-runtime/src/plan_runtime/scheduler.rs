@@ -21,12 +21,13 @@ use uuid::Uuid;
 use crate::effect::{
     CancellationHandle, CapturedEffectOutput, ControlReplayLookup, ControlTraceCapture,
     DurableCaptureReceipt, EffectArchive, EffectArchiveError, EffectArchiveErrorCode,
-    EffectCancellation, EffectCapture, EffectError, EffectErrorCode, EffectFailure, EffectHandlers,
-    EffectInput, EffectOutput, EffectReplayLookup, EffectWitness, ExtractEffectRequest,
-    HttpEffectRequest, QuickJsEffectRequest, QuickJsOutput, ReplayCompletionLookup,
-    effect_input_hash, effect_output_hash, quickjs_script_hash,
+    EffectCancellation, EffectCapture, EffectError, EffectErrorCode, EffectFailure, EffectInput,
+    EffectOutput, EffectReplayLookup, EffectWitness, ExtractEffectRequest, HttpEffectRequest,
+    QuickJsEffectRequest, QuickJsOutput, ReplayCompletionLookup, effect_input_hash,
+    effect_output_hash, quickjs_script_hash,
 };
 use crate::mapper::MapperContext;
+use crate::plugin::{EffectHandler, FrozenRegistry};
 
 use super::api::{
     ExecutionEvent, ExecutionEventKind, ExecutionFailure, ExecutionMode, PlanExecutionRequest,
@@ -123,7 +124,7 @@ pub(super) async fn run_execution(
     state: Arc<RuntimeState>,
     request: PlanExecutionRequest,
     path: ExecutionPath,
-    handlers: EffectHandlers,
+    registry: Arc<FrozenRegistry>,
     archive: Arc<dyn EffectArchive>,
     cancellation: CancellationHandle,
     sender: mpsc::Sender<ExecutionEvent>,
@@ -151,7 +152,7 @@ pub(super) async fn run_execution(
         &state,
         &request,
         &path,
-        &handlers,
+        &registry,
         archive.as_ref(),
         &cancellation,
         &mut emitter,
@@ -165,7 +166,7 @@ async fn execute_path(
     state: &RuntimeState,
     request: &PlanExecutionRequest,
     path: &ExecutionPath,
-    handlers: &EffectHandlers,
+    registry: &FrozenRegistry,
     archive: &dyn EffectArchive,
     cancellation: &CancellationHandle,
     emitter: &mut EventEmitter,
@@ -180,7 +181,7 @@ async fn execute_path(
     let mut context = EffectExecution {
         state,
         request,
-        handlers,
+        registry,
         archive,
         cancellation,
         emitter,
@@ -245,7 +246,7 @@ async fn execute_path(
 struct EffectExecution<'a> {
     state: &'a RuntimeState,
     request: &'a PlanExecutionRequest,
-    handlers: &'a EffectHandlers,
+    registry: &'a FrozenRegistry,
     archive: &'a dyn EffectArchive,
     cancellation: &'a CancellationHandle,
     emitter: &'a mut EventEmitter,

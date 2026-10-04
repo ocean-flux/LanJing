@@ -15,7 +15,8 @@ use tokio::sync::{Semaphore, mpsc};
 use tracing::Instrument;
 use uuid::Uuid;
 
-use crate::effect::{CancellationHandle, EffectArchive, EffectHandlers, HttpExecutionCredentials};
+use crate::effect::{CancellationHandle, EffectArchive, HttpExecutionCredentials};
+use crate::plugin::FrozenRegistry;
 
 use super::{scheduler, validation};
 
@@ -84,6 +85,8 @@ pub enum PlanRuntimeError {
 pub enum RuntimeFailureCode {
     /// capability grant 拒绝 effect。
     CapabilityDenied,
+    /// 执行绑定的 frozen registry 缺少该 operation 的 handler。
+    OperationUnavailable,
     /// effect adapter 返回失败。
     EffectFailed,
     /// live effect 无法获得 durable capture 收据。
@@ -368,7 +371,7 @@ impl PlanRuntime {
     pub fn execute(
         &self,
         mut request: PlanExecutionRequest,
-        handlers: EffectHandlers,
+        registry: Arc<FrozenRegistry>,
         archive: Arc<dyn EffectArchive>,
     ) -> Result<ExecutionSession, PlanRuntimeError> {
         self.validate_plan(&request.plan)?;
@@ -403,7 +406,7 @@ impl PlanRuntime {
                     state,
                     request,
                     path,
-                    handlers,
+                    registry,
                     archive,
                     runner_cancellation,
                     sender,

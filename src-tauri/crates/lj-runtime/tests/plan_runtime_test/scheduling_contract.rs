@@ -217,6 +217,41 @@ async fn effect_error_becomes_one_failed_terminal_with_attribution() {
 }
 
 #[tokio::test]
+async fn missing_operation_in_frozen_registry_fails_with_stable_code() {
+    let runtime = runtime(4);
+    let events = collect_events(
+        runtime
+            .execute(
+                request(
+                    quickjs_plan(),
+                    Uuid::new_v4(),
+                    lj_runtime::ExecutionMode::Live,
+                ),
+                registry_without_quickjs(
+                    FixtureHttp::success(Arc::new(AtomicUsize::new(0))),
+                    Arc::new(AtomicUsize::new(0)),
+                ),
+                Arc::new(DurableFileArchive::new()),
+            )
+            .expect("missing operation session"),
+    )
+    .await;
+
+    assert_eq!(terminal_count(&events), 1);
+    let Some(lj_runtime::ExecutionEventKind::Failed { failure }) =
+        events.last().map(|event| &event.kind)
+    else {
+        panic!("registry 缺少 operation 必须进入 Failed 终态");
+    };
+    assert_eq!(failure.code, RuntimeFailureCode::OperationUnavailable);
+    assert!(
+        failure.message.contains("frozen registry"),
+        "失败必须指明是 registry 缺少 handler，而不是 handler 自身失败：{}",
+        failure.message
+    );
+}
+
+#[tokio::test]
 async fn bounded_event_channel_backpressures_before_downstream_effect() {
     let runtime = runtime(1);
     let archive = Arc::new(DurableFileArchive::new());

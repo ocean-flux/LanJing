@@ -339,30 +339,3 @@ pub trait ExtractEffectHandler: Send + Sync {
         cancellation: EffectCancellation,
     ) -> Result<CapturedEffectOutput, EffectError>;
 }
-
-/// 三类实际 effect handler 的集合。
-#[derive(Clone)]
-pub struct EffectHandlers {
-    /// HTTP adapter。
-    pub http: Arc<dyn HttpEffectHandler>,
-    /// `QuickJS` adapter。
-    pub quickjs: Arc<dyn QuickJsEffectHandler>,
-    /// Extract adapter。
-    pub extract: Arc<dyn ExtractEffectHandler>,
-}
-
-impl EffectHandlers {
-    /// 用三个实际 adapter 创建 handler 集合。
-    #[must_use]
-    pub fn new(
-        http: Arc<dyn HttpEffectHandler>,
-        quickjs: Arc<dyn QuickJsEffectHandler>,
-        extract: Arc<dyn ExtractEffectHandler>,
-    ) -> Self {
-        Self {
-            http,
-            quickjs,
-            extract,
-        }
-    }
-}
