@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createSourceWorkflow, type SourceWorkflowAdapter } from '@/features/sources/workflow';
+import {
+  NETWORK_CONSENT_REQUIRED,
+  createSourceWorkflow,
+  deepLinkImportStep,
+  type SourceWorkflowAdapter,
+} from '@/features/sources/workflow';
 import type { InstallCandidate, InstalledSource, SourceOperation } from '@/shared/tauri/sources';
 
 function installedSource(sourceId = 'source:legado:one'): InstalledSource {
@@ -167,5 +172,30 @@ describe('source workflow', () => {
       prepared: [],
       errorCode: 'candidate_stale',
     });
+  });
+
+  it('uses the same network switch for the import fetch and the install grant', async () => {
+    const workflow = createSourceWorkflow(
+      adapter({ prepare: async () => candidate(undefined, true) }),
+    );
+    await workflow.refreshSources();
+    workflow.setInput(JSON.stringify({ bookSourceName: '需要联网的来源' }));
+    await workflow.prepareInput();
+    await workflow.prepareSelected();
+
+    // 开关为关: 安装被 network_grant_required 拦住, 深链导入同样不抓取。
+    await workflow.install();
+    expect(workflow.getState()).toMatchObject({
+      phase: 'confirm',
+      errorCode: 'network_grant_required',
+      allowNetwork: false,
+    });
+    expect(deepLinkImportStep(workflow.getState().allowNetwork)).toBe(NETWORK_CONSENT_REQUIRED);
+
+    // 同一个开关打开后, 两条路径一起放行。
+    workflow.setAllowNetwork(true);
+    expect(deepLinkImportStep(workflow.getState().allowNetwork)).toBe('fetch');
+    await workflow.install();
+    expect(workflow.getState()).toMatchObject({ phase: 'done' });
   });
 });
