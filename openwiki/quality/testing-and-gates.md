@@ -81,10 +81,10 @@ sources:
     resource: repo://src/test/setup.ts
   - id: openwiki-source-581dc5746c844c4ee0b781c7
     resource: repo://vite.config.js
-generated: { by: "pi", at: "2026-10-05T11:33:47.922Z" }
+generated: { by: "pi", at: "2026-10-05T11:45:07.820Z" }
 verified:
   - by: openwiki/0.7.0
-    at: 2026-10-05T11:33:47.922Z
+    at: 2026-10-05T11:45:07.820Z
 ---
 
 
@@ -157,7 +157,7 @@ pre-push 刻意不再跑测试(`lefthook.yml#L54-L65`): 每个提交单元跑定
 | 跨 crate 集成 | `lj-integration-tests/tests/{legado_rule_system.rs 6, maccms_json_rule_system.rs 8, core_out_rule_package.rs 3}` | 17 | 唯一覆盖完整链路的层(导入 → candidate → install → live 执行 → 捕获 → replay → 投影 → library 查询) | 真实网络与真实 DNS; 真实浏览器/UI |
 | workspace 守卫 | `src-tauri/tests/workspace_layering.rs` | 2 | crate 依赖边与 `ALLOWED` 表一致、整张图无环 | 前端 feature 之间的边界 |
 
-契约层最近收缩过一次: `lj-plugin-contract` 与其 8 条 identity/manifest 解析用例随 crate 删除; runtime 侧的 `plugin_host_test.rs`(7 条)换成 `effect_registry_test.rs`(5 条, `src-tauri/crates/lj-runtime/tests/effect_registry_test.rs#L73-L174`)。少掉的两条断言的是「重复 plugin identity」与「operation 不在 manifest 里」——这两个命题随「注册键改为 Rule Contract 的 `EffectKind`」一并消失, 不是被放宽。storage 契约测试里另有 4 条 `d12_*` 性能标定用例(重放扫描吞吐、16 writer 收据 p95 延迟、千资源投影事务、千条 archive GC), 它们是 `#[ignore]` 的 release-only 标定, 已从工作树删除; 因此**今天没有任何性能门禁**, 性能只由代码审查与手工标定保证。
+契约层最近收缩过一次: `lj-plugin-contract` 与其 8 条 identity/manifest 解析用例随 crate 删除; runtime 侧的 `plugin_host_test.rs`(7 条)换成 `effect_registry_test.rs`(5 条, `src-tauri/crates/lj-runtime/tests/effect_registry_test.rs#L73-L174`)。少掉的两条断言的是「重复 plugin identity」与「operation 不在 manifest 里」——这两个命题随「注册键改为 Rule Contract 的 `EffectKind`」一并消失, 不是被放宽。storage 契约测试里另有 4 条 `d12_*` 性能标定用例(重放扫描吞吐、16 writer 收据 p95 延迟、千资源投影事务、千条 archive GC), 它们是 `#[ignore]` 的 release-only 标定, 已删除(`tests/event_projection_storage_test/` 下只剩语义契约测试); 因此**今天没有任何性能门禁**, 性能只由代码审查与手工标定保证。
 
 集成层的定位写在文件头(`lj-integration-tests/tests/maccms_json_rule_system.rs#L1-L5`): 「只构造真实 SQLite/artifact、wiremock 与 concrete façade; **不组装内部执行编排、handler registry 或 storage transaction**」。这条自限让这层测试验的是公开契约而不是实现细节, 用例名即断言对象, 例如:
 

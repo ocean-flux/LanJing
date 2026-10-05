@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:fc70c63cf2139c703b8c7e28f06c94000faf0c77dcfd8a1ce96b3065ef4a0bb7",
+  "pageVersion": "sha256:9919d9e2b1e4f789168590361f3ff1f423ae92d4fdc4292f9c4c4298201dcb56",
   "claims": [
     {
       "id": "claim_8c712ba6c34a4017915407a19c5e33b0",
@@ -373,10 +373,24 @@
           "version": "repo-lines-v1:sha256:542d6a147f12a1cc462be0ca27b2e60e9d517d3f083f3f38152740e09ddd7069:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1YTBiYWExYTY0MTZiYmI2MWQ1YmQyZGQ4MGVkNjVhM2U3NDU3MjRjMzcyZWRlMTU2YTVhY2VkNmY3MTczMzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1OTgyOTE0OGE1MGRlMmRjYmIyYjhmMDQ0N2JkZDhlYTJmNGQyMjU5ZjBmMDZhM2ZmYjkxYzg3NWU2ZDVkZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
+    },
+    {
+      "id": "claim_c7701d87748f45d3a9cb24a278836556",
+      "statement": "storage 契约测试里的 4 条 d12_* 性能标定用例(重放扫描吞吐、16 writer 收据 p95 延迟、千资源投影事务、千条 archive GC)已从仓库删除, 而它们本就是 #[ignore] 的 release-only 标定(pnpm verify 的 cargo test 不带 --ignored), 因此今天没有任何性能门禁。",
+      "evidence": [
+        {
+          "resource": "repo://package.json#L22-L23",
+          "version": "repo-lines-v1:sha256:b997d6e54849f8468f5dc27f7818a3a8bbd38867dc0e4a0430df5e49843d0c4a:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWY2NDUzODE3NjViN2Y5ZDQ0NjM4OWRhNjVkYTEwYmUwM2FiN2E2ZGYzZDUxYjA4NTMxMTdkNWY3YWViOGViZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGYwM2EyNzE3NDdhMjZlZWEzNGU0ZTQ1Y2I3Mzc3MTMwOGQ5YzM3YjdlOGJlM2EwMWFhMWVhMmE3YWQ0NGQ3OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmU1YTNlZGEzNTA3MmM1M2JhOTI3ZDkyOWIxZjJhOGEwOTkxZjU0ZTAwM2NmMmY4NDY0ZDdhNWI2YmU5NzgxNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjhkODNkZDgwNjU0Y2U2ZDdmYjYxNTRlYTg1YzFmOTIxOWM2ZTljODdjNzcyZmYyZTRjZjkxYjU4MzMxMGE0NCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs#L1-L6",
+          "version": "repo-lines-v1:sha256:b068da848f587d095f8146693f5309055a84a4d9a609919afc2c57d35ee5412a:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmQ0OGZmYjVhYTZiMGFhYmRhNjZkYjM1ZTQ2N2RhNDQ4YWIzODVhM2ZjZjVlYjg3NzQ2ZTM4YmQ2YmEyZjRlMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzgwYmUzODM1ZDAwYjY2OTQ2YzU2MzMwMzI5NmRmZTRiM2M4NGI5ZmM2ZjdiNzY3YWU0NmI1YWU1MmU2ZGQ4MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjYyOWY3YmFkODkzNzdmZTgzZDcxOWY5NTczYWQyNDk5NWZiMDJmOTkwYTI3ZTQ3NGYyMzIzMjMyMTY3NDBiNyJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-05T11:33:47.922Z"
+    "at": "2026-10-05T11:45:07.820Z"
   }
 }

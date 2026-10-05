@@ -23,18 +23,18 @@
       "completedRunId": "450bf87a-0024-4e3f-ad77-0a8ca06f3f09"
     },
     "/openwiki/architecture/rule-runtime.md": {
+      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
+      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4",
       "pageVersion": "sha256:026134aad355745e2717641209ac7d28216d56f69f819bb635e24530c00c2aa4",
       "completedBy": "pi",
-      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff",
-      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
-      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4"
+      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff"
     },
     "/openwiki/architecture/rule-system-facade.md": {
+      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
+      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4",
       "pageVersion": "sha256:1812fe8626675970ef548170710a4fdc83503fd61a83f7eb46de1b60513991a4",
       "completedBy": "pi",
-      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff",
-      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
-      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4"
+      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff"
     },
     "/openwiki/architecture/storage-and-event-ledger.md": {
       "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
@@ -44,11 +44,11 @@
       "completedRunId": "450bf87a-0024-4e3f-ad77-0a8ca06f3f09"
     },
     "/openwiki/architecture/system-overview.md": {
+      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
+      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4",
       "pageVersion": "sha256:053089e06ce7b72fb8f54e6ba9e537ab37464463ba6434ca083e012d52f2c400",
       "completedBy": "pi",
-      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff",
-      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
-      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4"
+      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff"
     },
     "/openwiki/architecture/tauri-ipc-boundary.md": {
       "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
@@ -58,18 +58,18 @@
       "completedRunId": "450bf87a-0024-4e3f-ad77-0a8ca06f3f09"
     },
     "/openwiki/quality/testing-and-gates.md": {
-      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
-      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4",
-      "pageVersion": "sha256:fc70c63cf2139c703b8c7e28f06c94000faf0c77dcfd8a1ce96b3065ef4a0bb7",
+      "pageVersion": "sha256:9919d9e2b1e4f789168590361f3ff1f423ae92d4fdc4292f9c4c4298201dcb56",
       "completedBy": "pi",
-      "completedRunId": "701fcb94-3971-403f-8f66-3ef23109ecc1"
+      "completedRunId": "1e27d67a-ce4f-4c54-9220-5c58a0a94eb6",
+      "gitHead": "c41ff6714ede8c74be6e731202dbf31fced2f844",
+      "sourceFingerprint": "sha256:e81f80daa8bb07c86cc8db16f5bb5d43e780f5f9c9271e7ccb141731256ea20f"
     },
     "/openwiki/quickstart.md": {
+      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
+      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4",
       "pageVersion": "sha256:16b9b3e8e9c45cd5bdf3dc864900b3a8076789ca25b0033aa825b11d3997a8e6",
       "completedBy": "pi",
-      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff",
-      "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
-      "sourceFingerprint": "sha256:ff6dd31bd58351bc55688029d21985f6e49876ac99d106b588de5a22d1d55bd4"
+      "completedRunId": "b2c7170a-519d-4f77-896a-0a1e6790b6ff"
     },
     "/openwiki/reference/app-surfaces-and-asset-gateway.md": {
       "gitHead": "e1e9f4f0ad2ac1505d90f782d3e8c317db9a2c3f",
