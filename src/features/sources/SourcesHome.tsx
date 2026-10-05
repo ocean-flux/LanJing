@@ -71,7 +71,6 @@ export function SourcesHome() {
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [prepared, setPrepared] = useState<PreparedSource[]>([]);
-  const [allowNetwork, setAllowNetwork] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const [inspectedSource, setInspectedSource] = useState<InstalledSource>();
   const [inspectorOpen, setInspectorOpen] = useState(false);
@@ -160,7 +159,6 @@ export function SourcesHome() {
         })),
       );
       setPrepared(next);
-      setAllowNetwork(false);
       setImportPhase('confirm');
     } catch (caught) {
       setImportError(caught instanceof Error ? caught.message : String(caught));
@@ -169,7 +167,7 @@ export function SourcesHome() {
   };
 
   const installSelected = async () => {
-    if (requestsSystem || (requestsNetwork && !allowNetwork)) return;
+    if (requestsSystem) return;
     setImportPhase('installing');
     setImportError('');
     const results = await Promise.all(
@@ -331,11 +329,7 @@ export function SourcesHome() {
       >
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              {importPhase === 'confirm'
-                ? m.sources_deeplink_grant_title()
-                : m.sources_deeplink_import_title()}
-            </DialogTitle>
+            <DialogTitle>{m.sources_deeplink_import_title()}</DialogTitle>
             <DialogDescription className="font-mono break-all">
               {pendingImport ?? ''}
             </DialogDescription>
@@ -426,16 +420,7 @@ export function SourcesHome() {
               ) : null}
 
               {requestsNetwork && !requestsSystem ? (
-                <>
-                  <p className="text-ink-muted">{m.sources_deeplink_network_required_notice()}</p>
-                  <Label className="flex items-center gap-2">
-                    <Checkbox
-                      checked={allowNetwork}
-                      onCheckedChange={(checked) => setAllowNetwork(checked === true)}
-                    />
-                    {m.sources_install_grant_network_only()}
-                  </Label>
-                </>
+                <p className="text-ink-muted">{m.sources_deeplink_network_required_notice()}</p>
               ) : null}
 
               {importError ? (
@@ -453,11 +438,7 @@ export function SourcesHome() {
                   {m.sources_deeplink_back_to_pick()}
                 </Button>
                 <Button
-                  disabled={
-                    importPhase === 'installing' ||
-                    requestsSystem ||
-                    (requestsNetwork && !allowNetwork)
-                  }
+                  disabled={importPhase === 'installing' || requestsSystem}
                   onClick={() => void installSelected()}
                 >
                   {importPhase === 'installing'

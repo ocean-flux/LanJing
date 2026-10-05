@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import { Icon } from '@/components/Icon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Sheet,
   SheetContent,
@@ -11,7 +10,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useMessages } from '@/shared/i18n/messages';
@@ -122,9 +120,6 @@ function rollbackErrorLabel(code: string | null, m: ReturnType<typeof useMessage
     case 'system_grant_unsupported': {
       return m.sources_install_system_unsupported();
     }
-    case 'network_grant_required': {
-      return m.sources_install_network_required_notice();
-    }
     case 'source_operation_failed': {
       return m.sources_inspector_rollback_failed();
     }
@@ -151,7 +146,6 @@ export function SourceInspector({
   const [rollbackPhase, setRollbackPhase] = useState<RollbackPhase>('idle');
   const [rollbackError, setRollbackError] = useState<string | null>(null);
   const [rollbackDetail, setRollbackDetail] = useState('');
-  const [allowNetwork, setAllowNetwork] = useState(false);
 
   useEffect(() => {
     if (!open || !source) return;
@@ -164,7 +158,6 @@ export function SourceInspector({
     setRollbackPhase('idle');
     setRollbackError(null);
     setRollbackDetail('');
-    setAllowNetwork(false);
     const loadHistory = async () => {
       try {
         const next = await adapter.listRevisions(source.source_id);
@@ -201,7 +194,6 @@ export function SourceInspector({
     setRollbackCandidate(null);
     setRollbackError(null);
     setRollbackDetail('');
-    setAllowNetwork(false);
     setRollbackPhase('preparing');
     try {
       const candidate = await adapter.prepareRollback(source.source_id, revision.revision);
@@ -222,12 +214,6 @@ export function SourceInspector({
       setRollbackPhase('error');
       return;
     }
-    if (candidateNeedsNetwork && !allowNetwork) {
-      setRollbackError('network_grant_required');
-      setRollbackDetail('');
-      setRollbackPhase('error');
-      return;
-    }
     setRollbackPhase('installing');
     setRollbackError(null);
     setRollbackDetail('');
@@ -239,7 +225,6 @@ export function SourceInspector({
     } catch (error) {
       setRollbackError(errorCode(error));
       setRollbackDetail(errorDetail(error));
-      setAllowNetwork(false);
       setRollbackPhase('error');
     }
   };
@@ -457,18 +442,9 @@ export function SourceInspector({
                         </p>
                       ) : null}
                       {candidateNeedsNetwork && !candidateNeedsSystem ? (
-                        <Label className="flex items-start gap-2">
-                          <Checkbox
-                            checked={allowNetwork}
-                            onCheckedChange={(checked) => setAllowNetwork(checked === true)}
-                          />
-                          <span>
-                            <span className="block">{m.sources_install_grant_network_only()}</span>
-                            <span className="block text-ink-muted">
-                              {m.sources_install_network_required_notice()}
-                            </span>
-                          </span>
-                        </Label>
+                        <p className="text-ink-muted">
+                          {m.sources_install_network_required_notice()}
+                        </p>
                       ) : null}
                     </div>
                   ) : null}

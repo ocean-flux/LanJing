@@ -65,9 +65,6 @@ function errorLabel(code: string | null, m: ReturnType<typeof useMessages>): str
     case 'system_grant_unsupported': {
       return m.sources_install_system_unsupported();
     }
-    case 'network_grant_required': {
-      return m.sources_install_network_required_notice();
-    }
     case 'candidate_stale': {
       return m.sources_install_candidate_stale();
     }
@@ -446,18 +443,9 @@ export function SourceInstallDialog({
               </p>
             ) : null}
             {requestsNetwork && !requestsSystem ? (
-              <Label className="flex items-start gap-2">
-                <Checkbox
-                  checked={state.allowNetwork}
-                  onCheckedChange={(checked) => workflow.setAllowNetwork(checked === true)}
-                />
-                <span>
-                  <span className="block">{m.sources_install_grant_network_only()}</span>
-                  <span className="block text-ui-sm text-ink-muted">
-                    {m.sources_install_network_required_notice()}
-                  </span>
-                </span>
-              </Label>
+              <p className="text-ui-sm text-ink-muted">
+                {m.sources_install_network_required_notice()}
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -499,11 +487,7 @@ export function SourceInstallDialog({
           ) : null}
           {state.phase === 'confirm' || state.phase === 'installing' ? (
             <Button
-              disabled={
-                state.phase === 'installing' ||
-                requestsSystem ||
-                (requestsNetwork && !state.allowNetwork)
-              }
+              disabled={state.phase === 'installing' || requestsSystem}
               onClick={() => void install()}
             >
               {state.phase === 'installing'

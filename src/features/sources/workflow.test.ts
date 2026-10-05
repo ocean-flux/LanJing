@@ -2,12 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { createSourceWorkflow, type SourceWorkflowAdapter } from '@/features/sources/workflow';
 import type { InstallCandidate, InstalledSource, SourceOperation } from '@/shared/tauri/sources';
 
+const NO_SYSTEM_GRANT: InstallCandidate['required_grant']['system'] = {
+  env: false,
+  fs: false,
+  process: false,
+};
+
 function installedSource(sourceId = 'source:legado:one'): InstalledSource {
   return {
     source_id: sourceId,
     version: 'v1',
     revision: 4,
-    grant: { network: false, system: { env: false, fs: false, process: false } },
+    grant: { network: false, system: NO_SYSTEM_GRANT },
     profile: {
       id: sourceId,
       title: '已有来源',
@@ -24,6 +30,7 @@ function candidate(
   sourceId = 'source:legado:one',
   network = false,
   operation: SourceOperation = 'install',
+  system: InstallCandidate['required_grant']['system'] = NO_SYSTEM_GRANT,
 ): InstallCandidate {
   return {
     id: `candidate:${sourceId}`,
@@ -38,7 +45,7 @@ function candidate(
       supported_intents: ['Search'],
       risk_notes: [],
     },
-    required_grant: { network, system: { env: false, fs: false, process: false } },
+    required_grant: { network, system },
     diagnostics: [],
     definition_hash: 'definition-hash',
     plan_hash: 'plan-hash',
@@ -137,7 +144,7 @@ describe('source workflow', () => {
     });
   });
 
-  it('marks an existing identity as an update and resets grant after stale install', async () => {
+  it('marks an existing identity as an update and returns to pick after a stale install', async () => {
     const workflow = createSourceWorkflow(
       adapter({
         prepare: async () => candidate(undefined, true, 'update'),
@@ -152,7 +159,6 @@ describe('source workflow', () => {
     workflow.setInput(JSON.stringify({ bookSourceName: '本地来源' }));
     await workflow.prepareInput();
     await workflow.prepareSelected();
-    workflow.setAllowNetwork(true);
 
     expect(workflow.getState()).toMatchObject({
       phase: 'confirm',
@@ -163,9 +169,55 @@ describe('source workflow', () => {
     expect(workflow.getState()).toMatchObject({
       phase: 'pick',
       rawInput: '{"bookSourceName":"本地来源"}',
-      allowNetwork: false,
       prepared: [],
       errorCode: 'candidate_stale',
+    });
+  });
+
+  it('grants network_only without a consent step when the candidate requires network', async () => {
+    const grants: string[] = [];
+    const workflow = createSourceWorkflow(
+      adapter({
+        prepare: async () => candidate(undefined, true),
+        install: async (_candidateId, grant) => {
+          grants.push(grant);
+          return installedSource();
+        },
+      }),
+    );
+    workflow.setInput(JSON.stringify({ bookSourceName: '联网来源' }));
+    await workflow.prepareInput();
+    await workflow.prepareSelected();
+
+    await workflow.install();
+
+    expect(grants).toEqual(['network_only']);
+    expect(workflow.getState()).toMatchObject({ phase: 'done', errorCode: null });
+  });
+
+  it('refuses a candidate that requires system capability', async () => {
+    let installed = false;
+    const workflow = createSourceWorkflow(
+      adapter({
+        prepare: async () =>
+          candidate(undefined, false, 'install', { env: false, fs: true, process: false }),
+        install: async () => {
+          installed = true;
+          return installedSource();
+        },
+      }),
+    );
+    workflow.setInput(JSON.stringify({ bookSourceName: '系统能力来源' }));
+    await workflow.prepareInput();
+    await workflow.prepareSelected();
+
+    await workflow.install();
+
+    expect(installed).toBe(false);
+    expect(workflow.getState()).toMatchObject({
+      phase: 'confirm',
+      errorCode: 'system_grant_unsupported',
+      errorDetail: null,
     });
   });
 });

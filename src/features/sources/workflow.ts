@@ -43,7 +43,6 @@ export interface SourceWorkflowState {
   selectedIds: string[];
   prepared: PreparedSource[];
   sources: InstalledSource[];
-  allowNetwork: boolean;
   errorCode: string | null;
   errorDetail: string | null;
   failedItems: string[];
@@ -140,7 +139,6 @@ function initialState(): SourceWorkflowState {
     selectedIds: [],
     prepared: [],
     sources: [],
-    allowNetwork: false,
     errorCode: null,
     errorDetail: null,
     failedItems: [],
@@ -182,7 +180,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
       catalog: [],
       selectedIds: [],
       prepared: [],
-      allowNetwork: false,
       errorCode: null,
       errorDetail: null,
       failedItems: [],
@@ -218,7 +215,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
         ...state,
         phase: 'preparing',
         prepared: [],
-        allowNetwork: false,
         errorCode: null,
         errorDetail: null,
       });
@@ -273,7 +269,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
       catalog: parsed.items,
       selectedIds: parsed.items.map((item) => item.id),
       prepared: [],
-      allowNetwork: false,
       errorCode: null,
       errorDetail: null,
       failedItems: [],
@@ -289,8 +284,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
       ),
     });
   };
-
-  const setAllowNetwork = (allowNetwork: boolean) => publish({ ...state, allowNetwork });
 
   const prepareSelected = async () => {
     const selectedItems = state.catalog.filter((item) => state.selectedIds.includes(item.id));
@@ -343,7 +336,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
       ...state,
       phase: 'confirm',
       prepared,
-      allowNetwork: false,
       errorCode: failures.length > 0 ? 'source_prepare_partial' : null,
       errorDetail: failures[0]?.failure ? errorDetail(failures[0].failure) : null,
       failedItems: failures.map((result) => result.item.name),
@@ -359,13 +351,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
     if (state.phase !== 'confirm' || state.prepared.length === 0) return;
     if (state.prepared.some((entry) => candidateRequestsSystem(entry.candidate))) {
       publish({ ...state, errorCode: 'system_grant_unsupported', errorDetail: null });
-      return;
-    }
-    if (
-      state.prepared.some((entry) => candidateRequestsNetwork(entry.candidate)) &&
-      !state.allowNetwork
-    ) {
-      publish({ ...state, errorCode: 'network_grant_required', errorDetail: null });
       return;
     }
     const { prepared } = state;
@@ -397,7 +382,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
         prepared: retryable
           ? []
           : results.filter((result) => result.failure !== null).map((result) => result.entry),
-        allowNetwork: retryable ? false : state.allowNetwork,
         errorCode: code,
         errorDetail: errorDetail(firstFailure),
         failedItems: failures.map((result) => result.entry.item.name),
@@ -411,7 +395,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
         phase: 'done',
         sources,
         prepared: [],
-        allowNetwork: false,
         errorCode: null,
         errorDetail: null,
         failedItems: [],
@@ -421,7 +404,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
         ...state,
         phase: 'done',
         prepared: [],
-        allowNetwork: false,
         errorCode: null,
         errorDetail: null,
         failedItems: [],
@@ -440,7 +422,6 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
     refreshSources,
     prepareInput,
     setSelectedIds,
-    setAllowNetwork,
     prepareSelected,
     retryPreparation,
     install,
