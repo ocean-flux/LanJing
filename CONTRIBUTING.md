@@ -44,10 +44,9 @@ cargo test --manifest-path src-tauri/Cargo.toml --workspace
 pnpm verify   # pnpm check + cargo clippy --all-features -D warnings + cargo test --workspace
 ```
 
-钩子本身（`.git/hooks/pre-push`）做同样的事，但有两点要知道：
+钩子本身（`.git/hooks/pre-push`）做同样的事，有一点要知道：
 
-- **钩子按 PATH 解析 lefthook 二进制，优先于仓库 pin 的版本。** PATH 上有别的 lefthook 时门禁会静默用旧版（`git push` 输出里的 `lefthook vX.Y.Z` 就是实际用的版本）；要强制用仓库 pin 的那份就设 `LEFTHOOK_BIN`。
-- **门禁失败时不保证打印失败步骤的输出。** 推送被拒后先跑 `pnpm verify` 看真实原因，不要靠钩子的输出猜。
+- **钩子按 PATH 解析 lefthook 二进制，优先于仓库 pin 的版本。** `git push` 输出里的 `lefthook vX.Y.Z` 就是实际用的版本；跑的不是仓库 pin 的那份时，门禁可能连失败步骤的输出都不打印（实测旧版如此），于是推送被拒却看不到原因。要强制用 pin 的那份就设 `LEFTHOOK_BIN`；要完整的失败输出就直接跑 `pnpm verify`。
 
 ### 已知陷阱
 
