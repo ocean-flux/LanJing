@@ -54,9 +54,6 @@ sources:
   - id: openwiki-source-68e2dde2c84dfbdac9ee9fd2
     resource: repo://src-tauri/src/commands/execution.rs
 generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T13:54:24.186Z
 ---
 
 

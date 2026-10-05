@@ -54,9 +54,6 @@ sources:
   - id: openwiki-source-0abfee918aaf0d7e3ea712fc
     resource: repo://src-tauri/tauri.conf.json
 generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T13:54:24.186Z
 ---
 
 

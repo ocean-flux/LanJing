@@ -2,9 +2,6 @@
 type: "参考"
 title: "Library and media query"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-980fd459aadb6afbaa667438
     resource: repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs

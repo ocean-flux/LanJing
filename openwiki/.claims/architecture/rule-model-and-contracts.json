@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c8a7826cb41f46a3ad17bb438b2851c8789bad939d3181a2d79570b0a86c3ac3",
+  "pageVersion": "sha256:343b7076a28a71a24ff994ee729f2a80fc61e6a4d7092f75cdbe680dcf5f93c0",
   "claims": [
     {
       "id": "claim_08679c74f65340eb995813ca9e6e26fc",
@@ -63,11 +63,11 @@
       "statement": "definition_hash 由两步规范化得出: canonical_json 在每一层对 object key 按字节序排序而保持数组顺序, 语义投影则清掉节点 span、排序 Mapper identity_fields、按显式 order 排序 Merge inputs、按 UTF-8 bytes 排序 Condition branches 与 source_id_rules、按 id 排序 nodes 并对 edges 整体排序; 因此拖动节点或重排声明不改 hash, 而修改显式 Merge order/分支集合/任一节点配置一定改 hash。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/hash.rs#L37-L69",
-          "version": "repo-lines-v1:sha256:b035dae295674b6cc1a222f86f0c60a80b4587d2065fb6c17eb82ae4a6b50f11:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3ZDg1YzI4NzMxYjk5ZDg2NzY4YzllZTQxZDI0MzllY2UwYjIzMWQ1NzMwZDhiOTQzNDliZmFlNzZmNjE0OTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiYmExNTdlZTJiZWMzZDc1MTZkNGUzOWUzM2Q3ZjQwMDVhNzRiOTExZTM0MDA3ZTI5OWU0MmJhN2UyMzk3YmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5MDA2NWM0MDAwMTQwNmQzNWZiYTdiYmZhMGYyMjM1YjdjYjNlMjYzMjgwNTYzZjliYzU3NWRkOGQxMzE1NjMifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/hash.rs#L37-L70",
+          "version": "repo-lines-v1:sha256:dc465c316a7e51e189f7ea4c457e47ec66c9a0508c8f508de8a772ec14e504e7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3ZDg1YzI4NzMxYjk5ZDg2NzY4YzllZTQxZDI0MzllY2UwYjIzMWQ1NzMwZDhiOTQzNDliZmFlNzZmNjE0OTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiYmExNTdlZTJiZWMzZDc1MTZkNGUzOWUzM2Q3ZjQwMDVhNzRiOTExZTM0MDA3ZTI5OWU0MmJhN2UyMzk3YmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5MDA2NWM0MDAwMTQwNmQzNWZiYTdiYmZhMGYyMjM1YjdjYjNlMjYzMjgwNTYzZjliYzU3NWRkOGQxMzE1NjMifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/hash.rs#L71-L93",
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/hash.rs#L72-L94",
           "version": "repo-lines-v1:sha256:955359998ed0a75b026809a99578cf625b4caff9528849a7391f254a4e0aec58:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiZjdiOWM1N2ExODU1MGNlOWZmNTM2NDBiNjI3NmU3NmVhNWY4YWNmOTU5NTA2MzU0ZTBhOWJiYjhjYTlhNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5NmY4Y2IwODNmYTgwMGE0ZGNkMjk2OTcyMmQ3YjkyNjg2YWRkOWViZTM2NTU0OTJmYTY3MmIxYTdjZWQyNDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
@@ -78,19 +78,19 @@
     },
     {
       "id": "claim_343424e4cd6c425d8bc160a9328e4d8d",
-      "statement": "ExecutionPlan 字段全部私有且 plan_hash 只能由 ExecutionPlan::new 在构造末尾通过 execution_plan_hash 封存; 该 hash 覆盖全部 typed config、端口、边与 control region, 计算前清空 plan_hash 并规范化端口 union/句柄、nodes、edges、effect 能力、capability_requirements 与 Loop region 的 body_nodes, 使物理数组排列不进 hash 而显式 Merge order 与全部控制语义进 hash。",
+      "statement": "ExecutionPlan 字段全部私有, plan_hash 与 descriptor_digest 只能由 ExecutionPlan::new 在构造末尾封存; plan hash 材料是 ExecutionPlanWireRef, 覆盖全部 typed config、端口、边、control region 与 descriptor digest, 计算前清空 plan_hash 并规范化端口 union/句柄、nodes、edges、effect 能力、capability_requirements 与 Loop region 的 body_nodes。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L140-L182",
-          "version": "repo-lines-v1:sha256:6ece18fb67b50e7fb006aa87301273c8e85fdc7a9fa2d0cf6a936961a7bc3f55:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MmVkMjI2NGZhNDI3ZGY1OWY5NzY4MzI3MDJmYTRkNjIwNGFiZDJiMGFhNDg1NjA0NjI5NDA2MDcwNzEyZjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUwMmJlMTc5MWQzMDY2Mjk5MjlmZGJhZjlmMjc5YTc1MDU0MDc3Mzc1OGU3MzgwZGZjYzM5YzkxMTY2OTY4NjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRjNjdmNDMzYzBjZjUyZjU5YzUxZDIxNDAzYmQxYjJhM2UyNjQ2ZTE4OGVhMDM0OTZlMjJkZTkzYmYxZTYzZDMifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L140-L194",
+          "version": "repo-lines-v1:sha256:a83df313342df98f69fe94478e7087c2c836ba7be839cdd96e89723faa4c39be:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4MzEyN2NlY2Q2NmE2MmFmZjNmNDUxZWYwNzFjYTk2ODU4ZTU5MzI0YzBkZjM0N2I3NzU1M2M5MjJkM2YzOWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRjNjdmNDMzYzBjZjUyZjU5YzUxZDIxNDAzYmQxYjJhM2UyNjQ2ZTE4OGVhMDM0OTZlMjJkZTkzYmYxZTYzZDMifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L25-L35",
-          "version": "repo-lines-v1:sha256:65b54042c8dc340a3a62500828bbd7eef3d4b5d8204ef432538aa83136600872:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0ODAzMTYyMDkwODc4OGEzNmM1NjcyY2Q2MWY0YmYxZWI1Y2YzYTZjYTQ1MThiODdiNTJkODYxNzE5ZGQ0NzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmZjczNmIxNTBlZDY4ZTQ2N2M5ZDE3NTkyMGZhNTczMjI0MzFhMGY0MDFhMTk4YjhkMzUxMzdjOTk1NWQ2NWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxZTdhZTEzYTQ1ODFiZDIxNThiMjdlYmM0MTI1YTkxNmVjNzAxNTliZTcwYjhmYWExYWQwOTE1MzRkYzc4NDMifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L24-L35",
+          "version": "repo-lines-v1:sha256:9bc9d50d21c088a97c9c8c4cd65fd4a836767c66965477fb11365286483a9231:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzNzBmZTIzODIyZjM4ZWZkMWIwZTIxNmEzOTI4YTU0NjA3ZmNhMDMxZjg5ZDg2YjEyZTg5YzI2MTFkOThmYTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiM2ZiZTE1MmYzZDI1MjhlYjA3NDY5Y2NhZjc5MzcwMWMyMTFhMTQzMjZkNTNjZjkwNWE5ZTMyNTExMDFmM2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhOTdkZDc0Mzg0MGZhMjA2YjdjNmYyZWQzMDg4MTllNzMzNGNmZjhkNTRjMzZjZmQyNmRiYmQ4ZGNmYmM4YmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0MGI2N2U2ODliODQ0NjE4YmYyNDYyZjQ0MjBkYzU1YTNiYjM0NWU0MzIzMjcyMmMyOGJhMzYwM2JjNzRjNmQifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L43-L62",
-          "version": "repo-lines-v1:sha256:2bc9c895d903b296ca178f963e847cae380b0dd39c6181d4e4c98c01acc0390b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyN2NlY2U5M2NhZWNkN2UxYTE5OWFiODc0MTI4ZWEwNTZiODdkMzZhOGY4N2YxYTYyMGM2ZWIwYmJkMDRiYjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI2ZTliNWI2YzFiODc0NzMwYTg1YWFkZmE0YThmZWY3MmQ4NGUwN2EzYzc2MzlmZGI4OThkMTBlNDQ1YjQzYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiMWE4MmRmN2FmNDQ2NTY0ZTg3YTM4Mzc3M2FjNDJhNDU2Mjk3NjQxMmQ3OTMzMTQ3MGY0ZGZkMWJmMDg0Y2MifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L43-L61",
+          "version": "repo-lines-v1:sha256:87c29880977b9994d1572052887018b3dcd1d29bc90f639803706eb086cb62d8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNjRmZWUzYzZjNzc3ODkwYjhjMjc0Y2YyYTNiZDk1MDI2NTEzYjFiOGE1Njc2ZjdjMDQzNzRkODEyYTM0YTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0ZjU4NzUxNTVhOThhMWRjMGMyMzIxOTczY2YyYjlkNTY1NTZhYzZiNTE3NmRlMjA3NWVlMjI5NGQ0NDI0YWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmMzI1NDcyOTAyZGQ5MzdmMzk1YzRiYTRlNWZiOTFlZmM2NjNjMWI2NTA2ZmY5OTRjOThhOTA2MzBmNmVkNzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ4NWRlODYyOGRmOTM1NTI1N2M4OWJiMTc5OTI1OTNjZTQ1ZTBmZmYwMmQ5NTlhNmFkNWU5YjZiYjY3N2UxMWIifQ"
         }
       ]
     },
@@ -99,7 +99,7 @@
       "statement": "has_control_flow() 通过「存在 control region 或存在 Merge/Condition/Loop 节点」判定 Plan 是否用到当前 runtime 阶段尚未开放的控制能力, 它是能力协商的输入而非编译期校验。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L113-L125",
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L124-L136",
           "version": "repo-lines-v1:sha256:929657d39c34f652c3141b82397f931d6d87fa3ef98b2b8bf529ab8cf38bdc2d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmZGVjZGEyMTVjMjFjODM2N2RhYWY1YWMwODE0OGZhZWMwZjU2ZDJhMGNiNzcyNDEwOTQxY2I1NmI0MWVjNmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlNzgwNjI5YzljZjc4MzgyM2IzYjhhODc1ZmM1YWE1M2Y1NDk4NmI2NjA1ZGViZWNjNDdjOGQyNTRiZjVlNWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMzY2M3NjA4NTE4ZjlmZDgzMmY5NTJkNTI2YmI4MDRiMjE2ODc2ZWY4Yzg4MmY1NmIyNzg3ZmQxOTFhNTU1MGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4MzEyN2NlY2Q2NmE2MmFmZjNmNDUxZWYwNzFjYTk2ODU4ZTU5MzI0YzBkZjM0N2I3NzU1M2M5MjJkM2YzOWEifQ"
         }
       ]
@@ -109,7 +109,7 @@
       "statement": "Plan hash 的材料包含 RULE_CONTRACT_SCHEMA_VERSION 与 compiler_version, 因此合同 schema 或 compiler 版本变化都会改变 plan hash; 固定 handle 常量(LINEAR_*/CONDITION_INPUT_HANDLE/MERGE_OUTPUT_HANDLE/LOOP_*)在这一层定义, 编译器端口矩阵引用它们。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L170-L171",
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs#L181-L182",
           "version": "repo-lines-v1:sha256:819c20247687758e88893e8ae01036c7bdb79d84abb482cfebb259943f2d80e4:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmRhZDBjNDBiNmJlMTg1YTQ5NGJlMGYzYTNkOGU3OGZjOGZkYjMyNjY4ZGU0NzY2YTIxZWU5MGNlZTNhMjU3YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWVkMDU1N2Y1YTc2OWZhYTNlODNiNmZiZTMwZTNhYWU0YTJkNjMxMWUyZTM5NmQ4NjRiM2U3YzU4MjdjMjM5NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWM2M2ZhNWI2MjY1NjBhZWE3N2E4OWFjODQ1NzIwZGMxYTkwYmE2YzEzNTMxMmMzNzA3OGVhMWI1MDBlNTE5ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDY1ZTY2NDk1ODA3MDdmYTJhMTBhNTU3ZGZiYzM4MjVhNThhYzhmNTI3MDYyOTY1ODA1MTk1NDExMDk0MTkxNyJ9"
         },
         {
@@ -138,11 +138,11 @@
     },
     {
       "id": "claim_8262ebb7f2644ee6bb22d1bd9ea565cc",
-      "statement": "PolicyCapabilities 由 network 与拆出的 SystemCapabilities{fs,env,process} 组成, 同一结构同时充当安装 grant 与执行沙箱边界, 拒绝以 CapabilityError::Blocked(Capability) 表达; 拆出 system 子结构的原因之一是避免触发 clippy 的 struct_excessive_bools 阈值。",
+      "statement": "SystemCapabilities { fs, env, process } 是这一层唯一的策略类型, 同时充当安装 grant 与执行沙箱边界, 被拒绝的能力以 CapabilityError::Blocked(Capability) 表达; 网络不受 capability 控制, 所以既没有 network 字段也没有 Capability::Network。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/policy.rs#L5-L48",
-          "version": "repo-lines-v1:sha256:1e448b485abd5880498fab00a5b90827de18adb4e680176a4b4cd9b62b058dd4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExNzFmODU0NzFhMTkzYmZhOTQ4YzQ5ODUwY2RjNjQ0YWI3ZTI2Y2FhNTNmNTE4N2NhMTIwMTIyODlhY2I3ODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcyNzVhZjI5NTk0ODM4MTFjZjk5NzI3Yzc4MjZiNmY4MTIwMzkzNWI0MjFkZDhmNThiYzc4YWRhZTBlYjBhM2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/policy.rs#L5-L36",
+          "version": "repo-lines-v1:sha256:7e0dcf8f53b38f05708d4f353c06c901702a50c6d6f1237590c16ba9c3adbed7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExNzFmODU0NzFhMTkzYmZhOTQ4YzQ5ODUwY2RjNjQ0YWI3ZTI2Y2FhNTNmNTE4N2NhMTIwMTIyODlhY2I3ODkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcyNzVhZjI5NTk0ODM4MTFjZjk5NzI3Yzc4MjZiNmY4MTIwMzkzNWI0MjFkZDhmNThiYzc4YWRhZTBlYjBhM2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -189,8 +189,8 @@
       "statement": "rule-model 这一层没有 Revision 类型: 「草稿 / 生效 revision」的概念只存在于 lj-rule-system 的文档 DTO 与存储侧, 不在规则合同里。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-model/src/lib.rs#L21-L51",
-          "version": "repo-lines-v1:sha256:7ca43f9a4a1cd46600e2c8bf2b0c2b80e5a27259cf148c8c8622d4f6061873f5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImViYzYyODliMDJjZmNjMDBiMDk3ZTY5NzEyMDI4M2ZlNzk4MzNkMzliNjhlNDkwODk0YWRhN2NmNzI2ODA5OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4NDU3NDJkYWE1MzEzYTA0OGNiNzI1NTJmMWU4N2I5Nzg1ZmExYzIwNDBjYTNjNzQxYmEwMzZiZTEzZTQ5MjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4MjU0ZmRmYTAwMTNhYTRjOTIyMzIwOTJjNmE4Y2M3YWQ5NWY3MjBlZTQ2NzJlNDhiYjViYjZjMjkzZTdmZDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-model/src/lib.rs#L23-L54",
+          "version": "repo-lines-v1:sha256:ec8d3f422be26397676ea8535936a7f18565faee6ba90c7845ed60fe1ce657cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3MTMyNWQwOTYwZTg0ODZlYjE2MzY0ZTM1ZTM3MDk0ZDBkMGNjOTRlZDE1ZmQ3NjI5MTg3MmEyMTg1ZWE2YjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4NDU3NDJkYWE1MzEzYTA0OGNiNzI1NTJmMWU4N2I5Nzg1ZmExYzIwNDBjYTNjNzQxYmEwMzZiZTEzZTQ5MjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4MjU0ZmRmYTAwMTNhYTRjOTIyMzIwOTJjNmE4Y2M3YWQ5NWY3MjBlZTQ2NzJlNDhiYjViYjZjMjkzZTdmZDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -251,6 +251,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T13:54:24.186Z"
+    "at": "2026-10-05T08:37:16.392Z"
   }
 }

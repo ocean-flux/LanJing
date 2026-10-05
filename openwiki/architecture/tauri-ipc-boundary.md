@@ -2,9 +2,6 @@
 type: "参考"
 title: "Tauri ipc boundary"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-00ff4b2512b6dbfa268cbfa4
     resource: repo://src-tauri/capabilities/default.json

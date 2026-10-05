@@ -60,9 +60,6 @@ sources:
   - id: openwiki-source-b3eeee8972a1c1a0ed428993
     resource: repo://src/features/apps/AppsHome.tsx
 generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T13:54:24.186Z
 ---
 
 

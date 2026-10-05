@@ -1,0 +1,523 @@
+{
+  "schemaVersion": 1,
+  "runId": "450bf87a-0024-4e3f-ad77-0a8ca06f3f09",
+  "mode": "update",
+  "phase": "generating",
+  "startedAt": "2026-10-05T08:37:16.392Z",
+  "language": "zh-CN",
+  "languageChanged": false,
+  "requiredRewritePages": [],
+  "initialPages": [
+    "/openwiki/architecture/frontend-shell.md",
+    "/openwiki/architecture/rule-compiler.md",
+    "/openwiki/architecture/rule-model-and-contracts.md",
+    "/openwiki/architecture/rule-runtime.md",
+    "/openwiki/architecture/rule-system-facade.md",
+    "/openwiki/architecture/storage-and-event-ledger.md",
+    "/openwiki/architecture/system-overview.md",
+    "/openwiki/architecture/tauri-ipc-boundary.md",
+    "/openwiki/quality/testing-and-gates.md",
+    "/openwiki/quickstart.md",
+    "/openwiki/reference/app-surfaces-and-asset-gateway.md",
+    "/openwiki/security/trust-boundaries.md",
+    "/openwiki/workflows/execution-capture-and-replay.md",
+    "/openwiki/workflows/library-and-media-query.md",
+    "/openwiki/workflows/rule-document-lifecycle.md",
+    "/openwiki/workflows/rule-editor-workspace.md",
+    "/openwiki/workflows/source-install-and-update.md"
+  ],
+  "sourceFingerprint": "sha256:db71ffcb581e422328e07d57c4424b362016912a41060d31dbee7f4f58b83ff5",
+  "targetGitHead": "e8042fa0be7401e24e219f6980721ff6d770e384",
+  "actor": {
+    "producerActor": "pi",
+    "metadataModel": "host-agent/pi"
+  },
+  "previousLastUpdate": {
+    "updatedAt": "2026-10-04T14:22:51.663Z",
+    "command": "update",
+    "gitHead": "2f7f6032633b44de4f1162a146da88237ffe45b6",
+    "model": "host-agent/pi",
+    "status": "complete",
+    "language": "zh"
+  },
+  "baseGitHead": "2f7f6032633b44de4f1162a146da88237ffe45b6",
+  "beforeContentSnapshot": "782f198b9cc33fb6724c9b9938bac75c982fc14d5013ba53f5e8ae1be5d36cd9",
+  "preparedWiki": {
+    "generatedProvenance": [
+      {
+        "page": "/openwiki/architecture/frontend-shell.md",
+        "bodyHash": "07b94cc6e0db092f485a7a98dcb4682714bce103f6438af77b354c90a0399278",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/architecture/rule-compiler.md",
+        "bodyHash": "719522a2cb08b4f57e7cee02a3dde5776841a1fddc9cbe5d8b820ab39e15f935",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/architecture/rule-model-and-contracts.md",
+        "bodyHash": "a1c7e6cc8957611aeae3c1daaea296f9a3bf9bad9d9ff09c284d444ac994b27f",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/architecture/rule-runtime.md",
+        "bodyHash": "4bfa5822b53f24d1c253cafbd368d5a6485491b29a3e453ef83e798292b0effb",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/architecture/rule-system-facade.md",
+        "bodyHash": "ff48f950d4467965bdcffd845100ed0f4077a0c60d7a0843c74a9210adc428ce",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/architecture/storage-and-event-ledger.md",
+        "bodyHash": "5eb0ca62a79d7ecfc946e5b70c7ce8734edb6ffe6bcb021236c94b0f4b848e89",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/architecture/system-overview.md",
+        "bodyHash": "47d8e359870c7d9784f064bc3943b201fa6d3aa98d8f7d42423e4038755cfc6c",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/architecture/tauri-ipc-boundary.md",
+        "bodyHash": "3ff1f1391cabe662eb5b39e39e4cac44e3a1d77b13f1c9066d476093d9a3cb6f",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/quality/testing-and-gates.md",
+        "bodyHash": "95b58b18cc04ed17d9dbb5c2b718dfd3970771f5981882744c03b5cd4461a1bb",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/quickstart.md",
+        "bodyHash": "f06584c0cb59447ec2607fc7cf1af2a9e39feafa478fb9beac771c18828b5ebf",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/reference/app-surfaces-and-asset-gateway.md",
+        "bodyHash": "fa1c5add25b13faee870484b2a463b0665f9aeb2c4f340d7c2597cdc4506d038",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/security/trust-boundaries.md",
+        "bodyHash": "73235b451ec8ceda8083dabd4a36c6e8078a40c2ad2bc2ba0e5d73d99429421a",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/workflows/execution-capture-and-replay.md",
+        "bodyHash": "b172c905be0e0e8bc37cc278e9787fdb0b62db5a8c2d85948fc61acfc7c73ba3",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T13:54:24.186Z"
+        }
+      },
+      {
+        "page": "/openwiki/workflows/library-and-media-query.md",
+        "bodyHash": "eaccd7d923f139aad886ff003eb01b8ae20cbbf85e4069c08164236457835456",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/workflows/rule-document-lifecycle.md",
+        "bodyHash": "fa0d1d1d395057b82f24fe3d7f73eb2659d2b0d589848b8750217c957588dd54",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/workflows/rule-editor-workspace.md",
+        "bodyHash": "dcd4563d6a2ac1198b2164d767c0ad75a22ec70c1718d8759fec9eae0a67182d",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      },
+      {
+        "page": "/openwiki/workflows/source-install-and-update.md",
+        "bodyHash": "27abbf2ea91c3f713d13017d01e333de9e6d645b81fab651fd1549c4d66e72be",
+        "generated": {
+          "by": "pi",
+          "at": "2026-10-04T10:14:16.110Z"
+        }
+      }
+    ]
+  },
+  "plan": {
+    "pages": [
+      {
+        "id": "94ab70dc-9b4a-4817-90d5-ed89b8e5faf8",
+        "path": "/openwiki/architecture/frontend-shell.md",
+        "title": "Frontend shell",
+        "purpose": "前端外壳: 路由、布局、Barrel/共享模块、主题与本地化约定",
+        "seedPaths": [
+          "src/components/Icon.tsx",
+          "src/features/apps",
+          "src/index.css",
+          "src/shared/i18n"
+        ],
+        "relatedPages": [
+          "/openwiki/workflows/library-and-media-query.md",
+          "/openwiki/workflows/rule-editor-workspace.md"
+        ],
+        "instructions": [],
+        "status": "complete",
+        "completedBy": "pi"
+      },
+      {
+        "id": "160da3d4-4f10-43f1-ae4a-adc93cdd77ca",
+        "path": "/openwiki/architecture/rule-compiler.md",
+        "title": "Rule compiler",
+        "purpose": "规则编译器: descriptor 驱动的端口解析、校验诊断、canonical 化、immutable Plan 与 descriptor digest",
+        "seedPaths": [
+          "src-tauri/crates/lj-compiler/src/compiler.rs",
+          "src-tauri/crates/lj-compiler/src/compiler/canonicalize.rs",
+          "src-tauri/crates/lj-compiler/src/compiler/lowering.rs",
+          "src-tauri/crates/lj-compiler/src/compiler/ports.rs",
+          "src-tauri/crates/lj-compiler/src/compiler/validation/definition.rs"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-model-and-contracts.md",
+          "/openwiki/workflows/rule-editor-workspace.md"
+        ],
+        "instructions": [],
+        "status": "complete",
+        "completedBy": "pi"
+      },
+      {
+        "id": "50a39ebf-f741-469f-9d8e-adbdbbed92fa",
+        "path": "/openwiki/architecture/rule-model-and-contracts.md",
+        "title": "Rule model and contracts",
+        "purpose": "规则模型与合同: Definition/Plan/Rule Package 的 canonical 形状、descriptor 唯一声明表、能力清单、预算、unknown payload",
+        "seedPaths": [
+          "src-tauri/crates/lj-rule-model/src/budget.rs",
+          "src-tauri/crates/lj-rule-model/src/definition/config.rs",
+          "src-tauri/crates/lj-rule-model/src/descriptor.rs",
+          "src-tauri/crates/lj-rule-model/src/hash.rs",
+          "src-tauri/crates/lj-rule-model/src/lib.rs",
+          "src-tauri/crates/lj-rule-model/src/plan/contract.rs",
+          "src-tauri/crates/lj-rule-model/src/plan/types.rs",
+          "src-tauri/crates/lj-rule-model/src/policy.rs"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-compiler.md",
+          "/openwiki/architecture/rule-runtime.md",
+          "/openwiki/workflows/rule-document-lifecycle.md"
+        ],
+        "instructions": [],
+        "status": "complete",
+        "completedBy": "pi"
+      },
+      {
+        "id": "cb29a58b-5fbd-448b-a3e2-d7c6813bc6b0",
+        "path": "/openwiki/architecture/rule-runtime.md",
+        "title": "Rule runtime",
+        "purpose": "执行运行时: scheduler、effect 执行与捕获、replay、系统能力检查与 JS 资源预算",
+        "seedPaths": [
+          "src-tauri/crates/lj-runtime/src/capability.rs",
+          "src-tauri/crates/lj-runtime/src/effect/contracts.rs",
+          "src-tauri/crates/lj-runtime/src/effect_registry/builtin.rs",
+          "src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs",
+          "src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/dispatch.rs",
+          "src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-model-and-contracts.md",
+          "/openwiki/workflows/execution-capture-and-replay.md"
+        ],
+        "instructions": [],
+        "status": "complete",
+        "completedBy": "pi"
+      },
+      {
+        "id": "1886953d-00cd-4e1b-a91b-6df74301c961",
+        "path": "/openwiki/architecture/rule-system-facade.md",
+        "title": "Rule system facade",
+        "purpose": "RuleSystem facade: 应用层唯一入口, 文档生命周期、Rule Package 校验、安装候选与执行编排",
+        "seedPaths": [
+          "src-tauri/crates/lj-rule-system/src/lib.rs",
+          "src-tauri/crates/lj-rule-system/src/system.rs",
+          "src-tauri/crates/lj-rule-system/src/system/error_mapping.rs",
+          "src-tauri/crates/lj-rule-system/src/system/lifecycle/package.rs",
+          "src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/tauri-ipc-boundary.md",
+          "/openwiki/workflows/rule-document-lifecycle.md",
+          "/openwiki/workflows/source-install-and-update.md"
+        ],
+        "instructions": [],
+        "status": "complete",
+        "completedBy": "pi"
+      },
+      {
+        "id": "b1c7b2e2-b3cd-42d3-8878-d8a8029e233e",
+        "path": "/openwiki/architecture/storage-and-event-ledger.md",
+        "title": "Storage and event ledger",
+        "purpose": "存储与事件账本: SQLite 投影、候选 staging、凭据槽、执行归档与历史 pin",
+        "seedPaths": [
+          "src-tauri/crates/lj-storage-migration/src/lib.rs",
+          "src-tauri/crates/lj-storage/src/repository/candidate_source/contract.rs",
+          "src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs",
+          "src-tauri/crates/lj-storage/src/repository/execution/read.rs",
+          "src-tauri/crates/lj-storage/src/types/candidate.rs"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-system-facade.md",
+          "/openwiki/workflows/execution-capture-and-replay.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "f4646e33-3f21-4f46-87c8-7e15f4e3cffc",
+        "path": "/openwiki/architecture/system-overview.md",
+        "title": "System overview",
+        "purpose": "仓库整体系统概览: 一码多端的本地优先阅读工作台, Rust workspace 分层、前端分层、规则优先扩展体系的一期落地形态",
+        "seedPaths": [
+          "AGENTS.md",
+          "CONTEXT.md",
+          "README.md",
+          "docs/adr/0004-rule-first-open-extension-architecture.md",
+          "src-tauri/Cargo.toml"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-model-and-contracts.md",
+          "/openwiki/architecture/rule-runtime.md",
+          "/openwiki/architecture/tauri-ipc-boundary.md",
+          "/openwiki/quickstart.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "0736fb36-7af6-4521-858d-14013f93f1b0",
+        "path": "/openwiki/architecture/tauri-ipc-boundary.md",
+        "title": "Tauri ipc boundary",
+        "purpose": "Tauri IPC 边界: 命令清单、typed wire 镜像、执行事件流与前端唯一入口约定",
+        "seedPaths": [
+          "src-tauri/src/commands/document.rs",
+          "src-tauri/src/commands/import_install.rs",
+          "src-tauri/src/lib.rs",
+          "src/shared/tauri/execution.ts",
+          "src/shared/tauri/rules/wire.ts",
+          "src/shared/tauri/sources.ts"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-system-facade.md",
+          "/openwiki/security/trust-boundaries.md",
+          "/openwiki/workflows/rule-editor-workspace.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "76624666-233d-4176-8018-a9decbac58de",
+        "path": "/openwiki/quality/testing-and-gates.md",
+        "title": "Testing and gates",
+        "purpose": "测试与门禁: Rust 与前端测试分层、pre-commit/pre-push 门禁、验收型集成测试",
+        "seedPaths": [
+          "lefthook.yml",
+          "package.json",
+          "src-tauri/crates/lj-integration-tests/fixtures/core_out_rule_package.json",
+          "src-tauri/crates/lj-integration-tests/tests"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/system-overview.md",
+          "/openwiki/workflows/source-install-and-update.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "33b2ee71-c01b-45ec-82fc-9b0e35749e04",
+        "path": "/openwiki/reference/app-surfaces-and-asset-gateway.md",
+        "title": "App surfaces and asset gateway",
+        "purpose": "App Surface 与资产网关协议参考",
+        "seedPaths": [
+          "docs/adr/0007-asset-gateway-protocol.md"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/frontend-shell.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "e4e75f68-15ce-4060-9c0a-0c824a53a521",
+        "path": "/openwiki/security/trust-boundaries.md",
+        "title": "Trust boundaries",
+        "purpose": "信任边界: 网络不受能力控制、目标解析与 DNS pin、JS 沙箱、系统能力拒绝、凭据与归档不变量",
+        "seedPaths": [
+          "SECURITY.md",
+          "src-tauri/crates/lj-node-http/src/processor/import.rs",
+          "src-tauri/crates/lj-node-http/src/processor/request.rs",
+          "src-tauri/crates/lj-node-http/src/target.rs",
+          "src-tauri/crates/lj-node-js/src/processor.rs",
+          "src-tauri/crates/lj-runtime/src/capability.rs"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/tauri-ipc-boundary.md",
+          "/openwiki/workflows/source-install-and-update.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "48b8c981-5dca-47c2-812f-1b009901ce5d",
+        "path": "/openwiki/workflows/execution-capture-and-replay.md",
+        "title": "Execution capture and replay",
+        "purpose": "执行、捕获与重放: 执行终态、effect 捕获账本、禁止 live fallback 的历史重放",
+        "seedPaths": [
+          "src-tauri/crates/lj-rule-system/src/system/capture.rs",
+          "src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs",
+          "src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/replay.rs",
+          "src/features/rules/model/execution.ts",
+          "src/shared/tauri/execution.ts"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-runtime.md",
+          "/openwiki/architecture/storage-and-event-ledger.md",
+          "/openwiki/workflows/rule-editor-workspace.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "5a0d1cde-6696-4152-aad0-5a3d0294e373",
+        "path": "/openwiki/workflows/library-and-media-query.md",
+        "title": "Library and media query",
+        "purpose": "媒体库与查询工作流",
+        "seedPaths": [
+          "src-tauri/src/commands/query.rs",
+          "src/features/library"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/storage-and-event-ledger.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "f5fdae72-ece6-487c-ac29-9ed23e49e412",
+        "path": "/openwiki/workflows/rule-document-lifecycle.md",
+        "title": "Rule document lifecycle",
+        "purpose": "原生规则文档生命周期: Draft/Effective/Recovery revision、显式保存、unknown payload 与稳定诊断",
+        "seedPaths": [
+          "src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs",
+          "src-tauri/crates/lj-rule-system/src/types/document.rs",
+          "src/features/rules/model/session.ts",
+          "src/features/rules/session-error.ts"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-model-and-contracts.md",
+          "/openwiki/architecture/rule-system-facade.md",
+          "/openwiki/workflows/rule-editor-workspace.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "1c5e6490-a13a-47de-a41f-ae969b748349",
+        "path": "/openwiki/workflows/rule-editor-workspace.md",
+        "title": "Rule editor workspace",
+        "purpose": "规则编辑器工作区: descriptor 驱动的节点面板、端口门禁、显式保存与执行预览",
+        "seedPaths": [
+          "src/features/rules/RuleFlowCanvas.tsx",
+          "src/features/rules/inspector/ExecutionPreview.tsx",
+          "src/features/rules/inspector/node-panels.tsx",
+          "src/features/rules/model/connection-gate.ts",
+          "src/features/rules/model/descriptor-registry.ts",
+          "src/features/rules/model/session.ts"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-compiler.md",
+          "/openwiki/workflows/execution-capture-and-replay.md",
+          "/openwiki/workflows/rule-document-lifecycle.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "ff4cb1be-d5f7-460b-b3e0-da81e248bf03",
+        "path": "/openwiki/workflows/source-install-and-update.md",
+        "title": "Source install and update",
+        "purpose": "来源安装与更新: Adaptive Source Input、Install Candidate、能力摘要、Source Revision 与更新审阅",
+        "seedPaths": [
+          "src-tauri/crates/lj-importer/src/legado/translator.rs",
+          "src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs",
+          "src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs",
+          "src/features/sources/SourceInstallDialog.tsx",
+          "src/features/sources/SourcesHome.tsx",
+          "src/features/sources/workflow.ts"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-system-facade.md",
+          "/openwiki/architecture/storage-and-event-ledger.md",
+          "/openwiki/security/trust-boundaries.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      },
+      {
+        "id": "eb552904-b34b-4dec-af75-854c5837d10e",
+        "path": "/openwiki/quickstart.md",
+        "title": "Quickstart",
+        "purpose": "任务路由地图: 从任务到相关页面与命令的入口",
+        "seedPaths": [
+          "CONTEXT.md",
+          "CONTRIBUTING.md",
+          "README.md",
+          "src-tauri/src/lib.rs"
+        ],
+        "relatedPages": [
+          "/openwiki/architecture/rule-model-and-contracts.md",
+          "/openwiki/architecture/system-overview.md",
+          "/openwiki/quality/testing-and-gates.md"
+        ],
+        "instructions": [],
+        "status": "pending"
+      }
+    ],
+    "deletePages": []
+  }
+}

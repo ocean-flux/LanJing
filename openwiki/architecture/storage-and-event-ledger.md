@@ -2,9 +2,6 @@
 type: "参考"
 title: "Storage and event ledger"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-0942045685304146bceb6d57
     resource: repo://src-tauri/crates/lj-storage-entity/src/lib.rs

@@ -44,7 +44,7 @@ sources:
 generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
 verified:
   - by: openwiki/0.7.0
-    at: 2026-10-04T13:54:24.186Z
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -56,7 +56,7 @@ verified:
 
 启动后的失败不再变成同步错误: 它们进入 session 的 `ExecutionEventKind::Failed`。这条边界让调用方只有两种失败处理位置——`execute()` 的 `Result` 处理「根本不该开始」的问题, 事件流处理「开始之后」的问题。
 
-`PlanExecutionRequest` 携带 `execution_id`、`source_id`、`trace_id`、`plan`、`intent`、`input`、`mode`、`capabilities`、`base_url` 与 `credentials`; `ExecutionMode` 只有 `Live` 与 `Replay { archived_execution_id }`(`src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L203-L243`)。
+`PlanExecutionRequest` 携带 `execution_id`、`source_id`、`trace_id`、`plan`、`intent`、`input`、`mode`、`capabilities`(类型是 `SystemCapabilities`, 不再是含 network 的 PolicyCapabilities)、`base_url` 与 `credentials`; `ExecutionMode` 只有 `Live` 与 `Replay { archived_execution_id }`(`src-tauri/crates/lj-runtime/src/plan_runtime/api.rs#L224-L245`)。
 
 ## 装配: EffectRegistry → FrozenEffectRegistry
 
@@ -76,6 +76,7 @@ handler 的注册与冻结只发生在 application composition 阶段, 冻结后
 
 - `compiler_version` 必须与 runtime config **完全一致**, 否则 `CompilerVersionMismatch`。
 - 用 `execution_plan_hash` 重算 plan hash 并与 Plan 内 `plan_hash` 比对, 不一致即 `PlanHashMismatch`——这是对「Plan 是否被篡改或由不同 compiler 产出」的完整性检查。
+- `plan.descriptor_digest()` 必须等于当前 `descriptor_set_digest()`, 否则拒绝——compiler 与执行方读同一份 descriptor 声明表, 声明一变旧 Plan 就不再可执行(`#L53-L58`)。
 - `definition_hash` 非空、`intent_entries` 非空、节点 ID 唯一且非 nil、边引用的节点存在且 semantic identity 不重复、每个 intent 的 `mapper_output` 必须是 Mapper、effect 声明与节点类型一致、Loop region 不嵌套, 最后对每个 intent 试算 `execution_path`。
 
 `check_plan_support` 只回答一个问题: Plan 是否含 control flow(`has_control_flow()`), 从而给出 `PlanSupport::{Linear, ControlFlow}`(`src-tauri/crates/lj-runtime/src/plan_runtime/validation.rs#L40-L46`)。
@@ -118,7 +119,7 @@ Merge 的顺序语义落在 runtime: 物理存储顺序无关, 只有 `order` �
 `execute_effect` 是 live/replay 的分叉点(`src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs#L12-L135`), 顺序为:
 
 1. 取消检查;
-2. `enforce_capabilities`——Plan 声明的能力必须落在安装 grant 内, 否则 `CapabilityDenied`;
+2. `enforce_capabilities`——Plan 声明的能力必须落在安装 grant 内, 否则 `CapabilityDenied`。当前只能拒 `fs`/`env`/`process`: 网络不是受控能力, 没有网络声明也没有网络 grant(`src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/dispatch.rs#L169-L184`);
 3. 取 effect ID 与取消 token, **先等来源级 permit 再等全局 permit**(注释写明这是为了避免同一来源排队的 effect 占住全局 permit 阻塞其他来源);
 4. 再次取消检查;
 5. 计算 fingerprint;
@@ -180,8 +181,8 @@ adapter 实现分别放在独立 crate, 都实现 runtime 定义的 typed trait(
 
 | effect | 实现 | 关键约束 |
 | --- | --- | --- |
-| Http | `HttpEffectAdapter`(`src-tauri/crates/lj-node-http/src/processor/adapter.rs#L55-L75`) | 先查 `Network` capability; 测试构造器可关闭 SSRF 防护 |
-| QuickJS | `QuickJsEffectAdapter`(`src-tauri/crates/lj-node-js/src/processor.rs#L51-L120`) | 内存上限 16 MB、超时 5000 ms; 所有 `rquickjs` 对象只在 `spawn_blocking` 内创建与销毁; watchdog 轮询取消 token 并触发 QuickJS interrupt |
+| Http | `HttpEffectAdapter`(`src-tauri/crates/lj-node-http/src/processor/adapter.rs`) | 不再做能力检查: 网络不受 capability 控制, 直接请求; 目标解析与 DNS pin 在 `target.rs`, 不再阻止任何目标 |
+| QuickJS | `QuickJsEffectAdapter`(`src-tauri/crates/lj-node-js/src/processor.rs`) | 内存上限与超时**来自规则合同的 `JsBudget`**(host policy 上限内), 不再是适配器常量; 所有 `rquickjs` 对象只在 `spawn_blocking` 内创建与销毁; watchdog 轮询取消 token 并触发 QuickJS interrupt |
 | Extract | `ExtractEffectAdapter`(`src-tauri/crates/lj-node-extract/src/processor.rs#L20-L40`) | 直接借用上游 HTTP body 提取, 不为 Plan runtime 的 `Arc` 输出复制 body |
 
 `EffectOutput` 是闭集 `Http` / `QuickJs` / `Extract` / `Failure`, 其中 `Failure` 表示「已发生并需要 durable capture 的安全失败, 不伪造协议响应」; `EffectInput` 是 `Intent` / `Output(Arc<..>)` / `Json(Arc<..>)`, 用 `Arc` 避免在分支边上复制 HTTP body(`src-tauri/crates/lj-runtime/src/effect/contracts.rs#L110-L155`)。

@@ -2,9 +2,6 @@
 type: "参考"
 title: "Rule document lifecycle"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-9faf227efd814ea6139f8535
     resource: repo://docs/adr/0002-versioned-source-and-rule-lifecycle.md

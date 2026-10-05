@@ -4,7 +4,7 @@ title: "Frontend shell"
 openwiki_generated: true
 verified:
   - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
+    at: 2026-10-05T08:37:16.392Z
 sources:
   - id: openwiki-source-6ae244f79c5e27a2b1f08014
     resource: repo://components.json

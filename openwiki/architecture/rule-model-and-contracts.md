@@ -2,9 +2,6 @@
 type: "参考"
 title: "Rule model and contracts"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T13:54:24.186Z
 sources:
   - id: openwiki-source-f70faf819fb2edbb8e236f45
     resource: repo://docs/adr/0004-rule-first-open-extension-architecture.md
@@ -31,6 +28,9 @@ sources:
   - id: openwiki-source-8ece8d8ea6055cf2f800dcb4
     resource: repo://src-tauri/crates/lj-runtime/src/effect_registry.rs
 generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -78,9 +78,9 @@ hash 由两步组成。第一步 `canonical_json` 把值序列化为确定性 JS
 
 ## ExecutionPlan: 不可变封存
 
-`ExecutionPlan` 的字段同样全部私有: `compiler_version`、`definition_hash`、`plan_hash`、`nodes`、`edges`、`intent_entries`、`effects`、`capability_requirements`、`control_regions`(`src-tauri/crates/lj-rule-model/src/plan/contract.rs#L24-L35`)。`ExecutionPlan::new` 在构造末尾调用 `execution_plan_hash(&plan)` 并把结果写进 `plan_hash`, 调用方无法自行指定 hash(`#L43-L61`)。
+`ExecutionPlan` 的字段同样全部私有: `compiler_version`、`definition_hash`、`descriptor_digest`、`plan_hash`、`nodes`、`edges`、`intent_entries`、`effects`、`capability_requirements`、`control_regions`(`src-tauri/crates/lj-rule-model/src/plan/contract.rs#L24-L35`)。`ExecutionPlan::new` 在构造末尾调用 `execution_plan_hash(&plan)` 并把结果写进 `plan_hash`, 同时把 `descriptor_set_digest()` 写进 `descriptor_digest`, 这两个值调用方都无法自行指定(`#L43-L61`)。
 
-`execution_plan_hash` 覆盖全部 typed config、端口、边与 control region, 计算前把 `plan_hash` 清空; 它对 hash 材料也做规范化: 节点端口 union 与句柄排序、`nodes.sort_by_key(id)`、`edges.sort()`、每个 effect 的 `required_capabilities` 排序、`effects` 按 node_id 排序、`capability_requirements` 排序、Loop region 的 `body_nodes` 排序与 region 按 loop_node 排序(`#L140-L182`)。结论与 definition hash 一致: 物理数组排列不进 hash, 显式 Merge `order` 与全部控制语义进 hash。
+`execution_plan_hash` 覆盖全部 typed config、端口、边与 control region, 计算前把 `plan_hash` 清空; hash 材料是 `ExecutionPlanWireRef`, 其中带 `descriptor_digest`, 所以 descriptor 声明表一变旧 Plan 的 hash 就不再匹配 —— 「执行绑定 descriptor digest」就是靠这一点落地的。它对 hash 材料也做规范化: 节点端口 union 与句柄排序、`nodes.sort_by_key(id)`、`edges.sort()`、每个 effect 的 `required_capabilities` 排序、`effects` 按 node_id 排序、`capability_requirements` 排序、Loop region 的 `body_nodes` 排序与 region 按 loop_node 排序(`#L140-L194`)。结论与 definition hash 一致: 物理数组排列不进 hash, 显式 Merge `order` 与全部控制语义进 hash。
 
 `has_control_flow()` 用来回答「这份 Plan 是否用到当前 runtime 阶段尚未开放的控制节点/region」: 只要有 control region, 或存在 Merge/Condition/Loop 节点即为真(`#L113-L125`)。它是 runtime 能力协商的输入, 而不是编译期校验。
 
@@ -106,9 +106,17 @@ Plan IR 的值类型是闭集: `EffectKind` 只有 `Http` / `QuickJs` / `Extract
 
 策略只分类名称, 从不持有或记录对应值, 这是后续 error_mapping/witness 能够「只谈名字不谈内容」的前提。
 
-## 能力策略
+## 能力策略: 只管系统 API
 
-`PolicyCapabilities { network: bool, system: SystemCapabilities }`, 其中 `system` 拆出 `fs` / `env` / `process` 三个 bool(`src-tauri/crates/lj-rule-model/src/policy.rs#L8-L27`)。这份结构同时充当安装 grant 与执行沙箱边界; 被拒绝的能力以 `CapabilityError::Blocked(Capability)` 表达(`#L29-L48`)。
+`SystemCapabilities { fs, env, process }` 是这一层唯一的策略类型(`src-tauri/crates/lj-rule-model/src/policy.rs#L5-L17`)。**网络不是受控能力**: 应用总是允许联网, 没有网络能力、没有网络 grant, `Capability` 枚举里也没有 `Network`(`#L19-L28`)。被拒绝的能力以 `CapabilityError::Blocked(Capability)` 表达(`#L30-L36`)。
+
+这份结构同时充当安装 grant 与执行沙箱边界, 但两边含义不同: 安装侧描述「这个来源声明需要哪些系统能力」(`CapabilityManifest { required: SystemCapabilities }`), 执行侧描述「这次执行允许哪些」。规则声明的能力只能收紧执行侧, 不能放宽。
+
+## descriptor: 节点声明的唯一来源
+
+节点端口、编辑器字段、默认 config 与文案 key 只有一份声明, 在 `lj-rule-model::descriptor`(约 1160 行): `node_descriptors()` / `node_descriptor_set()` 给出全部内置能力的声明, `resolve_config_ports()` 把声明解析成具体端口(compiler 与规则编辑器共用同一份), `descriptor_set_digest()` 把整份声明表算成一个稳定摘要供 Plan 绑定(`src-tauri/crates/lj-rule-model/src/descriptor.rs#L439-L508`)。新增一个规则能力只需在这里加一条声明, compiler 与前端都不用改; 未安装能力的节点由 opaque payload 承接并拿到 `NODE_CAPABILITY_UNAVAILABLE`。
+
+JS 节点的资源预算同样在合同里: `JsBudget` 与 `JsBudgetCeiling`(`src-tauri/crates/lj-rule-model/src/budget.rs`), 规则只能收紧 host policy 的上限, 不能抬高。
 
 拆分的原因写在注释里: 避免触发 clippy 的 `struct_excessive_bools` 阈值——这是一个契约形状被 lint 规则影响的少见但真实的例子。
 

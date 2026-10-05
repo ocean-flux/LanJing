@@ -2,9 +2,6 @@
 type: "参考"
 title: "Rule editor workspace"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-d27d10d277ef08477509b505
     resource: repo://src-tauri/crates/lj-compiler/src/compiler/validation/definition.rs

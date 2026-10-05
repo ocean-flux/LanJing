@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1d48faa323aaaab8cde6cfc41776a5283d620b6561d9ad779b61f53355d49dec",
+  "pageVersion": "sha256:90fad10d15a1e3a569b8df5b0eea27ee57bbf91927c3ca4eeb018b5fbfbe7369",
   "claims": [
     {
       "id": "claim_9da95b724ea34070bbd4a1183a68c29b",
       "statement": "lj-rule-system 是规则导入/安装执行的唯一 concrete façade: 对外只公开安全 DTO, Definition/immutable Plan/node effect adapter/EventProjectionStorage/execution registry 全部保持私有, Tauri 不直接依赖 storage/importer/runtime, 外部也无法注入 Graph、Plan JSON、processor registry、SQLite connection 或 storage handle。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/lib.rs#L1-L29",
-          "version": "repo-lines-v1:sha256:da3f77bce11694db061e60ec59c3b4bfc5795ac581b8a19c0c1398f5248e1125:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlMThjY2I0MjY4NWZmOGViMTI3ZjgzYjExYjk5MWYyZDE5MDhlZGY1OGQ0NWU2OWMyMGM5NTA5MTAzYjAyMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ3NDc1OTNhY2JlZWNhMTIyZjVlNTcwNWYxNGJmYmMwOGEyM2MzMmUzYjNlN2ViMTg3OGExNTc3NGY3OGEyMTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzMTQyMjhiM2ViMDNjNzhlYWExYjBmNTljMzkyNjc2YTU4YTFhYTkzZjQ2NmNmMGQxMjAyZDgyNTk5ZWU2YjcifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/lib.rs#L1-L31",
+          "version": "repo-lines-v1:sha256:069d32b76c6b536c899692ed89609edd26c7cd28841a4fbd6ebd471ff5a4e5da:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlMThjY2I0MjY4NWZmOGViMTI3ZjgzYjExYjk5MWYyZDE5MDhlZGY1OGQ0NWU2OWMyMGM5NTA5MTAzYjAyMmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ3NDc1OTNhY2JlZWNhMTIyZjVlNTcwNWYxNGJmYmMwOGEyM2MzMmUzYjNlN2ViMTg3OGExNTc3NGY3OGEyMTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzMTQyMjhiM2ViMDNjNzhlYWExYjBmNTljMzkyNjc2YTU4YTFhYTkzZjQ2NmNmMGQxMjAyZDgyNTk5ZWU2YjcifQ"
         },
         {
           "resource": "repo://src-tauri/crates/lj-rule-system/src/system.rs#L36-L49",
@@ -117,7 +117,7 @@
       "statement": "stage_prepared_candidate 要求定义依次通过 canonicalize、validate(与导入期诊断合并)、compiler.compile 与 runtime.validate_plan, 之后才计算到期时刻并写入候选; 编译失败映射为 stage 为 Candidate 且带诊断的 RuleError, 到期时刻溢出则返回 candidate_expiry_overflow。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L159-L190",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L172-L203",
           "version": "repo-lines-v1:sha256:4c7603f1072fd8a86f3e5bf74a46e6e5f73cef2fd9a2e0f01ea3fcd299c3987c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3OTJlZGI0YWE0NDM2ZjhlMDVlZTZhZjc3MzAxNDMxYjRhM2RlOWFhMDU0MjRlYzAxNTY5NTA3OTJkODE4YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiMjBlNzhiOGRlMmI1ZDBlYzRlNDgwN2I0ZTNhODFmYzIyYjczMTQ4Mzg2ZWVmNzM1ZjZjYzFlMTIyYjRkZWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyMGY1MTk3MTc0MDgwOTA5ZDllNDg1ZWVhZmI3YWY1YjY4MDEzMWUzMjk5OWMyNjhhMWU1ZmMyYjk5M2IzMmUifQ"
         }
       ]
@@ -138,15 +138,15 @@
     },
     {
       "id": "claim_c1f7bbb7383943c28f2b3c6a1eb58a79",
-      "statement": "error_mapping 把 compiler/runtime/effect registry/storage 的内部错误收敛为脱敏 RuleError, 不变量是任何 message、diagnostic 或 trace 都不得包含 body、cookie、token、完整 URL query、Plan JSON 或 opaque payload; runtime_failure_error 把每个 RuntimeFailureCode 映射为 (stage, code, message) 三元组, effect_registry_error 用稳定码 effect_registry_registration_failed 且 message 只含错误码与 effect kind, storage 一侧按原因区分 candidate/contract/durability 类错误。",
+      "statement": "error_mapping 把 compiler/runtime/effect registry/storage 的内部错误收敛为脱敏 RuleError, 不变量是任何 message、diagnostic 或 trace 都不得包含 body、cookie、token、完整 URL query、Plan JSON 或 opaque payload; runtime_failure_error 把每个 RuntimeFailureCode 映射为 (stage, code, message) 三元组, effect_registry_error 用稳定码 effect_registry_registration_failed 且 message 只含错误码与 effect kind, compiler_error 给 plan/descriptor digest 不一致单独一个稳定码 plan_descriptor_digest_mismatch, storage 一侧按原因区分 candidate/contract/durability 类错误。",
       "evidence": [
         {
           "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L1-L5",
-          "version": "repo-lines-v1:sha256:80e52ed9e88e853d63e8bd6490529f29425b4e571531f5e019e88de427fdda42:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZkMTQ0MmRlNWRjOTk1NDdlZDExYWNkYzNjY2YzZjVmOWIzN2UwZTFlYzZlNWRhNWYxYzRkODE1YjI3YTM1MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk3YjFhODNkZWU2MGU2YzUwY2Q4ZmY2NjYxZTIxM2U0MDU4NTkwYTZiM2NiYWI3MzYyZWY5ODI2MTUwYmJkYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjI5YWIyMGI3Y2MxM2M0NTkwOTY2NjA5NmE4ZDViNWQzZmYzZjVmYzVmYzgxOTRmZmU1OTQyZjhiMjhmNzYzZCJ9"
+          "version": "repo-lines-v1:sha256:80e52ed9e88e853d63e8bd6490529f29425b4e571531f5e019e88de427fdda42:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmZkMTQ0MmRlNWRjOTk1NDdlZDExYWNkYzNjY2YzZjVmOWIzN2UwZTFlYzZlNWRhNWYxYzRkODE1YjI3YTM1MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjk3YjFhODNkZWU2MGU2YzUwY2Q4ZmY2NjYxZTIxM2U0MDU4NTkwYTZiM2NiYWI3MzYyZWY5ODI2MTUwYmJkYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDM0MDk3Mjk5NTZkNDU3NDAxNzFkYzNiMmQ3MTEyMTBlYTVlNDU0Nzc1NzQxNDBlYzY4MmNiZDBjZWUwMGQ1OCJ9"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L14-L446",
-          "version": "repo-lines-v1:sha256:d850b51776ea3c00988d49fe4e9da72aceb4282f6af1843208b8a090164238d7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1OGQ5YTZiZGFkMjVjZjAwMWE2N2U3ZGY0MzZhZWFkZDJlMjYxYWJhZjg0YWYwOWYwMDBiMDEwYjg0ZDg4NjQ1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIyYzExNTZjOTI5NDg4ZTRmM2U3MThmMWNiZDA0NzdiYTYyM2Y3N2I3ZmFjZmM0YjllZWQ1YzYyNWM0ZGM1MDllIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L29-L220",
+          "version": "repo-lines-v1:sha256:0906f469843074a3fa6f02aed4a50a50e94bf240d8d1c1f2c2151a79208d1f34:eyJzZWxlY3RlZExpbmVDb3VudCI6MTkyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1OGQ5YTZiZGFkMjVjZjAwMWE2N2U3ZGY0MzZhZWFkZDJlMjYxYWJhZjg0YWYwOWYwMDBiMDEwYjg0ZDg4NjQ1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI3ZTQyNWVlYzI4NzZhYjYxNzc0NmU5NjlkNjQyMGUwNDg3ZjAzN2M0ZjkzZDExZTJjZmExYzdhOWMyZTFmYzMyIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI5MWFkZTRkNDNhOGRmMGUzZTY2YWFkMzkyNDJiODIzNzEyNDcwMTdiMWZiMzk4NTZmOGQ4ODdiODMzYmI3NDZkIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIxNmFkZjEyYThlZTk5MzRlODIwMjMyYTY2OWZkZGQxMGI5YmUyZGQwZjM2MjIwYzU5MjdiMDA0YmE3YjVhYmIzIn0"
         }
       ]
     },
@@ -165,7 +165,7 @@
       "statement": "端到端测试覆盖 current control candidate 通过 gate 后安装、执行并回放的完整链路; capture.rs 与 witness DTO 只在 feature=\\\"test-support\\\" 下编译并通过真实 EffectArchive::load_replay seam 暴露观察点, 不属于生产路径。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/lib.rs#L31-L42",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/lib.rs#L33-L44",
           "version": "repo-lines-v1:sha256:f0c37f54ecf2082a1bb373602680f3fffc72f037727887b0c1559bc4fa06f268:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmMDJkZjFjZjgwNjQ1MWY4ZTlkZjE4ZjdiYzYyNzBhNjYzN2ViNDI2MWFjMzRiODZmZWEwNTJjODM0YTVmNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhMWQxYTYzMzkwMjI5Yzc5ODM0N2U4M2EwNDA1NDQxYzk0MDAwMzUyODRhZDE2OGMxYmY2Y2RmMWQ3MGEzNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExMWE2MzgyNDU0MWU5N2IwOTU3ZDJmOWQ1YTZiN2NlOWZlZTRlOGFiZWY5YzBkMTFjZjdhYmU0NDA2ZThlMjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
@@ -173,7 +173,7 @@
           "version": "repo-lines-v1:sha256:080fb1b77712f22e4692578e060efa35bf3aba6c72cc7bb974d0a5c73e65da7e:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxZDViYTU5ZjUyNjQzNDZmNTcwMmQxNWIzZjgzODgzMzA2M2UyOWMwMmJiY2Q4NzJiYmZjOGZkNmIxY2JjMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZlMzJhMjZlN2U3NzdiODc4ZDU0YTViODJjNWNjNjM5YzNkY2M5ZWQyZDFlZGJlMzBjNTBhMGM3YTI1MGY2YzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBmMzI1NDcyOTAyZGQ5MzdmMzk1YzRiYTRlNWZiOTFlZmM2NjNjMWI2NTA2ZmY5OTRjOThhOTA2MzBmNmVkNzIifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/tests.rs#L142-L142",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/tests.rs#L171-L171",
           "version": "repo-lines-v1:sha256:dbf11102392fcd9ab290bd5ccbae067a0a8e7d82b1a09008d692193072b230f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGJmMTExMDIzOTJmY2Q5YWIyOTBiZDVjY2JhZTA2N2EwYThlN2Q4MmIxYTA5MDA4ZDY5MjE5MzA3MmIyMzBmMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGJmMTExMDIzOTJmY2Q5YWIyOTBiZDVjY2JhZTA2N2EwYThlN2Q4MmIxYTA5MDA4ZDY5MjE5MzA3MmIyMzBmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTk3ZmFkYWNiYmNkOTg3ZWQxODVlM2NiYTY2NGVjNDY1MGY1MDA1ODczNDdiYjE3NTgyODYyMzRlYzA3ZGY3OSJ9"
         }
       ]
@@ -181,6 +181,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T13:54:24.186Z"
+    "at": "2026-10-05T08:37:16.392Z"
   }
 }

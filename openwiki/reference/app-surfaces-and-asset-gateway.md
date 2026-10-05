@@ -2,9 +2,6 @@
 type: "参考"
 title: "App surfaces and asset gateway"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T10:14:16.110Z
 sources:
   - id: openwiki-source-415c14fc16b9bb2d14d082c5
     resource: repo://docs/adr/0004-app-surfaces-and-workbench-layers.md

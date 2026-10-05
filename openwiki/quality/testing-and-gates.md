@@ -74,9 +74,6 @@ sources:
   - id: openwiki-source-581dc5746c844c4ee0b781c7
     resource: repo://vite.config.js
 generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
-verified:
-  - by: openwiki/0.7.0
-    at: 2026-10-04T13:54:24.186Z
 ---
 
 
