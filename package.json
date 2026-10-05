@@ -15,10 +15,11 @@
     "typecheck:web": "tsc --noEmit",
     "format:web": "oxfmt src package.json vite.config.js tsconfig.json index.html components.json --write",
     "format:check:web": "oxfmt src package.json vite.config.js tsconfig.json index.html components.json --check",
+    "static:web": "pnpm run lint:web && pnpm run typecheck:web && pnpm run format:check:web",
     "lint": "pnpm run lint:web",
     "format": "pnpm run format:web",
     "format:check": "pnpm run format:check:web",
-    "check": "pnpm run lint:web && pnpm run typecheck:web && pnpm run format:check:web && pnpm run test:web",
+    "check": "pnpm run static:web && pnpm run test:web",
     "verify": "pnpm run check && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml --workspace"
   },
   "dependencies": {

@@ -38,13 +38,21 @@ cargo test --manifest-path src-tauri/Cargo.toml --workspace
 
 ## 质量门禁
 
-推送前跑一条命令，它逐条对应 `git push` 的 pre-push 门禁：
+分两层：
 
 ```bash
-pnpm verify   # pnpm check + cargo clippy --all-features -D warnings + cargo test --workspace
+pnpm static:web   # 前端静态检查：Oxlint + TypeScript + Oxfmt 格式检查
+pnpm check        # static:web + 前端测试（Vitest）
+pnpm verify       # check + cargo clippy --all-features -D warnings + cargo test --workspace（全量）
 ```
 
-钩子本身（`.git/hooks/pre-push`）做同样的事，有一点要知道：
+`git push` 的 pre-push 门禁**只跑静态检查**（`static:web` 与 workspace clippy），不跑测试 —— 测试不挡推送速度。所以：
+
+- 每个自包含的改动落定后跑**定向**测试（受影响的 crate / 测试文件）。
+- 全部任务收尾、合并前跑 `pnpm verify`。
+- 想手动对齐推送门禁就跑 `pnpm run static:web` 加那条 clippy。
+
+有一点要知道：
 
 - **钩子按 PATH 解析 lefthook 二进制，优先于仓库 pin 的版本。** `git push` 输出里的 `lefthook vX.Y.Z` 就是实际用的版本；跑的不是仓库 pin 的那份时，门禁可能连失败步骤的输出都不打印（实测旧版如此），于是推送被拒却看不到原因。要强制用 pin 的那份就设 `LEFTHOOK_BIN`；要完整的失败输出就直接跑 `pnpm verify`。
 

@@ -54,13 +54,12 @@ commit-msg:
 pre-push:
   parallel: true
   jobs:
-    # 与根目录 `pnpm verify` 的两个阶段逐一对应；改动其一必须同步另一个。
-    # `pnpm check` 已包含 test:web，不要再在后面接一次 test:web。
+    # 只跑静态检查，测试不挡推送：每个提交单元跑定向测试，全部任务收尾时跑
+    # `pnpm verify`（静态检查 + 全量测试）。
     - name: web
-      run: pnpm check
+      run: pnpm run static:web
 
     - name: rust
       run: >
         cargo clippy --manifest-path src-tauri/Cargo.toml --workspace
         --all-targets --all-features -- -D warnings
-        && cargo test --manifest-path src-tauri/Cargo.toml --workspace
