@@ -67,6 +67,7 @@ This repository has a generated `openwiki/` evidence index. It is optional just-
 - Use `openwiki_list_workspaces` or `openwiki_list_wikis` when workspace membership itself needs to be discovered.
 - If the retrieval tools are unavailable, read `openwiki/quickstart.md` and follow its links to the relevant pages.
 - Treat source code and tests as authoritative. A brief's unknowns and review items are verification gaps, not automatic requirements.
+- When recording a claim, name the symbol in the statement and cite the narrowest line range. Line ranges drift within hours, and an unresolvable one blocks the submission.
 - Prefer the narrowest quiet validation that proves the changed behavior. Preserve complete failure output.
 
 The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
