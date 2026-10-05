@@ -52,10 +52,6 @@ pnpm verify       # check + cargo clippy --all-features -D warnings + cargo test
 - 全部任务收尾、合并前跑 `pnpm verify`。
 - 想手动对齐推送门禁就跑 `pnpm run static:web` 加那条 clippy。
 
-有一点要知道：
-
-- **钩子按 PATH 解析 lefthook 二进制，优先于仓库 pin 的版本。** `git push` 输出里的 `lefthook vX.Y.Z` 就是实际用的版本；跑的不是仓库 pin 的那份时，门禁可能连失败步骤的输出都不打印（实测旧版如此），于是推送被拒却看不到原因。要强制用 pin 的那份就设 `LEFTHOOK_BIN`；要完整的失败输出就直接跑 `pnpm verify`。
-
 ### 已知陷阱
 
 - **worktree 与共享 `CARGO_TARGET_DIR`**：本仓所有 worktree 共用主检出的 target 目录，而集成测试把 fixture 路径按**编译期**的 `CARGO_MANIFEST_DIR` 写死。删掉 worktree 之后，仍被当成“新鲜”的测试二进制会去读已不存在的路径，报出 `os error 3` 这类**假红**。所以删 worktree 必须排在最终验证之后；换 worktree 后先 `find src-tauri/crates src-tauri/src -name lib.rs | xargs touch` 再重编。
