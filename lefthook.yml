@@ -48,8 +48,10 @@ commit-msg:
 pre-push:
   parallel: true
   jobs:
+    # 与根目录 `pnpm verify` 的两个阶段逐一对应；改动其一必须同步另一个。
+    # `pnpm check` 已包含 test:web，不要再在后面接一次 test:web。
     - name: web
-      run: pnpm check && pnpm test:web
+      run: pnpm check
 
     - name: rust
       run: >

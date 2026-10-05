@@ -36,6 +36,24 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --al
 cargo test --manifest-path src-tauri/Cargo.toml --workspace
 ```
 
+## 质量门禁
+
+推送前跑一条命令，它逐条对应 `git push` 的 pre-push 门禁：
+
+```bash
+pnpm verify   # pnpm check + cargo clippy --all-features -D warnings + cargo test --workspace
+```
+
+钩子本身（`.git/hooks/pre-push`）做同样的事，但有两点要知道：
+
+- **钩子按 PATH 解析 lefthook 二进制，优先于仓库 pin 的版本。** PATH 上有别的 lefthook 时门禁会静默用旧版（`git push` 输出里的 `lefthook vX.Y.Z` 就是实际用的版本）；要强制用仓库 pin 的那份就设 `LEFTHOOK_BIN`。
+- **门禁失败时不保证打印失败步骤的输出。** 推送被拒后先跑 `pnpm verify` 看真实原因，不要靠钩子的输出猜。
+
+### 已知陷阱
+
+- **worktree 与共享 `CARGO_TARGET_DIR`**：本仓所有 worktree 共用主检出的 target 目录，而集成测试把 fixture 路径按**编译期**的 `CARGO_MANIFEST_DIR` 写死。删掉 worktree 之后，仍被当成“新鲜”的测试二进制会去读已不存在的路径，报出 `os error 3` 这类**假红**。所以删 worktree 必须排在最终验证之后；换 worktree 后先 `find src-tauri/crates src-tauri/src -name lib.rs | xargs touch` 再重编。
+- **全新检出**：`src/shared/paraglide/` 是 gitignore 的生成物。先跑一次 `pnpm test:web`（或任何 vite/vitest）生成它，否则 `pnpm typecheck:web` 会以缺少 message key 报 TS2339。
+
 ## 项目结构
 
 ```text
@@ -81,7 +99,7 @@ project.inlang/          # Paraglide 项目配置
 <type>(<scope>): <subject>
 ```
 
-类型包括 `feat`、`fix`、`refactor`、`docs`、`style`、`test`、`chore` 和 `perf`。提交前运行 `pnpm check`。
+类型包括 `feat`、`fix`、`refactor`、`docs`、`style`、`test`、`chore` 和 `perf`。提交前运行 `pnpm verify`。
 
 ## 文档规则
 

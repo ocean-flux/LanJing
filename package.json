@@ -18,7 +18,8 @@
     "lint": "pnpm run lint:web",
     "format": "pnpm run format:web",
     "format:check": "pnpm run format:check:web",
-    "check": "pnpm run lint:web && pnpm run typecheck:web && pnpm run format:check:web && pnpm run test:web"
+    "check": "pnpm run lint:web && pnpm run typecheck:web && pnpm run format:check:web && pnpm run test:web",
+    "verify": "pnpm run check && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml --workspace"
   },
   "dependencies": {
     "@base-ui/react": "catalog:",
