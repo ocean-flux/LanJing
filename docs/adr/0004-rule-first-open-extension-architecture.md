@@ -97,7 +97,7 @@ JS 不能访问 SQLite、Tauri、React state、任意文件系统、环境变量
 - Source Update 必须经过 Install Candidate 和 stale 检查, 不能覆盖式静默更新。
 - Rule Draft Revision 校验失败不能替换 Effective Rule Revision。
 - execution 绑定 Source Revision、descriptor digest 和 immutable Plan。
-- capability 取 host policy、Source grant、规则声明和 invocation grant 的交集。
+- capability 取 host policy、Source grant、规则声明和 invocation grant 的交集, 只覆盖应用暴露的系统 API（fs / env / process）；网络不受 capability 控制, 不在交集中。
 - plaintext credential 不进入普通 rule input、脚本 state、日志、诊断、事件或历史记录。
 - 所有受控外部 effect 都必须 capture, replay 禁止 live fallback。
 

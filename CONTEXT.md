@@ -17,7 +17,7 @@ _Avoid_: source, install candidate
 _Avoid_: format picker, source editor
 
 **Install Candidate**:
-后端为一个来源定义准备的、不透明且会过期的安装凭据，包含可展示的安全摘要和所需授权。
+后端为一个来源定义准备的、不透明且会过期的安装凭据，包含可展示的安全摘要和所需的系统能力授权。
 _Avoid_: install plan, source definition
 
 **Stale Install Candidate**:

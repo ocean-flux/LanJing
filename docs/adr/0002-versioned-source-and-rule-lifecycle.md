@@ -10,7 +10,7 @@ React 迁移是产品重构，不以复刻 Svelte 页面为目标。来源更新
 ## 决定
 
 1. 来源入口使用 Adaptive Source Input，同时接受 Legado JSON、Maccms URL 和本地 JSON 文件。解析格式不是用户先选的导航步骤。
-2. Source 的安装、更新和回退都必须准备 Install Candidate 并经过审阅。网络授权每次与候选绑定确认；候选过期或 stale 后重新准备，不能自动重试。
+2. Source 的安装、更新和回退都必须准备 Install Candidate 并经过审阅。系统能力授权每次与候选绑定确认；候选过期或 stale 后重新准备，不能自动重试。
 3. Source Update 与 Source Rollback 都追加 Source Revision。回退从历史版本创建新的更新，不重写历史；Source Inspector 展示当前资料、授权和历史。
 4. Native Rule Document 区分 Rule Draft Revision 与 Effective Rule Revision。Explicit Rule Save 会保存草稿；通过校验的草稿在同一生命周期中自动晋升为生效版本，不再存在 prepare 或手动发布步骤。
 5. 无效草稿不会替换 Effective Rule Revision。保存冲突时，保留原文档的远端版本，并创建独立 Recovery Draft；语义冲突不自动合并。
