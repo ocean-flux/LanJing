@@ -9,6 +9,8 @@ sources:
     resource: repo://src-tauri/crates/lj-node-extract/src/processor.rs
   - id: openwiki-source-378ef8c9992cfb062d1d9087
     resource: repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs
+  - id: openwiki-source-9e78ff08579c5d0a1877c1c8
+    resource: repo://src-tauri/crates/lj-node-http/src/processor/redirect.rs
   - id: openwiki-source-0dcbf0271dec640cfb5161dc
     resource: repo://src-tauri/crates/lj-node-js/src/processor.rs
   - id: openwiki-source-8ece8d8ea6055cf2f800dcb4
@@ -29,6 +31,8 @@ sources:
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs
   - id: openwiki-source-150ac7f1387e477217243644
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/control_archive.rs
+  - id: openwiki-source-17f1cf15274491a45980b28f
+    resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/dispatch.rs
   - id: openwiki-source-b98d6cf0b98f80e0aa1f7d56
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/effect_execution.rs
   - id: openwiki-source-34d489227f93cd0425da2fa7
@@ -41,10 +45,10 @@ sources:
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/routing.rs
   - id: openwiki-source-5dd5df7cae61c75ccead7c81
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/validation.rs
-generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+generated: { by: "pi", at: "2026-10-05T11:35:47.718Z" }
 verified:
   - by: openwiki/0.7.0
-    at: 2026-10-05T08:37:16.392Z
+    at: 2026-10-05T11:35:47.718Z
 ---
 
 
@@ -161,7 +165,7 @@ replay 分支只从 archive 读, 并逐层比对(`src-tauri/crates/lj-runtime/sr
 
 `effect/witness.rs` 的模块注释定义了边界: witness 只保留可安全持久化的 URL、IP、hash、时序与 QuickJS host-call 元数据, **永远不含 query、body、cookie、token 或 authorization**(`src-tauri/crates/lj-runtime/src/effect/witness.rs#L1-L5`)。
 
-`HttpRequestWitness` 里的 `safe_url` 明确规定只能包含 scheme、host、port 与 path, 禁止 query、fragment 与 userinfo; `headers` 只保留非敏感 header 的稳定摘要, cookie/token/authorization 不得出现(`#L29-L40`)。`HttpDnsTargetKind` 还记录了目标地址的来源(PinnedDns / IpLiteral / DirectHost), 使「这次请求经过 SSRF pin 还是走直连」在 replay 时可判定(`#L17-L27`)。
+`HttpRequestWitness` 里的 `safe_url` 明确规定只能包含 scheme、host、port 与 path, 禁止 query、fragment 与 userinfo; `headers` 只保留非敏感 header 的稳定摘要, cookie/token/authorization 不得出现(`#L29-L40`)。`HttpDnsTargetKind` 还记录了目标地址的来源(PinnedDns = 已完成 DNS 解析并固定地址 / IpLiteral = 目标本身是 IP 字面量 / DirectHost = 仅见 host 未解析), 使「这次请求是否经过逐跳 DNS 解析与 IP 固定」在 replay 时可判定(`#L17-L27`)。
 
 witness 的作用因此是双重的: 让 replay 能证明「当时确实以这种方式调用了」, 又不把凭据带进可持久化的记录。
 

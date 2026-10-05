@@ -31,13 +31,22 @@ sources:
     resource: repo://src-tauri/tauri.macos.conf.json
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
+  - id: openwiki-source-7b4777db24e3917d09c987ae
+    resource: repo://src/features/rules/model/descriptor-registry.ts
+  - id: openwiki-source-e523845a56feec75d438c920
+    resource: repo://src/features/rules/model/session.ts
+  - id: openwiki-source-61edd4d2deb95e4b81381576
+    resource: repo://src/shared/tauri/execution.ts
   - id: openwiki-source-99a93074334aa4f3f476fdcf
     resource: repo://src/shared/tauri/library.ts
   - id: openwiki-source-bfa866dbb93b4c8108ffdf7f
     resource: repo://src/shared/tauri/rules/wire.ts
   - id: openwiki-source-938e4156b9e76517514c2370
     resource: repo://src/shared/tauri/sources.ts
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -72,16 +81,16 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 - `generate_lanjing_handler!` 把它变成 `tauri::generate_handler![...]`, 交给 `invoke_handler`;
 - 测试用的 `declare_registered_command_names!` 把它变成常量数组 `REGISTERED_COMMAND_NAMES`。
 
-测试 `root_command_registry_contains_only_current_facade_commands` 断言三件事: 名单与期望完全相等、没有重复项、数量恰为 25, 且**没有任何 `source_document` 前缀的旧命令名**(`src-tauri/src/lib.rs#L117-L170`)。这把「命令表是唯一的公开 IPC 面」变成了可回归的约束, 顺带防止旧编辑链的命令名复活。
+测试 `root_command_registry_contains_only_current_facade_commands` 断言三件事: 名单与期望完全相等、没有重复项、数量恰为 26, 且**没有任何 `source_document` 前缀的旧命令名**(`src-tauri/src/lib.rs#L124-L172`)。期望名单是测试里的 `EXPECTED` 常量, 因此增删命令必须同时改宏与测试(`#L126-L153`)。这把「命令表是唯一的公开 IPC 面」变成了可回归的约束, 顺带防止旧编辑链的命令名复活。
 
-25 个命令分四组:
+26 个命令分四组:
 
 | 组 | 数量 | 代表命令 | 组文件 |
 | --- | --- | --- | --- |
 | import/install | 4 | `fetch_import_src`、`prepare_install`、`prepare_source_rollback`、`install` | `src-tauri/src/commands/import_install.rs#L47-L90` |
 | execution | 3 | `execute`、`cancel_execution`、`catch_up_execution` | `src-tauri/src/commands/execution.rs#L43-L140` |
 | query | 8 | `list_installed_sources`、`get_library_projection`、`update_library_entry`、`get_media_item(s)`、`list_media_units/assets` | `src-tauri/src/commands/query.rs#L12-L110` |
-| document | 10 | `create/save/validate_native_rule_document`、`list_native_rule_revision_history`、`restore_native_rule_revision`、`get/rename/delete_native_rule_document`、`get_native_rule_provenance` | `src-tauri/src/commands/document.rs#L19-L110` |
+| document | 11 | `create/save/validate/list_native_rule_document`、`list_rule_node_descriptors`、`list_native_rule_revision_history`、`restore_native_rule_revision`、`get/rename/delete_native_rule_document`、`get_native_rule_provenance` | `src-tauri/src/commands/document.rs#L19-L120` |
 
 每个命令都是薄包装: 取 `State<'_, AppState>`, 调 `state.system.<method>`, 返回 `Result<_, RuleError>`。
 
@@ -111,17 +120,20 @@ system.execute(request) → session
 
 ## 前端 wire 层
 
-前端只在 `src/shared/tauri/` 里调 `invoke`, 三个文件共 19 个 wrapper:
+前端只在 `src/shared/tauri/` 里调 `invoke`, 四个文件共 23 个 wrapper:
 
 | 文件 | 数量 | wrapper |
 | --- | --- | --- |
-| `sources.ts` | 6 | `list_installed_sources`、`list_source_revisions`、`fetch_import_src`、`prepare_install`、`install`、`prepare_source_rollback`(`src/shared/tauri/sources.ts#L78-L119`) |
-| `library.ts` | 3 | `get_library_projection`、`get_media_items`、`update_library_entry`(`src/shared/tauri/library.ts#L39-L55`) |
-| `rules/wire.ts` | 10 | 与 document 组一一对应(`src/shared/tauri/rules/wire.ts#L304-L367`) |
+| `sources.ts` | 6 | `list_installed_sources`、`list_source_revisions`、`fetch_import_src`、`prepare_install`、`install`、`prepare_source_rollback`(`src/shared/tauri/sources.ts#L86-L124`) |
+| `library.ts` | 3 | `get_library_projection`、`get_media_items`、`update_library_entry`(`src/shared/tauri/library.ts#L39-L56`) |
+| `rules/wire.ts` | 11 | document 组 11 个命令一一对应, 含 `list_rule_node_descriptors`(`src/shared/tauri/rules/wire.ts#L353-L416`, `#L547-L550`) |
+| `execution.ts` | 3 + 1 订阅 | `executeRule`、`cancelExecution`、`catchUpExecution`, 加 `listenRuleExecutionEvents`(`src/shared/tauri/execution.ts#L181-L208`) |
+
+`execution.ts` 除了三个 wrapper, 还把事件通道的合同镜像到前端: `RULE_EXECUTION_EVENT = 'rule-execution-event'` 与 Rust 侧 `commands::delivery::RULE_EXECUTION_EVENT` 是同一个字符串, `listenRuleExecutionEvents` 用 `isExecutionEvent` / `isExecutionEventKind` 做运行时形状校验后才把 payload 交给 handler, 并明确声明**一条订阅覆盖所有 execution**(调用方自己按 `execution_id` 过滤), 因此订阅应在 `execute` 之前建立以免错过启动阶段事件(`src-tauri/src/commands/delivery.rs#L9`, `src/shared/tauri/execution.ts#L16-L16`, `#L203-L208`)。这套 wrapper 已经有真实调用点: 规则编辑器的预览运行在 `session.ts` 里先订阅、再 `executeRule`、必要时 `cancelExecution`(`src/features/rules/model/session.ts#L353-L368`, `#L537`)。
 
 `library.ts` 还包含纯前端的 `projectLibrary`: 它把投影过滤为「收藏/置顶/最近打开/有进度」并做排序, 不调 IPC(`src/shared/tauri/library.ts#L58-L73`)。
 
-**缺口是精确可数的**: 25 个命令减去 19 个 wrapper, 剩下 6 个没有前端调用点——`execute`、`cancel_execution`、`catch_up_execution`、`get_media_item`、`list_media_units`、`list_media_assets`(在 `src/` 内检索这些名字无任何命中)。这解释了当前的产品状态: 后端执行链路完整且被契约测试覆盖, 但**没有任何前端路径能发起一次 execution**, 规则保存后无法在应用内跑起来。
+**缺口收窄到 3 个查询命令**: 26 个命令减去 23 个 wrapper, 剩下 `get_media_item`、`list_media_units`、`list_media_assets` 没有前端调用点(在 `src/` 内检索这三个名字无任何命中)。此外 `catchUpExecution` 虽然封装好了, 但 `src/` 里没有调用点 —— 也就是说「断线后补读 durable 事件」这条路径今天没有 UI 入口, 而发起与取消 execution 已经由规则编辑器接上。`get_media_items`(复数)是有消费方的: `library.ts` 的 `loadMediaItems` 用它批量取媒体条目。
 
 wrapper 在非 Tauri 环境下也有明确降级: `isTauri()` 为假时读操作返回空值(`{global_seq: 0, entries: []}`、`[]`), 写操作返回 rejected Promise(`library_update_unavailable`)(`src/shared/tauri/library.ts#L39-L56`), 使浏览器里跑 `vite dev` 不至于崩在缺 IPC 上。
 
@@ -150,7 +162,7 @@ Rust 侧的 `deeplink` 模块只做一件事: 第二实例被拒绝后聚焦主�
 
 ## 当前边界
 
-- 前端缺少 execute 系列的 6 个 wrapper, 因此 UI 无法发起、取消或续播一次 execution(见上文缺口清单)。
+- 仍有 3 个查询命令没有 wrapper(`get_media_item`、`list_media_units`、`list_media_assets`), 且 `catchUpExecution` 有 wrapper 却无调用点, 所以 execution 的断线续播今天没有 UI 入口。
 - `lanjing://` 资产协议未注册, CSP 也没有对应白名单; ADR 0007 定义的资产网关仍是设计。
 - `mcp_bridge` 只存在于 debug desktop 构建; 发布构建里没有本地调试桥。
 - 单实例与窗口聚焦只在桌面目标编译, 移动端依赖平台自身的单实例行为。

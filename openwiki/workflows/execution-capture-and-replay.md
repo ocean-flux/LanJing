@@ -45,15 +45,22 @@ sources:
     resource: repo://src-tauri/crates/lj-storage/src/storage/execution.rs
   - id: openwiki-source-7d4ed639b034234af79f8973
     resource: repo://src-tauri/crates/lj-storage/src/types/execution.rs
-  - id: openwiki-source-ddb39399ffd9dce97df2d9df
-    resource: repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs
   - id: openwiki-source-39dd156540df2869ff0cbfa0
     resource: repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/replay_contract.rs
   - id: openwiki-source-164707dfe3596be848b3ec22
     resource: repo://src-tauri/src/commands/delivery.rs
   - id: openwiki-source-68e2dde2c84dfbdac9ee9fd2
     resource: repo://src-tauri/src/commands/execution.rs
-generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+  - id: openwiki-source-723acd102ba9a8c53b06e21e
+    resource: repo://src/features/rules/inspector/ExecutionPreview.tsx
+  - id: openwiki-source-b4c5152a4e2170db5b29047e
+    resource: repo://src/features/rules/model/execution.ts
+  - id: openwiki-source-e523845a56feec75d438c920
+    resource: repo://src/features/rules/model/session.ts
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -140,7 +147,7 @@ runtime 发出的事件由唯一的 session runner 消费(`src-tauri/crates/lj-r
 
 - 前端拿到的每个 delta 都已经在账上, 因此「刷新后仍能看到刚才那条结果」是结构性保证, 而不是靠重试;
 - 投递失败(窗口关闭/事件系统不可用)只 warn, 不取消执行(`src-tauri/src/commands/delivery.rs`), 中断后靠 `catch_up_execution` 从 C2 事件流补齐;
-- delta 事件与投影在同一事务里提交, 所以不存在「事件写了但投影没更新」或反之; 这也是 `d12_thousand_resource_event_projection_transaction_gate`(`src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs#L492`)要守的门。
+- delta 事件与投影在同一事务里提交, 所以不存在「事件写了但投影没更新」或反之: 事务边界在 `commit_execution_delta` 里由 `append_event_transaction` 与投影闭包共同持有(`src-tauri/crates/lj-storage/src/repository/execution/commit.rs#L1-L45`)。原先还有一条 `d12_thousand_resource_event_projection_transaction_gate` 规模门守着这条不变量, 该标定用例已随性能门禁一起删除, 现在只剩语义契约测试(`src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs`)。
 - 事件流序号由单写入者的 `event_counters` 递增, 天然单调; catch-up 只接受**严格连续**的序号, 缺失即报错而不是补造(`session_delivery.rs#L3-L9`)。
 
 ## 终态收敛与中断恢复
@@ -179,6 +186,23 @@ runtime 发出的事件由唯一的 session runner 消费(`src-tauri/crates/lj-r
 
 存储侧的 replay pin 也是被验证的: `execution_replay_pin_uses_verified_artifact_and_rejects_tampering`、`replay_start_keeps_historical_source_snapshot_after_source_update`、`replay_pin_survives_restart_and_rejects_tampered_snapshot`(`src-tauri/crates/lj-storage/tests/event_projection_storage_test/replay_contract.rs#L10`、`#L69`、`#L321`)覆盖「源被更新后 replay 仍用历史快照」与「重启后 pin 仍有效」。
 
+## 前端如何呈现 live 与 replay
+
+预览运行在前端只有一条路径: `session.ts` 的 `runPreview(request, replayOf)` 把 live 与 replay 折进同一个状态机, 二者的差别只有请求里的 `mode`(`{mode: 'live'}` 对 `{mode: 'replay', execution_id}`); `startPreviewRun` 与 `startReplayRun` 是两个薄入口, `cancelPreviewRun` 只把取消当请求发出、终态仍由 runtime 的 `cancelled` 事件落定(`src/features/rules/model/session.ts#L330-L345`, `#L524-L538`)。两条前端不变量值得记住:
+
+- **订阅先于启动**: 先建立 `listenRuleExecutionEvents`, `executeRule` 返回前到达的事件先进缓冲, 拿到 `execution_id` 后再补叠, 因此不会漏掉启动阶段的事件; 同一时刻只跑一次预览, 上一次订阅先收掉(`session.ts#L341-L352`)。
+- **请求失败与运行失败同归诊断表面**: 订阅不上或启动被拒只落到运行诊断, 不向调用方抛错——诊断栏就是失败的去处(`session.ts#L330-L340`)。
+
+运行结局在 `ExecutionPreview.tsx` 呈现: 状态 + 稳定 code, 再加一句「这次重放缺什么」的归类(`src/features/rules/inspector/ExecutionPreview.tsx#L77-L95`)。归类表把 Rust 侧写死的 replay 专属 code 收敛成三种对作者意味着不同下一步的语义(`src/features/rules/model/execution.ts#L166-L215`):
+
+| 归类 | 含义 | 代表 code |
+| --- | --- | --- |
+| `capture_missing` | 这段重放缺一段没被捕获的 effect | `replay_capture_missing` |
+| `history_mismatch` | 历史输入/输出/witness/收据校验不一致 | `replay_record_mismatch`、`replay_fingerprint_mismatch`、`replay_output_hash_mismatch`、`replay_witness_mismatch` |
+| `history_unavailable` | 历史固定不出来(不存在、未成功完成、被 GC、pin 与请求或快照不符) | `replay_execution_missing`、`replay_execution_not_completed`、`replay_revision_unavailable`、`replay_pin_unavailable` |
+
+未登记的 code 一律不归类(宁可退回普通运行失败, 也不把未知失败说成某种重放结局), 且 live 运行里出现同一个 code 时归类为 `null`——只有 `mode === 'replay'` 的运行才有可解释的历史(`execution.ts#L200-L215`)。live 运行则折叠出捕获清单: `CaptureList` 展示每次捕获的 effect_id、output_hash 与 artifact 数量, 空态也有文案(`ExecutionPreview.tsx#L101-L130`); 有可重放历史且不在运行时才允许重放(`#L184-L185`)。
+
 ## 取消只阻后续 effect
 
 取消的语义链: 取消令牌只携带状态(不含 HTTP client、不含非 Send 的 QuickJS 句柄), 因此可以跨 blocking lane; `CancellationHandle::cancel` 用 `compare_exchange` 幂等并返回是否为首次状态变化; 每个节点执行前、每个 effect 取许可前后都检查一次。
@@ -216,4 +240,4 @@ runtime 只见 `Arc<dyn EffectArchive>` 这个 trait seam, **不依赖 `lj-stora
 - **崩溃点覆盖**: durable-before-advance 的窗口(提交成功后、发事件前)靠代码结构与 `DurableFileArchive` fixture 验证, 没有「在任意指令处 kill 进程再恢复」的故障注入测试。
 - **incomplete 的客户端可见性**: 事件流没有终态事件这一点, 前端如何处理(catch-up 拿到空/无 terminal 的结果)未验证。
 - **迁移到真实 SQLite 之外的后端**: 单写入者 + `BEGIN IMMEDIATE` 的事务语义是 SQLite 特有的, 其余后端未经检验。
-- **投影的时间成本**: `d12_thousand_resource_event_projection_transaction_gate` 是规模门, 但并发多 execution 同时提交 delta 时的写队列延迟未测。
+- **投影的时间成本**: 原先那条千资源投影事务规模门已删除, 仓库里不再有任何性能用例; 并发多 execution 同时提交 delta 时的写队列延迟完全未测。

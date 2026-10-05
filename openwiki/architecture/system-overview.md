@@ -17,6 +17,10 @@ sources:
     resource: repo://docs/adr/0004-rule-first-open-extension-architecture.md
   - id: openwiki-source-05b14d59724ec4fa57d1c0cc
     resource: repo://docs/adr/0005-turn-engine-and-pagesource.md
+  - id: openwiki-source-fe996f1c611a94f015a96f71
+    resource: repo://docs/adr/0007-asset-gateway-protocol.md
+  - id: openwiki-source-88aa6c4dc126d9d87099ff1f
+    resource: repo://docs/adr/0008-rust-crate-layering.md
   - id: openwiki-source-ca67060e890937010b96de80
     resource: repo://src-tauri/Cargo.toml
   - id: openwiki-source-f11b1c19bf21ece4e75e90c0
@@ -27,6 +31,8 @@ sources:
     resource: repo://src-tauri/crates/lj-importer/src/maccms/mod.rs
   - id: openwiki-source-06153a1cffee823fcf0f4b22
     resource: repo://src-tauri/crates/lj-importer/tests/legado_test.rs
+  - id: openwiki-source-47e22aca7dbcb55078775964
+    resource: repo://src-tauri/crates/lj-node-http/src/target.rs
   - id: openwiki-source-a7f973b529835a5d2bbe2a82
     resource: repo://src-tauri/crates/lj-rule-model/src/hash.rs
   - id: openwiki-source-18e2cd19f7a3c23ecb7a2d80
@@ -57,9 +63,14 @@ sources:
     resource: repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler/live_capture.rs
   - id: openwiki-source-c33d51acf739e25ca33c8b1d
     resource: repo://src-tauri/crates/lj-storage-migration/src/lib.rs
+  - id: openwiki-source-e289656898f48b05e3af79e6
+    resource: repo://src-tauri/tests/workspace_layering.rs
   - id: openwiki-source-b3eeee8972a1c1a0ed428993
     resource: repo://src/features/apps/AppsHome.tsx
-generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+generated: { by: "pi", at: "2026-10-05T11:35:47.718Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T11:35:47.718Z
 ---
 
 
@@ -80,7 +91,7 @@ src-tauri/           Tauri 壳 + Rust workspace(14 个 crate)
   src/               main.rs / lib.rs / commands/ / deeplink/
   crates/lj-*        领域 crate, 见下表
 messages/            Paraglide 翻译源(en / zh-CN)
-docs/adr/            7 份已采纳的架构决定
+docs/adr/            8 份已采纳的架构决定(0004 有两个文件)
 ```
 
 Tauri 根 package 只依赖 `lj-rule-system` 与 Tauri 插件, 不直接依赖 storage/importer/runtime(`src-tauri/Cargo.toml#L97-L113`; `src-tauri/crates/lj-rule-system/src/lib.rs#L1-L5`)。这是「门面之外不越层」的编译期体现。
@@ -100,6 +111,10 @@ Tauri 根 package 只依赖 `lj-rule-system` 与 Tauri 插件, 不直接依赖 s
 | `lj-storage-migration` | `lj-compiler`, `lj-rule-model`, `lj-storage-entity` | 迁移与 schema 自检 |
 | `lj-storage` | `lj-rule-model`, `lj-runtime`, `lj-media`, `lj-storage-entity`, `lj-storage-migration` | 持久化 |
 | `lj-rule-system` | 上面几乎全部 | 唯一 composition facade |
+
+这张表不再是唯一权威。ADR 0008 把 workspace 的 14 个 crate 分成五层(契约叶子 / 规则合同 / 执行 / 持久化 / 门面), **只允许向下的边, 同层之间不互相依赖**(`docs/adr/0008-rust-crate-layering.md#L19-L27`);真正被机器检查的那份表是 `src-tauri/tests/workspace_layering.rs` 里的 `ALLOWED` 常量, 它被断言与实际 `[dependencies]` 边**完全一致**(`src-tauri/tests/workspace_layering.rs#L13-L68`, `#L71-L101`)。所以新增或删除一条依赖边都必须显式改这张表, 不存在「悄悄发生」的边界漂移。两条既有边被记录下来, 因为它们不理想但不打算现在修: `lj-storage-migration -> lj-compiler` 与 `lj-storage -> lj-runtime`(`docs/adr/0008-rust-crate-layering.md#L43-L45`)。
+
+守卫的取证方式是直接读 `src-tauri/crates/*/Cargo.toml`, 只统计生产 `[dependencies]`, 不含 dev/build 依赖(`src-tauri/tests/workspace_layering.rs#L12-L13`, `#L201-L207`);`lj-integration-tests` 是端到端收尾 crate, 在 `EXEMPT` 里显式豁免、允许依赖全部层, 它的 `[dependencies]` 不代表产品依赖方向(`#L68-L69`)。第二个测试断言整张 `ALLOWED` 图无环(`#L103-L130`)。两个测试都是普通 `#[test]`, 因此跟随 `cargo test --workspace` 执行 —— 今天这条命令的入口是 `pnpm verify`, 而不是 pre-push 钩子。
 
 两条被刻意维持的「不依赖」值得单独指出:
 
@@ -191,7 +206,8 @@ command: execute
 | 0004(规则优先扩展) | 规则优先的来源扩展架构(取代已删除的 ADR 0003) | 已采纳, 规则路径已实现 | 编辑器/候选安装/编译/immutable Plan/capture-replay 均在代码中; 通用 plugin system 按第 7 节一期不建设, 原 plugin/effect contract 层已删除(`docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114`) |
 | 0005 | TurnEngine 与 PageSource | 已决定未实现 | 无 `src/features/turn/**`, 全仓检索不到 `PageSource`/`TurnEngine`/`TurnIntent` |
 | 0006 | 仿真卷页空闲帧预渲染纹理缓存 | 已决定未实现 | 依赖 0005, 无 `CurlTransition` 与 `TextPageSource::snapshotFor()` |
-| 0007 | `lanjing://` 资产网关 | 已决定未实现 | Rust 未注册自定义协议, CSP 无 `lanjing:`, 无网关 crate; 但 SSRF 防护已存在于 `lj-node-http/src/ssrf.rs` |
+| 0007 | `lanjing://` 资产网关 | 已决定未实现 | Rust 未注册自定义协议, CSP 无 `lanjing:`, 无网关 crate; 网关可复用的只有 `lj-node-http/src/target.rs` 的 url 校验与 DNS pin(地址段不做限制) |
+| 0008 | Rust workspace 的 crate 分层与单向依赖 | 已实现并有守卫 | `ALLOWED` 表与 `crate_dependencies_match_the_allowed_layer_table` / `crate_dependency_graph_is_acyclic` 两个测试(`src-tauri/tests/workspace_layering.rs#L13-L130`); 前端 feature 之间的同类边界仍无机器检查(ADR 0008 「后果」末条) |
 
 `docs/adr/` 现在有两个编号 `0004` 的文件: `0004-app-surfaces-and-workbench-layers.md`(双层架构)与 `0004-rule-first-open-extension-architecture.md`(规则优先扩展)。引用时看文件名而不是编号。
 
@@ -205,4 +221,4 @@ command: execute
 
 - 前端只有工作台层; 应用面、翻页引擎、资产网关均未实现。
 - Rust 侧不再有 plugin 机制: 通用 plugin system(动态 Rust ABI、通用 PluginHost、plugin catalog、跨插件 service、registration lease、第三方 executable plugin SDK、在线 marketplace)按 ADR 0004 第 7 节属**一期明确不建设**, 原有的 plugin/effect contract 层(`lj-plugin-contract` 与 `PluginHost` / `FrozenRegistry`)已删除(`docs/adr/0004-rule-first-open-extension-architecture.md#L104-L114`)。运行时只注册内置的三种 effect handler, 未注册 kind 由 dispatch 转成稳定失败。
-- Maccms 来源在 importer crate 内没有单元测试(`lj-importer/tests/` 只有 `legado_test.rs` 与 Legado fixture), 它只被跨 crate 集成测试覆盖(`lj-integration-tests/tests/maccms_json_rule_system.rs` 的 8 个用例, 其中 `maccms_json_four_intents_live_and_replay_use_only_rule_system` 走完整门面); 也就是说 importer 的 Maccms 翻译逻辑本身缺细粒度回归, 但线路层不缺口。
+- Maccms 来源没有独立的测试文件与 JSON fixture(`lj-importer/tests/` 与 `fixtures/` 里只有 Legado 的), 但它的翻译逻辑有 **6 个内联单测**(`src-tauri/crates/lj-importer/src/maccms/mod.rs#L195-L353` 的 `mod tests`: 四意图导出、稳定身份与节点 id、discover/detail URL 保留协议参数、XML 定义走 XPath 字段规则、端点文档把运行时凭据与定义分离、非法 URL 在创建定义前被拒), 另有 8 个跨 crate 集成用例(`lj-integration-tests/tests/maccms_json_rule_system.rs`, 其中 `maccms_json_four_intents_live_and_replay_use_only_rule_system` 走完整门面)。差别在测试形态(内联 vs 独立文件 + fixture), 不在覆盖有无。

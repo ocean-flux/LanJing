@@ -31,11 +31,16 @@ sources:
     resource: repo://src/features/rules/EditorToolbar.tsx
   - id: openwiki-source-ee130a462d446f70c12f0143
     resource: repo://src/features/rules/model/core.ts
+  - id: openwiki-source-cf08c1737c34782425dd0f98
+    resource: repo://src/features/rules/model/native-import.ts
   - id: openwiki-source-04750d843a810bbf356d4660
     resource: repo://src/features/rules/session-error.ts
   - id: openwiki-source-8780adbf81fc42a7d70c2315
     resource: repo://src/features/rules/use-session.tsx
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -122,7 +127,7 @@ document_row 必须存在, occurred_at_ms >= 0
 凭证明文是一次性的:
 
 - facade 把 `CredentialMutationRequest.value` 送进 `SemanticSaveInput.credential_mutations`, 存储层在同一事务里写入/更新槽位;
-- 前端在 `saveRequest` 步骤就把 `pendingCredentialMutations` 移进 `inFlightSave` 快照并清空 state, 注释写明「明文只存在于 inFlightSave 快照; 响应后不保留, 冲突时由 UI 重新输入」(`src/features/rules/model/core.ts#L1150-L1152`); 保存失败也不恢复明文(`#L1215`)。
+- 前端在 `saveRequest` 步骤就把 `pendingCredentialMutations` 移进 `inFlightSave` 快照并清空 state, 注释写明「明文只存在于 inFlightSave 快照; 响应后不保留, 冲突时由 UI 重新输入」(`src/features/rules/model/core.ts#L1108-L1131`); 保存失败只清 in-flight、不恢复明文(`#L1220-L1231`)。
 
 **一处未接线**: 文档的有效凭证**不会**被转成运行时凭证。候选/安装路径的 `runtime_credentials` 只来自导入器(`take_credentials()`, 即 Legado/Maccms 源文本里的静态凭据)(`src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L114-L124`), 执行侧则从 `source_versions.runtime_credential_secret_id` 读取(`src-tauri/crates/lj-storage/src/repository/execution/read.rs#L223-L264`)。ADR 0002 第 6 条后半句「只有 Effective Rule Revision 的 credential 可在 prepare/install 时编码为 source runtime credential」属于**已决定未实现**。
 
@@ -160,7 +165,7 @@ Recovery Draft 本身也只是**内存态**: 结构里只保留脱敏 Definition
 
 ## 未实现与边界清单
 
-- 文档导出的可安装路径不存在: `RuleInput` 只有 `MaccmsJson` 与 `Legado` 两个变体(`src-tauri/crates/lj-rule-system/src/types/candidate.rs#L13-L24`), 因此**手工创作的 native rule document 无法变成已安装来源**, 也就无法被执行。`prepare_install` 不谈 document。
+- 手工创作的 native rule document 仍没有可安装路径。`RuleInput` 现在有三个变体(`MaccmsJson` / `Legado` / `Package`, `src-tauri/crates/lj-rule-system/src/types/candidate.rs#L13-L29`), 其中 `Package` 是通用 Rule Package 导入(端到端被 `core_out_rule_package` 集成测试覆盖); 但编辑器只能把 external RuleDefinition JSON **导入到编辑会话**(`src/features/rules/model/native-import.ts#L1-L22`), 反过来没有任何「导出成 Rule Package」的 IPC 或界面动作, `prepare_install` 也不接受 document 作为输入。因此「编辑中的规则」与「已安装来源」之间仍缺一段。
 - 文档 effective 凭证 → runtime credential 的编码未接(见上文)。
 - `state` / `link_revision` 恒为初始值, 文档↔来源链接未实现。
 - 冲突与 Recovery Draft 无 UI 出口, 且冲突被当作成功提示。

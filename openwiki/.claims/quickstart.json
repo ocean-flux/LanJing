@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:b18360b330bbdff599c6813c28e7cf8a645186a52f545a274ea409ddcbed979b",
+  "pageVersion": "sha256:16b9b3e8e9c45cd5bdf3dc864900b3a8076789ca25b0033aa825b11d3997a8e6",
   "claims": [
     {
       "id": "claim_6940d714570a4b509d7f8b6e2782e615",
@@ -88,15 +88,19 @@
     },
     {
       "id": "claim_52d19672ce3e4e35b796f26552a571b8",
-      "statement": "25 个 Tauri 命令由 src-tauri/src/lib.rs 的 lanjing_commands! 宏唯一声明(同一宏还展开出 REGISTERED_COMMAND_NAMES), 而前端 src/shared/tauri/rules/wire.ts 只覆盖规则文档的 10 个命令, execute / cancel_execution / catch_up_execution / get_media_item / list_media_units / list_media_assets 没有前端 wrapper。",
+      "statement": "26 个 Tauri 命令由 src-tauri/src/lib.rs 的 lanjing_commands! 宏唯一声明(同一宏还展开出 REGISTERED_COMMAND_NAMES), 前端 4 个 wire 文件共 23 个 wrapper; 仍无任何调用方的是 get_media_item / list_media_units / list_media_assets(连 wrapper 都没有)与 catch_up_execution(有 wrapper 无调用方), 而 execute / cancel_execution 已由编辑器预览使用; 另外注册表的 IPC 刷新函数 loadNodeDescriptors() 没有调用方, list_rule_node_descriptors 运行期不会被走到。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/lib.rs#L14-L60",
-          "version": "repo-lines-v1:sha256:f4c8d013df7e68f88830a223f1c1e3c67eed0d72d117a7460a2e27d3ff7e3eb0:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljM2Y4M2FmYzQzMDlmMDQ0ZDE5NmVlNWY0M2Y0MDc4YzIwOTE4MmI3NGZkY2NjZjY3N2E1MGY3OWU0ODI1MjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxYTUxM2M3NmEwY2FhOTFhODBjMTY4ZDA4ODZhOTkyZDY1NzIzOTMwNjE0MGJiMmMyMGM1ZDZlOGNiMTk5NDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4YzRkZWRkMWJmMDAxMWQ5ZjkzMGE5YmZjNWM1ZGQyYjM0ODkyZGNhOWUyMDUyMjk3ZDJmMTEyZmZhMThiNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlmMDFjZDgwNDQ5ZGNmODA1MjhmNzQ0NmJhMjZhMGUxNDE4YjUxMmFmMTVjM2NjN2MxZDE1MDMwZjc5NWFhYzcifQ"
+          "resource": "repo://src-tauri/src/lib.rs#L14-L45",
+          "version": "repo-lines-v1:sha256:baadc82d51471e50c52eb3bf26e994cc4d1ad59a3bbf23b7971402a159369d13:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljM2Y4M2FmYzQzMDlmMDQ0ZDE5NmVlNWY0M2Y0MDc4YzIwOTE4MmI3NGZkY2NjZjY3N2E1MGY3OWU0ODI1MjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4YzRkZWRkMWJmMDAxMWQ5ZjkzMGE5YmZjNWM1ZGQyYjM0ODkyZGNhOWUyMDUyMjk3ZDJmMTEyZmZhMThiNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiNDNlZDQwNTE2ODY2MzMxMGZjMzA4ZDIzM2U4YWFhMWFlYjRmOTUyMDNkMDkzZGNkNTU2Zjg0MzMwNzJkOGEifQ"
         },
         {
-          "resource": "repo://src/shared/tauri/rules/wire.ts#L301-L364",
-          "version": "repo-lines-v1:sha256:4045f8fa46f73f7c3bf8b4a3e6e817f2ab5b1bdcf9afeb53f9930c270fc8edc4:eyJzZWxlY3RlZExpbmVDb3VudCI6NjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlMDk1NzI1YTQxZTA5YjI5MTM4NDZmMmQ1Y2MxZDFjZjQ1ZmFmMzExMmExYzgzYjQ5YjA4MWRhY2QxMTcwM2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyNWU5MjUwNjM2YTU3M2Y3MTA1ZDRhNGJiN2E1MTUyNDI2YTFmZGZkOTVlMmUwY2NmZGY4MGRhYjRjYWQ2ZDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE3MjAyNzI1MDg2NWQyNmJmMmQ2MmQyYzI0NzRhNGIwYTg4MmQxZmE1OTk2MjY0NGFhMzBiOWMxZGRjYTVjNGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwNzY2MjU2OWJlN2Y4ZWVlZDI3OGVjMDdhMDhmYWIwMWRjNTZiYjMxZjIxNTUyYzYxM2U4ZTczZjAzMmQ2NWQifQ"
+          "resource": "repo://src/features/rules/model/descriptor-registry.ts#L83-L95",
+          "version": "repo-lines-v1:sha256:3b7846b78eb9e4ef0cb943268e79e8da5944b4c2394a7f02cf7667a46412aeb2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkwMmMxMmEwNTQ2ZWU4MTIwY2M4NzBiMzEwMmJmMGI3ZTBlZmM2NGY0M2RjOWY5NjY3ZmUyNzc4NWFkMDA0MjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImEwNmE0MGVmNmI1NGQ4Mzc0ZThiZDkyMTFjNWI5ZTc0MjY2MTNkODViNmIyMzFhZmE1MmI3MTY4ZTg5N2UyNTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA5YWIxOTVhM2M5NGZhY2UyMDE1NWI1NGQ5NmU5ZjkzYzg0YTljZGJhOTMzOTRiODEzNThjYzlkOGI5NzEzODAifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/session.ts#L330-L345",
+          "version": "repo-lines-v1:sha256:651cce5388b8da2ef6dc5b7470175a8612aac220c2d144c0078bf18c750e3986:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE2OWRmNzBlZTM5ZTk5ODgwMDZjNGY3MDhmZWYwZTc2NGI2MzNhM2QzMThlYWM5NjEwYTU1N2ZjZDNkM2I1MDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxOTFmNTEzYjk1ODg3Njg1N2NiMjBiYTBmMmY2YzEwOTU4NzA4NzRhYjQ1OGUyYzhhNjNiNTUxYTViOTJmOGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExZmFiNjcyMGIzNTVlYzg4MjVhZDI2MGE2NzEzMjNmNWVlM2Q2NDJkNzMwMWJiZmExMTA5MTcyZDg4YmNiYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ5MjM1YjEyYzM3MjY4MzgyY2FjNzBlYzg2NzQ5NDNmNjM4ZDExMWVhODZkYzI1ZmE3YTA4YTNiZTljNWJmYjYifQ"
         }
       ]
     },
@@ -105,7 +109,7 @@
       "statement": "EditorToolbar 的 run() 在 action 不抛错时无条件 toast.success, 而保存冲突是正常返回值, 因此写入被拒时工具栏也会提示「已保存」。",
       "evidence": [
         {
-          "resource": "repo://src/features/rules/EditorToolbar.tsx#L33-L42",
+          "resource": "repo://src/features/rules/EditorToolbar.tsx#L38-L47",
           "version": "repo-lines-v1:sha256:567ca277377563db9d9d3b70256e090de3dec4493a0e573f1004461702984085:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlNzZlYjkyNTJmOTg4NTk4OTVlNjFlZGRhYTEzZDYwNjk4MTRmZmNiMTcxMGRhY2JmZWQzNzgyMDcwN2U2NmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxYmI5MDVjMTNiOTI5NDMzYmFjODFlZjQwOGQwMjNkN2VlZDY5YzRhNmYwN2Y2ZjQ3YzViOGUzZDBkNjE0OTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4MGYxMWJiZjYyODY0OTU0ZGJkYmJkOTQ3NzdkZjg2YmY4ZmRkMjk0MmY5MzBkMzRkOGEyM2I0ZGM0MzZiYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0NWE2ZmRjZmM0MjVjOTZjNzA5N2MxYzdhMDlkMmVlMTA0MGEwY2UzNWM3YzVjYjM4ZmU5ODE5ZmUyYjIxN2QifQ"
         }
       ]
@@ -133,7 +137,7 @@
           "version": "repo-lines-v1:sha256:57c891e383afe45f873e73d708f05e6ce5f7c98c3e5d664a0ef28d0afccf5260:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTdjODkxZTM4M2FmZTQ1Zjg3M2U3M2Q3MDhmMDVlNmNlNWY3Yzk4YzNlNWQ2NjRhMGVmMjhkMGFmY2NmNTI2MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTdjODkxZTM4M2FmZTQ1Zjg3M2U3M2Q3MDhmMDVlNmNlNWY3Yzk4YzNlNWQ2NjRhMGVmMjhkMGFmY2NmNTI2MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWJlMzA2MDRlZWZhYWRlMDJmMTMyMjRjZjExZWU1OGE4YzhjZGE3ZDYyZWFhZTc5N2FkODdkZGNjNGU3OTA1MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjVhYTdiNmFjOWViMjZhNWU1ZWNiZGI3Mzg5NGZkNWZkNGMxYjYyYmYwOTEzYWYxNjhmNTc3ZGFjOTg0NzNkMCJ9"
         },
         {
-          "resource": "repo://package.json#L62-L65",
+          "resource": "repo://package.json#L64-L67",
           "version": "repo-lines-v1:sha256:dcb4f801c5bfe7263265828fd846cbff8a5c2f1228c2daceea8b57b520490526:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2U4YzlmMzMwZDc4ZmU0NDMxZDlmYzM5ZmFlMzRiNWRmODA4ZDk4ODFhZjUwNGNkNDE1NGZkZjQxM2UzMmVmMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWVjZjI5ZWU0ZWQ1ZjIzZDM2MTUwNDE0ZDc0YTQyMzdjOTgxOGFjMmI5MTc1ZTBmY2Q5MGZjZTBmOGVmOWM3ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjQzM2JlN2QzZGQwZDY3OTgxOGM4MGUwOTMyNzE5YWE1YWViMjI3Y2QxY2IwMDhhMjZlYWJjNTk0Nzg5NTBmNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDFiMGM4ODFlYmEwNmYwZjM3OGI1N2M1ZjdjMzczMDMzMjQzODBjZmU4MjNkYjY5NDdkMWI5YmRhNGY3MDk0NCJ9"
         }
       ]
@@ -150,11 +154,11 @@
     },
     {
       "id": "claim_a7bba8debf9b4998936146c9f75cb1ab",
-      "statement": "前端脚本集合是 dev/build/preview/tauri/test:web/lint:web/typecheck:web/format:web/format:check:web, 其中 pnpm check 等于 lint:web && typecheck:web && format:check:web && test:web, 不包含 build。",
+      "statement": "前端脚本集合是 dev/build/preview/tauri/test:web/lint:web/typecheck:web/format:web/format:check:web/static:web/check/verify, 其中 pnpm static:web = lint:web + typecheck:web + format:check:web, pnpm check = static:web + test:web, pnpm verify = check + cargo clippy --workspace --all-targets --all-features -- -D warnings + cargo test --workspace, 都不包含 build。",
       "evidence": [
         {
-          "resource": "repo://package.json#L7-L22",
-          "version": "repo-lines-v1:sha256:de11e441df5e0e303380360245e8123216942c2dedacacca411202d7c895969d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0ODMzZDU5NDljMDNhNDBjYTk1MjQ5MTYxMGE2NjU5NjQ0YjNhYTQ2NjM2MmY3OTkwMjBkYmYxOTgxNTQ3ZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhMzM2ZmFlZjkwZDgzMjE0NWNhMjJmYWNjMWQwNWRmMmI0MzI4OWM4ZjQzMmM4NzQ5NDU2NGQxYTY1NzIwYjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwMzE0YjQ4MmRjZmUxYzNjNDk2ZTMzNTY4YWZhNTM4MTk2NDBhYjE0M2QzMGMxYjlkYjBhOGI3ZjRjYWZhYTMifQ"
+          "resource": "repo://package.json#L7-L24",
+          "version": "repo-lines-v1:sha256:fd54fe9fbd02d601d1553bad6ad03273994487adb75ebf1a76b617f40b7f2269:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0ODMzZDU5NDljMDNhNDBjYTk1MjQ5MTYxMGE2NjU5NjQ0YjNhYTQ2NjM2MmY3OTkwMjBkYmYxOTgxNTQ3ZGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhMzM2ZmFlZjkwZDgzMjE0NWNhMjJmYWNjMWQwNWRmMmI0MzI4OWM4ZjQzMmM4NzQ5NDU2NGQxYTY1NzIwYjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwMzE0YjQ4MmRjZmUxYzNjNDk2ZTMzNTY4YWZhNTM4MTk2NDBhYjE0M2QzMGMxYjlkYjBhOGI3ZjRjYWZhYTMifQ"
         }
       ]
     },
@@ -170,21 +174,25 @@
     },
     {
       "id": "claim_67fd317dbb6141bc8b8e5cd014c626c9",
-      "statement": "lefthook 把门禁挂在 git hooks: pre-commit 并行跑 oxlint+oxfmt(串行 piped 两步, 因为共用 glob 会让 css-only 提交以空输入让 oxlint 退出 1)与 cargo fmt --all, 并对暂存文件 stage_fixed; commit-msg 跑 commitlint; pre-push 并行跑 web(pnpm check && pnpm test:web)与 rust(clippy + cargo test --workspace)。",
+      "statement": "lefthook 把门禁挂在 git hooks: pre-commit 并行跑 oxlint+oxfmt(串行 piped 两步, 因为共用 glob 会让 css-only 提交以空输入让 oxlint 退出 1)与 cargo fmt --all, 并对暂存文件 stage_fixed; commit-msg 跑 commitlint; pre-push 只跑 pnpm run static:web 与 workspace clippy, 不跑测试。",
       "evidence": [
         {
-          "resource": "repo://lefthook.yml#L6-L58",
-          "version": "repo-lines-v1:sha256:d40569fa63fe703e1efa58bd9fac41c1d7b1e01cac60786bbef3d318bedf4af9:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2NGJmNDdhNDNjMzE3MzgxM2Y2NzdmNzRkZjIzZDc3MjdmMTM1YzI1MTUyYzcxZGM5Mjk4ZmFhZGZiZTA0NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1YzU2OWM3ZWMyYjgwZDUwODg0ODliOGY1ZDZjOTYxNzc5OThiOGFhZmYyNDgxZTA1YThkNWMwODY0NjJjOWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkNjdiZmVjMzQ3ZDcwYmEyOGU3NDAwMTM5ZDcwNDhiODQ4MDY1OWFkYWU3MjMxMTE4YmM0MDY5ZGZkY2Q0MTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://CONTRIBUTING.md#L39-L53",
+          "version": "repo-lines-v1:sha256:d61de5d8b3aba0a83f995607cdef8462e425c2f6baf34de27e09027c35f8c7b6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjMDk4ZTUyNjkyODFkM2YxZmZkZmUyZGRmNGYwYTRmNDkyODA1MWYzZDA0MjRjZjQxM2YwZGJiYjg3NzlhZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlNDBjYjUzMzRmOThkMGNlODBlMGY1MjRhMGMzMDU5YmI0ZDk5NTQ2YjEwN2U3ODRjZmE5ZDA1YTBlOTA0NjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmNWUzZGMxZjUxNDI0ZTRiMGU4OTVkODAxMDhkMDA5NTVjYWM5MTQ5YzU0MTEzZDViMTQzODkwY2VjMWI3YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhZTIwM2MxYTk1MTU2ZDg0ZWY5MDRlYmQwMmJjZDRkMzViYWMxMjk1NmUwMGQyOGRkNjZkNGMxYWI2MjkwZTEifQ"
+        },
+        {
+          "resource": "repo://lefthook.yml#L6-L65",
+          "version": "repo-lines-v1:sha256:256f6d09a496228b7456b5d9107a8012a558735f8b782706a483a37b924d3f98:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2NGJmNDdhNDNjMzE3MzgxM2Y2NzdmNzRkZjIzZDc3MjdmMTM1YzI1MTUyYzcxZGM5Mjk4ZmFhZGZiZTA0NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0ZjExOWExMjU5MDg2NTEwM2NjNWZlYzZjMDkwNmY5ZWYwYTU5MmM0N2E2ZTg1NzYwNjhmMjg0ZjgxODJhZjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkNjdiZmVjMzQ3ZDcwYmEyOGU3NDAwMTM5ZDcwNDhiODQ4MDY1OWFkYWU3MjMxMTE4YmM0MDY5ZGZkY2Q0MTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
       "id": "claim_175fd85e9bbb4b298cf577329bfc2302",
-      "statement": "提交信息约定是 Conventional Commits 的 <type>(<scope>): <subject>, commitlint 继承 @commitlint/config-conventional。",
+      "statement": "提交信息约定是 Conventional Commits 的 <type>(<scope>): <subject>, 类型含 feat/fix/refactor/docs/style/test/chore/perf, commitlint 继承 @commitlint/config-conventional, 提交前跑 pnpm verify。",
       "evidence": [
         {
-          "resource": "repo://CONTRIBUTING.md#L76-L84",
-          "version": "repo-lines-v1:sha256:4f0a08f8772e9798d735eed9b90fd704bd9e2ab7a55d274e25ef3f71ecaf04eb:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGM2NzFkMzI2MzRhODQ5NWFmM2I5ZWM3NDY5NWYwNmI2NDQ2NGNlYzk4M2Q3MjM2MTdmNmQzOWIxYWQ1ZDJkZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTMzYmU1MzYyZTA0ZTRiNDg2ZGI5MDhiODUyZjdjNjU1YWZmM2ExNGI3MDVlODdmZTMzYmRmZjI2NTY0YzNiYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDMwNWJhNGJhMGU1ZjZjYTJlOWViYzk1M2NjN2EwMGMyZGMyMDFjNjVhYjdmNDZjNTQ0NDJmZTBiNWZmMjEwYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjlhYTkzMWVjY2UwMDNiOTZkNjgxZGNjM2RhMzg0ODg0ZTg0M2IwNzU2OTQ4NThlNmMzNjUwZmYxYzQ2NzgxNiJ9"
+          "resource": "repo://CONTRIBUTING.md#L99-L105",
+          "version": "repo-lines-v1:sha256:ea2f65992493b27f837f292f1f939cf13a10d173c406103bdb8f633a49230fbc:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjNjYzM0NzlmNWZmMDAwNDY2YzE3MWY3NDAwOGU2NDgyOTRmOWY5MzEyMGVmNzg4OGMzYzBiOGYxMzNmOWU2OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGIwOWRlMDE4ZWMxYTdjMjU4ODMyZTBhMWZkZThlNmMzYjgzYmI1MjEzODkwNWJkOGE0YzQ0MTFiNDUxNmIxOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2E0MDE4ZTI4ZTk1Y2M2NDdhYjA1NzYzN2I3OTFiYTliMWY1MWU2OWRkNzRlNWVjMDA4NDBlODZiNTVhY2UwYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjlhYTkzMWVjY2UwMDNiOTZkNjgxZGNjM2RhMzg0ODg0ZTg0M2IwNzU2OTQ4NThlNmMzNjUwZmYxYzQ2NzgxNiJ9"
         },
         {
           "resource": "repo://commitlint.config.js#L1-L3",
@@ -235,7 +243,7 @@
           "version": "repo-lines-v1:sha256:f2ffeea71d211022657cc5c40427f38b7dc05a1bd17153355b27fa088184ec15:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjJmZmVlYTcxZDIxMTAyMjY1N2NjNWM0MDQyN2YzOGI3ZGMwNWExYmQxNzE1MzM1NWIyN2ZhMDg4MTg0ZWMxNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjJmZmVlYTcxZDIxMTAyMjY1N2NjNWM0MDQyN2YzOGI3ZGMwNWExYmQxNzE1MzM1NWIyN2ZhMDg4MTg0ZWMxNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDA5OWJkZmJlZDZlN2NjOTU4MzllMjFiODc5OTUwMDNiY2VjMjE5Mjg2NjVmYzJjOGRmM2Y5ZjViYzVhYWY5NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDk0M2Q1NDMwYjZmZTU3YjE5MWFmZmM2OTljMDU0OGUxZjY0MTAxMGFhN2FlNGUzYjIzZGQ2Njc3ZWFiOWRjMiJ9"
         },
         {
-          "resource": "repo://CONTRIBUTING.md#L64-L74",
+          "resource": "repo://CONTRIBUTING.md#L85-L95",
           "version": "repo-lines-v1:sha256:dd83052616bf8c1359a5c8375b9f7613dcc796615acfe80495309dd37e1f72a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdmMWNhNmQ2ZjZmMDdjMDkyODJlZGFkOWM1YWNhZTJhNTE5NzFiOThlMjk2YjdhMzdmYzM5ZDIyOTViNDMyMzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0MDJlODNkN2YwNjRhNmZkN2JiM2JhMDg1YThmNDFhODFmYTU1ZWY2NDE4ZTZmZDM4YWNmNjJmYjIwNzAwYzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQwMTVlNDg0ZDY5ZmJiZDVkMjI3ZGE4YmU2ODA0YzA3NjczM2FmNzBhMWQxZGFiZDcxNjNiMWUyMWQ1Mjc4M2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhNDAxOGUyOGU5NWNjNjQ3YWIwNTc2MzdiNzkxYmE5YjFmNTFlNjlkZDc0ZTVlYzAwODQwZTg2YjU1YWNlMGIifQ"
         }
       ]
@@ -249,14 +257,70 @@
           "version": "repo-lines-v1:sha256:e99f5932f88f38404e2c8dfa8de45d41f591221ed2a7ba07d85b2c06a8f1863c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTk5ZjU5MzJmODhmMzg0MDRlMmM4ZGZhOGRlNDVkNDFmNTkxMjIxZWQyYTdiYTA3ZDg1YjJjMDZhOGYxODYzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTk5ZjU5MzJmODhmMzg0MDRlMmM4ZGZhOGRlNDVkNDFmNTkxMjIxZWQyYTdiYTA3ZDg1YjJjMDZhOGYxODYzYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGU4NWIxNDUzYmRmYzZlNjhhNzdkNDg5MDIzZDExZTViZTlmNDE5YjUyY2VlNWJjYmY0NGQ3ZjkxZDcyMjZkYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2Q1YzM5OGUwNTY2NDc4N2JjYzBjZGU0YzNmMjBhNTA1NjQzMzdkZWYxNTcyNTU0MzExZTVlMmQ3NTE0Njk4YiJ9"
         },
         {
-          "resource": "repo://CONTRIBUTING.md#L58-L60",
+          "resource": "repo://CONTRIBUTING.md#L79-L81",
           "version": "repo-lines-v1:sha256:5f3492d9fde1991d13414227c5fd612f82cdddf6f63558b57883f65a1ccb55a6:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjg4NzAxNmMwMjBiNjA0NWRmNjFhNzQ0N2VmYWIyZGUyMzFiZWVjOTliMDRiZTZkNzgzMGU3NjRhZWU0YzJmMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA5M2U1M2FjMDA5ZmQ3OTFmMWQ1NmEyNmYzODI4OTQ3MzA0NDVmYTk0YzljOGIwNTA5ZjNhNDc0Mjk2YjFkYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjg0N2VmMTg4YmFmZTM0OGJmOGU0MjM0MDY4NWFjODQwZDVjNzlhZWI0MDJiODZjNDM0YTA1NjNkNzg0ZmNhOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDAxNWU0ODRkNjlmYmJkNWQyMjdkYThiZTY4MDRjMDc2NzMzYWY3MGExZDFkYWJkNzE2M2IxZTIxZDUyNzgzYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d6d0999dae5d45a4ba9cb96a9df840a4",
+      "statement": "工作台路由已全部接上(RealmHome/AppsHome/SourcesHome/RuleWorkspaceRoute/LibraryHome/LibraryItemRoute/SettingsHome/NotFound), 而五个应用面(reading/gallery/podcast/video/music)仍是 enabled: false 的禁用列表。",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L94-L104",
+          "version": "repo-lines-v1:sha256:bdee691929c137f51444df286410a3eda0272f50af966803c8304dd559562d65:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhlMjMwN2JmMTFmYjE5MTRkYjRmYjkwODRjY2JhOWZmYWJkNWMwYWM5MWQ2NTE3NWZhMDI3N2IxMTYzZGRjZTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkOGEyMzMyOWFlNmRkYjRjNDRkNDQ3OTUzM2M1OGNhZDZkNTc3NWU0Zjg0NzBlOWIwYzI5OWU1NjFkMjBhNTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBmZDE4ZTE4ZTQyZDdjMjIzMGFjOWQwMWQzNjg0MDhjYTdjZDE5N2U5MzU4YzMzYjQyYTUzZDgzMTFhMjk1ZDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEzMjE5NGNiNDhjMjcwNzUzODVhYTYyODQ1ZWFjMjNjMDcyOTExNDhiYzQ3ZGJkODBlMWU4NzFlYjlmZWRmYTUifQ"
+        },
+        {
+          "resource": "repo://src/features/apps/AppsHome.tsx#L16-L20",
+          "version": "repo-lines-v1:sha256:8ffe96b8b70e1ae28236596f44caff598f68536eace455d1bff0e36423cbf978:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTYwNDMzMGExODJmMGNjYTYyYWQ0NzEwYjQwNjk3ODUxOWVhNDNiYjY5YWQxOTZhZDMwZDkxODBjOWU4ZjA2MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDRlYTViMTU1NGNjNDVhZWNlYjg2OWRiZjkzOGQxZWE0MjQ2ZGRiMGEzNDY5NmYzZGFjNWFiZjQ0YmMwYWQ1ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWE2ZmY2ODI2YjA2MDIxYWQxNjg3OTA1ODU5MGJlZWIxZDAwMTEyNWQ0OGM1MWZhNzA4OWJiYTk2YzdhOGU2YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTI3ZmY4YmZmMzhjZWMxOWY2NDRiNWJmZTdkNjgzOTIzMzA3ODFlNDU3MzBlZWY0Y2M1YTU3OGU1OGExM2JmMyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_dc76ffaeba9a4288a5f791183bcc500a",
+      "statement": "两处文档与实现不符: README 仍说规则编辑器是语义图只读投影加布局保存(实际已支持配置编辑/连线/删除/粘贴/撤销重做与预览运行), README 把 pnpm test:web 描述为 React Testing Library + Vitest 而 src/ 下没有任何文件 import @testing-library/react。",
+      "evidence": [
+        {
+          "resource": "repo://README.md#L25-L25",
+          "version": "repo-lines-v1:sha256:3f3bf2c8bd40f11f04010f553bf6b262237c810056b75e84f4d1f1de80a7f271:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2YzYmYyYzhiZDQwZjExZjA0MDEwZjU1M2JmNmIyNjIyMzdjODEwMDU2Yjc1ZTg0ZjRkMWYxZGU4MGE3ZjI3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2YzYmYyYzhiZDQwZjExZjA0MDEwZjU1M2JmNmIyNjIyMzdjODEwMDU2Yjc1ZTg0ZjRkMWYxZGU4MGE3ZjI3MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjJlZjBiOTY4MjQ2YWZmOGExNWNlYTcxNDVlNzEyNmE2ZDk3MjJjMTlmYTJiMTQwNGFhMjMyNTdmYTgxNmI1NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjcyN2RiMjM2NWZhZmZjMDFiNmJjZGVhYzA3NmFjYzlkYzNhOTMyNzQ0NmJiODA1OGNjYWQ0YmM1ZWJlZDc5NiJ9"
+        },
+        {
+          "resource": "repo://README.md#L57-L57",
+          "version": "repo-lines-v1:sha256:57c891e383afe45f873e73d708f05e6ce5f7c98c3e5d664a0ef28d0afccf5260:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTdjODkxZTM4M2FmZTQ1Zjg3M2U3M2Q3MDhmMDVlNmNlNWY3Yzk4YzNlNWQ2NjRhMGVmMjhkMGFmY2NmNTI2MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTdjODkxZTM4M2FmZTQ1Zjg3M2U3M2Q3MDhmMDVlNmNlNWY3Yzk4YzNlNWQ2NjRhMGVmMjhkMGFmY2NmNTI2MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWJlMzA2MDRlZWZhYWRlMDJmMTMyMjRjZjExZWU1OGE4YzhjZGE3ZDYyZWFhZTc5N2FkODdkZGNjNGU3OTA1MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjVhYTdiNmFjOWViMjZhNWU1ZWNiZGI3Mzg5NGZkNWZkNGMxYjYyYmYwOTEzYWYxNjhmNTc3ZGFjOTg0NzNkMCJ9"
+        },
+        {
+          "resource": "repo://src/features/rules/EditorToolbar.tsx#L84-L92",
+          "version": "repo-lines-v1:sha256:db608819edf79b214ee31a2d3d56d4d3a9ffa3f03ed64e7b2b49fe4b9595726e:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODgwMDVkNTcxMDZhMzYyZWIwMDBkYWYzZGE0Njc0YzgyYjUxOGZmNWEyZTJmNjdlZThlNzU3YTMzM2MyYWY2NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGUwMDYzOTk3NmZhNzYzMWE1ZGJkMjdlM2U0Y2MyMjdiYjRjMzcxYzc1NWU2NWU3OWQ0OWRkMzAwZWQ4ZjQzYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzUzM2FjNzhkOTNlMGVmZDY5Y2FlODRmY2FiMDZjMDc0NDBkYmMzNjA1NjA3NDI1MGEwYjE0NzA0OGU1MTcwYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2QwYzU2YmYwMTFiODY2NGNhODFhMTI4MjRkNDVmMGMzNDhkMWExOGMzZTdmOTYzZjZkOWQxYTQwMzJlZDZjNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_da5260de6b114e85b7492a8257720171",
+      "statement": "CI 里只有 OpenWiki 更新 workflow(定时 + 手动), 没有 lint/test job, 所以质量门禁只在本地 pre-push 与人工执行时生效。",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/openwiki-update.yml#L1-L10",
+          "version": "repo-lines-v1:sha256:c3d5eea0b554e2a6bc3e48f1f8fa058a38e6b5e21e256de6bb5d3a73b2a1fce7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE3NDNhMmEyZmI4MmVhZWQyNDg4ZTI4NjRkNDIzYmViNTAwNjFkZDQyM2Q4MGI4NzIxZDNiYWU1YTY0N2E3ZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNiYTVhZmZkODIzMWMwZTgxYmJjZDQyMTU0YTFjYzkwZTg2ZWZmNjYzNTVjMDQ4Y2U1NWIzMjM3YmRhYzNhMWQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b8fd5fe76166480fb2e499e34f6eeecd",
+      "statement": "来源安装不受网络 capability 约束(没有联网确认开关), 但声明了 fs/env/process 的来源会被拒: 前端在提交前以 system_grant_unsupported 拦下, 后端生产 grant 恒为空。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/types/candidate.rs#L112-L119",
+          "version": "repo-lines-v1:sha256:86524fba848e75b92667e84c0e9866be1efe9ec909ffb023577084ad6f3f7a35:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDk4ZjI2MTIxMTVkNmNmM2I5YTk1MWVkMjk3NGQwZmUxMjc3NDI1NGE1YmE2YWYzMjdhOGZkNjU4MjgyZjg3YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzYyZjBlNzZjYTU4NDViNDdiMjg1NjkzY2M4MGQwNzQ3NjcyNTc1NjliYWE2ZjdiMTNkYTEyMzI0NGI4ZWZiMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWU5ODc2NjNjMjg5N2Q0YTkxZGMwMjQzNTFhOGY1OTY1NTQxMjc0MjFiNTU4NjAzZjVhYjc3Y2YzODNiYzJjNCJ9"
+        },
+        {
+          "resource": "repo://src/features/sources/workflow.ts#L347-L350",
+          "version": "repo-lines-v1:sha256:c11d7316b984bdd0c4152fc701d67503da0be092a93ccf9dc562583804bd7969:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWNmNWUyZjRiZjMyODlhMmU1MDEyM2NhMmIzZjBjOWI3NzNjZDhlMDA2NjkyYTNmODc5MTcwM2RkMTEzYmRmNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg5M2Y0MGUzNzgxZWI4OTZjODJkMDQ2YTA4MDY3YTExZTM1Y2RmMmYxZGZhZjI2ZmVhOTBiOGRiNjY3NjQxMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTNmN2JiYTM4NjdjMDkyYzYwYWQ5ZGRkNmUwODAzMWY0ZGMwMGE1OThjMzI1ZmVlMDYxODYwNWFhYzYxZDhjYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWJmZTZmMGEzNTUyZTllOWI3MDRlZGVlYjM1MDZkNDE3ZmZhZTBiZDZmNDVjMmU1ZDdiNmZiODYyNGE3MTUxMSJ9"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T13:54:24.186Z"
+    "at": "2026-10-05T11:35:47.718Z"
   }
 }

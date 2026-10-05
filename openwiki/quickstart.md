@@ -25,6 +25,8 @@ sources:
     resource: repo://package.json
   - id: openwiki-source-23775c3de52f3ab95a13cb8b
     resource: repo://README.md
+  - id: openwiki-source-0e77489563e28087cde37771
+    resource: repo://src-tauri/crates/lj-rule-system/src/types/candidate.rs
   - id: openwiki-source-8fb4609cef6e3bffc73c48ee
     resource: repo://src-tauri/src/lib.rs
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
@@ -35,9 +37,16 @@ sources:
     resource: repo://src/features/rules/EditorToolbar.tsx
   - id: openwiki-source-ee130a462d446f70c12f0143
     resource: repo://src/features/rules/model/core.ts
-  - id: openwiki-source-bfa866dbb93b4c8108ffdf7f
-    resource: repo://src/shared/tauri/rules/wire.ts
-generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+  - id: openwiki-source-7b4777db24e3917d09c987ae
+    resource: repo://src/features/rules/model/descriptor-registry.ts
+  - id: openwiki-source-e523845a56feec75d438c920
+    resource: repo://src/features/rules/model/session.ts
+  - id: openwiki-source-c79f60033c1e57537cf64e77
+    resource: repo://src/features/sources/workflow.ts
+generated: { by: "pi", at: "2026-10-05T11:35:47.718Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T11:35:47.718Z
 ---
 
 
@@ -64,9 +73,9 @@ LanJing / 览境 是**本地优先的跨媒体发现与阅读工作台**: 没有
 
 已经打通的链路:
 
-- **来源安装 / 更新 / 回退**(`/sources`): Adaptive Source Input、Install Candidate 的 TTL 与 stale 判定、授权确认、追加式 Source Revision 与由历史 revision 构造新候选的软回退。见 [来源安装、更新与回退](workflows/source-install-and-update.md)。
+- **来源安装 / 更新 / 回退**(`/sources`): Adaptive Source Input、Install Candidate 的 TTL 与 stale 判定、prepare 判定的 `install`/`update` 操作声明、追加式 Source Revision 与由历史 revision 构造新候选的软回退。网络不受 capability 约束(没有联网确认开关), 系统能力申请一律拒绝。见 [来源安装、更新与回退](workflows/source-install-and-update.md)。
 - **Native Rule Document 生命周期**(`/sources/rules`): 草稿 / 生效分域乐观并发保存、校验失败保留草稿、Effective Revision 历史与恢复。见 [Native Rule Document 生命周期](workflows/rule-document-lifecycle.md)。
-- **规则编辑器**: 节点配置、连线、删除、粘贴、撤销重做都在本地 reducer 里, 只有「保存 / 校验 / provenance / 新建导入」写回后端(`src/features/rules/model/core.ts#L258-L278`)。见 [规则编辑器前端工作区](workflows/rule-editor-workspace.md)。
+- **规则编辑器**: 节点配置、连线、删除、粘贴、撤销重做都在本地 reducer 里, 写回后端的是「保存 / 校验 / provenance / 新建导入」与「跑一次 live 或 replay 预览」(`src/features/rules/model/core.ts#L258-L278`、`src/features/rules/model/session.ts#L330-L345`); 节点的字段、端口与默认值由 Rust 的 descriptor 声明驱动(`src-tauri/crates/lj-rule-model/src/descriptor.rs#L1-L5`)。见 [规则编辑器前端工作区](workflows/rule-editor-workspace.md)。
 - **Rust 侧完整内核**: 编译器 → 不可变 Plan → 运行时逐节点推进 → live 捕获 / replay 逐字段比对 → 事件账本与投影。见 [整体架构与分层所有权](architecture/system-overview.md)。
 - **资料库读侧**: 列表 + Sheet Inspector, 收藏 / 置顶不变量由存储层写入事务强制。见 [资料库状态与媒体查询](workflows/library-and-media-query.md)。
 
@@ -74,9 +83,11 @@ LanJing / 览境 是**本地优先的跨媒体发现与阅读工作台**: 没有
 
 - 五个应用面全是 `enabled: false` 的禁用列表, 没有 `src/features/turn/`(`src/features/apps/AppsHome.tsx#L15-L20`)。见 [应用面、翻页引擎与资产网关蓝图](reference/app-surfaces-and-asset-gateway.md)。
 - 资料库**不能真的打开媒体**: 没有阅读器、没有跳转应用面的路由, 也没有任何 UI 写进度。
-- `execute` / `cancel_execution` / `catch_up_execution` 与 `get_media_item` / `list_media_units` / `list_media_assets` **没有前端 wrapper**, 所以界面上还没有任何路径能启动、取消或续接一次执行(`src-tauri/src/lib.rs#L14-L60` 是 25 个命令的唯一声明处, 前端 `src/shared/tauri/rules/wire.ts#L301-L364` 只覆盖规则文档那 10 个)。
+- **26 个 Tauri 命令**由 `src-tauri/src/lib.rs#L14-L45` 的 `lanjing_commands!` 宏唯一声明, 前端 4 个 wire 文件共 23 个 wrapper; 仍无任何调用方的是 `get_media_item` / `list_media_units` / `list_media_assets`(连 wrapper 都没有)与 `catch_up_execution`(有 wrapper 无调用方)——所以界面还不能续接执行或直取单个媒体项, 而 `execute` / `cancel_execution` 已由编辑器预览用上。
+- 编辑器的节点声明实际来自打包进 bundle 的 fixture: 注册表的 `loadNodeDescriptors()` 没有调用方, 因此 `list_rule_node_descriptors` 这条 IPC 在运行期不会被走到(`src/features/rules/model/descriptor-registry.ts#L83-L95`)。
+- **Rule Package 没有前端入口**: 后端 `RuleInput::Package` 能端到端安装, 但前端 JSON 文本一律按 Legado 书源解析, `inspect_rule_package` 也没有 IPC 命令。
 - 图片渲染与 `lanjing://` 资产网关未实现, deep link 只有 `legado` / `yuedu` / `lanjing` 三个 scheme 的解析。
-- 保存冲突是正常返回值而不是抛错, 工具栏会在写入被拒时也提示「已保存」(`src/features/rules/EditorToolbar.tsx#L33-L42`); Recovery Draft 只活在内存里。
+- 保存冲突是正常返回值而不是抛错, 工具栏会在写入被拒时也提示「已保存」(`src/features/rules/EditorToolbar.tsx#L38-L47`); Recovery Draft 只活在内存里。
 
 两处**文档与实现不符**, 读到时以代码为准:
 
@@ -87,14 +98,16 @@ LanJing / 览境 是**本地优先的跨媒体发现与阅读工作台**: 没有
 
 环境要求: Rust stable、Node.js 20+、pnpm 12(通过 `corepack enable` 启用)、以及目标平台的 Tauri 工具链(`CONTRIBUTING.md#L7-L16`)。
 
-前端与壳(`package.json#L7-L22`):
+前端与壳(`package.json#L7-L24`):
 
 ```bash
 corepack enable
 pnpm install
 pnpm dev              # Vite 开发服务器, 端口 1420
 pnpm tauri dev        # 启动 Tauri 应用
-pnpm check            # lint:web + typecheck:web + format:check:web + test:web
+pnpm static:web       # lint:web + typecheck:web + format:check:web
+pnpm check            # static:web + test:web
+pnpm verify           # check + cargo clippy -D warnings + cargo test --workspace（收尾跑一次）
 pnpm build            # React 生产构建, 输出 build/(Tauri 的 frontendDist)
 pnpm tauri build      # 打包 Tauri 应用
 ```
@@ -107,7 +120,7 @@ cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --al
 cargo test   --manifest-path src-tauri/Cargo.toml --workspace
 ```
 
-门禁由 lefthook 挂在 git hooks 上(`lefthook.yml#L6-L58`): pre-commit 并行跑 oxlint+oxfmt(串行两步, 避免 css-only 提交让 oxlint 拿到空输入)与 `cargo fmt --all` 并对暂存文件 `stage_fixed`; commit-msg 跑 commitlint, 约定是 Conventional Commits 的 `<type>(<scope>): <subject>`(`commitlint.config.js#L1-L3`、`CONTRIBUTING.md#L76-L84`); pre-push 并行跑 `pnpm check && pnpm test:web` 与 clippy + `cargo test --workspace`。
+门禁由 lefthook 挂在 git hooks 上(`lefthook.yml#L6-L65`): pre-commit 并行跑 oxlint+oxfmt(串行两步, 避免 css-only 提交让 oxlint 拿到空输入)与 `cargo fmt --all` 并对暂存文件 `stage_fixed`; commit-msg 跑 commitlint, 约定是 Conventional Commits 的 `<type>(<scope>): <subject>`(`commitlint.config.js#L1-L3`、`CONTRIBUTING.md#L99-L105`)——**pre-push 只跑静态检查**(`pnpm run static:web` 与 workspace clippy), 不跑测试, 测试靠每个提交单元的定向运行与收尾的 `pnpm verify`(`CONTRIBUTING.md#L39-L53`)。
 
 CI 里**只有一个 OpenWiki 更新 workflow**(定时 + 手动, `openwiki code --update`), 没有 lint / test job(`.github/workflows/openwiki-update.yml#L1-L10`)——因此上面这些门禁只在本地 pre-push 与人工执行时生效。
 
@@ -116,7 +129,7 @@ CI 里**只有一个 OpenWiki 更新 workflow**(定时 + 手动, `openwiki code 
 | 想改什么 | 先读 | 关键落点 |
 | --- | --- | --- |
 | 外壳、导航、主题色、i18n | [React 工作台外壳](architecture/frontend-shell.md) | `src/app/**`、`src/index.css`、`src/shared/theme`、`src/shared/i18n` |
-| 规则节点 / 端口 / 画布交互 | [规则编辑器前端工作区](workflows/rule-editor-workspace.md) | `src/features/rules/model/{ports,connection-gate,flow-adapter,core}.ts` |
+| 规则节点 / 端口 / 画布交互 | [规则编辑器前端工作区](workflows/rule-editor-workspace.md) | `lj-rule-model/src/descriptor.rs`、`src/features/rules/model/{descriptor-registry,ports,connection-gate,flow-adapter,core}.ts` |
 | 规则定义与 Plan 的数据形状 | [规则模型与契约层](architecture/rule-model-and-contracts.md) | `src-tauri/crates/lj-rule-model`、`lj-media` |
 | 校验规则与诊断定位 | [规则编译与校验](architecture/rule-compiler.md) | `src-tauri/crates/lj-compiler` |
 | 节点执行、循环、effect 适配与 effect 注册 | [规则运行时与 effect 注册](architecture/rule-runtime.md) | `src-tauri/crates/lj-runtime` |
@@ -127,10 +140,10 @@ CI 里**只有一个 OpenWiki 更新 workflow**(定时 + 手动, `openwiki code 
 | 事件账本、迁移、投影、凭证存储 | [存储层与事件账本](architecture/storage-and-event-ledger.md) | `lj-storage/**`、`lj-storage-migration/**` |
 | 资料库读侧与媒体查询 | [资料库状态与媒体查询](workflows/library-and-media-query.md) | `lj-media`、`lj-storage/src/storage/query.rs`、`src/features/library/**` |
 | Tauri 命令与前端 wire 层 | [Tauri 壳与 IPC 边界](architecture/tauri-ipc-boundary.md) | `src-tauri/src/commands/**`、`src/shared/tauri/**` |
-| SSRF / 凭据 / CSP / 资源上限 | [信任边界与安全不变量](security/trust-boundaries.md) | `lj-node-http/src/{ssrf,processor/request,processor/redirect}.rs`、`lj-storage/src/artifact.rs` |
+| 请求目标限制 / 凭据 / CSP / 资源上限 | [信任边界与安全不变量](security/trust-boundaries.md) | `lj-node-http/src/{target,processor/request,processor/redirect}.rs`、`lj-storage/src/artifact.rs` |
 | 测试该放哪一层、门禁是什么 | [测试分层与质量门禁](quality/testing-and-gates.md) | `lefthook.yml`、`lj-*-tests/**`、`src/**/*.test.ts` |
 | 应用面 / 翻页引擎 / 资产网关(蓝图) | [应用面、翻页引擎与资产网关蓝图](reference/app-surfaces-and-asset-gateway.md) | ADR 0004-0007、`docs/reference/reader-architecture.md` |
-| 分层与 crate 依赖方向 | [整体架构与分层所有权](architecture/system-overview.md) | `src-tauri/Cargo.toml`、`src-tauri/src/lib.rs` |
+| 分层与 crate 依赖方向 | [整体架构与分层所有权](architecture/system-overview.md) | `docs/adr/0008-rust-crate-layering.md`、`src-tauri/tests/workspace_layering.rs`、`src-tauri/Cargo.toml` |
 
 ## 仓库约定
 

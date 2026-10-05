@@ -13,12 +13,24 @@ sources:
     resource: repo://src-tauri/crates/lj-storage-migration/src/schema_metadata.rs
   - id: openwiki-source-25f9975ec0abf8c6031e92de
     resource: repo://src-tauri/crates/lj-storage/src/artifact.rs
+  - id: openwiki-source-b395647d8599e3994fb54f71
+    resource: repo://src-tauri/crates/lj-storage/src/candidate_install.rs
   - id: openwiki-source-0edcca0fe903e3375ebb6b15
     resource: repo://src-tauri/crates/lj-storage/src/connection.rs
   - id: openwiki-source-bd620e0389d5800fc7208ba7
     resource: repo://src-tauri/crates/lj-storage/src/database.rs
   - id: openwiki-source-3a3fdfb5a00399ef7859b900
     resource: repo://src-tauri/crates/lj-storage/src/keyring_init.rs
+  - id: openwiki-source-eb76945a7b81744f72bbb438
+    resource: repo://src-tauri/crates/lj-storage/src/repository/candidate_source/contract.rs
+  - id: openwiki-source-5a4e9d601d982611144a723a
+    resource: repo://src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs
+  - id: openwiki-source-c43839edf96a2611e50704fd
+    resource: repo://src-tauri/crates/lj-storage/src/repository/candidate_source/mod.rs
+  - id: openwiki-source-4815e4a3e566bd659f70abed
+    resource: repo://src-tauri/crates/lj-storage/src/repository/candidate_source/read.rs
+  - id: openwiki-source-805fcc595e4a29b21c7df917
+    resource: repo://src-tauri/crates/lj-storage/src/repository/candidate_source/staging.rs
   - id: openwiki-source-aaaa1af7d45207ac8a646f67
     resource: repo://src-tauri/crates/lj-storage/src/repository/document.rs
   - id: openwiki-source-04df110324feb1bf7e2d0443
@@ -37,6 +49,8 @@ sources:
     resource: repo://src-tauri/crates/lj-storage/src/storage.rs
   - id: openwiki-source-9653aa1d8d274ae45eae1e3f
     resource: repo://src-tauri/crates/lj-storage/src/storage/query.rs
+  - id: openwiki-source-7be932d6889e1346d9eafbd5
+    resource: repo://src-tauri/crates/lj-storage/src/transaction/candidate.rs
   - id: openwiki-source-4f69dc8c710ab3da1c12053d
     resource: repo://src-tauri/crates/lj-storage/src/transaction/mod.rs
   - id: openwiki-source-f9f9422ec8101aa005a38079
@@ -45,7 +59,10 @@ sources:
     resource: repo://src-tauri/crates/lj-storage/src/types/execution.rs
   - id: openwiki-source-0270102debfccc7de7fb79b9
     resource: repo://src-tauri/crates/lj-storage/src/writer.rs
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -125,6 +142,29 @@ validate_config
 | `writer.rs` | 只在 crate 内传递的 `WriterCommand` 枚举, 不进入对外 API(`src-tauri/crates/lj-storage/src/writer.rs#L5-L65`) |
 
 `WriterCommand` 把写操作枚举化(`Append` / `StageCandidate` / `InstallCandidate` / `StartExecution` / `StartReplayExecution` / `CommitDelta` / `FinishExecution` / `SetExecutionPin` / `UpdateLibrary` / `PersistEffect` / `PersistControlTrace` 等), 使「所有写都经过一个队列」在类型上可见。
+
+## Candidate 与 source revision: 一次 composite publish, 一次原子消费
+
+`repository/candidate_source` 拥有 candidate/source 的 SQL 与 row mapping, 内部按职责拆成四个模块: `contract.rs`(候选合同校验与 stream/owner id 生成)、`staging.rs`(composite publish 与回退候选)、`install.rs`(原子消费 candidate 并追加权威 source revision)、`read.rs`(candidate summary、installed source、revision 列表、启动恢复与 TTL 过期)(`src-tauri/crates/lj-storage/src/repository/candidate_source/mod.rs#L1-L6`)。crate-private 的读入口由 `src-tauri/crates/lj-storage/src/candidate_install.rs#L1-L8` 再导出, 写路径统一经 `transaction::candidate`, 四个入口 `stage` / `stage_source_rollback` / `install` / `recover` 各自包一个 `transaction::run`(`src-tauri/crates/lj-storage/src/transaction/candidate.rs#L10-L77`)。
+
+staging 的顺序是**先落文件, 再落行**: 先 `write_secret` 写随机 locator 的 runtime credential 文件, 再写 package 与 Plan 两个内容寻址 artifact, 算出覆盖 candidate_id / source_identity / runtime secret id / `expected_installed_revision` / 两个 artifact hash / `definition_hash` / `plan_hash` / profile / grant / diagnostics / expiry 的 `candidate_contract_hash`, 最后在**同一个 Event transaction** 里追加 `candidate` 事件、`retain_pending_secret` 并插入 `candidate_projection` 行(`src-tauri/crates/lj-storage/src/repository/candidate_source/staging.rs#L2-L95`)。contract hash 把「候选这一整份承诺」折叠成一个值, 因此后续任何一项被替换都会在 install 时暴露。回退候选 `process_stage_source_rollback` 走同一发布形状, 只从不可变 source revision 复制受控 artifact 与 secret 内容。
+
+install 在同一个 Event transaction 里「先验证完再消费」(`src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs#L2-L32`):
+
+1. 候选行缺失 → `CandidateMissing`; `expires_at_ms <= occurred_at_ms` → 先 `expire_candidate` 再返回 `CandidateExpired`(`#L5-L12`)。
+2. status/schema 校验 + `validate_staged_candidate_event` 重读第 1 版 candidate 事件(`#L13-L14`)。
+3. 当前 source revision 与候选记录的 `expected_installed_revision` 不等 → `CandidateStale`, 所以「候选期间来源被改过」不会静默覆盖(`#L17-L26`)。
+4. `ensure_candidate_secrets` 逐个确认 secret 文件与 owner 仍在, 再从 artifact 重读并校验 package 与 Plan(`#L28-L30`)。
+5. `grant_covers(&request.grant, &required_grant)` 不成立 → `GrantInsufficient`; 授权是 install 调用方给出的输入, 不信任候选自述(`#L31-L32`)。
+6. 以 `expected_version = expected_installed_revision` 打开 source stream, 追加 `installed` / `updated` 事件并在同一事务里投影 source revision(`#L35-L111`)。
+
+第 1-5 步全部在 `append_event_transaction` 之前返回, 所以失败不会留下半条 source revision; 同一 `event_id` 的重试由 `idempotent_event` 直接返回既有 revision 而不是写第二条(`install.rs#L58-L62`)。
+
+篡改检测落在 `validate_staged_candidate_event` 上: 它重新读回 candidate stream 的第 1 版事件, 重算 `candidate_contract_hash`, 并逐项比对 event_id / source_identity / event_type / schema_version / payload 里的 `kind`/`contract_hash`/`candidate_schema_version`/`expires_at_ms`、artifact 引用集合、codec 必须是 `zstd`、secret 引用必须为空; 任一项不符即 `CandidateTampered`(`src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs#L323-L400`)。也就是说候选的完备性不是「同一次 writer 调用内」的自证, 而是下次读回来仍然成立。
+
+包与 Plan 的自洽性由 `validate_candidate_package_and_plan` 守住: `definition_hash(package.definition())` 必须等于 Plan 的 `definition_hash`, Plan 的 `plan_hash` 必须等于 `canonical_plan_hash(plan)`, 且 package 的 source identity 与内嵌 definition 一致(`src-tauri/crates/lj-storage/src/repository/candidate_source/contract.rs#L52-L67`)。`grant_covers` 是同一文件里的授权覆盖判定。
+
+过期与启动清理只有一条路径: `recover_candidates_sync` 按 `created_at_ms` 扫全部 candidate, 把 schema 不符、状态非 `staged` 或已过期的候选交给 `expire_candidate`; `expire_candidate` 释放 secret owner 引用、移除事件引用并删除 `candidate_projection` 行(`src-tauri/crates/lj-storage/src/repository/candidate_source/read.rs#L187-L227`)。这与 `open` 启动顺序里的 `candidate::recover` 是同一份实现。
 
 ## 事件账本是唯一真相来源
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1c7177246e361dfa69b869e58b9e41a13e6d79f7db6afdd5cc169140516ec487",
+  "pageVersion": "sha256:026134aad355745e2717641209ac7d28216d56f69f819bb635e24530c00c2aa4",
   "claims": [
     {
       "id": "claim_9bd2693a288340c2ad0abf6f34a7839c",
@@ -275,10 +275,24 @@
           "version": "repo-lines-v1:sha256:891bea5d2a131533378edbc36f034a8684d1b2da860f8ddc18f0a75415f75c55:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODIxMDk0MjNlZjYxNGUwODZhMTFjMWQwYWU4Y2Q2YWUxMjc5NjNjNzc2ODRjMDM5YzVkODc5NzY2MGNkOTA3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJlOGFjZDEwN2IyNTM1YTBkMDExYTQ5MDk2OTU0OGI5YzMxYTE2MjIwNzM3ZDFjNzZiYWEyM2NkOWM4Yjg5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRmZmM3ZjViYWRkOTAyODYyYzkwYTJjODQzYmI3N2RjMjMyMTVmY2EwOTVmZGQwZDA0Y2ZjMTc5NGQ4MzE4NSJ9"
         }
       ]
+    },
+    {
+      "id": "claim_df83ab5c3f9045dca25a69466316fffa",
+      "statement": "`HttpDnsTargetKind` 记录目标地址的来源: PinnedDns(已完成 DNS 解析并固定地址)、IpLiteral(目标本身是 IP 字面量)、DirectHost(仅见 host 未解析), 使「这次请求是否经过逐跳 DNS 解析与 IP 固定」在 replay 时可判定; redirect 处理里按实际情形分别产出三种 kind。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/redirect.rs#L175-L203",
+          "version": "repo-lines-v1:sha256:e6c7640d14e483f30816054b6fa903e2bf234bc24230686d42edf5fcb59155f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1ODBhNzRkNzg3ZWNkM2IxMzMxYTM4OGNkN2U2YTRmZjBlNmU5MzY1NTcwZjFiYWYzNzQwNTVmNDgxNWJkN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViNjNhM2UwNDA2NzM3MTk4ZjFhZjAwZjQ0NzhlODMzMDI1NWQxNmU1NjU0NDI1NTAyMGJhOTM4YjJlMWIyNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY4ODE0MzE0NThhYjgzYWQ5ZWU0MjE1MjIzMjM5Y2JhMTYzYTQzMGQzMGI4ZjI4ZjEzNmUyYmI3OTgyZDc4MmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE2YjI0ZjZkYjNmY2EyZDAyNWZhZTU4NzVjNjcwYmExZTQzNjBlNDg4MmJiYzE4NzM4NDgyMjExMDdkNGRiNGIifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-runtime/src/effect/witness.rs#L17-L27",
+          "version": "repo-lines-v1:sha256:a03e6efe38b241b0f22d25dcdfa75b3f76e6fd05ac099e4ceb08c1f07d095188:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZmMmVkNTdkZjlkMjNlY2Y3NDA4ZTdhNDg1ZDZiODBmOTEzODQ3MDQ1ZjNiZmM1M2VkMTc0MWVmZWRlYTQ1YWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlNDM1NjEyN2M0ZjQzZjgyZTlhNjJiNGE0OGMwY2M1YjcwMjdhMDk4MWNhNWNmZmQwMmVmMmU1NmUyZjlkY2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQyMzc4MTJkMDdlOTlmMGRiZWYwZmM1ZGRiNDkyZDQzYTIzMDI2ZGIxNzNlOGY0NTllYTYxOGY2YjhkYjQ4MmMifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-05T08:37:16.392Z"
+    "at": "2026-10-05T11:35:47.718Z"
   }
 }

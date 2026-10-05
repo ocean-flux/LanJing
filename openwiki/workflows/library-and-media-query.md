@@ -35,7 +35,10 @@ sources:
     resource: repo://src/shared/tauri/library.ts
   - id: openwiki-source-2640df53984077a61a4bb013
     resource: repo://src/shared/types/media.ts
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -70,7 +73,7 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 | `get_library_projection` | 单个只读事务里取 `global_seq` + 全部条目 | 无分页(资料库是用户规模) |
 | `get_library_entry` | 单条目 | |
 | `source_projection` | 按来源聚合的规范化投影 | |
-| `get_item` / `get_items` | `projection_items` 按 ID(payload JSON) | 批量最多 64 个 ID |
+| `get_item` / `get_items` | `projection_items` 按 ID(payload JSON) | 存储层不做上界; 「最多 64 个 ID」与分页 `limit 1..=100`(默认 50)由门面 `query_adapter` 强制(`src-tauri/crates/lj-rule-system/src/system/query_adapter.rs#L29-L33`, `#L209-L216`) |
 | `get_unit` | `projection_units` 按 ID | |
 | `list_items_by_source` | 按 `source_identity` 列 | |
 | `list_units_for_item` | 按 item 索引的有界分页 | `limit` 默认 50 / 硬上限 100 |

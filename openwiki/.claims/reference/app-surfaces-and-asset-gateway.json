@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:f4baae1fa13a2d375c7e782686d613c8b59a0fdf3d08b97620b0295dfde7089f",
+  "pageVersion": "sha256:e0624663a8b99e21a2076a3cdff2910466d642a9d5e79570b4709b5ca012d5dc",
   "claims": [
     {
       "id": "claim_55ad58c4acca43a68eba81e3a285c743",
@@ -142,11 +142,11 @@
     },
     {
       "id": "claim_922a8fddd81e40d99b886d8cd27325c8",
-      "statement": "ADR 0007 决定新增 lanjing://asset/<asset-id>?w=<px> 资产网关代理真实网络请求, 按来源规则注入防盗链头(Referer/UA/Cookie), 磁盘缓存 + ETag 条件请求, 必须复用 lj-node-http/src/ssrf.rs 的 SSRF 防护不得绕道, CSP 补 lanjing: 白名单, 降采样后置实现但协议形态现在预留; 背景是资产 locator 为 Url(String) 而 WebView <img> 无法携带自定义头, 直连必然 403。",
+      "statement": "ADR 0007 决定新增 `lanjing://asset/<asset-id>?w=<px>` 资产网关代理真实网络请求, 按来源规则注入防盗链头(Referer/UA/Cookie), 磁盘缓存 + ETag 条件请求, 必须复用 `lj-node-http/src/target.rs` 的目标解析与 DNS pin(而不是另起裸 HTTP 客户端, 也不是地址段白名单), CSP 补 `lanjing:` 白名单, 降采样后置实现但协议形态现在预留; 背景是资产 locator 为 Url(String) 而 WebView <img> 无法携带自定义头, 直连必然 403。",
       "evidence": [
         {
           "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L18-L25",
-          "version": "repo-lines-v1:sha256:af5d6eb3e0e8bf4b09b26182eb663012182ed925dcf4454f49a1f08e1c35f8bf:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGZmYjFjZmY4MGFhZjBjZDFjNTA0ZGRjMjUyNGQxMzM2MzUyNzQ4MjMzNjA2NzgyNjdmZTAxN2M3MjdkNzJlMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjc0MjI5ZWUyYWU5ZTFmNmY1ZDQ4NWFiNTIxMmRiNjA4NjhjZGVmMDE3MjFjNTFlNGEwMzlmMmNhN2ViMTRlOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGQ1ODg0ZDIyODU1NTY0NGVlYzFlZjgxMGRkZTZmMTZkODk5ZGQ2MGU1MTNjNzUyNTI4NjJjYzg3MGJmZDIyZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODMyM2Y5OTc0NTI5MDhkNzVmZWRkNjdmZDEzNzRmYzBkMWQyYTQyZDNjNDJkY2MwMzk2OTI3N2NhYjgxYTExOCJ9"
+          "version": "repo-lines-v1:sha256:81d660784e69f9cfa2c7a5ea447125c5783850485be06ea9633784a46b802549:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGZmYjFjZmY4MGFhZjBjZDFjNTA0ZGRjMjUyNGQxMzM2MzUyNzQ4MjMzNjA2NzgyNjdmZTAxN2M3MjdkNzJlMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjc0MjI5ZWUyYWU5ZTFmNmY1ZDQ4NWFiNTIxMmRiNjA4NjhjZGVmMDE3MjFjNTFlNGEwMzlmMmNhN2ViMTRlOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGQ1ODg0ZDIyODU1NTY0NGVlYzFlZjgxMGRkZTZmMTZkODk5ZGQ2MGU1MTNjNzUyNTI4NjJjYzg3MGJmZDIyZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODMyM2Y5OTc0NTI5MDhkNzVmZWRkNjdmZDEzNzRmYzBkMWQyYTQyZDNjNDJkY2MwMzk2OTI3N2NhYjgxYTExOCJ9"
         },
         {
           "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L8-L14",
@@ -156,15 +156,15 @@
     },
     {
       "id": "claim_47241781090b4a0fb17b84e86746c251",
-      "statement": "ADR 0007 记录了两个否决/修正结论: 「零拷贝直通 GPU 纹理」不成立(custom protocol 仍过 WebView 网络栈解码, 网关收益是防盗链 + 缓存); 备选的前端 fetch 转 blob URL 与 Rust fetch 后经 IPC 传 Base64/字节均被否决(前者缓存/SSRF/凭据散在前端, 后者体积膨胀与序列化开销不可接受)。",
+      "statement": "ADR 0007 记录了三个否决/修正结论: 「零拷贝直通 GPU 纹理」不成立(custom protocol 仍过 WebView 网络栈解码, 网关收益是防盗链 + 缓存); 复用 `target.rs` 不等于复用目标白名单, 本项目不限制地址段; 备选的前端 fetch 转 blob URL 与 Rust fetch 后经 IPC 传字节/Base64 均被否决(前者不变量散在前端, 后者体积膨胀与序列化开销不可接受)。",
       "evidence": [
         {
-          "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L41-L42",
-          "version": "repo-lines-v1:sha256:6edfd20eaa8a20049e54a41242f5d7ce6ac87806d3bf19363ef4afc760271ab9:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTA1MTFjZGY4YWFmMDYzY2Y2YTY2NTdkNjk4NzA2OGM5ZGZmMGY0ZGNmNThiMTU1OTE5NTM1MDdhZWMxNjZlMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjQ3ODlkZTkwMmE2NWJiOTIwMzIyNzZlOGVhZmFiZjFiMmYzODJhMGE1ZDI1NGU3M2EyMjExN2U1NjZhYTc2YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTE5MDQ4NjliOWY0YWMwMmNkYjkxYzNlZmIyZjJlZjNhYmVhMTljMjFmMDA5YTlkZWU0ZGQ1MGMxMmM3ZTFiYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTA3ZjliNTNjNjRjZDA3MmEyOTMyZjA1N2Y4NTA1YzA5ZThhMzAwNDBjMjA5ZWY4NDE5Mjc0MDdlMTZlYmI1ZCJ9"
+          "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L42-L46",
+          "version": "repo-lines-v1:sha256:3dbf801fb74b53b4b7251ffde1164b9096bb845b65a02f538ac69e6a7885e6a0:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTA1MTFjZGY4YWFmMDYzY2Y2YTY2NTdkNjk4NzA2OGM5ZGZmMGY0ZGNmNThiMTU1OTE5NTM1MDdhZWMxNjZlMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjEyYzI5MGU1MzYzMjFmMmQ0YzhmZDQ4OTAxZDAzMjA1MDBkNWQzMTBiNWE1OTZhZjdkOWVjODJhYjE3YmFjMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTE5MDQ4NjliOWY0YWMwMmNkYjkxYzNlZmIyZjJlZjNhYmVhMTljMjFmMDA5YTlkZWU0ZGQ1MGMxMmM3ZTFiYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTA3ZjliNTNjNjRjZDA3MmEyOTMyZjA1N2Y4NTA1YzA5ZThhMzAwNDBjMjA5ZWY4NDE5Mjc0MDdlMTZlYmI1ZCJ9"
         },
         {
-          "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L44-L50",
-          "version": "repo-lines-v1:sha256:0e0ecd58a577a1ffce48f2bf7a5a6bd5f7704f639cdc0ce893f1d4a4f779438a:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZThiODFiODAzZDk2MDdiYTU4ZDBmZjljNTg2Zjk5Y2JkMjM5NjAzNWQxMzNhZWJkNTVjZmZjM2FjYmVhOTQwYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzA3ZmUxMjhiNzU0MmZhZjc1OTNiMjFjZTc5MWYxNTRiYWZjNWRjZTczNmIyNWJjNDgxN2M2YTc4YmEyZDZhMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzFmMzU2YWU5NjRiNmViMDhkZDllNjlhYmRhMzgzYjgxZmVkNDkzMDU4YmRlNDQyMzI0MTgyOTg2MTBlOWJjOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+          "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L48-L54",
+          "version": "repo-lines-v1:sha256:d2481aedcd0f541abbb4e5c4d6381edb7c42f812faa97f7fa30c8e52b649de1c:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZThiODFiODAzZDk2MDdiYTU4ZDBmZjljNTg2Zjk5Y2JkMjM5NjAzNWQxMzNhZWJkNTVjZmZjM2FjYmVhOTQwYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzA3ZmUxMjhiNzU0MmZhZjc1OTNiMjFjZTc5MWYxNTRiYWZjNWRjZTczNmIyNWJjNDgxN2M2YTc4YmEyZDZhMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzQwNmE5NTE1OTAyMjc2ZTIxOWY4OTNiZTg3NmFhNTlmODZhZDI3ZGU2YjAwMzc4NjY4YjFhMzM2MjBiMWY2MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         }
       ]
     },
@@ -188,23 +188,19 @@
     },
     {
       "id": "claim_69eb31c2bd7e41959eecaa91eb60e944",
-      "statement": "ADR 0007 要求复用的 SSRF 基础已存在: ssrf.rs 有 PinnedTarget(携带 DNS 解析结果用于防 rebinding)、is_blocked_ip 与返回 SsrfBlocked 的校验入口, 并有单元测试覆盖 127.0.0.1 被阻断与 8.8.8.8 通过; 但尚无网关调用它。",
+      "statement": "ADR 0007 要求复用的目标解析基础已存在于 `lj-node-http/src/target.rs`: `resolve_and_pin` 自行异步 DNS 解析并固定地址, `PinnedTarget` 携带 URL/Host header/地址列表, 单元测试覆盖回环、私网与元数据地址可解析与公网放行; 但该模块**不做任何目标限制**, 且尚无网关调用它。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L165-L165",
-          "version": "repo-lines-v1:sha256:7bc13908a892871192392c092511f65665b7cb34d66daa9ed10b68c5e4150646:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2JjMTM5MDhhODkyODcxMTkyMzkyYzA5MjUxMWY2NTY2NWI3Y2IzNGQ2NmRhYTllZDEwYjY4YzVlNDE1MDY0NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2JjMTM5MDhhODkyODcxMTkyMzkyYzA5MjUxMWY2NTY2NWI3Y2IzNGQ2NmRhYTllZDEwYjY4YzVlNDE1MDY0NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzI1MzQxNjI4YzY3NDNmYWQzZjAxMjhiMzUyMmMwNjk1ZTViYzg2YWM4ZmExOTg2ZjVhMjVjYzYxZWQ5ZTkzMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjVhOWEzZmZhOGZmNjhlNzM4ZmM5YzFkYTkzZDUxZGE0ZmEzNmI5YWViYzM0MzNmYzgxNDJhNTM1ZjJjNGFmNiJ9"
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L1-L20",
+          "version": "repo-lines-v1:sha256:979aa054729e61463e9a3c3d0bef93bfccdf602a73102caf0196c0f79916b0af:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjMjJkMGJiZWYxNmExNjVhYTA2ZDgyMTNjNDA2OTExM2E5MzhjZWM4M2JhMmJjNDRhNzQ0MWQ3NzYxNTgzMGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4ZDA2OGUzODk3ZjU4ZDgwMmNkMzc2NTlhMmM2MGZjNmI0NGY5Y2ZmY2ZkMmRiMDZmY2RhOGFlZmIwOTc0YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjODcwMGVkYWYxZWEwZGQ1NmRkNzFhNjkxNWMyMTZkZmZmYTRlNjZjMDRiNWI3ODA1M2QwYjRiNjdmZjI1ODYifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L389-L395",
-          "version": "repo-lines-v1:sha256:5a87af61d4a2d60f5ab31a97d180433ccca230e16b2d3c5d87e96700970384f0:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDY0ODc5N2MwZGU5N2E0ZWNhZDE2OWFmZWYwMmM3ZmM0NDZhNzU5YWUxNzgwNTNkNDZiODk5NzhmNTRkYTM5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOWZmOGE3MDQ2NjU2ZGNjYjMyMjk3MjE5NThmNzUxYjI1ZDUyOTc2NTBiZDNhYzE4MzlmMTc0ZWZlYzRjMWM4ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTc2YjdiY2ExNTA2MzI5MzRkYWI5NzZhMTgwNzdhOTYwMGQ5ODBmMzFlYTgzOGE5YWU5MjMzZWQyYjBmMTIzYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWRiMjgxNDViMWMzNWJlYTY5N2M4YmE0ODMzZGYyYjZiZGM5MDcxMmYzZWI4YWE5NWVkODQzY2FiYTkyNTdmYyJ9"
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L163-L186",
+          "version": "repo-lines-v1:sha256:75e2384f503eeb6a83fb697e9305ba432d4771134b34faabb29dd8a4cf18fdd5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0MTFlMzYyZjUyYTg2NzFhOTk5NWE3NjNlNTQyZTk1YWFkZTYzMjQ4Mzk2MjBiNzU2OGMwNWRlZjJkYTc2OTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMxMzVjYTQ1NWRlMzIzNWI3MjU2Y2YxODNkNTNiZjcxYmUwYzc5NTY4ZTVkMmQ5OGNiYTE5NTNlNjVlMTY1YzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3YTU4MDA3MGY1NTVjNGE5NWI4M2E2ZTA0NTk1NzVkODg1NGQ1YzEzODQ1MGJkNDMwZjE5NmM2NzcwNTcyYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE2YzZiZjRlZmQ0YjNmODYyMTMzOGQ0ODZiY2FmOWI5NDUzODQ2ZmRmZmZlNjgzYmNiMjgwZmY2ZTdiZTZhNDQifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L53-L55",
-          "version": "repo-lines-v1:sha256:9e7d81965176e3c978100cc1d438eacfbfe373e58da1a8e84c3af94c38702803:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzM4MGJhNjgwY2ViYTc3MWEwMjQ5Mjk4MzIxYWNmYTM4ZWE2NGMzMTA1MzRlODM4ZjYxMTAxYzFhM2Q2M2Y4YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGIxM2M4ZTVjZDQwNWZiNTg3M2Q4NTMzNjRmNjU3YWFjMzU3NjBiNjdmOTRiNmU1ODczOTIxYzg3ZTE2YjAzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDIwZmIyNGY3NmFiMTU3MmMzMDM1MTJhOTE1ZTQ3N2UzODI5NmVkMjY2NjBjNzgwZmYzMGIyMDVkMTM3YjViOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGUyM2Y1YWNjZWY0Y2VkNjk2M2U4MGY3NjQ3NjNhMWVkOWU1MWE5MzBmZmM3NWE3OWQ4YTMxZDA0ZTk1OTY3ZCJ9"
-        },
-        {
-          "resource": "repo://src-tauri/crates/lj-node-http/src/ssrf.rs#L68-L70",
-          "version": "repo-lines-v1:sha256:aa49285d574f7c385887d660705df6828feb7b4939d736cad4ffaef86edd6913:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmY1ZGQ2NzhmMWNjODlmNzMxNDFmMTE5NzlhNWEzMjY2YzZmOGY4YTM0NWVmMzBiZDkwYzhhOTI2OWNkOTQwNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTAwNjM0NjFmZThiNzlkYjNkYTQzOTFjNThiNzcwMzM2MmU1ZDA4MDY0ZDlkMTMyOGYzNDkxYmE2YTcwMTBlNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzk0NTZkMmJlZGM1ZDdjNjYwZDMyY2YwYTgzZmRiZWQzMThmMmQxOTRlNTc5NTE0MzQxMzI2YjFmY2JlY2ZjMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmY5NzMxNDk1ZmE2YWIzNWJlZDEyOTgwYzZmMTg1OTJjNzE4NTE5NTg4NzIzNDUyMmEwMjA2MGM0MDYzZGM4OSJ9"
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L80-L141",
+          "version": "repo-lines-v1:sha256:205a823463d21c06f368e6c1bf1a3b1fbe08da091b53479f3ad5329e2ed52f44:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhN2JlYjkzYjliMGQxMTAxYTI5NjU2NTFlZTEyZWNiNWQ4YzhmOTQ3MzdmNmRlNzcxZjhjYjEzNDEwOTM1YzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMmZiYzNjOTIwMGI1M2QyNjg2ZDY1MTc4MDA3MDBiZThkMmZiZWIzNjgxNGQxMzg1MDhkMzhiMzE4YzAxY2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4ZDNhNzJiNmEyZjM1MmZhMDBjYjUxMWRmMDg0OWJmYjQ0YTIwMGQ5YjZlMzc2YzdhZDhlZGVmODczOWRjOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIifQ"
         }
       ]
     },
@@ -257,14 +253,42 @@
           "version": "repo-lines-v1:sha256:16b9261cda8d1f00dc261533164022435f5dd2c92accd4cc98c4baa2d0e29ade:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjMGUxYjY3MmQ5NzA5NTcyNGRlOTE3NzlhNjQ0ZTE3MmFjNzkxMjdkZTQyOTAxMDllNjhjNTExYjRjYTIzMWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1MmQ3MTExMDNkNTBhNDM3ODMwYzZmYmNkMDRmYjRiYWI0OWEwZjgyZjZkMjZkMWM3OTFjNmU4NDg4ZGQwOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAwMWYyZWMxNzU5M2MxMDU0ZWI0NjM2N2Q4NDUzZWYyNGExNzNjZTk2YjcxMTdkOTFmOWE2OGQ0NGZlZjhiMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyNDBkN2U4NTMxZmY1ZmQzZmQ2MzUxYzFkZGJhMWI5NDlhOGNmZjJiMzhlNjQ2NzYwYjBlMGJiY2UzMmM5ZTIifQ"
         },
         {
-          "resource": "repo://package.json#L23-L54",
+          "resource": "repo://package.json#L25-L56",
           "version": "repo-lines-v1:sha256:14d504f6c26a439c8f46aa56b52f898ce470ab253c2077850a81533cc2c2782d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhM2I0NjlkOWUwOTc1NzIyNDY2NjczNGM5ZWY3YjI1NGQ4ODUzNGY1ZDViYjcwOTg5NjA4MDVjNTUzZGMzMDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQzZjJhYjNhZjBiNGNiNGJkMjk3ZDliYjc2ZWRmYWZmNDVkZmRmZTk5NTZlNmZjZTU1ZTg4MDhiZjVhN2EwYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdjOTc3NWJmN2ZkODg1MDlkOTgxMmQ2ZDUyNzZkOWI2Y2Y0ZGM3MjI4YjI5OTc4ZTlhZTY3NDZiZWM3MzY2ZDYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_848c5c6c5baa454e8f4f63b8dc707329",
+      "statement": "本项目的出网请求不限制地址段: 环回与私网可解析可请求(产品决定, 风险由用户承担, 见 SECURITY.md); 网关复用的是 scheme 校验、DNS pin 与体量上限, `target.rs` 的模块文档与 ADR 0007 的后果一节使用同一说法。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L44-L46",
+          "version": "repo-lines-v1:sha256:56065ff0986c711a075daa722fdcf9732130496972bc357a83943aa6679214dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWY2OWUzZmQ2YjhhYzYxZmViYjZmYTI1MjcyMTU0MmM3MjBlZWJhMGJlOTE3MzU0OGYwMDFiZjRiZTJkYjVkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjEyYzI5MGU1MzYzMjFmMmQ0YzhmZDQ4OTAxZDAzMjA1MDBkNWQzMTBiNWE1OTZhZjdkOWVjODJhYjE3YmFjMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWY1YzBlMTBiZjc2ZTI4NWU4MTkzZDk4ZGU4ZWQwYmY5NGE0MTBkN2JiNTEyN2VmNGY5MDlmM2Y4OTZkMWU1ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTA3ZjliNTNjNjRjZDA3MmEyOTMyZjA1N2Y4NTA1YzA5ZThhMzAwNDBjMjA5ZWY4NDE5Mjc0MDdlMTZlYmI1ZCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L1-L20",
+          "version": "repo-lines-v1:sha256:979aa054729e61463e9a3c3d0bef93bfccdf602a73102caf0196c0f79916b0af:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjMjJkMGJiZWYxNmExNjVhYTA2ZDgyMTNjNDA2OTExM2E5MzhjZWM4M2JhMmJjNDRhNzQ0MWQ3NzYxNTgzMGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4ZDA2OGUzODk3ZjU4ZDgwMmNkMzc2NTlhMmM2MGZjNmI0NGY5Y2ZmY2ZkMmRiMDZmY2RhOGFlZmIwOTc0YjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjODcwMGVkYWYxZWEwZGQ1NmRkNzFhNjkxNWMyMTZkZmZmYTRlNjZjMDRiNWI3ODA1M2QwYjRiNjdmZjI1ODYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_73ba929d7afe46e7b991793d0d7e6122",
+      "statement": "`resolve_and_pin` 对 HTTP 与 HTTPS 用不同方式 pin: HTTP 直接把 URL 中的主机名换成解析出的 IP(消除 TOCTOU 窗口), HTTPS 保留原始 URL 交由 `ClientBuilder::resolve` 固定 IP 以保留 SNI 与证书验证; HTTP 处理器的手动 redirect 循环每跳重新 pin, 消除重定向场景的 DNS rebinding 窗口。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L117-L141",
+          "version": "repo-lines-v1:sha256:3d19fa6095f442972248ca523b91f75b44fa5850c44aa7fe362ab682d94d3c9a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmYTk3NWU5OTg3NTk2YWM5MGU0NjA4MDYxOTdkNzliMGUyNjI2ZjA5YjIyN2QwNWMzYThmOGExMTc3YjNhZjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMmZiYzNjOTIwMGI1M2QyNjg2ZDY1MTc4MDA3MDBiZThkMmZiZWIzNjgxNGQxMzg1MDhkMzhiMzE4YzAxY2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMzYjAxNDQyZTVkYjBmMjFlMmJhZGFjNzJlMTdiNGQwOTU5MTBiYWM3NTVmNzUyZjBjZDVmYTg1MTc5ZmQ1NjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L13-L20",
+          "version": "repo-lines-v1:sha256:a71ee42ff49d0ebde00be940bd8c1d3571921c9773514d535048df39290c7b9e:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWYxZjgxNGJhOGUyMDNlYzVmYWU2ZGQ0ZGJmYjExODc2OGJkNWE4ODVjZDFhZmJiM2FlNzUyY2JhZmNjOTlmNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzhkMDY4ZTM4OTdmNThkODAyY2QzNzY1OWEyYzYwZmM2YjQ0ZjljZmZjZmQyZGIwNmZjZGE4YWVmYjA5NzRiNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWI2ZGZjMWM0ZDZiZjI0OGU5ZTlhODJhN2M2ODgxMzZhZWFjY2RkNTE2N2FmMWMyODkwYmM0ZWQzNWQwZThkYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWM4NzAwZWRhZjFlYTBkZDU2ZGQ3MWE2OTE1YzIxNmRmZmZhNGU2NmMwNGI1Yjc4MDUzZDBiNGI2N2ZmMjU4NiJ9"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-05T08:37:16.392Z"
   }
 }

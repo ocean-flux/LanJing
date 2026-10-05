@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:858424fc6192a789822e978f41c6d2a10b58032aaf7f34e27fec4318d169dcff",
+  "pageVersion": "sha256:36fb1c8cddd65c672264c2cfdffec7b8aa018e86649bb7e6d536ef153f728307",
   "claims": [
     {
       "id": "claim_bb2894a77a8a42228e86cd6fc7fd93ad",
@@ -81,7 +81,7 @@
       "statement": "迁移后的 validate 要求 marker 为 lanjing_current 且版本为 3、三条迁移记录齐备、且 marker 内的 fingerprint 等于当前 sqlite_master 全对象的 BLAKE3 重算值; 因此未知或篡改的 schema 的后果是拒绝启动(SchemaCorrupt), 不做修复或忽略, 测试通过删除一个索引触发该路径。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L280-L304",
+          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L274-L298",
           "version": "repo-lines-v1:sha256:9ea154c956ddea8d1a39c1b9091531863b9e1dd62b55570c85162afefd1368c4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkxY2M0MDY4N2QyNDRlOWRhZjkxY2VkNDY1MjMyNjU2OWE0ZmI2ZGZjODFkMDNmYmU3MjNhNWVhM2NjYmU5ZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0ZWY3ZjMxYmZkN2RkZGEwYjJiNDhiMzM0OGZlZmM2MmYwZGIxZWQ0ODVjMzA1MTYzMGZmMjdmMTk4OWU3NWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg0YmYxNGE2ZWYyYTJiNDhhZTY0ODU3MTFlMTlhZmY5NzQxMTkyOGEyMDFlOTIzNDgwZDU1MmI5NDhkZmI4M2IifQ"
         },
         {
@@ -121,7 +121,7 @@
           "version": "repo-lines-v1:sha256:35759c561fefe08f66fbb4c0a7e4bc1759b1c110adbec1fb0b54b4b763b6a4c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRhODQ4ZWM2ZTM5YjNmZDc5ZDRjNDBjZDY1NmI3N2JmNDJmYTkyN2JkYThkN2YzOTc1MjE1OThlMjU2NTk3M2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlOTMyNjQ4ODdlNDM1NjZlMTRmOTIxZmI4M2U5NzY3ZDE1YjY3YWI2ZDA3ZDliZjc4MTdiZTdkNjE4YTgxODUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI1M2I5ZDFjZGQ0ODJjMGRmMmExZGIwZGYwYTBkMjRmYzYyY2NhNDQ2ODNmODM4Yjg2ODQ3NzM4MWQ5OTg5N2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L164-L176",
+          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L158-L170",
           "version": "repo-lines-v1:sha256:b5dcd829de07acb9689a52bdf523bb3944bde85ef7e5542e48c2b5709e3ccf47:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkxY2M0MDY4N2QyNDRlOWRhZjkxY2VkNDY1MjMyNjU2OWE0ZmI2ZGZjODFkMDNmYmU3MjNhNWVhM2NjYmU5ZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdiOTQ2NmI5YmFmNWI0YWVjZjRkZDQ5YjY2NjAwNTA0NzY4MWExMzE5MjE2Y2NlZjcxZmM1ZmU5YWRjOTYzMTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg0ZWQ0ZDlmMDdkYzFkYzhhZjBjNDU0YTUzMjQ1MDJhZDhiZmIxMDY3MWVjZDU4YjU5MmI4NTQ3MDQxMzBiZGMifQ"
         }
       ]
@@ -273,18 +273,104 @@
       "statement": "迁移与约束的测试契约包括: v1→v2 回填只保留通过 compiler 校验的快照(非法快照被跳过)、CHECK 触发器拒绝非法行、以及 invocation 路径/序号/payload 的唯一性只在单个 execution 内要求(跨 execution 允许相同路径)。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L196-L278",
+          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L190-L272",
           "version": "repo-lines-v1:sha256:ae4f215f2d7106e64f0763fc477bd292849ec77f4a44b4c1a9b9526549cb14bc:eyJzZWxlY3RlZExpbmVDb3VudCI6ODMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNmMGY1ZWJjZGNmMDU1OTZjNWI0Nzg3MTRmYjEzMzk0NzBlODEyODEwM2M2OWJmMDExYzhkY2ZlZWY3MDI1NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3YTU4MDA3MGY1NTVjNGE5NWI4M2E2ZTA0NTk1NzVkODg1NGQ1YzEzODQ1MGJkNDMwZjE5NmM2NzcwNTcyYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU4ZjM1NTUwNzk5OWVjZDJkYTJjN2QwM2Y0NTdjOTU0ODUwM2YwYzdmMGJjM2IwNWVkY2IwYzU5MWJkZDUwMzUifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L306-L380",
+          "resource": "repo://src-tauri/crates/lj-storage-migration/src/lib.rs#L300-L374",
           "version": "repo-lines-v1:sha256:ba9a6fa7298d07527724faed801f29e85e6570aead195dd990124ba53d360b5a:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkxY2M0MDY4N2QyNDRlOWRhZjkxY2VkNDY1MjMyNjU2OWE0ZmI2ZGZjODFkMDNmYmU3MjNhNWVhM2NjYmU5ZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE1ZWI3YTNhOTczMjQxZTlhNDMxNDc5MmE1MDlmOGMyZDUyODVlYzEzMjVmZDYxNjEzOWQwMzViYTA3MTJjYTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4f9d9121f44e495d982b0edc48129cc7",
+      "statement": "lj-storage 的 candidate/source 读写被拆成 `repository/candidate_source` 的四个模块: `contract.rs` 拥有候选合同校验与 stream/owner id 生成, `staging.rs` 拥有 composite publish 与回退候选, `install.rs` 拥有原子消费 candidate 并追加 source revision, `read.rs` 拥有 summary/installed source/revision 列表与恢复过期; crate-private 读入口由 `candidate_install.rs` 再导出, 四个写入口 `stage`/`stage_source_rollback`/`install`/`recover` 统一经 `transaction::candidate` 各包一个 `transaction::run`。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/candidate_install.rs#L1-L8",
+          "version": "repo-lines-v1:sha256:fbe6b9a9b2716bb8e0f6b3bc6d2dc61b718cb20549252e1b1ae6f7e7d3cba366:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjJhY2FlOWU1ODAyMGM1ZDMxNDUxZmQ5YTgwNjRhM2MyOGY1NzFlNDU0YWE4MGQ4ZWM2ZWJjYjlkNzIxMmU4NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWFkN2ExMDhkMGM3NDBiNzM2NjMzNGY2Zjg4MTgwMWU2MjM5MDhjNzQ5Mjg0NWI2YzdjMGYyMWEyYjNhZTFmZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/mod.rs#L1-L6",
+          "version": "repo-lines-v1:sha256:964c968a0edda1925e3be917bab62852d993a1b4520b879c5a0e78854229787a:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDExOTUxNTk3ZWNmY2VmZDVmZTI1NmIwNWVmMjBjZDc5ZmU5OWVjNTg3NmZkMDhmOWFmOTM5NDEyNjVhOTE5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdjMmU2OTY0MWM4NzQ3MDUzOTdmNzZkZmMyMGVmMTdlMDljMzZjNDhlNzJmZWFiNjY3MzVmZjY2MmI4NWJjMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDNjNjA3YjRjYWU4NDc0YWZjNWE2YjYwMWY2YTdiOGIwN2RmOWQ2NjNjY2EyN2FjZDcwYjQ3ODk0NTk0N2ZkZCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/transaction/candidate.rs#L10-L77",
+          "version": "repo-lines-v1:sha256:b5970185250dffb908921bd89d7b83d65b5039700730a6640d0a48cfc8763758:eyJzZWxlY3RlZExpbmVDb3VudCI6NjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNDczZGM2NmRjMTM3YjcyZTg2NTAxMzIzMjIzMzcxOTA5NzBmNTQ4Y2FjZmU2YmRkNmU3ZWI4N2Q1ZGRiZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNiNDllMmMyMjgyYThkMmZmZDA5NDNmMGY0NGNmMjljYTdiNGFiNjc3ZDdlYjY3ZTBmM2ZiMjk0Nzg0MzQ0YjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_092cda8df76a44e0a1d716279aeade12",
+      "statement": "`process_stage_candidate` 的发布顺序是先落文件再落行: 先写 runtime credential secret 文件、package 与 Plan 两个内容寻址 artifact, 再算覆盖 candidate_id/source_identity/runtime secret id/expected_installed_revision/两个 artifact hash/definition_hash/plan_hash/profile/grant/diagnostics/expiry 的 `candidate_contract_hash`, 最后在同一个 Event transaction 里追加 `candidate` 事件、`retain_pending_secret` 并插入 `candidate_projection` 行。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/staging.rs#L2-L95",
+          "version": "repo-lines-v1:sha256:0ecf85de64b527f7f008d8490f79f5bc6a36dd6890c012fd54f3c9de4ae83af6:eyJzZWxlY3RlZExpbmVDb3VudCI6OTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzM2YmNkNmNjOWFlMDQ5ZmUzNWExYjQ4ZTM0OTVjNjMyYTJmOGM1ZDA4YWNlZjM5ZDMxYmFiYjdjZjBiNDgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU0MWYyZjdkMWMyMjAxZDBjYjBlMTVlNjk4ODZjNjhiZDk3ZTYyNmIzZmIyOTRiZTYxMDk5N2RhYmEzY2YxNzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoxLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA1YjFiMzY1ZGQ5OThlNjFkNjk2Y2ExMjZjZmNmNTY0NzBiYTg3NTlmNjc1NDgxOWE2ZTExNjIwNzAyZDMzMzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZjMDVlNWNjNmY1OTNjODYyNWZjNjk2NWY5YmRmNDFmNmVkNjdkNGUyYTk2ZGQ3NDI3NjZkNDgzNzU5ZjY0OGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_58af5775c9824ef5a15a21d72c9839bd",
+      "statement": "`process_install_candidate` 在追加事件前依次做五类判定并各自返回不同错误: 候选行缺失 → `CandidateMissing`, `expires_at_ms <= occurred_at_ms` 时先 `expire_candidate` 再返回 `CandidateExpired`, 当前 source revision 与候选的 `expected_installed_revision` 不等 → `CandidateStale`, secret 或 artifact 不可用则失败, `grant_covers` 不成立 → `GrantInsufficient`; 因此这些失败都不会留下半条 source revision。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs#L2-L32",
+          "version": "repo-lines-v1:sha256:f44287721c2c36247e8e5be7bc8432f30d0629db0552a598fe6ed0b5686773c1:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmZjExMjNhNDc5ZDljZTMyNmNhOWE1MzljZDRlODcyZDA3OTUxMDY0Yzk2M2MzOGZiOGE5NzJiNTg0MzdkN2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk2ZGQ4NDIwZDFiZTFiOThkZmY5ZmM1YWU1M2I4ZmEzNzc2ZGI0NzFkMzgwMmYyNWUwNzViZjhiNDZiYzdlZjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjoxLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQxOTI0ZGU2YWQwODIwNmM5OTA5NTBkYWUxYmZkYjUxY2RiZmViOGNmYzRhMjQ1YTJiMTAwNzRjYmE0MDMyNTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllMmIxNGQyODk0NjhkNGQxMDcxNjA3YzIzNGUwYmYzNTFiZWM2OGFmYTNlNzgxMjIzMTMzY2YyMzE4MGU3YmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0c8183336e194f67a314e328e9f71e62",
+      "statement": "`validate_staged_candidate_event` 靠重新读回 candidate stream 第 1 版事件并重算 `candidate_contract_hash` 来检测篡改: 它逐项比对 event_id/source_identity/event_type/schema_version/payload 的 kind 与 contract_hash 与 candidate_schema_version 与 expires_at_ms、artifact 引用集合、codec 必须为 `zstd`、secret 引用必须为空, 任一项不符即返回 `CandidateTampered`。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs#L323-L400",
+          "version": "repo-lines-v1:sha256:4da2d2e85ff473465cd2c5d7244e86021c385e51fdb6ec894358f4e8c9f8053d:eyJzZWxlY3RlZExpbmVDb3VudCI6NzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxYjI2YzYwNDRmOGNkMWMxOGQ4ZmI1YjQ1NTMyY2M1NGRiNTg1MDVmMDcwY2FmZTMzMGQwMGMxYTc5OTg4M2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM1ZjZmNDY2ZTU5Y2ZjMzA3MDNjNDVmNzJhZjY1ZGU1NGFjMzYzZDM1NGNjMWEzMzMwMzUwYWNkNDUyNDM0YzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM1ZjZmNDY2ZTU5Y2ZjMzA3MDNjNDVmNzJhZjY1ZGU1NGFjMzYzZDM1NGNjMWEzMzMwMzUwYWNkNDUyNDM0YzQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8f797854ed20433ab2422e69608b16cb",
+      "statement": "`process_install_candidate` 用 `idempotent_event` 实现安装幂等: 已存在同一 `event_id` 时直接返回既有 revision 的 `InstalledSource`, 不再追加第二条 source 事件。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/install.rs#L58-L62",
+          "version": "repo-lines-v1:sha256:d263d2d1ff5e7b07ff8ada9d8cb09ea2653ed2b7beb1b6bac39fab9f1b506f38:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODc3YjA0YzhkMzUzYjM5MWViZDQ3NTMwYTk5OTEzN2RkM2QxOTQxZWRkYjFhZjI1YzJlYTQ2MDBmYzQ0ZThjOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTFjNzM5OTQ0N2E1YTYzODY4NGNmMTdiMjQ3M2EyNDM2MzAyMDA2NzM1MTdhNjRiNTEzOGI5NGFhMjZmNzYyMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGE1OWI0MjNmMzUzZTU3ZWY4MjVjM2I4YWU1NTQ0OWZjMTQ5NjI3MDU0Yjc4NjdmN2I0OGIyNjM5Y2YwZTk5NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzg5YzU1Y2ZkYWZmZDVlOGUxMTBkNDk0NjhhOTk1MTVlY2I1ZmU5YTBkM2EzMjVkYTJiNTc2NWRmNmE3NWY0MyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c3bc841966a840378d2634a0a0ee9c08",
+      "statement": "`validate_candidate_package_and_plan` 守住 package 与 Plan 的自洽: `definition_hash(package.definition())` 必须等于 Plan 的 `definition_hash`、Plan 的 `plan_hash` 必须等于 `canonical_plan_hash(plan)`、package 的 source identity 必须与内嵌 definition 一致, 否则 `StorageError::InvalidInput`; `grant_covers` 是同模块的授权覆盖判定。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/contract.rs#L1-L1",
+          "version": "repo-lines-v1:sha256:d8cc937f2633acf2a4b7dd7dc8e5fbee7fd731eb3f6768a78cfb492f6dac10d3:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDhjYzkzN2YyNjMzYWNmMmE0YjdkZDdkYzhlNWZiZWU3ZmQ3MzFlYjNmNjc2OGE3OGNmYjQ5MmY2ZGFjMTBkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDhjYzkzN2YyNjMzYWNmMmE0YjdkZDdkYzhlNWZiZWU3ZmQ3MzFlYjNmNjc2OGE3OGNmYjQ5MmY2ZGFjMTBkMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjZiM2M4MTA0NjQzNGVjMmZhOWJmZmI4MGIxMThiYWIxODg2YzA0ZWUxYWM2NTU4YzUxNzlmOGY4NGNlMTBiZCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/contract.rs#L52-L67",
+          "version": "repo-lines-v1:sha256:0b35f4957ac6fabb0e82e0c12d2514e9608c5b83266217e0f98c87eff730f39f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdmYmQ4ZmRlYWU3M2Y1NzI1YjJjZWUxMTA1ZDI1ZTczZjExY2M1YzdjOWNlOWVlNTFlYTNhY2U2OGQ4NGRjZTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhOTFhZjEyMDg3YzJkNDkxNzY2Y2QxMjk2NDVlNTIzZTRlOTRiNzZhZjFhYjdhZWMyYjJmMGJmOTQ1OGU3NTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhjOWQ2ZGFmMDQ1ZTM5MjY2NGFkNThmYThhY2U5OGQ2YTc0NzBhMWI1Y2M1YTdjMjRmZWZhMDkwZmQxMmY3ODUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_aa3cb3eaaf16411a981d5db248eb2907",
+      "statement": "候选过期与启动清理只有一条路径: `recover_candidates_sync` 按 `created_at_ms` 扫全部 candidate, 把 schema 不符、状态非 `staged` 或已过期的行交给 `expire_candidate`, 后者释放 secret owner 引用、移除事件引用并删除 `candidate_projection` 行; `EventProjectionStorage::open` 的启动恢复调用的就是这份实现。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/repository/candidate_source/read.rs#L187-L227",
+          "version": "repo-lines-v1:sha256:f52c1b20044d7dc74b4756c6c56e01d0b694da8694bbfba5027f9cdf258471c5:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmZGM3YzdhOGU5Njc3MTU5OWEyNTk2NWZmYjBiY2JiYmNjMTIzZTBiNDQ1ZDUzZGJhOGU1OWNmZTFlYzc3NjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcwMTVhYzk4NjU4ZTgwNzg0M2NiY2E1NGNiNTkyNTQ0NDUxZjc2MDZhM2E2OWM5MjI2MmVmNTQ0MzE2OTg3ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyZjc1YzY1ZTg0NDJjMzI1NjA1MzQ1Yzg3YWQ0YmM5ZDVmMjc2MmFjNjkwMTM2YTQ1Zjg1N2FkODQ1OGZiOWQifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/src/storage.rs#L43-L49",
+          "version": "repo-lines-v1:sha256:c811ee6590da425921054ec4a63aa9eab998a85619bcf4797b98056203c8108b:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWU4NjgyODFhOGUxNTE5MWQ4NzY0YWQ0OWEyZTU2ODU3ZjE5MzA0MDliNDhjYTg3MTU4NTVkMTdkNzQ4YzBiZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzk1YjI4ZDg4YTI4MjlmYTRjMmJlMTM5OTBmNzM4NDZkY2ZhNDVjMjc2YzNhOTcyOWQ5MTliNzNhNWIyNmViOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDNiMGU2NGEwN2FhMDJjNTMxMzQxZjZjN2ViYThmNDNiYmM4Yjg3YjI1NjAyZjA1MjBkOGIwMWY3M2JlZjllZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDNlYWI5MTgxNmMxOTg3YmZkMDUwZjk2NWEzMTM4ZTkzMGQ5NGEwZDVmZDYwNDk2ZjEwNzQ5NjFmMDI0ZjU5OSJ9"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-05T08:37:16.392Z"
   }
 }

@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:29a1fb2d03a2cba2170d01c19d2b737d8578c05f893ba63850a5bbb3ead18d12",
+  "pageVersion": "sha256:fc70c63cf2139c703b8c7e28f06c94000faf0c77dcfd8a1ce96b3065ef4a0bb7",
   "claims": [
     {
       "id": "claim_8c712ba6c34a4017915407a19c5e33b0",
-      "statement": "前端门禁是一个收口命令 pnpm check = lint:web(oxlint ... --deny-warnings) && typecheck:web(tsc --noEmit) && format:check:web && test:web(vitest run); Rust 侧不用 wrapper, 直接跑 cargo clippy --workspace --all-targets --all-features -- -D warnings 与 cargo test --workspace。",
+      "statement": "前端门禁是三层递进脚本: `static:web`(oxlint --deny-warnings + tsc --noEmit + oxfmt --check)、`check`(static:web + vitest run)、`verify`(check + workspace clippy -D warnings + cargo test --workspace); `verify` 是唯一同时跑静态检查与全量测试的收口命令, 也是 CONTRIBUTING 要求的收尾门禁。",
       "evidence": [
         {
-          "resource": "repo://CONTRIBUTING.md#L31-L37",
-          "version": "repo-lines-v1:sha256:62d5089a20d1a52c3f240497ad20ae77032d19727c566c3f128a622568da8ead:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2Y2OTVmZDcwN2VhZTZlMzZmYjlkYzEwZTc2ODY4NzZjOWRlNTM3NWE4ZGY1NGI1ZTY0YmU1MmExM2I2MTRhMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDdjMDZjNTYxZDVjMzI3MzQzNjg1MjY4YTQ2YjMzOTFmMzk5OGVlZTg5MGQyYmU1MWYwZDIxY2M0YTUzYWU2ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODM4M2ZiNTQ3OGYyMGE4MDI5MWZlODFmNzdlZDZmYWUzYTFkOWNjMzI4MWYwZTk0YjYyNGU2NDU3NjFkM2ZjMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjM5NDVjM2RkZjJjNDI2ODAwOWU0MWQyMGFkZWUzN2FjMGNjNDVlN2M0N2Y5ZTM2MDQ2YmZkYWM2YTIyODU4NCJ9"
+          "resource": "repo://CONTRIBUTING.md#L39-L53",
+          "version": "repo-lines-v1:sha256:d61de5d8b3aba0a83f995607cdef8462e425c2f6baf34de27e09027c35f8c7b6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjMDk4ZTUyNjkyODFkM2YxZmZkZmUyZGRmNGYwYTRmNDkyODA1MWYzZDA0MjRjZjQxM2YwZGJiYjg3NzlhZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlNDBjYjUzMzRmOThkMGNlODBlMGY1MjRhMGMzMDU5YmI0ZDk5NTQ2YjEwN2U3ODRjZmE5ZDA1YTBlOTA0NjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmNWUzZGMxZjUxNDI0ZTRiMGU4OTVkODAxMDhkMDA5NTVjYWM5MTQ5YzU0MTEzZDViMTQzODkwY2VjMWI3YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhZTIwM2MxYTk1MTU2ZDg0ZWY5MDRlYmQwMmJjZDRkMzViYWMxMjk1NmUwMGQyOGRkNjZkNGMxYWI2MjkwZTEifQ"
         },
         {
-          "resource": "repo://package.json#L12-L21",
-          "version": "repo-lines-v1:sha256:5f7365d7bf46748cbdac4e9a9047712541e9a9c9a2cbc9030a3aa00aefc103df:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1M2NjMWYwNmQ3OTE1MDQ1OGU0ZDRhNGQ4NmQzMDU2NTcxNzEyOTY0ODIyYmIwMDcwNjRhZWU0ZmQ5YjRkODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjZWY2ZWQ1MjUyYzdmMjBhYjcyMzhlMzJlOTk0YTZjMTJjMmQzZDI2NzY3ZjdkNWU0MDJlNjU1YmU0NTFhMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExYTQ3YTAwNGY4OGJjZjhjNTkyOGMwMjRjNmVlZGZhNDNhYTVjOGI4OGFlM2RkMDJhOWE0NDIzNjhkMTNiNzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4ZDgzZGQ4MDY1NGNlNmQ3ZmI2MTU0ZWE4NWMxZjkyMTljNmU5Yzg3Yzc3MmZmMmU0Y2Y5MWI1ODMzMTBhNDQifQ"
+          "resource": "repo://package.json#L12-L23",
+          "version": "repo-lines-v1:sha256:0cdcf32d66c2f9ea7bacb647cb7ebe423dc87263a434b5a37920f8650864d989:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1M2NjMWYwNmQ3OTE1MDQ1OGU0ZDRhNGQ4NmQzMDU2NTcxNzEyOTY0ODIyYmIwMDcwNjRhZWU0ZmQ5YjRkODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmMDNhMjcxNzQ3YTI2ZWVhMzRlNGU0NWNiNzM3NzEzMDhkOWMzN2I3ZThiZTNhMDFhYTFlYTJhN2FkNDRkNzkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExYTQ3YTAwNGY4OGJjZjhjNTkyOGMwMjRjNmVlZGZhNDNhYTVjOGI4OGFlM2RkMDJhOWE0NDIzNjhkMTNiNzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4ZDgzZGQ4MDY1NGNlNmQ3ZmI2MTU0ZWE4NWMxZjkyMTljNmU5Yzg3Yzc3MmZmMmU0Y2Y5MWI1ODMzMTBhNDQifQ"
         }
       ]
     },
@@ -69,44 +69,40 @@
           "version": "repo-lines-v1:sha256:d1ca2b9c4b8d76cbdfe4183f2bfd6e97f6d3fc82b840c002e90cf6ea3b8e8c93:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5Y2E4OTFiZmY3YWMxZjdjZWFhZTQwZWYwNTEwNjZiZTllZmU0N2I0ZTQyODFlODZjMzE5YmUyYzU1ZWJjZTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwNjQ4Zjc3ZmQ1YTljNjNiM2NkZDBhZjQ5ZGFhMTI5OTIyMGI3NTQxZTg4Y2ExN2VmZTFhNmExMTRiOWZmMmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJkMTJjODczNWI1NjlkNDk2MjliZWI3NzZlNGQwYjA0M2VmYmNmZjQwNThlYTBkMDAyZmQzZjU4ZWFjMzI2NWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
-          "resource": "repo://CONTRIBUTING.md#L74-L74",
+          "resource": "repo://CONTRIBUTING.md#L95-L95",
           "version": "repo-lines-v1:sha256:0402e83d7f064a6fd7bb3ba085a8f41a81fa55ef6418e6fd38acf62fb20700c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDQwMmU4M2Q3ZjA2NGE2ZmQ3YmIzYmEwODVhOGY0MWE4MWZhNTVlZjY0MThlNmZkMzhhY2Y2MmZiMjA3MDBjMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDQwMmU4M2Q3ZjA2NGE2ZmQ3YmIzYmEwODVhOGY0MWE4MWZhNTVlZjY0MThlNmZkMzhhY2Y2MmZiMjA3MDBjMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODg0NDU4NGVkODVjNzJjODg2OTFjNzQ4ZmM0NGMxYjQwMjBlMzY2MGMzYTc0MzU2N2IxMzdhNTViYmEzODQxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2E0MDE4ZTI4ZTk1Y2M2NDdhYjA1NzYzN2I3OTFiYTliMWY1MWU2OWRkNzRlNWVjMDA4NDBlODZiNTVhY2UwYiJ9"
         }
       ]
     },
     {
       "id": "claim_323b49b4341e4b8886e6fbe548e92d90",
-      "statement": "lefthook 分三段: pre-commit 并行跑 oxlint --fix/oxfmt --write(只针对暂存文件)与 cargo fmt --all, 全部 stage_fixed; commit-msg 跑 commitlint(config-conventional); pre-push 并行跑 web(pnpm check && pnpm test:web)与 rust(clippy -D warnings + cargo test --workspace), 是唯一的全量门禁。",
+      "statement": "lefthook 分三段: pre-commit 并行跑 oxlint --fix/oxfmt --write(piped 两步, 只针对暂存文件)、oxfmt-root 与 cargo fmt --all, 全部 stage_fixed; commit-msg 跑 commitlint(config-conventional); pre-push 只跑静态检查(web 为 `pnpm run static:web`, rust 为 workspace clippy -D warnings), 不再跑任何测试。",
       "evidence": [
         {
           "resource": "repo://commitlint.config.js#L1-L3",
           "version": "repo-lines-v1:sha256:b0acbdafc17f8ffc98a1858f0be9b9453f4e359800b7ca7b0a11e7dc0cf2bcee:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzMyN2I2YzI2Y2NhMjgwNGIyNjZhNzdhMmE0ZjExNTU1MGQ5M2I2ZTJjMjcyMjgyYmIwYmNmNjQ5ZDVjYzMwMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWExZDFhNjMzOTAyMjljNzk4MzQ3ZTgzYTA0MDU0NDFjOTQwMDAzNTI4NGFkMTY4YzFiZjZjZGYxZDcwYTM3MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         },
         {
-          "resource": "repo://lefthook.yml#L43-L46",
-          "version": "repo-lines-v1:sha256:aaad14df9899f6664789ef7664cc7b8439a9087015be4805609d28347b6587cf:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWJlYWM4Y2U2ZWYwMDA2ZTA3ZTI4MWZkNzY0ZTk5MzEyZDVjMDQ0OWM0M2NjZWNlNWYyMmQ0OTdjMWU2YTk0YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjIxNjQ0MzRiOTZhNDU2M2FjNDBjOWNlYWNhMDA4YmFmNzljMzZiMmVjMzE4NWUxY2YyNmMxMDdlMjA0Y2U3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNWZiMzEwY2JjZjk4ODNmNDQxMjFhMzMwMDczMjIyYWE5NTAwMDUyZDFkMmRhMmY0MWEzMjJhMTExNzlmZmE4MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmE4MzBjMmNkMmY2ZjA1YzAyM2VjYWNkOGZlNDU2ZjMyNzRkNGU0NGI0ZjAzZjliNjI3MWRjZGY1MzI4YmU1ZSJ9"
-        },
-        {
-          "resource": "repo://lefthook.yml#L48-L58",
-          "version": "repo-lines-v1:sha256:df8f058fc2fa91eef18b99562cb5c05cc6bf2f4483d42272c5f79b87e2854d78:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyOGVkNzIxOGU3ZTJjMDk0YWU5OTg5NTJkODQ4Yjg3MTIxOGVjMjNkNmMyMzVkODFkOWQ1ZWNlZjNhZjY3NGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1YzU2OWM3ZWMyYjgwZDUwODg0ODliOGY1ZDZjOTYxNzc5OThiOGFhZmYyNDgxZTA1YThkNWMwODY0NjJjOWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmZWU2YzJmZDViNzc1OWZkMmY3MDI4YmM0ODUyZDFkNDBiYWVmMTU5ZWNkMjhhNWJkMDU0ZTcxMDFlMWQ3MjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
-        },
-        {
-          "resource": "repo://lefthook.yml#L6-L41",
-          "version": "repo-lines-v1:sha256:ce4c12c89c34ddee5a3d1ee32f78e6e82f213114ecb34ac5ebe2b6ae0d76e296:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2NGJmNDdhNDNjMzE3MzgxM2Y2NzdmNzRkZjIzZDc3MjdmMTM1YzI1MTUyYzcxZGM5Mjk4ZmFhZGZiZTA0NTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiOWY5NTgxMTM2Njc3MTcyMmFlMjM4M2Q4Y2Q2ZGM5ZTVlMGYyZDM0OTk1ZmRlMDgwYzc5YjRhMGYxZWYwMzkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkNjdiZmVjMzQ3ZDcwYmEyOGU3NDAwMTM5ZDcwNDhiODQ4MDY1OWFkYWU3MjMxMTE4YmM0MDY5ZGZkY2Q0MTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZjNTU2OTkyZWY2ODRmZWFjNTMzNGJkNDNhODQ2MjE3YTBmMzQ4NThlYTZkMDMzNmMzM2QyZmU3YzllMDJhZjEifQ"
+          "resource": "repo://lefthook.yml#L49-L65",
+          "version": "repo-lines-v1:sha256:d9ced947e54749b1f07d196b7ecc7f70f5773170739d609d25fa3ec16f4d97bc:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiZWFjOGNlNmVmMDAwNmUwN2UyODFmZDc2NGU5OTMxMmQ1YzA0NDljNDNjY2VjZTVmMjJkNDk3YzFlNmE5NGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0ZjExOWExMjU5MDg2NTEwM2NjNWZlYzZjMDkwNmY5ZWYwYTU5MmM0N2E2ZTg1NzYwNjhmMjg0ZjgxODJhZjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVmYjMxMGNiY2Y5ODgzZjQ0MTIxYTMzMDA3MzIyMmFhOTUwMDA1MmQxZDJkYTJmNDFhMzIyYTExMTc5ZmZhODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
       "id": "claim_aa84a629b7464ac3af3bcc3ab3cf8f26",
-      "statement": "pre-commit 有两个被注释解释的细节: oxlint 与 oxfmt 必须拆成 piped 两步, 因为只暂存 css 的提交会让 oxlint 拿到空输入并以 1 退出; cargo fmt 必须带 --all, 否则只格式化根包, 子 crate 与测试会被漏掉。",
+      "statement": "pre-commit 有三个被注释解释的细节: oxlint 与 oxfmt 必须拆成 piped 两步(只暂存 css 时 oxlint 会拿到空输入并以 1 退出); 两个工具各需两条 glob, 因为 lefthook 的 `src/**/*` 匹配不到 `src/` 根层的 App.tsx/main.tsx/index.css; cargo fmt 必须带 `--all`, 否则只格式化根包。",
       "evidence": [
         {
-          "resource": "repo://lefthook.yml#L11-L22",
-          "version": "repo-lines-v1:sha256:a9bdfab68a4d785f212130e0247a5f5c04bfbe15988aab6f4d65e59be932bdbb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhN2JlNDEzNzE2MTU0Yzk4MjQwNTc0MDQyMjVlOGZkZmY4Yjg3NmI0MzM2MzQwZDRlNWZkOWU5ZWUwNjZmNjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0MmMwODFmMGUzNzA1NWEwMTJiNWU4ZmQzNDc4NDIzMzJjY2JjMWVhZDkwOWUxMjJiYmJjMjY1YjBmM2I5MGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5NDBmMGMyZGE0OGFlNzA5MWNhOTYwOGY3YmJkNzMwOWJjYmNlNmRjMDE3YWQzZjA0MWVlYWM4YTE1NDkyOTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNjNTBlMWY0Yjk5ZjkxMGI3N2YwMmY2NDVjYmUwOTY4MGI0YzljMGU1YzAzOTE4ZDMwOWFlMGMwNDgzMzAwZjMifQ"
+          "resource": "repo://lefthook.yml#L16-L26",
+          "version": "repo-lines-v1:sha256:f6a3bb0b53c2517097dcbf14c5197f371a015fcc30cd92e5bf555f2ce057d4b8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkNjIyMWY2ZGY3MTQ0MTU4NjhkMjllOGQ2ZWFiMmMxMmExZjY1MzQyZjE4OTI1OTZiMzZkMDEyYzAyMWY3YzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MTZkYzNjZDAyYmQ5MDVmZjE2NmYzYjQ3YzUxZGNhMWFkNDE1NGQ2YzA3ZWFlNjdjNjFhNzEyZWFmN2ZjMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhOTA2MjU2OGE2NzM4YjJjMzk1MGI1Y2FmZGI0ZDgzZDMwN2JiNDgyNWE3NzE0NmQwMmVkOWYzM2E4NWQ5N2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNjYjE1MTBmZjkzZmE5ZGM5ZTdmODRkNjljMzEzZjRhNDkyNTBmYmQ1NDliZDhkZWZiYTk3ZTIyN2MwZTIzNmIifQ"
         },
         {
-          "resource": "repo://lefthook.yml#L37-L41",
+          "resource": "repo://lefthook.yml#L43-L47",
           "version": "repo-lines-v1:sha256:bf2bfa48590be541e995a469d9070fac2f43f90c3960d5275622d2acffd6155b:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzlmYjA2OTQyZWNmODNlZjcxODZhNjk3ZTkyZmUzYWQxODQwMGNjM2RlMzdjM2JjZDNlNGMzMWU1MDU0ZDQ0YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGI5Zjk1ODExMzY2NzcxNzIyYWUyMzgzZDhjZDZkYzllNWUwZjJkMzQ5OTVmZGUwODBjNzliNGEwZjFlZjAzOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjU3M2Q5N2I4YjgxZWYzMTA1NDVhOWNiNzZiMTZlYTNkYmZkNGQ0NmZjMmY4NDIyYzc2NDBkZWEyMTI1M2Q1NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmM1NTY5OTJlZjY4NGZlYWM1MzM0YmQ0M2E4NDYyMTdhMGYzNDg1OGVhNmQwMzM2YzMzZDJmZTdjOWUwMmFmMSJ9"
+        },
+        {
+          "resource": "repo://lefthook.yml#L9-L28",
+          "version": "repo-lines-v1:sha256:ec876a6510afaf4fef9ef067cd04ce003cd87ab9bfcb2ea3d50362c6149f185f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0ZmZkZTM5MTYyYzZmMzliN2YwYTQ1YzRjOTI0YzQzMWU3NmM1MGEzNTBhMTYzYzE2ODNiYWEwYzg2NmEzZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0MmMwODFmMGUzNzA1NWEwMTJiNWU4ZmQzNDc4NDIzMzJjY2JjMWVhZDkwOWUxMjJiYmJjMjY1YjBmM2I5MGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUxYjViMDE2MzBlN2M4OGI3ODk1M2Y1YmY5MWY5NzI1OWQ0NDcxNjI2NjI3NmM5NTgyMGI5NTE3MTk4MzkzY2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNjNTBlMWY0Yjk5ZjkxMGI3N2YwMmY2NDVjYmUwOTY4MGI0YzljMGU1YzAzOTE4ZDMwOWFlMGMwNDgzMzAwZjMifQ"
         }
       ]
     },
@@ -122,47 +118,55 @@
     },
     {
       "id": "claim_fea21f1f60a547e989a240e90d9bbc03",
-      "statement": "没有 CI 复验的直接后果: pre-push 是唯一真正执行全量门禁的时刻, 而它由本地钩子实现(需 lefthook install 且不写 --no-verify), 服务端无法复验或阻止绕过; 另 pre-push 的 web job 里 pnpm check 已含 test:web, 再显式 && pnpm test:web 会让前端测试在推送时跑两遍。",
+      "statement": "仓库没有任何执行 lint/typecheck/test/clippy 的 CI job, 而 pre-push 也只跑静态检查, 因此前端测试与 Rust 测试只在 `pnpm verify`(或手工定向命令)里执行; 「门禁通过」与「测试全绿」两句都不可被服务端复验, 也无法阻止 `--no-verify` 绕过。",
       "evidence": [
         {
-          "resource": "repo://lefthook.yml#L48-L58",
-          "version": "repo-lines-v1:sha256:df8f058fc2fa91eef18b99562cb5c05cc6bf2f4483d42272c5f79b87e2854d78:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyOGVkNzIxOGU3ZTJjMDk0YWU5OTg5NTJkODQ4Yjg3MTIxOGVjMjNkNmMyMzVkODFkOWQ1ZWNlZjNhZjY3NGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1YzU2OWM3ZWMyYjgwZDUwODg0ODliOGY1ZDZjOTYxNzc5OThiOGFhZmYyNDgxZTA1YThkNWMwODY0NjJjOWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmZWU2YzJmZDViNzc1OWZkMmY3MDI4YmM0ODUyZDFkNDBiYWVmMTU5ZWNkMjhhNWJkMDU0ZTcxMDFlMWQ3MjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://.github/workflows/openwiki-update.yml#L3-L10",
+          "version": "repo-lines-v1:sha256:93ca2da0784da6a240c06dd9c7978af1d1ef0d2fc3b690d5450837641e49ad3c:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTk2ZGM0ODE0OWY1YTgzZDFlZDZkYmIzOWJiYzdlMmI5MDJhYTNkMzRkNmJkNWFlNGIyOTFiNjhkZjBjYTc5YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc0M2EyYTJmYjgyZWFlZDI0ODhlMjg2NGQ0MjNiZWI1MDA2MWRkNDIzZDgwYjg3MjFkM2JhZTVhNjQ3YTdmNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjIsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzViMWYyNGU2MTgwNWVlMWE5YmM3ODA0N2UxZTRiM2Q4NjE1N2Q2ZTM3ZDhhYzBiY2JlYmQ1ZTY1ZTVlZjFhYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2JhNWFmZmQ4MjMxYzBlODFiYmNkNDIxNTRhMWNjOTBlODZlZmY2NjM1NWMwNDhjZTU1YjMyMzdiZGFjM2ExZCJ9"
         },
         {
-          "resource": "repo://package.json#L12-L21",
-          "version": "repo-lines-v1:sha256:5f7365d7bf46748cbdac4e9a9047712541e9a9c9a2cbc9030a3aa00aefc103df:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1M2NjMWYwNmQ3OTE1MDQ1OGU0ZDRhNGQ4NmQzMDU2NTcxNzEyOTY0ODIyYmIwMDcwNjRhZWU0ZmQ5YjRkODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjZWY2ZWQ1MjUyYzdmMjBhYjcyMzhlMzJlOTk0YTZjMTJjMmQzZDI2NzY3ZjdkNWU0MDJlNjU1YmU0NTFhMjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjExYTQ3YTAwNGY4OGJjZjhjNTkyOGMwMjRjNmVlZGZhNDNhYTVjOGI4OGFlM2RkMDJhOWE0NDIzNjhkMTNiNzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI4ZDgzZGQ4MDY1NGNlNmQ3ZmI2MTU0ZWE4NWMxZjkyMTljNmU5Yzg3Yzc3MmZmMmU0Y2Y5MWI1ODMzMTBhNDQifQ"
+          "resource": "repo://lefthook.yml#L54-L65",
+          "version": "repo-lines-v1:sha256:247bdfb9c95705ade149c72fdd168b33095f54a3656c7e7e84fdea8caca1b89e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyOGVkNzIxOGU3ZTJjMDk0YWU5OTg5NTJkODQ4Yjg3MTIxOGVjMjNkNmMyMzVkODFkOWQ1ZWNlZjNhZjY3NGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0ZjExOWExMjU5MDg2NTEwM2NjNWZlYzZjMDkwNmY5ZWYwYTU5MmM0N2E2ZTg1NzYwNjhmMjg0ZjgxODJhZjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmZWU2YzJmZDViNzc1OWZkMmY3MDI4YmM0ODUyZDFkNDBiYWVmMTU5ZWNkMjhhNWJkMDU0ZTcxMDFlMWQ3MjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://package.json#L22-L23",
+          "version": "repo-lines-v1:sha256:b997d6e54849f8468f5dc27f7818a3a8bbd38867dc0e4a0430df5e49843d0c4a:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWY2NDUzODE3NjViN2Y5ZDQ0NjM4OWRhNjVkYTEwYmUwM2FiN2E2ZGYzZDUxYjA4NTMxMTdkNWY3YWViOGViZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGYwM2EyNzE3NDdhMjZlZWEzNGU0ZTQ1Y2I3Mzc3MTMwOGQ5YzM3YjdlOGJlM2EwMWFhMWVhMmE3YWQ0NGQ3OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmU1YTNlZGEzNTA3MmM1M2JhOTI3ZDkyOWIxZjJhOGEwOTkxZjU0ZTAwM2NmMmY4NDY0ZDdhNWI2YmU5NzgxNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjhkODNkZDgwNjU0Y2U2ZDdmYjYxNTRlYTg1YzFmOTIxOWM2ZTljODdjNzcyZmYyZTRjZjkxYjU4MzMxMGE0NCJ9"
         }
       ]
     },
     {
       "id": "claim_05c4c567a4604eac9d8016bcd6396644",
-      "statement": "Rust 最底层是纯契约测试(lj-rule-model 的 3 个测试文件与 lj-compiler 的 plan_compiler_test.rs), 无 IO; 它们断言 hash 归一化、端口/句柄矩阵、诊断路径与排序稳定性, 不能证明任何持久化或并发行为。",
+      "statement": "Rust 最底层是纯契约测试: `lj-rule-model/tests/` 的四个文件(model 13 条、flow 12 条、descriptor 9 条、sensitive_policy 1 条)与 `lj-compiler/tests/plan_compiler_test.rs`(11 条), 全部无 IO; 它们断言 hash 归一化、端口/句柄类型矩阵、descriptor 合同、敏感名策略与诊断稳定性, 不能证明任何持久化或并发行为。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-compiler/tests/plan_compiler_test.rs#L1-L10",
-          "version": "repo-lines-v1:sha256:8d5627ddaece31dd0c46fc5e459485a5ea6cab2340650a1cd075b63a941d4b34:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhYTUwYzBlMGMxM2M3ODM1MGU0NTdlNDA2ZDkwYzI0YWIxZmUwNjkzODI1YzBjYTkzZTM5MDU0NmMxMTY5YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzNjFlZjQxYmJlYzBhZjcyOTRiOWJiZTRlMTYyMzAwZDUyMmJhNmI3ODQ3M2MwNzdiYTMxZjVkY2Q3MWM5ZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlMzUzZTdiOTFiNmNlZDcyOTU5ZmNlODM3N2Q3MmY3MjYwYTg3NTk0OGRjZDVkY2ViY2UzMTdjOWEzYWZkZWEifQ"
+          "resource": "repo://src-tauri/crates/lj-compiler/tests/plan_compiler_test.rs#L1-L12",
+          "version": "repo-lines-v1:sha256:0b27dfb4f2080b5d171ae6f15aa780e6edaf1bb56a8f2d9bbede0ebe1fbcd18b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBhYTUwYzBlMGMxM2M3ODM1MGU0NTdlNDA2ZDkwYzI0YWIxZmUwNjkzODI1YzBjYTkzZTM5MDU0NmMxMTY5YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJjMWFjYWZjOTZkZTY2MTVkZDFmN2UzZGYzYWJjNDVlZTM5ZTEwODlkMmMwNjgwYzBhOTY4M2MwM2UwZjA2ZTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2Y2RjY2E5NjcyNDI1YjljNWQzMDNmMjViMzI2ZGM3M2ExNGYwYTFlNTdmOWM2ZTg1OTU0YWM1YjZjNWI4ZmIifQ"
         },
         {
           "resource": "repo://src-tauri/crates/lj-rule-model/tests/model_contract_test.rs#L1-L5",
-          "version": "repo-lines-v1:sha256:60830d15cd0e37aa2257119d23daa306450d146beabbe023e4a2f67ef77ecf2e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWFlMjM5YmM2ODBiNTg4OWJkMDIxOGIxZjQzMTk5YmIxYmYxNDM1MWZkNjgxMjYzZjJjZGQwNDk3MTI3MDY3NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc0MTM1MTdmMmU5NzZjNmJkNjVlYTcxYzExOTYzMTQ0MjhmYzgyNzcxYTQ2YTc0N2ViZGJkNDhkMzBhYTQzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWM5NjFkMmE0M2I2MjQ1MjA5MzQ3NGVkMjc1YmM3MmU1NTg2YjdmODgyNjRjY2E2MWFmMTM3MTJlM2JjZWJmMyJ9"
+          "version": "repo-lines-v1:sha256:60830d15cd0e37aa2257119d23daa306450d146beabbe023e4a2f67ef77ecf2e:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWFlMjM5YmM2ODBiNTg4OWJkMDIxOGIxZjQzMTk5YmIxYmYxNDM1MWZkNjgxMjYzZjJjZGQwNDk3MTI3MDY3NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc0MTM1MTdmMmU5NzZjNmJkNjVlYTcxYzExOTYzMTQ0MjhmYzgyNzcxYTQ2YTc0N2ViZGJkNDhkMzBhYTQzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTJiNjY2NTZiOTA5MjUyYzQwMzUyZWQ3NzdkMjk0ZjdjYzgyY2I5NjE3OWVjZjQ1OGQ3NzY3NGUxNjBlNjZkNSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-model/tests/sensitive_policy_test.rs#L1-L6",
+          "version": "repo-lines-v1:sha256:3d39c30e2175b5dbb0a1462b1725f550178954990525638c336369fb90b969bb:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWU3YmM1MWNiYmIzOWVkMTUzZjRmOWUxYzcxOTBmNjBkZTA5N2M4ZjRhMjhkNWFmZGQyNjIwOWEyMDAzNTNhNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWQ3OGYxZDRkZWYwMDU4YTE3YmI2ZGFhMTQ0NDhmZGZkOTU0NWMwM2VhNTlhYzQwZDY2OWJhZTYwYjcyMzE5OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2Q4NzcyZmM4MWNlNjgzZmIzMjAwM2ZjZjRhM2Q3OThkYTllMjMxYTFlOTY3OTNmYWZlYTdlYTdiMjE3MGZmNSJ9"
         }
       ]
     },
     {
       "id": "claim_6762d450fc1a48fbb6fbf544fb52fadc",
-      "statement": "adapter 层三个 crate 各有 tests/processor_test.rs 测单个 effect handler 在 wiremock 前的行为与提取/QuickJS 约束; 它们不涉及调度顺序、捕获持久化与取消语义。",
+      "statement": "adapter 层三个 crate 各有 tests/ 下的 handler 测试(processor_test.rs 分别 27 / 11 / 19 条, 另有 `lj-node-js/tests/sandbox_test.rs` 5 条与 `lj-node-extract/tests/html_xpath_test.rs` 9 条), 覆盖单个 effect handler 在 wiremock 前的行为与提取/QuickJS 约束; 它们不涉及调度顺序、捕获持久化与取消语义。",
       "evidence": [
         {
           "resource": "repo://src-tauri/crates/lj-node-extract/tests/processor_test.rs#L1-L8",
           "version": "repo-lines-v1:sha256:1374fcc2ea941af5fe48623fae89caf9fe5d9adfa08e4aa85f1b541143568e5c:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdhZmRmZTM0MGY2ZjQzZWJjYTU5Y2Q1ZTIxMjFjMDA0ZTM1ZjdjYTY3ODA3NjZhMDU3MDBlNzY4ZmI5ZDZjNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWY0ZjJmNmRlNjI1ZDQ1N2JkODQxZjAyMDYzNGE1YTBhMDQ0ZDQzODEzZTY5MzFjM2FkY2I0MzYzNDcyZmE0MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGI5ZjBlN2I5MWVmODkyZmNmNDQxNzk1NWU3ZmVkMTI1MTJiZWJiNzQyYmY0MmZlYmNlYTExMjg4NTQ2MmMxMCJ9"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L1-L8",
-          "version": "repo-lines-v1:sha256:776612ec7a3081197b05186073423d6688ac1ae861444c86663a396f521da3d3:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWYwZmMwNDk0Yzc4NWZmNmM4NTFiZmJmNGY1YWUwNWQ3MmE0NTlkMzkwYzNiMGU4YjZiZTUyNzEzNjdlYTgxMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmEzMWYzN2ZhM2I1NGUwZjZlN2ZlNWU5ZWUyNDE4YTEzYjNjN2ZjMWY2YWI4ZTg1NjE4NWY0MTIyMWFlNDZhZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzM3MWMwNjFkNDk5YTg0ZGZlZTVkYTM4NTMzN2E2ZjhlZDU1ODFkZjRmNjI2NGFiNWQzYjEzMGUxMmEyNDNiYSJ9"
+          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L1-L12",
+          "version": "repo-lines-v1:sha256:e1ebda483e984b23bd658fb76de563298b8ccde75dcc94e8cdfba19821b40ba0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmMGZjMDQ5NGM3ODVmZjZjODUxYmZiZjRmNWFlMDVkNzJhNDU5ZDM5MGMzYjBlOGI2YmU1MjcxMzY3ZWE4MTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5ZjgwMDM5NjhmMzY5ZDNiMjkwOWIwOTY4NjVhYWM2YTVlNzgwMzQyNWRjZTY3MDgxNTIzZTQ1ODZkNTg4NWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2MjlkYjVmMmRmNmMwN2M1ZjIyZDA4NzYxYTM3YWFkOWJhYWY0YmM0OTJhMzU4NTU0NjFlODY5ZTdmZTZmODAifQ"
         },
         {
           "resource": "repo://src-tauri/crates/lj-node-js/tests/processor_test.rs#L1-L8",
-          "version": "repo-lines-v1:sha256:b6a01a7ee3a5afa7a52a52a7cd351543ea5ade72d544fa90db5f7cdc0f4d50bc:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODQwYzJkMWE1OTY0MzI5MzBiZjY0NWEwNDA5N2JmYzI5MWViZWRmZmI0ZTdmMmU3Zjg3NDBhOWU1OWYxNmY0MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzRkOGM4ZDJmMzE5MGFlZjdlNzkyMDgyZTQ3ZDllYTAzMWZjN2Y2NWU0M2JiNDBlNzlhYmI4NDQzYjU4ZjMwMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWVmNWY5YjI4Y2E0NzZkMjdhZGZmNTZjNjM2YWU4MDlkNGExM2ZkNGJkOGIwOTliNTQzNDg1NzAwYTcwYjg2NCJ9"
+          "version": "repo-lines-v1:sha256:b6a01a7ee3a5afa7a52a52a7cd351543ea5ade72d544fa90db5f7cdc0f4d50bc:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODQwYzJkMWE1OTY0MzI5MzBiZjY0NWEwNDA5N2JmYzI5MWViZWRmZmI0ZTdmMmU3Zjg3NDBhOWU1OWYxNmY0MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzRkOGM4ZDJmMzE5MGFlZjdlNzkyMDgyZTQ3ZDllYTAzMWZjN2Y2NWU0M2JiNDBlNzlhYmI4NDQzYjU4ZjMwMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOThkZTQ4ZWI0OGZhYWQ4NzY5YTRkYjg1YjBlODNmMTA5YjVkNGE3YmUyMjIwZTQ0ZDFlZmNlMWZkYjA4Njc0NyJ9"
         }
       ]
     },
@@ -207,11 +211,11 @@
       "statement": "facade 层的内联测试集中在四块: document.rs 19 个(凭据策略、provenance 脱敏、revision 冲突、draft 保留、重命名/删除、wire 字段), error_mapping.rs 2 个(存储 schema 错误映射到稳定码、legacy archive 拒绝保持 replay 安全), query_adapter.rs 4 个(分页 has_more/边界/默认值、非空 ID), lifecycle/tests.rs 1 个端到端控制流 candidate。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L418-L435",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs#L437-L454",
           "version": "repo-lines-v1:sha256:d420919fa6eb00f0a3ceb9ece47c8eed43c3ebb1e1ff3f2a2f31237932fec1d3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiYjUwZTZmNjg5Zjk0Njc5NmE3YTQ1MmQyYmZlMDUwMTBiOGJhM2M3YTJmN2Y0ZDFhMjMzYmJiOGU0YmVjNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMTBmNDFlNWE4MDIyMjM1ZTE5YjY1NDQ3OWU3MzRjNjMzY2EyMjFmMDMxNGE2YjNjYjZmYzQyNDJmNTg0OWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFlZjk3ZTY5MTVjZGIxOWQyZjJkNDE1NjAyZmUwMjJjYTY2ZTQ4MDI5Yzc2YTJjZDlkM2ZhOWZjMDc3NjI4M2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFlNDVjMTk0NTBjNWQyM2Q4ZmYzZGVjODQxYmM2OTY4YTJmZDIwMjI3OTAzMGI3ODI5NTZhOGQzNTkyMmRiMmIifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs#L1352-L1459",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs#L1349-L1456",
           "version": "repo-lines-v1:sha256:2bd44a0f1940aac6d7ee602f308a016168bbf75b040858ab789eb02e18c86231:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZGU0MzE0YTNlYzVjMTgwM2Y3MzNmZWVhNGExNDQ4YzdmNzM2OTY5ZTE5MmRjNmIxNmZkOTBhMTg2ZWYyODk5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NzJhZDg5YTM1NjUyZDgxYmM5YzA5MzcxMzgyY2Y3OTg2MzQwYWY5ZjUzMzBhMWM2YTc1MGJkZjJjN2MxZDU1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJjMjUxMDI3YzI1ZTdhMzk5YjY3YjNlYzdhNTE2MGZlNGU2YjYwZTk1MTE4N2RlMTM0OTZjZDJjN2MyNWI2NDY1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlN2FmMjliNjY5OWYzZWQ3ZDMyOWQzNGFjMjg4YjI5NDAzYzYzNjNjNDUxNmNkOTM2MGMwY2M4YjhkZmYyZWQxIn0"
         },
         {
@@ -240,18 +244,22 @@
     },
     {
       "id": "claim_c586d1642f924d14a35e92d2d515dc75",
-      "statement": "集成用例名即断言对象: candidate 边界不透明且拒绝篡改/过期/grant 不足, 重启后安装重新校验事件元数据, 源历史与回滚必须走新的待审 candidate, 四个 intent 的 live 与 replay 结果一致, 丢弃投递流不取消执行且 cancel/catch-up 幂等且连续, library 投影顺序为 pinned/favorite/recent/id。",
+      "statement": "集成用例名即断言对象: `candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insufficient_grant`、`candidate_install_revalidates_event_metadata_after_restart`、`source_revision_history_and_rollback_require_a_new_reviewed_candidate`、`maccms_json_four_intents_live_and_replay_use_only_rule_system`、`stream_drop_does_not_cancel_and_cancel_and_catch_up_are_idempotent_and_contiguous`、`library_projection_orders_pinned_favorite_recent_and_id` 与 `core_out_rule_package_covers_source_rules_and_controlled_js_live_and_replay` 各自把边界写进名字。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L483-L606",
-          "version": "repo-lines-v1:sha256:060523b6a0eb2cd2bdee352a93e42502dbaee1194e2c07cee09f1f435ed75451:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxZTlkZDk0Nzk2NzI1NTMwOWY4YmFlOGIyYjMzZTMyM2RlMTQzNTQ1ZDEyY2ZkZTJkY2ZjODlmOGZiZmIwNmZiIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwNjY1MTc3OTE0OWEyMTZmZjAxMmE2ZDYyMGU3NDkwMzlhMzVjNWQyZTU1ZWNhY2ExNjA1N2MwMDRjYTIwNmM2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3NzcyZTkyNzVjYjZhMjRmZmE4OTUyY2NhNzdlNmE0YTVhMmFkZTYzY2VkNDM1MWM2YmM1ODYwYWFmZTUyMmQxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwOGViZDJkM2UyZDcxYzZkOTVhZjAyZmM5ZmQwMTUwNDQwZmU5ZmZiMmVmZWQ5ZDJkNzE1OTE0MTZkY2QwMGZlIn0"
+          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/core_out_rule_package.rs#L295-L414",
+          "version": "repo-lines-v1:sha256:47f13e946e4824db450f5bc27e3eb533141471b9558c579fd8fa2557a92af30c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3NWI5NTMyZmRiYmM5Nzc2N2FlY2U0NzgzZGFiOTIwMTIxNjYwNmUyODAzMjY1OTQ4OTllNjhiOTQzNGY3ZDEzIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJiZWQzNWQyYTMzNTM3NWQzMGNkNzAxYjg4YTZjZjJiN2YzYzViYTllMTk1NjQxMGNjNGZkOTcwZmMwMDlhMjhiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3NzcyZTkyNzVjYjZhMjRmZmE4OTUyY2NhNzdlNmE0YTVhMmFkZTYzY2VkNDM1MWM2YmM1ODYwYWFmZTUyMmQxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3OWZmMzQzYmJmOTUyMzg5NTQyMjczOTllNTk5NWNkNzM5YmViNWVjNGQ1OTBhNzdmNWZhYjUyYzZhM2E3ZjNmIn0"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L696-L786",
-          "version": "repo-lines-v1:sha256:0b1f465ae6ffa95770ee0a2ef11aad79f851854348ffc6ed11d20ddb0a22e4de:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExMjJjZTg3OTQ3ODZkMzdiZDczMjE2Yzk5MjUwYjMzZWMwMWIzNWNhNjNlZGUwYTIwYjdjYjEwZjBhMmMzODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxODY5MzgyYmZiOTg1OGJjODcyOGM3ODk4YzlhODc2OTJiYzY0N2Q5MTE2ZjJlY2Q1OWI1NWZlNTY5MTU0NTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3NzJlOTI3NWNiNmEyNGZmYTg5NTJjY2E3N2U2YTRhNWEyYWRlNjNjZWQ0MzUxYzZiYzU4NjBhYWZlNTIyZDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxZmFlNzNkYWE5ZWUxNDBlMDRkOTc1MTNkMGVjODgzMWQ2Nzg1ZWEzOWNmNTBjMjE5ZjQyZTViZmEwNzljMTAifQ"
+          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L487-L608",
+          "version": "repo-lines-v1:sha256:21ca0c4a7939be9921553896515f27c6e9c93124aff18e72f599345ba247cae9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxZTlkZDk0Nzk2NzI1NTMwOWY4YmFlOGIyYjMzZTMyM2RlMTQzNTQ1ZDEyY2ZkZTJkY2ZjODlmOGZiZmIwNmZiIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwNjY1MTc3OTE0OWEyMTZmZjAxMmE2ZDYyMGU3NDkwMzlhMzVjNWQyZTU1ZWNhY2ExNjA1N2MwMDRjYTIwNmM2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3NzcyZTkyNzVjYjZhMjRmZmE4OTUyY2NhNzdlNmE0YTVhMmFkZTYzY2VkNDM1MWM2YmM1ODYwYWFmZTUyMmQxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwOGViZDJkM2UyZDcxYzZkOTVhZjAyZmM5ZmQwMTUwNDQwZmU5ZmZiMmVmZWQ5ZDJkNzE1OTE0MTZkY2QwMGZlIn0"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L995-L1047",
+          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L693-L783",
+          "version": "repo-lines-v1:sha256:9adcf24c8b81aab4e0b08bf51759231a3717ea405d24cff8b60036a2b76f95f4:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExMjJjZTg3OTQ3ODZkMzdiZDczMjE2Yzk5MjUwYjMzZWMwMWIzNWNhNjNlZGUwYTIwYjdjYjEwZjBhMmMzODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYxODY5MzgyYmZiOTg1OGJjODcyOGM3ODk4YzlhODc2OTJiYzY0N2Q5MTE2ZjJlY2Q1OWI1NWZlNTY5MTU0NTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3NzJlOTI3NWNiNmEyNGZmYTg5NTJjY2E3N2U2YTRhNWEyYWRlNjNjZWQ0MzUxYzZiYzU4NjBhYWZlNTIyZDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxZmFlNzNkYWE5ZWUxNDBlMDRkOTc1MTNkMGVjODgzMWQ2Nzg1ZWEzOWNmNTBjMjE5ZjQyZTViZmEwNzljMTAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L992-L1044",
           "version": "repo-lines-v1:sha256:ec8f483fb5ec31f04408c8cd7e8262e8854d5f25fe30394ef3a3e38fac3c7a0b:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmYjNiZmFhYTljNzJlN2I0MjRhOGNhYzc4ZWZjNjZkZTk1M2Y0NzYwNWMwMGRhZmE5OWRiN2RjYjdkMjczMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1YzAxOTYxMGU3YTRkNmZmNGMzZDc0MmVkMDRmMWMxYWQ5NDM5Nzc3MDIyZDJiMDEwM2I4MjAzOWMzYmM4YzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc3NzJlOTI3NWNiNmEyNGZmYTg5NTJjY2E3N2U2YTRhNWEyYWRlNjNjZWQ0MzUxYzZiYzU4NjBhYWZlNTIyZDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwNDBhMTdkODMwYTkxNDBmMmMxODRjYjY5NzdiYTQwNWE4MGM3ZWM3NDgxZTZkMDBmODc2NmY3MmUwZDZhMTIifQ"
         }
       ]
@@ -261,7 +269,7 @@
       "statement": "前端测试配置是 jsdom 环境 + src/test/setup.ts(只有一行 import '@testing-library/jest-dom/vitest'), 且 RTL / user-event / jest-dom / jsdom 全在 devDependencies; 但 14 个测试文件里没有任何 @testing-library/react import 或 render 调用, 即 jsdom 与 jest-dom 属于已装未用, 组件渲染/可访问名/focus-visible/空态均无测试。",
       "evidence": [
         {
-          "resource": "repo://package.json#L62-L69",
+          "resource": "repo://package.json#L64-L71",
           "version": "repo-lines-v1:sha256:3152bb2306212b2e62bba9a5af8be0c7fdc5e33a00c05262daa6d02b41407f96:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2U4YzlmMzMwZDc4ZmU0NDMxZDlmYzM5ZmFlMzRiNWRmODA4ZDk4ODFhZjUwNGNkNDE1NGZkZjQxM2UzMmVmMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2E0NDNhNzM2OGVjYWNkNDA4MDc2NzdkM2M5ODM0YTljNGY1MDhmNGJkMTIzNzNlMDljMTM3MTcwYjZhZmJhNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjQzM2JlN2QzZGQwZDY3OTgxOGM4MGUwOTMyNzE5YWE1YWViMjI3Y2QxY2IwMDhhMjZlYWJjNTk0Nzg5NTBmNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjRmMDQ0OGU3YzZjOTNlODk3ZTYyNzI4NTgwMjI0YWFlODdmZjQwZjg3NDFlZDc0MzE1YTBiYTFiZjIyMjBkYyJ9"
         },
         {
@@ -279,7 +287,7 @@
       "statement": "wire 测试用 vi.mock('@tauri-apps/api/core') 把 invoke/isTauri 换成 spy 后断言 command 名与 { request } 包络及 snake_case 字段, 能抓前后端契约漂移(改名/改包络/改字段命名), 但 invoke 被 mock 所以证明了任何 Rust 侧行为, 也不是端到端。",
       "evidence": [
         {
-          "resource": "repo://src/shared/tauri/rules/wire.test.ts#L20-L43",
+          "resource": "repo://src/shared/tauri/rules/wire.test.ts#L21-L44",
           "version": "repo-lines-v1:sha256:f6fda04dbca18ed5901e6e89b81210893295f78ba51890dedd4039bbeb8dd75d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiMzI2MWZhZWU1ZTgwZTNmNmQ0ODQ0NTQ2OTkxZjliZDNmN2Q5NTc0NzY0ZWNjMjk5ZTYxZGU0NjMwZTk1MmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNhM2U0NmY5NDI3NmI2ZjZmNGVkMWYwMmFmNzhiZWY2YTJlZTFjNDM5ZGQ1NTg0Yjk3Mzk0ODMxMzIxNGQyYjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkOWZmN2M1OWQ5NzQ5MTJmMDExOGE1MGY5Mjc4ZTUxMzIxM2Q3OWM2YmJmZDZjYzhhNWU0ZjJkMzUwMDYzOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2YTI3MTdkOTJkNjdiYjc2NzEzZTQwMDc4N2U1YzQwNjUxYjU4NjQxOTZkNjUyZTk5ZGIzMjBkODgzMmJmNmUifQ"
         },
         {
@@ -290,33 +298,33 @@
     },
     {
       "id": "claim_4991f23e7fee426cb435f0315d98b20d",
-      "statement": "Tauri 命令层没有行为测试: 唯一覆盖是 lib.rs 里对命令名单的断言(恰 25 项、无重复、无 source_document 旧名), execute 的取消注册表登记、forward_execution_events 的失败继续语义与 catch_up_execution 的终态清理都只靠代码审查。",
+      "statement": "Tauri 命令层没有行为测试: 唯一覆盖是 lib.rs 里对命令名单的断言(恰 26 项、无重复、无 source_document 旧名), execute 的取消注册表登记、forward_execution_events 的失败继续语义与 catch_up_execution 的终态清理都只靠代码审查。",
       "evidence": [
         {
           "resource": "repo://src-tauri/src/commands/execution.rs#L43-L74",
           "version": "repo-lines-v1:sha256:94b3c1f99382ee0531646ff4b4157c1a246266aadcd1ae379cafd768827f49c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMWVlMzNlZTk1ZmFlZTFjMTBlOWViZjNkM2RlNDFiYjE5MjUxNWNhZDc3Y2RhMjA1ZTU0NmRhMTcwMDFhNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlOGEyZmJlNjE5NWRjOWUyNDdmY2YxOTNmMmZkYWU3MzZlN2JkMWUyNzFiMjEwMzE0MDFmODcyYTY5MTFiZjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY3N2M5N2RkMTZhNzBhOTBlYTk4ZWYxN2JmZDJiODc0OGY0OWMwYTgwZWQ3MmIxNDczODhhMGUzM2E0ZmRlYWEifQ"
         },
         {
-          "resource": "repo://src-tauri/src/lib.rs#L117-L170",
-          "version": "repo-lines-v1:sha256:ab81d54b93251421da0852097c20f4a97a2bde3e275d64a2873737bfe4cbac95:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1Y2Y1ZmMyM2YyYTZkMjNjM2VhNTFlNzJmNWU4OTZjNzU1NWZiYWEwNWNkNWIxZWExODJiZjk2MThhOGU4MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0ZTRhMTE2ZWQ5NDAwMGE4MDJlMjAzYTNiYTZlMTNhODg0YjQzMTZmNmE2NGFkNjc0OTA2NmMwMDFiMWIwY2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src-tauri/src/lib.rs#L124-L172",
+          "version": "repo-lines-v1:sha256:b4a3ffe8722e34aed294bb5fb1b676d1b7c240a8cdbd153cbc586c78b8eca222:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyYjVlZGY1OTQ5Y2ZlYTY3ODIyY2Y2OTExMzIzNjNkNjhkNmYxZTE2OWY1ZTBkNGY3YzE0ZTVmYTFlNmQ0ZTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmMzUyMTcwMTI2Njk1MmYwMWNmNDI1MTIyMTZmZjFhMjEwNzY2OWUzOTQ0MDE2NjNhMjYzMjRkZGJmMjgwNzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         }
       ]
     },
     {
       "id": "claim_3221a21ddb07405b83b3c6ad138d0fc2",
-      "statement": "测试不可覆盖的现实边界: 所有 HTTP 断言走 wiremock(HttpEffectAdapter::new_test() 还显式关闭 ssrf 以便打回环), keyring 用 keyring_core::mock 预置 store, 因此真实网络/DNS pinning/TLS 与平台的 KeyringUnavailable/KeyringLocked 降级路径均无自动化覆盖。",
+      "statement": "测试不可覆盖的现实边界: 所有 HTTP 断言走 wiremock, 且 HttpEffectAdapter::new_test() 把 pin_targets 设为 false(直接请求 witness 里的 host, 不做逐跳 DNS 解析与 IP 固定; 生产 new() 为 true), 只有 target.rs 的 7 个单测覆盖解析/固定本身, 所以真实网络与 TLS 无自动化覆盖; keyring 用 keyring_core::mock 预置 store, 平台的 KeyringUnavailable/KeyringLocked 降级路径也没有测试。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L1-L8",
-          "version": "repo-lines-v1:sha256:776612ec7a3081197b05186073423d6688ac1ae861444c86663a396f521da3d3:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWYwZmMwNDk0Yzc4NWZmNmM4NTFiZmJmNGY1YWUwNWQ3MmE0NTlkMzkwYzNiMGU4YjZiZTUyNzEzNjdlYTgxMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmEzMWYzN2ZhM2I1NGUwZjZlN2ZlNWU5ZWUyNDE4YTEzYjNjN2ZjMWY2YWI4ZTg1NjE4NWY0MTIyMWFlNDZhZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzM3MWMwNjFkNDk5YTg0ZGZlZTVkYTM4NTMzN2E2ZjhlZDU1ODFkZjRmNjI2NGFiNWQzYjEzMGUxMmEyNDNiYSJ9"
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs#L33-L43",
+          "version": "repo-lines-v1:sha256:4dff3beca21308c5f9c2e1297c4c317ee1e5fd833d41327c9bb4c72f2561c5f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2ZTExMGYxOGZlZWQ1Y2ZmNDE2M2U4MTc2OWVmNWY4OGE0OTFhYzgxYWE0MTQyY2IyZGUzODNiNTQ0NTJlMzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYzdiODllMjNlNTBhODAzZmIwMjU2ODc4MzU4YmVhOGE4Y2RjODQwNzIxYjFmMDIyNjkwNzkxNTBkN2RiYjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQzODMyYjhiZmFjNTAzODk1NTAwMDg3Nzg2OTIyNGMzMDY0YzZjNWJlZjExMThiZWQxM2ViNmJjNjVjMGExMTAifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/tests.rs#L21-L26",
-          "version": "repo-lines-v1:sha256:03cb487b762b9c6f9232e446fcfb6f34b8247027ba8f00cb9afa1c1f921aebde:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGEwNDk0OWQ3ZDYxNjM4MmI5N2VlOGU0M2FmZjY1NzEyMTA4NDU0YzYwYmJiZjBhODUxMGM5NDMwNWY2NTEyNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWUwMWM1YzU5MjNjMWQwYTQ4N2U4MzgyMmFjZDI0MjgyZDc5NDdhNjRiNGQzZGFlZDNjMjkyYTdkNDVhYTJiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjg5NDY0MzQzMjQ5OGY5YjViYjI5MzkxMmUzMjQ4NTMxNTg0YmM4MTIxODk1NTA5YjgyYWZkOTdlYzYwNDVkMyJ9"
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L146-L218",
+          "version": "repo-lines-v1:sha256:9df2797fbf994d1e0b7af0c60bf835eb79abd1137fdf9883fb443e67fdde601e:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGFmM2ZkNGE0YzNhMWQ0N2M3ZjQ3MGVkMGQ4NmQ5MGQ5ZGUyMTBhNWViMTQ1NWZiZDk0NDgyYTQ3NjViNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjE2MDRiMzVmYzQwYWYwMGNiYTRlZWEyZmQ1ZTJjM2FmMTg2M2IzOTExODVkN2JmNGJiMDllNzJkMGM4YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-storage/src/keyring_init.rs#L34-L45",
-          "version": "repo-lines-v1:sha256:bef916c9b1ad984f674c9b6b38e48de33dbd1150db442439b990d58e1a85daca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyYjQ3NTQxNGRlYmEwNzUyNTM3MTNkOWY1MDQxMTAzZjMxNmNlNjFhODJiOTc2MGEwM2U3ZWEwMzczNTIyYTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZlNTQyYTE0ZGM0NGU2N2VjN2M3MzAzZmQ0NjNhNmRjYmQxZWU2ZDUzY2E0YWVmMDg2NzBiOTRhNDZhMjQ3ODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZmNmQ2NTRkNTY1ZmMxZjc1NjhmNjZhZDM1ZjdlZjk5MWZiMjY5NDdiNzNmNGU5OGU4ZGZmNTE2OGFlOGI0OTUifQ"
+          "resource": "repo://src-tauri/crates/lj-node-http/tests/processor_test.rs#L1-L12",
+          "version": "repo-lines-v1:sha256:e1ebda483e984b23bd658fb76de563298b8ccde75dcc94e8cdfba19821b40ba0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmMGZjMDQ5NGM3ODVmZjZjODUxYmZiZjRmNWFlMDVkNzJhNDU5ZDM5MGMzYjBlOGI2YmU1MjcxMzY3ZWE4MTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5ZjgwMDM5NjhmMzY5ZDNiMjkwOWIwOTY4NjVhYWM2YTVlNzgwMzQyNWRjZTY3MDgxNTIzZTQ1ODZkNTg4NWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2MjlkYjVmMmRmNmMwN2M1ZjIyZDA4NzYxYTM3YWFkOWJhYWY0YmM0OTJhMzU4NTU0NjFlODY5ZTdmZTZmODAifQ"
         }
       ]
     },
@@ -325,7 +333,7 @@
       "statement": "CONTRIBUTING 要求两个 locale 的 key 集合一致, 但仓库里没有对应脚本或测试, src/shared/i18n/messages.ts 只是对生成物的再导出; Paraglide 构建是否会让缺 key 失败未验证。",
       "evidence": [
         {
-          "resource": "repo://CONTRIBUTING.md#L60-L60",
+          "resource": "repo://CONTRIBUTING.md#L81-L81",
           "version": "repo-lines-v1:sha256:9093e53ac009fd791f1d56a26f382894730445fa94c9c8b0509f3a474296b1dc:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA5M2U1M2FjMDA5ZmQ3OTFmMWQ1NmEyNmYzODI4OTQ3MzA0NDVmYTk0YzljOGIwNTA5ZjNhNDc0Mjk2YjFkYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTA5M2U1M2FjMDA5ZmQ3OTFmMWQ1NmEyNmYzODI4OTQ3MzA0NDVmYTk0YzljOGIwNTA5ZjNhNDc0Mjk2YjFkYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODY2NTEyODJkYzU1NWEzMjQ5MDUxYzIxMGVmMjU3YTU1MTY5MWMxNjA0YTUxYmIyZGRjMWRkODNmNDBiNjczMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDAxNWU0ODRkNjlmYmJkNWQyMjdkYThiZTY4MDRjMDc2NzMzYWY3MGExZDFkYWJkNzE2M2IxZTIxZDUyNzgzYSJ9"
         },
         {
@@ -333,10 +341,42 @@
           "version": "repo-lines-v1:sha256:c83ffa500d26419cf08d4a6d5992421c2bfb2b6efc3d3331bec7bbd691e04137:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVmZmUyZWNjZWM5Nzc4MzRkYTJkZThkN2YzOWY2YTM3MzQyN2FiNzQwMGE4NzcwYjA1MzlkODk5MGQ1M2E1YWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
+    },
+    {
+      "id": "claim_a59b045fb3194a91b4aacd3d043349bb",
+      "statement": "`pnpm verify` 是仓库里唯一同时包含静态检查与全量测试的命令(check + workspace clippy + cargo test --workspace), 而 `static:web` 是 pre-push 实际执行的那份子集, 二者是包含关系。",
+      "evidence": [
+        {
+          "resource": "repo://CONTRIBUTING.md#L39-L53",
+          "version": "repo-lines-v1:sha256:d61de5d8b3aba0a83f995607cdef8462e425c2f6baf34de27e09027c35f8c7b6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRjMDk4ZTUyNjkyODFkM2YxZmZkZmUyZGRmNGYwYTRmNDkyODA1MWYzZDA0MjRjZjQxM2YwZGJiYjg3NzlhZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNlNDBjYjUzMzRmOThkMGNlODBlMGY1MjRhMGMzMDU5YmI0ZDk5NTQ2YjEwN2U3ODRjZmE5ZDA1YTBlOTA0NjgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmNWUzZGMxZjUxNDI0ZTRiMGU4OTVkODAxMDhkMDA5NTVjYWM5MTQ5YzU0MTEzZDViMTQzODkwY2VjMWI3YjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNhZTIwM2MxYTk1MTU2ZDg0ZWY5MDRlYmQwMmJjZDRkMzViYWMxMjk1NmUwMGQyOGRkNjZkNGMxYWI2MjkwZTEifQ"
+        },
+        {
+          "resource": "repo://package.json#L22-L23",
+          "version": "repo-lines-v1:sha256:b997d6e54849f8468f5dc27f7818a3a8bbd38867dc0e4a0430df5e49843d0c4a:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWY2NDUzODE3NjViN2Y5ZDQ0NjM4OWRhNjVkYTEwYmUwM2FiN2E2ZGYzZDUxYjA4NTMxMTdkNWY3YWViOGViZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGYwM2EyNzE3NDdhMjZlZWEzNGU0ZTQ1Y2I3Mzc3MTMwOGQ5YzM3YjdlOGJlM2EwMWFhMWVhMmE3YWQ0NGQ3OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmU1YTNlZGEzNTA3MmM1M2JhOTI3ZDkyOWIxZjJhOGEwOTkxZjU0ZTAwM2NmMmY4NDY0ZDdhNWI2YmU5NzgxNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjhkODNkZDgwNjU0Y2U2ZDdmYjYxNTRlYTg1YzFmOTIxOWM2ZTljODdjNzcyZmYyZTRjZjkxYjU4MzMxMGE0NCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_fe7c8a59cd254ebcad216727f1ea3267",
+      "statement": "storage 契约测试里原有的 4 条 `d12_*` 性能标定用例已从工作树删除, 现在这三个文件里只剩下按行为命名的契约用例(archive 11 条、projection_retention 5 条、credential_writer 4 条), 仓库里也不再有 `#[ignore]` 的 release-only 用例, 因此性能没有任何门禁。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/archive_contract.rs#L1080-L1091",
+          "version": "repo-lines-v1:sha256:d44b917cb1db1ce147dd32982ed5a9778bacf6eba6d68c522fb2caf30e33f0fb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxODBkODU0ZTFhMmZlY2Q1NzQzMjBmNzkxNjFmNDliNGVkYmM3NTFlMTNlM2JhMTJlZjAyYzIyMjZkNTZiZDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU0YzQwZjRkOWU4M2JkYzA4Njg2ZGJhZWRiNjAzOTBlNjBhNGQwYTc2NGYyY2NhOTE2ZjQzMGUyZTg0NDYwZTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/credential_writer_contract.rs#L200-L221",
+          "version": "repo-lines-v1:sha256:47bc7d91ac20cecbb49fb92fca4754724a871a70d457326d50884fdd619f2fb9:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwZmM3ZTRjYTQzY2MzNjkwZjljOTczMzc4ZmIzNDEzZGQzZDJiYWNmY2MyMGQ3MDdlMjliOGI2MTQ2YTRjMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIyMGY0MGVhY2Y4ZWIxMDdjYTllYmUwZDJjMzlkZWI2Mjk2YzFjNzM4ZWQ5OTJkZjFkYjBiNjcyOTRmYzIzZWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs#L470-L488",
+          "version": "repo-lines-v1:sha256:542d6a147f12a1cc462be0ca27b2e60e9d517d3f083f3f38152740e09ddd7069:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1YTBiYWExYTY0MTZiYmI2MWQ1YmQyZGQ4MGVkNjVhM2U3NDU3MjRjMzcyZWRlMTU2YTVhY2VkNmY3MTczMzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM1OTgyOTE0OGE1MGRlMmRjYmIyYjhmMDQ0N2JkZDhlYTJmNGQyMjU5ZjBmMDZhM2ZmYjkxYzg3NWU2ZDVkZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T13:54:24.186Z"
+    "at": "2026-10-05T11:33:47.922Z"
   }
 }

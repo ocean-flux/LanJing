@@ -17,8 +17,8 @@ sources:
     resource: repo://package.json
   - id: openwiki-source-f37a0f7edcf7d757acfa95d3
     resource: repo://src-tauri/crates/lj-media/src/lib.rs
-  - id: openwiki-source-e3712091d151264c5b636d0c
-    resource: repo://src-tauri/crates/lj-node-http/src/ssrf.rs
+  - id: openwiki-source-47e22aca7dbcb55078775964
+    resource: repo://src-tauri/crates/lj-node-http/src/target.rs
   - id: openwiki-source-0abfee918aaf0d7e3ea712fc
     resource: repo://src-tauri/tauri.conf.json
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
@@ -31,7 +31,10 @@ sources:
     resource: repo://src/shared/tauri/sources.ts
   - id: openwiki-source-2640df53984077a61a4bb013
     resource: repo://src/shared/types/media.ts
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -101,11 +104,13 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 1. 前端用 `lanjing://asset/<asset-id>?w=<px>` 引用资产, Rust 侧自定义协议处理器代理真实网络请求;
 2. 网关按资产所属来源规则注入防盗链头(Referer / UA / Cookie);
 3. 磁盘缓存 + ETag 条件请求, 重复打开同一资产不走网络;
-4. **网关必须复用 `lj-node-http/src/ssrf.rs` 的 SSRF 防护, 不得另起裸 HTTP 客户端绕过**;
+4. **网关请求必须复用 `lj-node-http/src/target.rs` 的目标解析与 DNS pin, 不得另起裸 HTTP 客户端绕过**;
 5. CSP 白名单补 `lanjing:`;
 6. 按需降采样(`?w=`)后置实现, 但协议形态现在预留。
 
 背景陈述是: 资产 locator 是 `Url(String)`, 图站/资源站普遍校验 `Referer`/`User-Agent`/Cookie 防盗链, 而 WebView 的 `<img>` 无法携带规则定义的请求头, 直连必然 403, **当前全库没有渲染过一张图片, 根因在此**(`#L8-L14`)。
+
+复用 `target.rs` 不等于复用目标白名单: 本项目的请求**不限制地址段**(环回与私网可达, 风险已接受, 见 `SECURITY.md`), 网关复用的是 scheme 校验、DNS pin 与体量上限(`docs/adr/0007-asset-gateway-protocol.md#L44-L46`)。这一条是 ADR 最近修正的内容: 早先的写法是复用 `ssrf.rs` 的地址段阻断, 而那个模块已经消失, `target.rs` 的模块文档现在明确写着「本模块**不做目标限制**」(见「信任边界」页)。
 
 当前落地状态:
 
@@ -115,9 +120,9 @@ generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
 | 无 `lanjing://` 出现 | 全仓库检索 `lanjing://` 无命中 | 未实现 |
 | CSP 白名单 | `src-tauri/tauri.conf.json` 的 CSP 里 `img-src 'self' data: https:` 是唯一放行外部图像的位置, 没有 `lanjing:` | **未实现**(且当前 `https:` 是唯一出口) |
 | 前端零直连 | 业务代码里没有任何 `<img>`; `SourceProfile.icon_url` 只有类型与 IPC 镜像, 无渲染点(`src/shared/tauri/sources.ts#L18` 声明, 无使用处) | 与「发现直连视为缺陷」一致, 但也意味着图片路径整体不存在 |
-| SSRF 复用 | `lj-node-http/src/ssrf.rs` 已有可复用实现: `PinnedTarget`(#L53-L55)、`is_blocked_ip`(#L68-L70)与带 DNS 解析 + 防 rebinding 的校验入口(#L165), 单元测试覆盖回环阻断与公网放行(#L389-L395) | **已实现**(网关可直接复用, 但尚未被网关调用) |
+| 目标解析与 DNS pin | `lj-node-http/src/target.rs` 已实现: `resolve_and_pin`(`#L80-L141`)异步解析后固定地址(HTTP 用 IP 直连 URL 防 TOCTOU, HTTPS 走 `ClientBuilder::resolve` 保留 SNI/证书校验), HTTP 处理器的 redirect 循环每跳重新 pin(`#L1-L20`); 单元测试覆盖回环与私网/元数据地址可解析、公网放行、端口与 query 保留、DNS 失败与无主机报错(`#L146-L218`) | **已实现**(网关可直接复用, 但尚未被网关调用) |
 
-ADR 里有一条常被忽略的结论: 外部方案宣称的「零拷贝直通 GPU 纹理」不成立——custom protocol 返回字节流, 仍要经 WebView 网络栈解码; 网关的收益是**防盗链 + 缓存**, 不是零拷贝(`#L41-L42`)。被否决的替代方案也各有技术理由: 前端 fetch 带自定义头再转 blob URL(Tauri WebView 的 fetch 同样受限, 且缓存/SSRF/凭据散在前端)、Rust fetch 后经 IPC 返回字节或 Base64(33% 膨胀 + JSON 序列化开销, 大图与视频不可接受)(`#L44-L50`)。
+ADR 里有一条常被忽略的结论: 外部方案宣称的「零拷贝直通 GPU 纹理」不成立——custom protocol 返回字节流, 仍要经 WebView 网络栈解码; 网关的收益是**防盗链 + 缓存**, 不是零拷贝。被否决的替代方案也各有技术理由: 前端 fetch 带自定义头再转 blob URL(Tauri WebView 的 fetch 同样受 CORS 与头限制, 且缓存/请求不变量/凭据散在前端)、Rust fetch 后经 IPC 返回字节或 Base64(33% 膨胀 + JSON 序列化开销, 大图与视频不可接受)(`docs/adr/0007-asset-gateway-protocol.md#L42-L54`)。
 
 ## reader-architecture.md 的方案与偏差
 
@@ -145,7 +150,7 @@ ADR 里有一条常被忽略的结论: 外部方案宣称的「零拷贝直通 G
 | 0004 | 双层架构与应用面交互语言 | 已决定未实现 | `/apps` 只有一条路由, 五面均 `enabled: false` |
 | 0005 | TurnEngine 与 PageSource | 已决定未实现 | 无 `src/features/turn/`, 无相关测试 |
 | 0006 | 空闲帧预渲染纹理缓存 | 已决定未实现, 且**成立与否待真机验证** | 无 WebGL/转场代码; 前置条件未执行 |
-| 0007 | `lanjing://` 资产网关 | 已决定未实现 | 无自定义协议, CSP 无 `lanjing:`; SSRF 基础已具备 |
+| 0007 | `lanjing://` 资产网关 | 已决定未实现 | 无自定义协议, CSP 无 `lanjing:`; 目标解析与 DNS pin 基础已具备 |
 | (reference) | reader-architecture 单层方案 | 与 ADR 冲突, 未采纳也未删除 | 技术栈依赖未安装 |
 
 ## 未验证 / 未决定

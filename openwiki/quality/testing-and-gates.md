@@ -23,24 +23,30 @@ sources:
     resource: repo://src-tauri/crates/lj-compiler/tests/plan_compiler_test.rs
   - id: openwiki-source-b64b6ab843d2592264a06eb9
     resource: repo://src-tauri/crates/lj-integration-tests/Cargo.toml
+  - id: openwiki-source-f70ccb923eaf127cf287c26d
+    resource: repo://src-tauri/crates/lj-integration-tests/tests/core_out_rule_package.rs
   - id: openwiki-source-4866e15f73219bace3482e99
     resource: repo://src-tauri/crates/lj-integration-tests/tests/legado_rule_system.rs
   - id: openwiki-source-980fd459aadb6afbaa667438
     resource: repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs
   - id: openwiki-source-9c10ac9b7d289d7fe8e6de00
     resource: repo://src-tauri/crates/lj-node-extract/tests/processor_test.rs
+  - id: openwiki-source-378ef8c9992cfb062d1d9087
+    resource: repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs
+  - id: openwiki-source-47e22aca7dbcb55078775964
+    resource: repo://src-tauri/crates/lj-node-http/src/target.rs
   - id: openwiki-source-c9a97bdea04d62635b90bf91
     resource: repo://src-tauri/crates/lj-node-http/tests/processor_test.rs
   - id: openwiki-source-4faec7944a92fbaedeeffea2
     resource: repo://src-tauri/crates/lj-node-js/tests/processor_test.rs
   - id: openwiki-source-5ded4b6721374179194a354c
     resource: repo://src-tauri/crates/lj-rule-model/tests/model_contract_test.rs
+  - id: openwiki-source-e42beef93ca2dd7d6b9e0f1e
+    resource: repo://src-tauri/crates/lj-rule-model/tests/sensitive_policy_test.rs
   - id: openwiki-source-32d4001fffac613566845710
     resource: repo://src-tauri/crates/lj-rule-system/src/system/error_mapping.rs
   - id: openwiki-source-f4d8e498f8a27d9242bfdc4b
     resource: repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs
-  - id: openwiki-source-00fc7c09c51d967590463257
-    resource: repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/tests.rs
   - id: openwiki-source-985022f215d1a8fb48d686c6
     resource: repo://src-tauri/crates/lj-rule-system/src/system/query_adapter.rs
   - id: openwiki-source-d52076293fecd21d5b53a29e
@@ -49,12 +55,14 @@ sources:
     resource: repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test.rs
   - id: openwiki-source-115e591341fdf411553c3c50
     resource: repo://src-tauri/crates/lj-runtime/tests/plan_runtime_test/scheduling_contract.rs
-  - id: openwiki-source-3a3fdfb5a00399ef7859b900
-    resource: repo://src-tauri/crates/lj-storage/src/keyring_init.rs
   - id: openwiki-source-91742d0fdf22103ae9601de4
     resource: repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test.rs
   - id: openwiki-source-f7e1959d32ecb943411c3a10
     resource: repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/archive_contract.rs
+  - id: openwiki-source-7742e64a01efba4e2fae9d97
+    resource: repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/credential_writer_contract.rs
+  - id: openwiki-source-ddb39399ffd9dce97df2d9df
+    resource: repo://src-tauri/crates/lj-storage/tests/event_projection_storage_test/projection_retention_contract.rs
   - id: openwiki-source-2d345f6b900b5259dfd538b3
     resource: repo://src-tauri/crates/lj-storage/tests/native_rule_document_test.rs
   - id: openwiki-source-451254818f9278942b21492c
@@ -73,29 +81,30 @@ sources:
     resource: repo://src/test/setup.ts
   - id: openwiki-source-581dc5746c844c4ee0b781c7
     resource: repo://vite.config.js
-generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+generated: { by: "pi", at: "2026-10-05T11:33:47.922Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T11:33:47.922Z
 ---
 
 
 ## 门禁的组成
 
-前端用一个命令收口(`package.json#L12-L21`):
+前端有三个递进的门禁脚本(`package.json#L12-L23`):
 
 ```text
-pnpm check = lint:web(oxlint src vite.config.js --ignore-path .gitignore --deny-warnings)
-           && typecheck:web(tsc --noEmit)
-           && format:check:web(oxfmt ... --check)
-           && test:web(vitest run)
+pnpm static:web = lint:web(oxlint src vite.config.js --ignore-path .gitignore --deny-warnings)
+               && typecheck:web(tsc --noEmit)
+               && format:check:web(oxfmt ... --check)
+pnpm check      = static:web && test:web(vitest run)
+pnpm verify     = check
+               && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings
+               && cargo test --manifest-path src-tauri/Cargo.toml --workspace
 ```
 
-`--deny-warnings` 让 warning 也阻断; `vitest run` 是一次性执行而非 watch, 因此可以在钩子和 CI 里无副作用地跑。
+三个层级对应三种场合: `static:web` 是 pre-push 实际执行的那一份; `check` 加上前端测试; `verify` 才是同时跑静态检查与全量 Rust 测试的收口命令, 也是 CONTRIBUTING 要求的「全部任务收尾/合并前」门禁(`CONTRIBUTING.md#L39-L53`)。`pnpm format` / `pnpm lint` 这类旧别名仍保留, 只是指向 `static:web` 的组成项(`package.json#L19-L21`)。
 
-Rust 侧不用 wrapper, 直接用 Cargo(`CONTRIBUTING.md#L31-L37`):
-
-```text
-cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings
-cargo test --manifest-path src-tauri/Cargo.toml --workspace
-```
+`--deny-warnings` 让 warning 也阻断; `vitest run` 是一次性执行而非 watch, 因此可以在钩子里无副作用地跑。
 
 `-D warnings` 不是唯一的 clippy 严格度来源: workspace 级 lint 已经是 `clippy.all = "deny"` 加 `clippy.pedantic = "deny"`(`src-tauri/Cargo.toml#L31-L33`), 各 crate 通过 `[lints] workspace = true` 继承, 所以新增 crate 自动落进同一门禁。两个配套配置:
 
@@ -112,15 +121,18 @@ Oxlint 的规则面本身也是门禁的一部分(`.oxlintrc.json#L3-L25`): 除 
 
 | 钩子 | 内容 | 说明 |
 | --- | --- | --- |
-| pre-commit | oxlint --fix + oxfmt --write(并行组内串行, 只跑暂存文件) / oxfmt 只管仓库根配置 / `cargo fmt --all` | 三个 job 并行, 每个都 `stage_fixed: true` |
+| pre-commit | oxlint --fix + oxfmt --write(piped 两步, 只跑暂存文件) / oxfmt-root(只扫仓库根配置) / `cargo fmt --all` | 三个 job 并行, 每个都 `stage_fixed: true` |
 | commit-msg | `commitlint --edit {1}` | 规则继承 `@commitlint/config-conventional`(`commitlint.config.js#L1-L3`) |
-| pre-push | web: `pnpm check && pnpm test:web` ∥ rust: clippy -D warnings + `cargo test --workspace` | 唯一的全量门禁 |
+| pre-push | web: `pnpm run static:web` ∥ rust: clippy `-D warnings` | **只跑静态检查, 不跑测试** |
 
-两处细节值得留意:
+pre-push 刻意不再跑测试(`lefthook.yml#L54-L65`): 每个提交单元跑定向测试, 全部任务收尾时跑 `pnpm verify`。这把「测试全绿」从推送门禁降级为人工约定 —— 代价是本地钩子成了静态检查的唯一边界, 而它仍可被 `--no-verify` 绕过。
 
-- pre-commit 里 oxlint 与 oxfmt 被刻意拆成 piped 的两步(`lefthook.yml#L11-L22`), 注释说明了原因: Oxlint 只认代码文件, oxfmt 还要管 css/html/json, 共用一个 glob 时「只暂存 css 的提交」会让 oxlint 拿到空输入并以 1 退出。
-- `cargo fmt` 必须带 `--all`(`#L37-L41`), 否则只格式化根包, 子 crate 与测试会被漏掉。
-- pre-push 的 web job 里 `pnpm check` 已经包含 `pnpm test:web`, 再显式 `&& pnpm test:web` 会让前端测试在推送时跑两遍——是重复成本, 不是正确性问题。
+四处细节值得留意:
+
+- pre-commit 里 oxlint 与 oxfmt 被刻意拆成 piped 的两步(`lefthook.yml#L9-L28`), 注释说明了原因: Oxlint 只认代码文件, oxfmt 还要管 css/html/json, 共用一个 glob 时「只暂存 css 的提交」会让 oxlint 拿到空输入并以 1 退出。
+- 两个工具的 glob 现在各是两条: `src/*.{...}` 与 `src/**/*.{...}`。原因是 lefthook 的 `src/**/…` 匹配不到 `src/` 根层的文件, 而 `App.tsx` / `main.tsx` / `index.css` 正好都在根层(`lefthook.yml#L16-L26`)。
+- `cargo fmt` 必须带 `--all`(`#L43-L47`), 否则只格式化根包, 子 crate 与测试会被漏掉。
+- 文件头注释仍写着 `pre-push: 全量门禁（web ∥ rust）`(`lefthook.yml#L1-L4`), 与现在的 jobs 已经不一致: 权威的是 job 旁的注释, 文件头那行没跟上这次降级。
 
 `stage_fixed: true` 意味着钩子自动修好的格式会直接回到暂存区, 提交内容与工作区不会分叉; 代价是钩子会改写你正要提交的文件, 所以 pre-commit 之后不该假设 `git diff` 还是原来那份。
 
@@ -128,22 +140,24 @@ Oxlint 的规则面本身也是门禁的一部分(`.oxlintrc.json#L3-L25`): 除 
 
 `.github/workflows/` 里只有一个 workflow, 且与质量无关: `openwiki-update.yml` 按 cron(`0 8 * * *`)或手动触发, 用 `fetch-depth: 0` 让 `openwiki code --update` 能把 HEAD 与上次记录的提交做 diff, 然后以 `contents: write` / `pull-requests: write` 权限提交 wiki 更新(`.github/workflows/openwiki-update.yml#L3-L67`)。
 
-**没有 lint / typecheck / test / clippy job。** 后果是: pre-push 是唯一一次真正执行全量门禁的时刻, 而它由本地钩子实现, 需要开发者执行过 `lefthook install` 且不写 `--no-verify`; 服务端无法复验一条「门禁通过」的声明, 也无法阻止绕过。仓库里那份 `pnpm check` 与 `cargo test --workspace` 因此是**约定**, 不是强制。这是当前质量体系里最大的结构性风险, 也解释了为什么 `pnpm test:web` 的失败只会在本地被发现。
+**没有 lint / typecheck / test / clippy job。** 后果比之前更重: 本轮改动后 pre-push 也**不再跑测试**, 于是整个仓库里没有任何地方在服务端复验代码, 而前端测试与 Rust 测试只在 `pnpm verify`(或手工的定向命令)里执行。因此「门禁通过」与「测试全绿」两句都不可被服务端证明, 也无法阻止绕过; 这仍是当前质量体系里最大的结构性风险。
 
 ## Rust 测试的六个层次
 
 按「离 IO 多远」排列, 每层断言的是不同种类的契约:
 
-| 层 | 位置 | 规模 | 证明什么 | 不能证明什么 |
+| 层 | 位置 | 规模(用例数) | 证明什么 | 不能证明什么 |
 | --- | --- | --- | --- | --- |
-| 纯契约 | `lj-rule-model/tests/`、`lj-compiler/tests/plan_compiler_test.rs` | 3 + 1 个文件 | hash 归一化、端口/句柄类型矩阵、诊断路径与排序稳定性 | 任何 IO、持久化、并发行为 |
-| adapter | `lj-node-http/tests/processor_test.rs`、`lj-node-js/tests/`、`lj-node-extract/tests/`(含 `html_xpath_test.rs`) | 3 个 crate | 单个 effect handler 在 wiremock 前的行为、提取器与 QuickJS 约束 | 调度顺序、捕获持久化、取消语义 |
-| runtime | `lj-runtime/tests/plan_runtime_test/{scheduling_contract,control_contract,replay_contract}.rs` + `effect_registry_test.rs` | 6 + 8 + 10 + 5 | 调度/控制流/replay 的不变量, effect 注册的原子性与冻结 | 真实 SQLite 事务下的 durable-before-advance |
+| 纯契约 | `lj-rule-model/tests/`(`model_contract_test.rs` 13、`flow_contract_test.rs` 12、`descriptor_test.rs` 9、`sensitive_policy_test.rs` 1)与 `lj-compiler/tests/plan_compiler_test.rs`(11) | 46 | hash 归一化、端口/句柄类型矩阵、descriptor 合同、敏感名策略、诊断路径与排序稳定性 | 任何 IO、持久化、并发行为 |
+| importer | `lj-importer/tests/legado_test.rs`(11)加三个 crate 内单测(`maccms/mod.rs` 6、`legado/parser.rs` 2、`imported_rule.rs` 1) | 20 | Legado/Maccms 输入到 Definition 的翻译与结构化拒绝 | 安装与执行链路(那是集成层) |
+| adapter | `lj-node-http/tests/processor_test.rs`(27)、`lj-node-js/tests/{processor_test.rs 19, sandbox_test.rs 5}`、`lj-node-extract/tests/{processor_test.rs 11, html_xpath_test.rs 9}` | 71 | 单个 effect handler 在 wiremock 前的行为、提取器与 QuickJS 约束 | 调度顺序、捕获持久化、取消语义 |
+| runtime | `lj-runtime/tests/plan_runtime_test/{scheduling_contract.rs 8, control_contract.rs 8, replay_contract.rs 14}`、`effect_registry_test.rs`(5) | 35 | 调度/控制流/replay 的不变量, effect 注册的原子性与冻结 | 真实 SQLite 事务下的 durable-before-advance |
+| storage | `lj-storage/tests/event_projection_storage_test/{archive_contract.rs 11, credential_writer_contract.rs 4, media_query_contract.rs 1, projection_retention_contract.rs 5, replay_contract.rs 4}`、`native_rule_document_test.rs`(13) | 38 | 真实 SQLite/临时目录/mock keyring 下的追加顺序、乐观并发、vault、投影顺序与保留策略 | runtime 是否发出了正确的事件序列 |
+| facade | `lj-rule-system` 内联单测: `lifecycle/document.rs` 20、`lifecycle/tests.rs` 13、`query_adapter.rs` 4、`error_mapping.rs` 2 | 39 | 凭据策略、provenance 脱敏、revision 冲突、draft 保留、分页边界、错误码稳定映射 | 跨 crate 的完整生命周期 |
+| 跨 crate 集成 | `lj-integration-tests/tests/{legado_rule_system.rs 6, maccms_json_rule_system.rs 8, core_out_rule_package.rs 3}` | 17 | 唯一覆盖完整链路的层(导入 → candidate → install → live 执行 → 捕获 → replay → 投影 → library 查询) | 真实网络与真实 DNS; 真实浏览器/UI |
+| workspace 守卫 | `src-tauri/tests/workspace_layering.rs` | 2 | crate 依赖边与 `ALLOWED` 表一致、整张图无环 | 前端 feature 之间的边界 |
 
-契约层最近收缩过一次: `lj-plugin-contract` 与其 8 条 identity/manifest 解析用例随 crate 删除; runtime 侧的 `plugin_host_test.rs`(7 条)换成 `effect_registry_test.rs`(5 条, `src-tauri/crates/lj-runtime/tests/effect_registry_test.rs#L73-L174`)。少掉的两条断言的是「重复 plugin identity」与「operation 不在 manifest 里」——这两个命题随「注册键改为 Rule Contract 的 `EffectKind`」一并消失, 不是被放宽。
-| storage | `lj-storage/tests/event_projection_storage_test/{archive,credential_writer,media_query,projection_retention,replay}_contract.rs` + `native_rule_document_test.rs` | 12 + 5 + 1 + 7 + 4 + 13 | 真实 SQLite/临时目录/mock keyring 下的追加顺序、乐观并发、vault、投影顺序与保留策略 | runtime 是否发出了正确的事件序列 |
-| facade | `lj-rule-system/src/system/lifecycle/document.rs#L1352-L2134`、`error_mapping.rs#L419-L436`、`query_adapter.rs#L447-L477`、`lifecycle/tests.rs#L142` | 19 + 2 + 4 + 1 | 凭据策略、provenance 脱敏、revision 冲突、draft 保留、分页边界、错误码稳定映射 | 跨 crate 的完整生命周期 |
-| 跨 crate 集成 | `lj-integration-tests/tests/legado_rule_system.rs`、`maccms_json_rule_system.rs` | 6 + 8 | 唯一覆盖完整链路的层(导入 → candidate → install → live 执行 → 捕获 → replay → 投影 → library 查询) | 真实网络与真实 DNS; 真实浏览器/UI |
+契约层最近收缩过一次: `lj-plugin-contract` 与其 8 条 identity/manifest 解析用例随 crate 删除; runtime 侧的 `plugin_host_test.rs`(7 条)换成 `effect_registry_test.rs`(5 条, `src-tauri/crates/lj-runtime/tests/effect_registry_test.rs#L73-L174`)。少掉的两条断言的是「重复 plugin identity」与「operation 不在 manifest 里」——这两个命题随「注册键改为 Rule Contract 的 `EffectKind`」一并消失, 不是被放宽。storage 契约测试里另有 4 条 `d12_*` 性能标定用例(重放扫描吞吐、16 writer 收据 p95 延迟、千资源投影事务、千条 archive GC), 它们是 `#[ignore]` 的 release-only 标定, 已从工作树删除; 因此**今天没有任何性能门禁**, 性能只由代码审查与手工标定保证。
 
 集成层的定位写在文件头(`lj-integration-tests/tests/maccms_json_rule_system.rs#L1-L5`): 「只构造真实 SQLite/artifact、wiremock 与 concrete façade; **不组装内部执行编排、handler registry 或 storage transaction**」。这条自限让这层测试验的是公开契约而不是实现细节, 用例名即断言对象, 例如:
 
@@ -160,13 +174,13 @@ Legado 侧同构(`legado_rule_system.rs#L1-L5` 同样的自限声明), 用 `lj_i
 
 ## 前端测试的真实边界
 
-前端有 14 个测试文件, 配置是 jsdom 环境加 `src/test/setup.ts`(`vite.config.js#L39-L43`, setup 只有一行 `import '@testing-library/jest-dom/vitest'`)。`package.json#L62-L78` 里 RTL / user-event / jest-dom / jsdom 全都装了。
+前端有 17 个测试文件, 配置是 jsdom 环境加 `src/test/setup.ts`(`vite.config.js#L39-L43`, setup 只有一行 `import '@testing-library/jest-dom/vitest'`)。`package.json#L62-L78` 里 RTL / user-event / jest-dom / jsdom 全都装了。
 
-但**没有任何一个测试 import `@testing-library/react`, 也没有任何 `render(` 调用**。也就是说这 14 个文件全部在测纯逻辑:
+但**没有任何一个测试 import `@testing-library/react`, 也没有任何 `render(` 调用**。也就是说这 17 个文件全部在测纯逻辑:
 
-- `src/features/rules/model/` 下 7 个文件(端口矩阵、连接门、撤销重做、ELK 布局、导入适配)是最大的一块;
+- `src/features/rules/model/` 下 9 个文件(端口矩阵、连接门、执行编排与会话、descriptor 注册表、导入适配、布局)是最大的一块;
 - `src/features/{library,sources}/workflow.test.ts` 与 `src/shared/navigation.test.ts` 测状态机与路由判定;
-- `src/shared/tauri/*.test.ts` 测 wire 层。
+- `src/shared/tauri/**` 下 5 个测 wire 层(含 `rules/wire.test.ts`)。
 
 `jsdom` 与 jest-dom 目前是**已装未用**的配置。按 `AGENTS.md` 的测试边界(UI 单测只在用户可观察合同无法由逻辑或公共集成边界证明时才用)这是有意为之, 但它意味着: 组件的可访问名称、focus-visible、路由渲染、Toast 提示、空态与错误态**完全没有测试**。前端改动只能靠 `lint` / `typecheck` / 生产构建与人工 Tauri 冒烟来判定。
 
@@ -182,8 +196,8 @@ Legado 侧同构(`legado_rule_system.rs#L1-L5` 同样的自限声明), 用 `lj_i
 
 把上面各层的空白合起来, 当前**没有任何自动化测试**覆盖:
 
-- **Tauri 命令层的行为**: 25 个命令没有 Rust 测试, 唯一的覆盖是 `lib.rs` 里对命令**名单**的断言(数量 25、无重复、无旧 `source_document` 名)。`execute` 的取消注册表登记、`forward_execution_events` 的失败继续语义、`catch_up_execution` 的终态清理都只靠代码审查。
-- **真实网络与 DNS/SSRF**: 所有 HTTP 断言走 wiremock; `HttpEffectAdapter::new_test()` 还显式把 `ssrf_enabled` 设为 false 以便打回环。真实 pinning 行为、TLS、真实响应体积都未验证。
+- **Tauri 命令层的行为**: 26 个命令没有 Rust 测试, 唯一的覆盖是 `lib.rs` 里对命令**名单**的断言(数量 26、无重复、无旧 `source_document` 名)。`execute` 的取消注册表登记、`forward_execution_events` 的失败继续语义、`catch_up_execution` 的终态清理都只靠代码审查。
+- **真实网络与 DNS pinning**: 所有 HTTP 断言走 wiremock; `HttpEffectAdapter::new_test()` 把 `pin_targets` 设为 false, 直接请求 witness 里的 host 而不做逐跳 DNS 解析与 IP 固定(生产 `new()` 为 true)。真实的解析/固定路径只有 `target.rs` 的 7 个单测覆盖(回环、RFC1918 与元数据地址、公网、保留端口、保留查询、DNS 失败、无 host), TLS 与真实响应体积未验证。
 - **真实 keyring**: 测试用 `keyring_core::mock` 预置 store; 平台安全存储不可用/被锁时的降级路径(`KeyringUnavailable`/`KeyringLocked`)只有类型存在, 没有测试。
 - **任何 UI 渲染**。
 - **迁移的历史路径**: `lj-storage-migration` 的基线测试断言 33 张表与 down/up 重建, 但没有跨版本升级的端到端 fixture(见存储页)。
@@ -191,6 +205,7 @@ Legado 侧同构(`legado_rule_system.rs#L1-L5` 同样的自限声明), 用 `lj_i
 
 ## 未强制的要求
 
-- 没有 CI 复验, 所以「门禁通过」不可被服务端证明(见上文)。
-- `pnpm check` 与 pre-push 的 web job 重复跑一次前端测试。
+- 没有 CI 复验, 且 pre-push 只跑静态检查, 所以「测试全绿」与「门禁通过」都不可被服务端证明(见上文)。
+- `pnpm check` 与 `pnpm verify` 重叠: 收尾只跑 `verify` 就能覆盖 `check` 的全部内容。
 - 集成测试自限于 concrete façade, 因此内部编排(handler registry、storage transaction 的组装)只有各自层的单测保护, 没有一层同时验内部与外部。
+- 性能没有任何门禁: 原先的 4 条 `d12_*` 标定用例已删除, 仓库里不再有吞吐/延迟阈值。

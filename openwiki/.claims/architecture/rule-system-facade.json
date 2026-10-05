@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:90fad10d15a1e3a569b8df5b0eea27ee57bbf91927c3ca4eeb018b5fbfbe7369",
+  "pageVersion": "sha256:1812fe8626675970ef548170710a4fdc83503fd61a83f7eb46de1b60513991a4",
   "claims": [
     {
       "id": "claim_9da95b724ea34070bbd4a1183a68c29b",
@@ -177,10 +177,24 @@
           "version": "repo-lines-v1:sha256:dbf11102392fcd9ab290bd5ccbae067a0a8e7d82b1a09008d692193072b230f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGJmMTExMDIzOTJmY2Q5YWIyOTBiZDVjY2JhZTA2N2EwYThlN2Q4MmIxYTA5MDA4ZDY5MjE5MzA3MmIyMzBmMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGJmMTExMDIzOTJmY2Q5YWIyOTBiZDVjY2JhZTA2N2EwYThlN2Q4MmIxYTA5MDA4ZDY5MjE5MzA3MmIyMzBmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTk3ZmFkYWNiYmNkOTg3ZWQxODVlM2NiYTY2NGVjNDY1MGY1MDA1ODczNDdiYjE3NTgyODYyMzRlYzA3ZGY3OSJ9"
         }
       ]
+    },
+    {
+      "id": "claim_20c1c9c10979442da559b7fee15962a4",
+      "statement": "开放时 HTTP adapter 由配置选定: local_fixture_http 为真时用 HttpEffectAdapter::new_test()(pin_targets = false, 直接请求 witness 里的 host, 不做逐跳 DNS 解析与 IP 固定), 为假时用生产 new()(pin_targets = true)。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs#L33-L43",
+          "version": "repo-lines-v1:sha256:4dff3beca21308c5f9c2e1297c4c317ee1e5fd833d41327c9bb4c72f2561c5f6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2ZTExMGYxOGZlZWQ1Y2ZmNDE2M2U4MTc2OWVmNWY4OGE0OTFhYzgxYWE0MTQyY2IyZGUzODNiNTQ0NTJlMzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYzdiODllMjNlNTBhODAzZmIwMjU2ODc4MzU4YmVhOGE4Y2RjODQwNzIxYjFmMDIyNjkwNzkxNTBkN2RiYjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQzODMyYjhiZmFjNTAzODk1NTAwMDg3Nzg2OTIyNGMzMDY0YzZjNWJlZjExMThiZWQxM2ViNmJjNjVjMGExMTAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system.rs#L111-L115",
+          "version": "repo-lines-v1:sha256:e2c043f8ef08161ba7d7b752ee2a34ffc8340bf04d02364a0b5704366dfa8910:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWNlZDdkMTU1OGYzZTAwMjM0OGEyMmY2Y2M5MGY0YjJkYzRiMzM5ZTE3OGJjYjAxMGVkZTk0YjYxODc1OGYxNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzVjZGVmODA4NWFlNzRhYjYzNmQ2NDU5ZjVjNmQ1ZmJmYjBkYjI2NGYxYjBkNzViYWM1MTljOWIzZjY3MTdhYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDc3MTM5Y2U1ZGQwYTYyMzRkYTEzYTMyYTRmOGVhMzA2ODk2MGExNmI1ZjM3MDQ0N2Q0NmU4Zjc5M2VjYjhlMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDdjOTMxZWYxMDA0MGVlYmQxN2Y4NTdkMzIwYjEyN2I2OGExNjlhZWU4MjJkMGRiZDVmNGZjZjc0MjIxYWQ3ZiJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-05T08:37:16.392Z"
+    "at": "2026-10-05T11:35:47.718Z"
   }
 }

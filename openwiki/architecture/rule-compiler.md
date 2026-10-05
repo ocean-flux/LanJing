@@ -31,13 +31,15 @@ sources:
     resource: repo://src-tauri/crates/lj-compiler/src/lib.rs
   - id: openwiki-source-012692312089ec8143764f4d
     resource: repo://src-tauri/crates/lj-compiler/tests/plan_compiler_test.rs
+  - id: openwiki-source-bdf4f88ce68a67aa50cdcf1f
+    resource: repo://src-tauri/crates/lj-rule-model/src/descriptor.rs
   - id: openwiki-source-568a13748f69a4d9b494241b
     resource: repo://src-tauri/crates/lj-rule-model/src/plan/contract.rs
   - id: openwiki-source-f4d8e498f8a27d9242bfdc4b
     resource: repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs
   - id: openwiki-source-80e8762cff162b2ecd16e129
     resource: repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
 verified:
   - by: openwiki/0.7.0
     at: 2026-10-05T08:37:16.392Z

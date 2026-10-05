@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:cce6ed6048119a7ef56ac95c888c94183a0af84d21c22eb4933b3405a484f9b9",
+  "pageVersion": "sha256:382f0221d806ecb7a765f87d5c73221a2f3bdd5118bd27c2c6134b948c4e24f9",
   "claims": [
     {
       "id": "claim_38c793e84d314ab8aaad112427a5faa5",
@@ -111,7 +111,7 @@
       "statement": "后端不变量有集成测试: library_entry_normalizes_pinned_and_favorite_ownership 验证两个方向——置顶自动收藏, 以及取消收藏必须同时取消置顶。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L954-L954",
+          "resource": "repo://src-tauri/crates/lj-integration-tests/tests/maccms_json_rule_system.rs#L951-L951",
           "version": "repo-lines-v1:sha256:f0e6fceb68db4a386ee0f738410ea6bdc6c0cbc2c11b19599952e08962986c9d:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjBlNmZjZWI2OGRiNGEzODZlZTBmNzM4NDEwZWE2YmRjNmMwY2JjMmMxMWIxOTU5OTk1MmUwODk2Mjk4NmM5ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjBlNmZjZWI2OGRiNGEzODZlZTBmNzM4NDEwZWE2YmRjNmMwY2JjMmMxMWIxOTU5OTk1MmUwODk2Mjk4NmM5ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzc3MmU5Mjc1Y2I2YTI0ZmZhODk1MmNjYTc3ZTZhNGE1YTJhZGU2M2NlZDQzNTFjNmJjNTg2MGFhZmU1MjJkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGY4NGQxN2ViNTNlMmZiYWFlYjQ4NzE1ODY2OTJhM2ZhOGFhZWRjMGI0OGY3NWNiMjc5Y2YyNWE2NTZmODYzOCJ9"
         }
       ]
@@ -277,10 +277,28 @@
           "version": "repo-lines-v1:sha256:9407fd881b6c79d8d50c3fdca4725ceb7af0f697891a973f5a13485a0f1ce89d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM5MjZlODM0ODRmMzcyOWJjN2M0ZTY3OTE0ZjBlN2JlYzYxMDVjYWMzNWY2MjZkYzQyNDNmYmFhMGY3MTcwYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiNzhjNGNjZDRkNWIzZGIzNDU1YzYxOTcxOTc0MDgzZTZmYWZiYTQ4NTRhODZiN2IzOTM0ZmI5Mjc5OGJhZTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM1ZjZmNDY2ZTU5Y2ZjMzA3MDNjNDVmNzJhZjY1ZGU1NGFjMzYzZDM1NGNjMWEzMzMwMzUwYWNkNDUyNDM0YzQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ5MDBlZGJjZmI1ZWNiNGY1MDgyNDY3MzM5NGVkNDJkMWQxNjk4M2QyOTNjNzdjNDMwOTU3ZmI5NDU3NTA2ZmQifQ"
         }
       ]
+    },
+    {
+      "id": "claim_a36aaa22f0d94743b0c7af4242f4b284",
+      "statement": "媒体查询的产品上界由门面 `query_adapter` 强制而不是存储层: 批量 ID 上界 `MAX_MEDIA_BATCH_IDS = 64`(空列表与超限各自返回稳定校验错误), 分页 `limit` 默认 `DEFAULT_MEDIA_PAGE_LIMIT = 50`、硬上限 `MAX_MEDIA_PAGE_LIMIT = 100`, 越界返回 `media_page_limit_invalid`。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/query_adapter.rs#L209-L216",
+          "version": "repo-lines-v1:sha256:193dcc16a5b661834d6a3b43cc5a924c0ed9fb5f5ebf4e04ad6eb780a4d9bed2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2U0NjVlMjE1ZjU1N2E1MmE4NDQyMzY0MzBmZTk4OGRmMzIyYzVmNTUwYjQ5YWI3Yzg3YjYwODVhZWU5YjMwNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjEzZGE3ZjQzYjYxYjJjOTM5M2I3ZGJjMjQ4N2M0ZTU4MWI5MDNhZmUyMzczNjAwMjFhMzgyYWUyMWYzZjBjYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjQxOGFhMTAyODQ3ZWM5NjY3MGM0YTczN2NmMGFhNmRmNDY3ZmFkYjExOWZmMTkzOTZkNjJkN2UwODIzNWJhZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWZiOWQ1MDQ2YWYyYWU4NjdjYjAxMzhhMTIwYzE3NTViZmFmMDE3ZmE2ZDRiMjI5ZThjODhmODZhMTVkMzZiMyJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/query_adapter.rs#L29-L33",
+          "version": "repo-lines-v1:sha256:21db141c5e02cda3b15182e91a7d1b27ed3ebda748c8a009655b45ab6e070d63:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzI5N2I5NTJkNWE0OTQ0NjM1YjhjZjM5ZWQ3OWJmMWRlZmIxNDk2ZmQwMGIzNjc4MWYwMDg5M2Q5Y2I5ZTRlMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQzZDcxOTc4ODYxZTEzMmE5ODhiY2IxM2M4ZjcxNTE2ZDQxMWYyNWQ3MzliZWZlMDA5Mjg1MjJkNzE0YWQ2ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzM3MjZmNGM4ZjQxYWM5OTZkNGM0MDFmNGFjNTEzYTMyZDFhNDFkMGNiYmVlZDRhZTkxM2ViOTYzN2NmZGFhOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzE4ZjBiZDJkYmNiODFlYWRjMDhjM2VlODM5MTBmNjAzZWU1MjYzZWYzNjM0N2Y2MzcxYzkwYzljNTkzMjk2MSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/query_adapter.rs#L343-L352",
+          "version": "repo-lines-v1:sha256:21d4ddde7c396a71cfe2a0c204645d68d1f06daecfb9dce427fb1d4cc791e94b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4NDM4MjQ3MzFjMTcyN2E2NGNmYmY1ODgyZmQ1OTY5MzMzYjAxNDJjODQ3Yzk3YTZkNGVjMGUzMDM2MmNiNDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjN2MzYzM0NjZhY2NjNmI3YjMzMzIyMjQzMzE0ZThkOGIwNzBmNjJmZTA2ZGIyNTUyZTljNGZlNGZiZDNlZWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlNGIxYzgxMDJjMDg1MTM1ODdmOTYxNTMwZmZhNzMxMDRkYjczZDRjYjk1OGUyMGYzZGMwMGY2NTFlY2U0MjgifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-05T08:37:16.392Z"
   }
 }

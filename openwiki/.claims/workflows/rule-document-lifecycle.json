@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:775b76c4d4f87f3e9891979703a4ea9c470392d85713a848bb93a2a197f5a380",
+  "pageVersion": "sha256:a7e7324a02ab16ea263bef38456c518bedfdd4453742be9855886f88adb01996",
   "claims": [
     {
       "id": "claim_6f235a86c799489498958def44cd44d9",
@@ -115,11 +115,11 @@
       "statement": "危险草稿的保留与校验接口语义一致: validate_native_rule_document 编译失败时返回 valid: false 且 plan_hash 为 None 并一次性返回全部诊断而不是报错; invalid_definition_preview_keeps_draft_only 与 invalid_save_preserves_effective_rule_and_records_draft 两个测试固定「无效草稿不会替换 Effective」。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs#L1483-L1483",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs#L1480-L1480",
           "version": "repo-lines-v1:sha256:09318bfe794960991542b2383b507ac50ba978d78f5b45c02f7d013098f6be63:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDkzMThiZmU3OTQ5NjA5OTE1NDJiMjM4M2I1MDdhYzUwYmE5NzhkNzhmNWI0NWMwMmY3ZDAxMzA5OGY2YmU2MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDkzMThiZmU3OTQ5NjA5OTE1NDJiMjM4M2I1MDdhYzUwYmE5NzhkNzhmNWI0NWMwMmY3ZDAxMzA5OGY2YmU2MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTA0ZDkzOWEwOTI3YzQ1YzRjM2UzYWUxMGEyYTViMjFkY2I2ODMyNDQyZDE4MGZjOGFmMTc4ZWQwMDJjYmUxOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjY4NTY0NzQ5NmVkODZiMDlkZTllNmUxZDVjZTdkYmZmMGM3NWI0N2I0ZjQyOGQxYWRkOGYwN2EyYzFkZjViNCJ9"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs#L1532-L1532",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/document.rs#L1529-L1529",
           "version": "repo-lines-v1:sha256:7c1da673fde4a70fff7582ef9eed605409f3cac4f40a2adede17913677196d26:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2MxZGE2NzNmZGU0YTcwZmZmNzU4MmVmOWVlZDYwNTQwOWYzY2FjNGY0MGEyYWRlZGUxNzkxMzY3NzE5NmQyNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2MxZGE2NzNmZGU0YTcwZmZmNzU4MmVmOWVlZDYwNTQwOWYzY2FjNGY0MGEyYWRlZGUxNzkxMzY3NzE5NmQyNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTdhNTgwMDcwZjU1NWM0YTk1YjgzYTZlMDQ1OTU3NWQ4ODU0ZDVjMTM4NDUwYmQ0MzBmMTk2YzY3NzA1NzJhOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjY4NTY0NzQ5NmVkODZiMDlkZTllNmUxZDVjZTdkYmZmMGM3NWI0N2I0ZjQyOGQxYWRkOGYwN2EyYzFkZjViNCJ9"
         },
         {
@@ -158,15 +158,15 @@
     },
     {
       "id": "claim_492df6ecc8a2420581d118d0b986259b",
-      "statement": "凭证明文是一次性的: 前端在 saveRequest 步骤把 pendingCredentialMutations 移进 inFlightSave 快照并从 state 清空(注释明写明文只存在于 inFlightSave、冲突时由 UI 重新输入), 保存失败也不恢复明文; 后端在同一事务里写入槽位。",
+      "statement": "凭证明文是一次性的: 前端在 saveRequest 步骤把 pendingCredentialMutations 移进 inFlightSave 快照并从 state 清空(注释明写明文只存在于 inFlightSave、冲突时由 UI 重新输入), 保存失败只清 in-flight、不恢复明文; 后端在同一事务里写入槽位。",
       "evidence": [
         {
-          "resource": "repo://src/features/rules/model/core.ts#L1150-L1152",
-          "version": "repo-lines-v1:sha256:c348ee81889162c53189586eccf9c40f9727b8f6c406ae4d8806a92d7a78b976:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTQ1YmMzMjA5Mjg2MjIyNTkwM2Y3YTJjZWIzN2FkYWI5MzliOTBjNGE5MDhiNjgzNzRhNzNkN2VlZmMwYjNmNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjU3ZjMwMjMxN2ZmNDEyY2ZlYWY4NTA1YjJiZjEwYWIyYjZiZWUzMGE0ZWQyZmM2NDBhNmU0NjUzNjZkMDAzNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzY4OWMyMDFlYTYxNDQ0ZDZiMGJjN2Q4MmFmYmYzNDE0YTgxZjc3MjE1N2QwZWY2OThlZGY4YzdiMzJkOWI3YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2Q2ZjZiNjcyOTQ2ODQ2ZTEzYWQ0MjFhYmZkYzc0ODRkN2JmZThlMTkyMzY4MGVlYzRkMTA2Mjc2MDExNjIzOSJ9"
+          "resource": "repo://src/features/rules/model/core.ts#L1108-L1131",
+          "version": "repo-lines-v1:sha256:54baee66eccea3b6081ed2185870c084efc8eee88236cc7bb7ab6f06e0b78351:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjYTNmODcxMTZmODE5YzcyNDQ5YzlkYjgxODljZDJmODM5NGYzYmQwNThjMDIyNjhhMmRhYTdlYzdkNDhhM2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4M2FlZTNiOTc3YzI4MzU0M2U2NGQzMWYyOTRmY2E1NjE1OWUyZmRjMWM1NWQ0OGE2MDNlZjQ2ZjdkMzNmMTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyZmFiMGM4YmYzYTkzY2IwOWQ1MDFhMDAwMmIxZDVmNzg4OTVjODBiNGYwNDM4OThhN2U1MjAyMzI2MmMwOWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgxNzcwNzFiYjMzZmIwNjhhY2RlN2Y1NzkzZWY0MWZmYzc0NTUyZjVlYzVlY2NiMTcwOTYzMTU2NGQzNjZjMDUifQ"
         },
         {
-          "resource": "repo://src/features/rules/model/core.ts#L1215-L1215",
-          "version": "repo-lines-v1:sha256:bf93ff91dc3af97631e2400aba009a49ca997317b08b3208ce7e296e511a24ed:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmY5M2ZmOTFkYzNhZjk3NjMxZTI0MDBhYmEwMDlhNDljYTk5NzMxN2IwOGIzMjA4Y2U3ZTI5NmU1MTFhMjRlZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmY5M2ZmOTFkYzNhZjk3NjMxZTI0MDBhYmEwMDlhNDljYTk5NzMxN2IwOGIzMjA4Y2U3ZTI5NmU1MTFhMjRlZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjhmZDg4MGQ5ZjI0ZjI2OTZiOTVjMzNlYTM1YTZhYmZmZTk3MWE0ZGQzZTM3MDQyYmQ4NWFkOTA1MzRjZDE0OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMThmMmI2MjdiYzBhOGI4ZWJkZGMwYzljNDBmNjBjOGI3MjA5ODc2NTcwMmVhYmM1ZTUwNjkzZmVlZTRjMWUzYyJ9"
+          "resource": "repo://src/features/rules/model/core.ts#L1220-L1231",
+          "version": "repo-lines-v1:sha256:cd4ad382a92f59e2cf2e64fa13840273f30ece8b27e68bf8751e90f0ce5be2f8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3YzRkODBjZTU1OWFmOWJkZWIzOTdlNmM2NjJhZWVhNWY0NWI3NGM4NzI5ZmUxMjQwZTUyMzQ0OGJlN2MyYmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3ODc5ODJkZjg5MjJiY2ZjNjJlYzEzNzY5ZjA2ZmJhMTBmYjg4Mjc2OGFhYWYzMTY1ZWM3OWFkMmY5MGVmNDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3OTk4ZDE3ZmQ3MGE3MzM2OTZmMjcwOWRhMTlhOTg5MTNkZjc0OTdjMGVlNWIxM2E5OTQzMzdhOGQxMGI3ZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyOTRjZTdiODlhZmRiMGZiNDgwOTJhODEwYzEwYmZhOTQ2MjVlMzY2N2IzNmJjMTRjOGIwNjJhOGZmZmIyM2YifQ"
         }
       ]
     },
@@ -175,7 +175,7 @@
       "statement": "一处未接线: 文档的有效凭证不会被转成运行时凭证——候选/安装路径的 runtime_credentials 只来自导入器的 take_credentials()(Legado/Maccms 源文本里的静态凭据), 执行侧从 source_versions.runtime_credential_secret_id 读取且按 owner kind source_version_runtime 解密; ADR 0002 第 6 条后半句属已决定未实现。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L114-L124",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L127-L137",
           "version": "repo-lines-v1:sha256:4011423da1b1fdd7d5235bde8db24b9bc85ff539a5d554222215655b17d27b67:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4MGU5MTIyNWQ1NjY1MzEzZWY5YjQ0YjMyZmVhOTFhNTE0NzkzZDMxYzhmMDY4YzYwZWE4MmIzYmQzMjY2MjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMwMzEwMmZkMWQ0MGE1MzBhYzcxZWMzNTE1Yjg3Y2VkYTc2YjM0YTQwZTkxZmYwYmFkNzhlY2U4ZTAxYTk1ZDEifQ"
         },
         {
@@ -218,19 +218,19 @@
     },
     {
       "id": "claim_17b46bedbc974cbab6af7fd2c50840cb",
-      "statement": "硬失败与冲突的可见结果不同: 抛异常时 saveFailure 清空 in-flight、保留 dirty, 工具栏 toast.error(sessionErrorText(...)) 按 SessionError.code 映射文案; 而冲突是正常 resolve, run() 会照常弹 toast.success(rules_saved()), 于是用户看到「已保存」而实际写入被拒。",
+      "statement": "硬失败与冲突的可见结果不同: 抛异常时 saveFailure 清空 in-flight、保留 dirty, 工具栏 `run` 用 toast.error(sessionErrorText(...)) 按 SessionError.code 映射文案; 而冲突是正常 resolve, 同一个 `run` 会照常弹 toast.success(rules_saved()), 于是用户看到「已保存」而实际写入被拒。",
       "evidence": [
         {
-          "resource": "repo://src/features/rules/EditorToolbar.tsx#L104-L111",
-          "version": "repo-lines-v1:sha256:d9bebc24e7fb192f39d6ac3615b499898806651f55458913a44c329a1c1d259f:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTNmNmE4MDk3NDQxZmFhMGMyNGJlOGUzNmU1NmNiMzczM2IwYzhmZTNjZDBkZTM4YjUyYzQxNmM3NzJjNjllNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjVlMDNjOWMzOGNiMDNlOGVmYjk1ODIyZThkMThkODZmNGFhYTE0NzIwNmZkOWU5MDNhOGZhNTgzNDAwNTM4MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGQ2M2YyM2E5YWZiZmNkZjUxMTNmNTRmN2FiN2FjNWExN2NiMjQxZTQ3NjNlMDQwODBmYjNlNDc1NjJjMDg1YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWY1YWQxNTFjMWJiMTQ5NjQxMzcwODUyZGUwNjY1ODI2MWNhMTRkNzljODRkYTAxZTliZmZiMTZmZDNiNjk5OCJ9"
+          "resource": "repo://src/features/rules/EditorToolbar.tsx#L132-L137",
+          "version": "repo-lines-v1:sha256:6d1641affa5de34f43977f5937a5e17d1cfb0b47619cdbbcbf0b08703a13739b:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTNmNmE4MDk3NDQxZmFhMGMyNGJlOGUzNmU1NmNiMzczM2IwYzhmZTNjZDBkZTM4YjUyYzQxNmM3NzJjNjllNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjg1N2UwYzg1NTk5MTc5MDA1NmFkMTAzODI4NmMyMDFjNTM3NjRjNTRiODAyZGI5MjIzMTk5N2QzYjM3YWJlNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGQ2M2YyM2E5YWZiZmNkZjUxMTNmNTRmN2FiN2FjNWExN2NiMjQxZTQ3NjNlMDQwODBmYjNlNDc1NjJjMDg1YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTE4NTc1NDg3ZmJhMzgwYjk1NGM4M2YwY2E1ZDMzNTVlNzFiZGE0YTcxODhjYjMyZmMxZjYxMzU5NmYzZDA4MCJ9"
         },
         {
-          "resource": "repo://src/features/rules/EditorToolbar.tsx#L33-L42",
+          "resource": "repo://src/features/rules/EditorToolbar.tsx#L38-L47",
           "version": "repo-lines-v1:sha256:567ca277377563db9d9d3b70256e090de3dec4493a0e573f1004461702984085:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlNzZlYjkyNTJmOTg4NTk4OTVlNjFlZGRhYTEzZDYwNjk4MTRmZmNiMTcxMGRhY2JmZWQzNzgyMDcwN2U2NmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxYmI5MDVjMTNiOTI5NDMzYmFjODFlZjQwOGQwMjNkN2VlZDY5YzRhNmYwN2Y2ZjQ3YzViOGUzZDBkNjE0OTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4MGYxMWJiZjYyODY0OTU0ZGJkYmJkOTQ3NzdkZjg2YmY4ZmRkMjk0MmY5MzBkMzRkOGEyM2I0ZGM0MzZiYTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM0NWE2ZmRjZmM0MjVjOTZjNzA5N2MxYzdhMDlkMmVlMTA0MGEwY2UzNWM3YzVjYjM4ZmU5ODE5ZmUyYjIxN2QifQ"
         },
         {
-          "resource": "repo://src/features/rules/session-error.ts#L10-L31",
-          "version": "repo-lines-v1:sha256:3cd87cc33af6e131d3bf6583c7973d94afaba44addb1cb7634e217ec4bd02d84:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2YzQ0MWJiYjc4YTM3YTc5ZDZmZTc1MTFiYTc2MzA1MjdiOTUzZjZmOWEwMTJkNzc4MGRjNTE0NmZmMDg5NTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM4NTFkNDdmODA3YWQzOGFiZGU1NmY4NTQ2OTc2NjEwODRiZTI4YTQzM2ZlMzc4MDU1ZGJhYjA4MmI1ZDBkMzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/features/rules/session-error.ts#L10-L33",
+          "version": "repo-lines-v1:sha256:b3b7f0a3de1e89463af2b93a23a0398a8f4acfb5f6d3447764b4375f37028bc7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2YzQ0MWJiYjc4YTM3YTc5ZDZmZTc1MTFiYTc2MzA1MjdiOTUzZjZmOWEwMTJkNzc4MGRjNTE0NmZmMDg5NTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM4NTFkNDdmODA3YWQzOGFiZGU1NmY4NTQ2OTc2NjEwODRiZTI4YTQzM2ZlMzc4MDU1ZGJhYjA4MmI1ZDBkMzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         }
       ]
     },
@@ -250,21 +250,39 @@
     },
     {
       "id": "claim_8eed7c14963648a79c7fe28e6e0ae8fa",
-      "statement": "手工创作的 native rule document 无法被执行: RuleInput 只有 MaccmsJson 与 Legado 两个变体, prepare_install 不谈 document, 因此文档没有可安装路径; 同时编辑器 session 是 vanilla zustand, React 仅做 context 与选择器订阅绑定。",
+      "statement": "手工创作的 native rule document 无法直接被执行: RuleInput 虽有 Package 变体(通用 Rule Package 导入), 但编辑器只能导入 external RuleDefinition JSON 到编辑会话, 没有导出包或安装 document 的入口, prepare_install 也不接受 document; 同时编辑器 session 是 vanilla zustand, React 仅做 context 与选择器订阅绑定。",
       "evidence": [
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/types/candidate.rs#L13-L24",
-          "version": "repo-lines-v1:sha256:049430bc716e7563f03ea8af40babd5b2e349349b48b5e36e33262de47a4c934:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkOWE5M2Y5NGYyNzNmMmIwOGY3NDE2OTM3ZmYwZDdmOGZhNTU1YjU1OGU5NWQ1YWNhY2VhYWQwZDAzZDkzYWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4MzAyMTIyYTdlYWM0YjZlOGU2ZDJkMTJjZWIzYjhiZWZiYzE1N2ZhOTJmYjgxNTQ2MzlmOTZjYmE5MmQyNGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3Mzg1OWUzNTMxMzMxZGNlN2JkOWE1MWIzNThlMjUyYzYzZWU5MDQ4MjIwMmMxMzJjN2RjZDczN2E3NTNkOGMifQ"
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/types/candidate.rs#L13-L29",
+          "version": "repo-lines-v1:sha256:392e1306e3c0eb45f77ced03e9982d11730c38112876c5803f0b6a96e4381134:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRkOWE5M2Y5NGYyNzNmMmIwOGY3NDE2OTM3ZmYwZDdmOGZhNTU1YjU1OGU5NWQ1YWNhY2VhYWQwZDAzZDkzYWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4MzAyMTIyYTdlYWM0YjZlOGU2ZDJkMTJjZWIzYjhiZWZiYzE1N2ZhOTJmYjgxNTQ2MzlmOTZjYmE5MmQyNGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3Mzg1OWUzNTMxMzMxZGNlN2JkOWE1MWIzNThlMjUyYzYzZWU5MDQ4MjIwMmMxMzJjN2RjZDczN2E3NTNkOGMifQ"
         },
         {
-          "resource": "repo://src/features/rules/use-session.tsx#L1-L45",
-          "version": "repo-lines-v1:sha256:89f5b5f72cf769645ea9aa9a67f63e0729e06f91a0c6b3d8df9daaadaebd5491:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4YjcxMmY0Y2Y3OWI1N2NlOGIxNDE1ZGZjZDkyMGUyMGYzOWU1N2Q3ZmRlMTRhZTA3NTUyYWUzZDkwYzQ5YjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/features/rules/model/native-import.ts#L1-L22",
+          "version": "repo-lines-v1:sha256:ca05a31551ee84aa23fe67968f7a773e451ea1c90ca0f8e9f33d3596850780b4:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzNjU0NjEzNjliMjQ3YjMzZGI3ZmIxMDEzYzJmMTQ5Y2NmYzJhMzZkNGVhM2U2ZTUxNWM0MzRjNmE4YTU4ODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZGQyMDA3MDUyMjdhNzZmZmJjYmVjYTliODcxZWY0N2QwOGZhNjdlOGIxZmYxYzI4ODhmNDJhOTEzZGI5MjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2MzY2ZDI0OWIzODVmN2RlN2E0ZTI1Y2IyZWE4NDhiZWFlYWM1N2M0M2Y3OWM1NzI3ZGQ4MTMxOTk2YWJlZmIifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/use-session.tsx#L1-L4",
+          "version": "repo-lines-v1:sha256:e9a3f7fe8fcdc17da54ca671f32741bf6c9dca2002bafcee52f8f855d9e2f5cd:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDhiNzEyZjRjZjc5YjU3Y2U4YjE0MTVkZmNkOTIwZTIwZjM5ZTU3ZDdmZGUxNGFlMDc1NTJhZTNkOTBjNDliMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjdkNmY5OWZlMmFkN2U5YmE0MGZkZTQ5ZjYyODg4ODI0MTFmMzliN2UxODAwN2JjZGRlZTQyYzk5NzNmYzM1ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjFlYjE0Y2EyOGU0OTJiNWM2ZjBmZGZiYzk2NDA2MjFkNGJlMzMxOTZjNmU4MGI5YWY5NWFjZTAzZDU2N2IyNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_2fc033931827439f9381cb1045ad49c0",
+      "statement": "保存冲突在模型里是正常结果而不是错误: 冲突时该域 revision 不推进, 而是把 RevisionConflict 与 RecoveryDraft 写进 state; 前端唯一的消费点是 core.ts 自身, 没有组件读取 conflict 或 recoveryDraft, 因此恢复草稿没有 UI 出口。",
+      "evidence": [
+        {
+          "resource": "repo://src/features/rules/model/core.ts#L1150-L1195",
+          "version": "repo-lines-v1:sha256:24f18693bf3626d9cb62b9dfa8cace3ab85c7ee66501e8e3aec62d08e82e5fca:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU0NWJjMzIwOTI4NjIyMjU5MDNmN2EyY2ViMzdhZGFiOTM5YjkwYzRhOTA4YjY4Mzc0YTczZDdlZWZjMGIzZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxMWUxZWQ4MGQyYTI1NDZkMDg5YTY2YjI2NDE1ZDBhMmM1ZTljYmI5MDg2NmZlZWZhMzJkNWNmZTljNjU3OTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM2ODljMjAxZWE2MTQ0NGQ2YjBiYzdkODJhZmJmMzQxNGE4MWY3NzIxNTdkMGVmNjk4ZWRmOGM3YjMyZDliN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVkNmY4ODI0NjczN2E5NjRmMGMzZjhjM2IzNmQyOTgzNWRjN2NiMTM2MzdiY2M0MDkxYjk2MTY4ODA5OTQ5NmUifQ"
+        },
+        {
+          "resource": "repo://src/features/rules/model/core.ts#L244-L246",
+          "version": "repo-lines-v1:sha256:a00605cbb7c6618861b33dfec191ac503be04e6f905e51bd94b121e4e5398af9:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWU0ZDE3NmM3YzM2YjY5MTIzOWFjZmNlNzAzMTkxZjNiMjQ2ZTNhODdmYjk0NjEwOTNjMzViYjA2NTUyNjllNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTNlOTc2MTAwZjZhYzIyMDZmNmYwMTJjZmMwNWRmNzQ0MjgzZjExNTVhNDI5YzBiNzUyMDVkMzRlOWFiMmYzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWUwN2MwMzgxOGI3M2RmOWZkOGQ1NGFiNjkzNDY5ZTQ0Y2NjZGMxMjMxMDgwOTVmYjVlODkxOTQwYzYwNTZiMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDNjNTAwMWUyODNkNTAzZTUyODQwYTU4YWZlZjhmMGU0YWQzZWEzNjNkYWE3OGExNzY4ODNhMGUxZDU1ODcxZCJ9"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T10:14:16.110Z"
+    "at": "2026-10-05T08:37:16.392Z"
   }
 }

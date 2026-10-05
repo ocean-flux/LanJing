@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3df91ca6df79ee144f06cd5ab424418ca5790a5a944e6241c894ad5d1dabb24e",
+  "pageVersion": "sha256:053089e06ce7b72fb8f54e6ba9e537ab37464463ba6434ca083e012d52f2c400",
   "claims": [
     {
       "id": "claim_1ff0ec3b337943c1a699619af308fed3",
@@ -81,7 +81,7 @@
           "version": "repo-lines-v1:sha256:33b8f72c00de438a56b3e4122777fc43c213fe87be6d2087d1f04af2a2a285ff:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyZTM5ZmIyMDQxN2ZkZTgyYWEyMGM2MDJhOTM0MTY5MDY5ZmRiMzk5YzBjMTVlMzk1ZWY5YzE1NDYxZTA2M2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFhMWQxYTYzMzkwMjI5Yzc5ODM0N2U4M2EwNDA1NDQxYzk0MDAwMzUyODRhZDE2OGMxYmY2Y2RmMWQ3MGEzNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L159-L190",
+          "resource": "repo://src-tauri/crates/lj-rule-system/src/system/lifecycle/prepare_install.rs#L172-L203",
           "version": "repo-lines-v1:sha256:4c7603f1072fd8a86f3e5bf74a46e6e5f73cef2fd9a2e0f01ea3fcd299c3987c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3OTJlZGI0YWE0NDM2ZjhlMDVlZTZhZjc3MzAxNDMxYjRhM2RlOWFhMDU0MjRlYzAxNTY5NTA3OTJkODE4YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZiMjBlNzhiOGRlMmI1ZDBlYzRlNDgwN2I0ZTNhODFmYzIyYjczMTQ4Mzg2ZWVmNzM1ZjZjYzFlMTIyYjRkZWMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQyMGY1MTk3MTc0MDgwOTA5ZDllNDg1ZWVhZmI3YWY1YjY4MDEzMWUzMjk5OWMyNjhhMWU1ZmMyYjk5M2IzMmUifQ"
         }
       ]
@@ -170,19 +170,19 @@
     },
     {
       "id": "claim_a0a0f27bc0e048d4bd0b24236245e56e",
-      "statement": "Maccms 来源路径有实现入口(import_url/import_document/definition)但没有 fixture 与测试文件, 而 Legado 侧有 synthetic fixture 与 legado_test.rs, 这是该范围内最明显的测试缺口。",
+      "statement": "Maccms 来源没有独立测试文件与 JSON fixture(lj-importer/tests 与 fixtures 下只有 Legado 的 legado_test.rs 与 legado_synthetic_source.json), 但有 6 个内联单测(maccms/mod.rs 的 mod tests, 覆盖四意图导出、稳定身份与节点 id、URL 协议参数保留、XML/XPath 字段规则、端点凭据分离、非法 URL 拒绝)加 8 个跨 crate 集成用例, 差别在测试形态而非覆盖有无。",
       "evidence": [
         {
           "resource": "repo://src-tauri/crates/lj-importer/fixtures/legado_synthetic_source.json#L1-L1",
           "version": "repo-lines-v1:sha256:a6fb08fda1acb957b6116bd37811a1fe41a01611c0631edbf786d6889a27a55c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZmYjA4ZmRhMWFjYjk1N2I2MTE2YmQzNzgxMWExZmU0MWEwMTYxMWMwNjMxZWRiZjc4NmQ2ODg5YTI3YTU1YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZmYjA4ZmRhMWFjYjk1N2I2MTE2YmQzNzgxMWExZmU0MWEwMTYxMWMwNjMxZWRiZjc4NmQ2ODg5YTI3YTU1YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjdmMWYwNTc3NzdiMTU3YTZkZjVlMzkxODAwZDc3ZmQxNjhhOWM2OGFhMjk1NTIzMmE0YmQyMDE4NTJlYWI0MiJ9"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-importer/src/maccms/mod.rs#L26-L106",
-          "version": "repo-lines-v1:sha256:0618db23d98fc1aa68ad6c20aa18fb428f4eda801becfb17b4270fe2083765a3:eyJzZWxlY3RlZExpbmVDb3VudCI6ODEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdjZWZkODU0NDZlNzBkOGY1OThlZDQ0OGJjYmIwNWM3M2Q3MmQ3NjJmMDc2OWZjNjk2YjBhYmQ3OWExZjY2OGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmNTc3YmE2NWI4ODIzYWYxZmNiMDIxZWY2ZjVmNjkxODllZTZhNWIwNjU4ODZmMGM5MTM2NmEyMTE1NmEwMzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2MTQ1Y2YxMGEwZWVjOThiYWJhMjIwMTI3OTlmN2Q4MjRhM2RiNTMyZTgyNTU4ODBlMzk5YWM1ZWFkNWQ3NmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlMDEyZDAyYTAzODFlNmQxOTljMzNlY2E4ZjI4YTMwODJiMGMwZWEzODIxOGNlZTg1OWQxNWNjOGI4NzBhOWMifQ"
+          "resource": "repo://src-tauri/crates/lj-importer/src/maccms/mod.rs#L195-L353",
+          "version": "repo-lines-v1:sha256:cd362a0e9365d6dc728d47b308e0a1ab561427621c88efe511c0c3fb249a8d11:eyJzZWxlY3RlZExpbmVDb3VudCI6MTU5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxZTBhZjNmZDRhNGMzYTFkNDdjN2Y0NzBlZDBkODZkOTBkOWRlMjEwYTVlYjE0NTVmYmQ5NDQ4MmE0NzY1YjcyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJhZGUzYjBmNjk4N2ZjZmQxZGM4YTVmY2E1M2Q4ZTVmOWU5ZTA0NmY0Y2ZhMzZjNDBhNTljZjQ5ODg0OTE2N2NkIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhNTIxNjA0YjM1ZmM0MGFmMDBjYmE0ZWVhMmZkNWUyYzNhZjE4NjNiMzkxMTg1ZDdiZjRiYjA5ZTcyZDBjOGIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI5YmY2YjJmMTUzNTUwMWNhODk5ZDM1ZDExYWE3YzFhYWQ2NmExZTUxMjBlZjQwNDRiYjhjMDlmM2E1NTEyNDViIn0"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-importer/tests/legado_test.rs#L1-L60",
-          "version": "repo-lines-v1:sha256:368b5e95f7bf0c1d43bf04b12b7a960e6f98186504c7f14a0567d6cfef983c6a:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2ZWE4ODkyNmFlZDY1YmY0MGQwZWRiNmNkZWNhY2ExOTRlNDA4ODQxYTMwZWVmZmVkMDlmZmE0ZGZjNjkzM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzNDhhZjA1NzczYzNlMDRkZTUyMDZjZDBlNTgwNDk3ZWRhMjAxNjI2OWJhYWEwOWZkMmIxZDk5ZjEwZDU3MTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyN2MyNjU3NDhjMGIwYWZkYjA1ZGM4YWY0OTEyMTAzZjNiZTk2MTg5ODY0OWVmMzU4YmVlNmY3ZmI3ZDFmMmYifQ"
+          "resource": "repo://src-tauri/crates/lj-importer/tests/legado_test.rs#L1-L18",
+          "version": "repo-lines-v1:sha256:ed8538a463bbf7225093d2035efed2a72dcfa6391bc0736d13f82edc124c20e8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc2ZWE4ODkyNmFlZDY1YmY0MGQwZWRiNmNkZWNhY2ExOTRlNDA4ODQxYTMwZWVmZmVkMDlmZmE0ZGZjNjkzM2MiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3Zjk4NzkxYWE1Mjg4MmE2ZDdhNjBhOGNlNWE5ZDNiZDI5M2E5MzhhYjZkMWU5MGIzMWYyZDNjNTkwYjNhMDEifQ"
         }
       ]
     },
@@ -209,7 +209,7 @@
           "version": "repo-lines-v1:sha256:cf436671627f3ad169443c247d29476dfb5398e5eb950249dc47be7f495330d4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjljMGRmNmZkMzY5YzllZjc3ODg2MjljM2IwN2UzN2E2OTQ5NTdjYmMwNTNlMTQ3MzAyYjQ2ODgxMDRiOTgwNjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZkMDhkY2I1ZDY3ZWRhOTk4ZTdhNDYxMmNiYzNjODM0OGE3MDI3YmJjN2FjMzQxYTJiNzIyOGNiZDkxZjY5MDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
-          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L123-L244",
+          "resource": "repo://src-tauri/crates/lj-runtime/src/plan_runtime/scheduler.rs#L124-L245",
           "version": "repo-lines-v1:sha256:f7b2c08ddb756ee5aa491ee715e49d0c7b27c5e3d37842a70f4441421848a539:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiM2VlZDI1ZTY2MzMzMWUwMzJhMTA4MTVlNGQxMmRiY2JjNmZhM2M3ZDFkNTM3MDQxYmVhZGU2M2RkNmM0MDAyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0ZjcxM2UyMzlhMGU3YTFkOTkwOGFlNWQ3MDliMTFlZGYzNDQ5ZTVlNjZmNTdmMzI1NjI2NTg0MTE0Yjc3YzI2IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJjMzUyNDZjNzVhYzNjZWU0MzE0NWEyOTdiMjJiYjU0MWE1NjI3ZDI4M2UzYTQ1ODFjMWUwNjNjNDk3ZmZiMDBjIn0"
         }
       ]
@@ -227,10 +227,78 @@
           "version": "repo-lines-v1:sha256:891bea5d2a131533378edbc36f034a8684d1b2da860f8ddc18f0a75415f75c55:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODIxMDk0MjNlZjYxNGUwODZhMTFjMWQwYWU4Y2Q2YWUxMjc5NjNjNzc2ODRjMDM5YzVkODc5NzY2MGNkOTA3NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGJlOGFjZDEwN2IyNTM1YTBkMDExYTQ5MDk2OTU0OGI5YzMxYTE2MjIwNzM3ZDFjNzZiYWEyM2NkOWM4Yjg5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzRmZmM3ZjViYWRkOTAyODYyYzkwYTJjODQzYmI3N2RjMjMyMTVmY2EwOTVmZGQwZDA0Y2ZjMTc5NGQ4MzE4NSJ9"
         }
       ]
+    },
+    {
+      "id": "claim_991ed45495e9492fb61b7566d161b804",
+      "statement": "ADR 0008 把 workspace 的 14 个 crate 分成五层(契约叶子/规则合同/执行/持久化/门面)并规定只允许向下的边与同层不互相依赖, 而机器权威是 `workspace_layering.rs` 的 `ALLOWED` 表: `crate_dependencies_match_the_allowed_layer_table` 断言该表与实际 `[dependencies]` 边完全一致, `crate_dependency_graph_is_acyclic` 断言整张表无环, 因此新增或删除一条依赖边必须同时改表。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0008-rust-crate-layering.md#L19-L27",
+          "version": "repo-lines-v1:sha256:83befccf49112033678d26ed779d15eb5346e6e477e389382d2e838ea149b0d7:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTVkYjUxYzA4NDk2YjhkY2JhNDlkMGM3YjhiNWY0OTg5MWIzYmYxMDEyMTUxODc2NmM5ZGE5NmU3YTU0ZjgyNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTZmYmFmN2U3YmE5NmIyM2NhMDg4YTQxNjI4OTg0ODVmNGFlMWE5Y2MzM2ZlM2RmNDMwN2VhYmJlYWUyM2FmMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWU4NzYwODgwOTFkNzZhYjQ2NWQ5MDJmNjU1ZjhiZTdmNDVjZTRjZWFlOWFkODliOWE2Mjc2Nzk1MjIwODhjMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWJhNTkzOTdiZmQ3YWE2NDIxNTQ4ZDI3ZTQ3MWU5ZDRmYmZkMDc1OThjYjRlYTc3MjNhY2M0ZGY0YzBhOWQyNiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/tests/workspace_layering.rs#L103-L130",
+          "version": "repo-lines-v1:sha256:08a89613d0b3fc562d04ff6f2fdbf2ff7166ea0099a96124c8f92571b7150d5c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5ZmExZTlmNTA0ZjhhN2JiOTE3MjY2NGZjMjllMTA0NDE0YWM1YjQzMGIwMDgwM2YxYjM1ZTYyMTNmNWE3NTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmOWFkNDYzYmU3MWM1ZjQyMDk0NmFmYmYwN2QwZmU5ZjVmMTFkYTgyZjFlOTQ5MDNjYzMzOTVkOGMxYTBiMzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFiMDgyMTJmYTIxNjQyZWJkOGI5MTcxMGE5ZDE5N2VlN2Y4NTRkNDYzMWIyOWNlZDE4YmVmYmVlMDZjYzc1MGEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/tests/workspace_layering.rs#L13-L68",
+          "version": "repo-lines-v1:sha256:1ef9f0d535db77254258ddf4dd717e73f2cdfa84c48de545d78dc41b18c0e5f4:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ZGU0ZWVmZjY0YjllYTI0Y2NhMTM4NzRhMDkxM2MwMGQxMDhlYjViZmFkODM2YzFjYzJkOWZmMTI0MDVlNDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyMDk4MmEwYjJlMjFjZDAwODdiNDllYjA2ZWU0NTA4OGFmNTkyYmMwZjdlMzIyMjRjOWI0ZWU3MzZkNjJmOWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVkODUxZjBiYmI3YzJhODI0YWJhOTJkYTVlNTMyMzExMjNmZTJmZWE5ZTBmYjQ2MDY3NTI2Yjg0NWFjZTAzYTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhmYjAxMjQ0MzE5Mzg5ZmExZjMwMTkwMzY2YjdiYWQxNDViM2NiZDA5OWIxYWUzMmJkOTU1YWVjZmQwODZjZDMifQ"
+        },
+        {
+          "resource": "repo://src-tauri/tests/workspace_layering.rs#L71-L101",
+          "version": "repo-lines-v1:sha256:bf6d6843f1ff4cef316cb22fcbbe8aac7745306e724257758f888816b2ecf964:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2YmVkYTZmMDI5YjNhZDVlYzk5MDAzMTQ4YzIxZGRkNzhjZmMwYzAxOTg5M2VjMmY4ODJlNzhjYjRhNjAyZGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU5ZDI4NzA3NWZlMjJkZTdjYjZkMmRmZjNkZjhmYzU2YTg4MDE1M2IxMTgyOWIyMzg3ODc0NjFlNjEyMWI4MjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxZTE3NjIxMjYxZmUxZmM5YzgwYjc3ZWU1YmZlYWQxOGQwODAxNzEwNmRhNDE4MmRiOWVjYjJjODY0OWE3YzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_6e95895b3e26437ab8200b8e4b4e4244",
+      "statement": "分层守卫只统计生产 `[dependencies]` 边, 不把 dev/build 依赖计入表, 所以 `ALLOWED` 描述的是产品依赖方向而不是测试期依赖。",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/tests/workspace_layering.rs#L12-L13",
+          "version": "repo-lines-v1:sha256:6597dd9c07c43ac6db53108e2f52e01876f8d1aa6dd411455a9298cf93ceb2f1:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDZmYzgyZGNlNzdmM2FiNmY0NTc2MDVlM2I0ZDdiNjk2NjYzMWVlMGFmMmIwODVmYjc4ZDc2ZTkyMjNiZGM3MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNThkZTRlZWZmNjRiOWVhMjRjY2ExMzg3NGEwOTEzYzAwZDEwOGViNWJmYWQ4MzZjMWNjMmQ5ZmYxMjQwNWU0NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOThmNDZlZDkwY2ZmNGY3OTU1MGE4M2NhOTczZWNjMWZkMTMyNDUwYzk5ZGM3MjUyZGUyNzc2NzU1MDUzZjE5NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGIzMjNjMWY0ZjJjMGM0ZjMwNWE5N2ViNDAxNGZlOWYwMTY1MGUxZGMwNDY4ZjY1NWFiNGRkZDJkYzI5ZTdmMiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/tests/workspace_layering.rs#L201-L207",
+          "version": "repo-lines-v1:sha256:5a80e4d7d6b6fee52d6e24e3dc81cd502b7f6bf8fb656cd0e7fade3197620eff:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGRiNzY1ZDkzZGJiY2M1OTZkNWFhNDBlMTUzMzNkZGJmNjBiNzEwNWEyMmUzNGRlZmFhNzUzYzc3YmM5ODBlYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzU5YmNlYTBjNjNiMTQzM2MzNWZkZDMyYmJiY2JkMmEwM2M4YWRjMmQ0OTQzNTgzYWFjNTU4ODQ5OWRmODFjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2Q4Y2YzMTAwNDQ3ZWI5NDljZTVkYjgwODQ1OWU1MjEzMGJlYjZjM2RkYjczMTRlMTc4YzBiYjk5YTgxZjcxMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_fccf2ec6cb8d4a38bc0c1aaefdbf61ed",
+      "statement": "`lj-integration-tests` 在 `EXEMPT` 里被显式豁免于 `ALLOWED` 比对, 因此它可以依赖全部层且其 `[dependencies]` 不代表产品依赖方向; 两条既有的跨层边 `lj-storage-migration -> lj-compiler` 与 `lj-storage -> lj-runtime` 被 ADR 0008 记录为不理想但暂不改。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0008-rust-crate-layering.md#L43-L45",
+          "version": "repo-lines-v1:sha256:8cab916d162161cbfa14912bc3f0e53bb05b9d0fb50036a54fe87033f16bddd0:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDc1ZTFmNWEzZTU1MzBiNTgyZGM4Y2VmMjU0NTVhMGYxNWFlNjBiZWY1MDA4YzZmZWE3ZDExNzBkYmE5NGFhMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGY0YTgyMjI1YTBkNzI1MGI0NzVjOGY2MDZmMjcwYzRhNTVlZmQ2MTE2NjAwZjJhMmU1ZDY4OTZkZmYzMDI0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODljYjkxN2QxNDY4MGU2YWFlNDlmYzgxYzVmMGFiOTZlNThmYmEyNDMwZDdjMjQ5NzVkMjAwMzEwMjA5MjU3ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTYxZDA3MDZlYTM1ZWJkZGQwZmQyMGVmZGI4OWEzYWUyYTQ4N2I3OTJlZTlhYzJhMDY2YWEzZDc2ODczN2EyZiJ9"
+        },
+        {
+          "resource": "repo://src-tauri/tests/workspace_layering.rs#L68-L69",
+          "version": "repo-lines-v1:sha256:bf41542c2be0e2b709c9a49539f0c4b8c5f8e5cd3ace680dab73f37b965e5304:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjIwOTgyYTBiMmUyMWNkMDA4N2I0OWViMDZlZTQ1MDg4YWY1OTJiYzBmN2UzMjIyNGM5YjRlZTczNmQ2MmY5YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDIyYmMzYzZjMmJkMzMwMmUwMjljMmFkYTUzZTEzMDA4ZWU5OWJiYzQwMzU3NGM1Y2FiMmI5MWE2NGU3ODU5NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGQ0NjI4NTMyZjhlZWU2NmJiOTIzZTY0NzE5MGFjMzdiNGVhOWQ4MmZmODA1ZDBhNjZkZTFkZjY1YTIxY2E5MCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/tests/workspace_layering.rs#L71-L101",
+          "version": "repo-lines-v1:sha256:bf6d6843f1ff4cef316cb22fcbbe8aac7745306e724257758f888816b2ecf964:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2YmVkYTZmMDI5YjNhZDVlYzk5MDAzMTQ4YzIxZGRkNzhjZmMwYzAxOTg5M2VjMmY4ODJlNzhjYjRhNjAyZGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU5ZDI4NzA3NWZlMjJkZTdjYjZkMmRmZjNkZjhmYzU2YTg4MDE1M2IxMTgyOWIyMzg3ODc0NjFlNjEyMWI4MjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxZTE3NjIxMjYxZmUxZmM5YzgwYjc3ZWU1YmZlYWQxOGQwODAxNzEwNmRhNDE4MmRiOWVjYjJjODY0OWE3YzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_214391cef2ea416391e75f8f9d8c5a08",
+      "statement": "ADR 0007 的 `lanjing://` 资产网关尚未实现(Rust 未注册自定义协议、CSP 无 lanjing:、无网关 crate); 它能复用的不是目标白名单而是 `target.rs` 的 scheme/凭据校验与逐跳 DNS 解析加 IP 固定(地址段不做限制)。",
+      "evidence": [
+        {
+          "resource": "repo://docs/adr/0007-asset-gateway-protocol.md#L44-L46",
+          "version": "repo-lines-v1:sha256:56065ff0986c711a075daa722fdcf9732130496972bc357a83943aa6679214dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWY2OWUzZmQ2YjhhYzYxZmViYjZmYTI1MjcyMTU0MmM3MjBlZWJhMGJlOTE3MzU0OGYwMDFiZjRiZTJkYjVkMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjEyYzI5MGU1MzYzMjFmMmQ0YzhmZDQ4OTAxZDAzMjA1MDBkNWQzMTBiNWE1OTZhZjdkOWVjODJhYjE3YmFjMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWY1YzBlMTBiZjc2ZTI4NWU4MTkzZDk4ZGU4ZWQwYmY5NGE0MTBkN2JiNTEyN2VmNGY5MDlmM2Y4OTZkMWU1ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTA3ZjliNTNjNjRjZDA3MmEyOTMyZjA1N2Y4NTA1YzA5ZThhMzAwNDBjMjA5ZWY4NDE5Mjc0MDdlMTZlYmI1ZCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/crates/lj-node-http/src/target.rs#L80-L141",
+          "version": "repo-lines-v1:sha256:205a823463d21c06f368e6c1bf1a3b1fbe08da091b53479f3ad5329e2ed52f44:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhN2JlYjkzYjliMGQxMTAxYTI5NjU2NTFlZTEyZWNiNWQ4YzhmOTQ3MzdmNmRlNzcxZjhjYjEzNDEwOTM1YzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZiMmZiYzNjOTIwMGI1M2QyNjg2ZDY1MTc4MDA3MDBiZThkMmZiZWIzNjgxNGQxMzg1MDhkMzhiMzE4YzAxY2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4ZDNhNzJiNmEyZjM1MmZhMDBjYjUxMWRmMDg0OWJmYjQ0YTIwMGQ5YjZlMzc2YzdhZDhlZGVmODczOWRjOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.0",
-    "at": "2026-10-04T13:54:24.186Z"
+    "at": "2026-10-05T11:35:47.718Z"
   }
 }

@@ -3,6 +3,8 @@ type: "参考"
 title: "Rule system facade"
 openwiki_generated: true
 sources:
+  - id: openwiki-source-378ef8c9992cfb062d1d9087
+    resource: repo://src-tauri/crates/lj-node-http/src/processor/adapter.rs
   - id: openwiki-source-e63ceb81b531375188f64063
     resource: repo://src-tauri/crates/lj-rule-system/src/error.rs
   - id: openwiki-source-f77c1b2f9f427db1e6d94a57
@@ -29,10 +31,10 @@ sources:
     resource: repo://src-tauri/crates/lj-rule-system/src/types/config.rs
   - id: openwiki-source-66845dd8b3f72696149d5d09
     resource: repo://src-tauri/crates/lj-rule-system/src/types/document.rs
-generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+generated: { by: "pi", at: "2026-10-05T11:35:47.718Z" }
 verified:
   - by: openwiki/0.7.0
-    at: 2026-10-05T08:37:16.392Z
+    at: 2026-10-05T11:35:47.718Z
 ---
 
 
@@ -61,7 +63,7 @@ verified:
 1. 先拒绝无效配置: `candidate_ttl` 必须大于零(`candidate_ttl_invalid`), `session_event_capacity` 必须大于零(`bounded_capacity_invalid`)——后者是无界背压的根源(`#L75-L95`)。
 2. 打开 `EventProjectionStorage`(keyring service 从 config 带入)(`#L97-L101`)。
 3. `Compiler::default()`, 并把 `compiler.version()` 作为 `PlanRuntimeConfig.compiler_version`。这一步把「compiler 身份一致」的校验从约定变成装配约束——runtime 的 `compiler_version` 只能来自 compiler 自身(`#L102-L110`)。
-4. 构造 HTTP adapter: `local_fixture_http` 为真时用 `HttpEffectAdapter::new_test()`(关闭环回地址的 SSRF 拒绝), 否则用生产构造器(`#L111-L115`)。
+4. 构造 HTTP adapter: `local_fixture_http` 为真时用 `HttpEffectAdapter::new_test()`(把 `pin_targets` 设为 false, 直接请求 witness 里的 host 而不做逐跳 DNS 解析与 IP 固定), 否则用生产构造器 `new()`(`#L111-L115`; 两者差别见 `src-tauri/crates/lj-node-http/src/processor/adapter.rs#L33-L43`)。
 5. `EffectRegistry::new()` → `register_all(builtin::effects(http, QuickJs, Extract))` → `freeze()`: 注册与查找键是 Rule Contract 的 `EffectKind`, 注册失败经 `effect_registry_error` 映射成稳定码 `effect_registry_registration_failed`; 并**在接受任何规则请求之前**完成。注释写明 execution 始终绑定这个 snapshot(`#L116-L125`)。
 
 `RuleSystemConfig::desktop` 给出默认容量: session event capacity 64、并发 execution 16、全局并发 effect 16、单一来源并发 effect 4、candidate TTL 24 小时、keyring service `lanjing.event-store.master-key`(`src-tauri/crates/lj-rule-system/src/types/config.rs#L20-L35`)。

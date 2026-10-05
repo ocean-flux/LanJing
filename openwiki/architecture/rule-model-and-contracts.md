@@ -27,7 +27,7 @@ sources:
     resource: repo://src-tauri/crates/lj-rule-model/src/sensitive.rs
   - id: openwiki-source-8ece8d8ea6055cf2f800dcb4
     resource: repo://src-tauri/crates/lj-runtime/src/effect_registry.rs
-generated: { by: "pi", at: "2026-10-04T13:54:24.186Z" }
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
 verified:
   - by: openwiki/0.7.0
     at: 2026-10-05T08:37:16.392Z

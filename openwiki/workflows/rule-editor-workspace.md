@@ -3,8 +3,12 @@ type: "参考"
 title: "Rule editor workspace"
 openwiki_generated: true
 sources:
-  - id: openwiki-source-d27d10d277ef08477509b505
-    resource: repo://src-tauri/crates/lj-compiler/src/compiler/validation/definition.rs
+  - id: openwiki-source-bdf4f88ce68a67aa50cdcf1f
+    resource: repo://src-tauri/crates/lj-rule-model/src/descriptor.rs
+  - id: openwiki-source-3d6ee366a9e2fde703f537ab
+    resource: repo://src-tauri/crates/lj-rule-model/tests/descriptor_test.rs
+  - id: openwiki-source-a9261f19e98f918d04f73854
+    resource: repo://src-tauri/src/commands/document.rs
   - id: openwiki-source-98cb793e96999b4a33b247e5
     resource: repo://src/features/rules/DefinitionPreview.tsx
   - id: openwiki-source-c20aac7f1f6ba9a345db52a3
@@ -21,16 +25,20 @@ sources:
     resource: repo://src/features/rules/model/connection-gate.ts
   - id: openwiki-source-ee130a462d446f70c12f0143
     resource: repo://src/features/rules/model/core.ts
+  - id: openwiki-source-7b4777db24e3917d09c987ae
+    resource: repo://src/features/rules/model/descriptor-registry.ts
   - id: openwiki-source-b4c477b8156c887a7c0a2a4f
     resource: repo://src/features/rules/model/flow-adapter.ts
   - id: openwiki-source-df07a4012e3080352b9d1935
     resource: repo://src/features/rules/model/flow-layout.ts
   - id: openwiki-source-c103bd2ca7ee51fbcc90fdbb
     resource: repo://src/features/rules/model/layout-json.ts
+  - id: openwiki-source-b218b2b128f4c8b2a0fda5bc
+    resource: repo://src/features/rules/model/meta.ts
   - id: openwiki-source-cf08c1737c34782425dd0f98
     resource: repo://src/features/rules/model/native-import.ts
-  - id: openwiki-source-4501a731e7c124a791a77f66
-    resource: repo://src/features/rules/model/ports.test.ts
+  - id: openwiki-source-03ff078e0e8efeeb9bf975e6
+    resource: repo://src/features/rules/model/node-defaults.ts
   - id: openwiki-source-62d5fcc1f6508dad1c97ad3b
     resource: repo://src/features/rules/model/ports.ts
   - id: openwiki-source-e523845a56feec75d438c920
@@ -41,7 +49,12 @@ sources:
     resource: repo://src/features/rules/RuleWorkspace.tsx
   - id: openwiki-source-8780adbf81fc42a7d70c2315
     resource: repo://src/features/rules/use-session.tsx
-generated: { by: "pi", at: "2026-10-04T10:14:16.110Z" }
+  - id: openwiki-source-bfa866dbb93b4c8108ffdf7f
+    resource: repo://src/shared/tauri/rules/wire.ts
+generated: { by: "pi", at: "2026-10-05T08:37:16.392Z" }
+verified:
+  - by: openwiki/0.7.0
+    at: 2026-10-05T08:37:16.392Z
 ---
 
 
@@ -70,7 +83,7 @@ core 的状态形状(`model/core.ts#L223-L255`)包含: 当前 `definition`、不
 
 `semanticToFlow` 是**只读投影**, 模块头列了四条约束(`model/flow-adapter.ts#L1-L13`):
 
-1. 七类节点 kind 同名映射到画布自定义节点类型;
+1. 节点 kind 是**开放的 wire 字符串**而不是闭集(`src/shared/tauri/rules/wire.ts#L48-L55`): 内置七类 `http` / `js` / `extract` / `mapper` / `merge` / `condition` / `loop` 有 descriptor 声明, 未安装能力保留作者写入的原文(`FlowNodeConfig::Unavailable`)并仍可展示;
 2. 节点位置优先取 layout, 未保存的节点按 kind 做**确定性默认网格**排布, **绝不写回 definition hash**;
 3. 边 id 由语义 identity `from.node_id:from.handle->to.node_id:to.handle` 确定性派生, 与 core 的边去重 identity 一致, **不产生每意图副本**;
 4. `intentFocus` 只影响 `focused` / `dimmed` 标记(可达性投影), 不复制节点/边/配置。
@@ -88,11 +101,11 @@ missing-handle / unknown-node / unknown-handle / self-loop / incompatible-ports
 duplicate-edge / entry-occupied / back-edge / loop-yield-occupied / intent-mismatch
 ```
 
-判定顺序与语义(`connection-gate.ts#L136-L207`):
+判定顺序与语义(`connection-gate.ts#L115-L174`):
 
 1. 句柄完整性 → 端点存在性 → 自环检查;
 2. 端口必须属于该节点类型(按 config 推导的动态端口)的合同, 否则 `unknown-handle`;
-3. 类型矩阵 `portCompatible`(`ports.ts#L394-L396`: `input.accepts.includes(out.emits)`);
+3. 类型矩阵 `portCompatible`(`ports.ts#L153-L157`: `input.accepts.includes(out.emits)`);
 4. 语义边 identity 已存在 → `duplicate-edge`(重连时会先排除被替换的旧边);
 5. Loop 的 `yield` 只能有一条 structured return;
 6. HTTP 入口输入单入边(意图入口语义);
@@ -105,23 +118,30 @@ duplicate-edge / entry-occupied / back-edge / loop-yield-occupied / intent-misma
 
 **门禁不做的事**: 它只管单条边能否成立。跨边的结构合法性(意图可达性、Merge 必需输入、Loop 区域完整性、capability)不在前端判定——那是编译器的职责。
 
-## 前端端口矩阵与编译器 ports 的关系
+## 端口、字段与默认值只有 descriptor 一个来源
 
-`ports.ts` 是编译期端口合同的 **TS 镜像**(`model/ports.ts#L1-L12`): `PortType` 五值 `http_response | json | raw | delta | loop_binding`「与 compiler 的 `PortValueKind` 对齐」, 另有 `PortRole`(data/control/binding)与 `PortSide` 用于渲染。
+编辑器的节点形状不再由前端自己维护。Rust 的 `lj-rule-model::descriptor` 是**唯一来源**: 模块头写明「新增规则能力只需在 `node_descriptors()` 登记一条声明: compiler port、编辑器字段、字段标签与默认值都由同一份声明派生, 不需要新的前端页面分支或 runtime dispatch 分支」, 且本模块只出稳定 code 与 raw 文本、不出本地化文案(`src-tauri/crates/lj-rule-model/src/descriptor.rs#L1-L5`)。当前声明表是 7 条内置 kind, 每条带 `label_key` / `description_key` / `icon` / `inputs` / `outputs` / `fields` / `default_config`。
 
-静态合同 `PORT_CONTRACT` 覆盖七类节点的空配置回退(`#L74` 起), 动态端口由 `getNodePorts(kind, config)` 推导(`#L270` 起):
+三条同步路径保证两侧不漂移:
 
-- Js 节点的输出类型随 `config.output`(json/raw)变化;
-- Merge 的输入来自声明的 `inputs`(按显式 order), `input_id` 缺省写 `input_${index+1}`、`handle` 缺省写 `in:${index}`(`#L253-L268`);
-- Condition 的每个分支产生一个 `branch:<index>` 输出;
-- Loop 暴露 `collection` 入、`body` 出、`yield` 入与 `done` 出四个句柄。
+- **IPC**: `list_rule_node_descriptors` 把 `node_descriptor_set()` 原样返回(`src-tauri/src/commands/document.rs#L19-L24`);
+- **golden fixture**: Rust 测试 `node_descriptor_golden_matches_frontend_fixture` 把声明表与前端 fixture 逐字段比对, 声明变了它先失败, 用 `UPDATE_NODE_DESCRIPTOR_GOLDEN=1` 重生成后前端跟着更新(`src-tauri/crates/lj-rule-model/tests/descriptor_test.rs#L291-L308`);
+- **digest**: `descriptor_set_digest()` 只从同一份声明表算 canonical BLAKE3, 由 `descriptor_digest_is_derived_from_the_single_declaration_table` 独立重算锁定(`descriptor_test.rs#L277-L290`), 所以 Plan 绑定的就是这套 port/字段声明。
 
-**这是两份实现**: 编译器从 Definition 里的显式 config 推导同一组端口并校验结构(输入 handle 必须存在、order 唯一连续、input_id 唯一等), 前端则为了**即时反馈**必须能在没有往返的情况下告诉用户「这条边能不能连」。分工是:
+前端侧的消费结构是一条链, 每层只做自己那份:
 
-- **前端拥有句柄命名**: 检查器新增 Merge 输入时写死 `input_id: input_<n>` 与 `handle: in:<n-1>`(`src/features/rules/inspector/node-panels.tsx#L340-L345`), 与端口推导的缺省值一致; 注释还说明「编辑过程中 input_id 与 handle 都可以临时重复, 只有下标是唯一的」(`#L353`), 也就是说中间态的非法结构是允许存在的;
-- **编译器是权威**: 保存时由 Rust 校验并给出诊断, 前端矩阵只决定 UI 是否允许连边。
+| 模块 | 职责 |
+| --- | --- |
+| `model/descriptor-registry.ts` | 模块加载时用 fixture 填充注册表, 提供 `loadNodeDescriptors()` 用 IPC 声明替换与 `registerNodeDescriptors`; `resolveDescriptorPorts` 按 config 派生 handle 与 value kind(`#L47-L95`, `#L183-L193`) |
+| `model/ports.ts` | 只剩**视图层**: descriptor port → label / 角色 / 侧位, `getNodePorts` 查不到声明时返回空端口集合(`model/ports.ts#L1-L11`, `#L78-L98`) |
+| `model/node-defaults.ts` | 新节点默认 config 来自 `descriptorDefaultConfig`, 本模块不再自带 kind→默认值表以免与 Rust typed config 漂移(`model/node-defaults.ts#L1-L26`) |
+| `model/meta.ts` | palette 顺序 = 声明顺序, 图标取声明并在白名单外回退(`model/meta.ts#L15-L24`) |
+| `labels.ts` | descriptor 的 message key → 文案; 未安装能力退回 wire kind 原文(`src/features/rules/labels.ts#L28-L40`) |
+| `inspector/node-panels.tsx` | 字段、编辑器与顺序全部来自 descriptor, 没有 kind→面板表(`inspector/node-panels.tsx#L1-L8`) |
 
-两份实现的漂移风险是真实的: 仓库里没有跨语言断言两侧矩阵一致的测试(`ports.test.ts` 只对 TS 侧断言)。两侧是否仍然同步 未验证。
+**未安装能力的可见行为**是这套设计的直接结果: `nodeDescriptor(kind)` 返回 `undefined` → 端口集合为空(因此除自身外没有可连的边)、检查器不渲染字段只给 unavailable 说明、label 与 icon 退回原文与通用图标; 节点仍能展示、保存与 round-trip, 但 validate/compile/execute 会由 Rust 侧给出稳定诊断(`model/node-defaults.ts#L17-L22`, `inspector/node-panels.tsx#L7-L8`, `model/meta.ts#L10-L12`)。
+
+**一处未接线**: 注册表的 IPC 刷新函数 `loadNodeDescriptors()` 在 `src/` 里没有任何调用方 —— 应用实际一直用打包进 bundle 的 fixture, `list_rule_node_descriptors` 只有单测与 wrapper 走到。也就是说两侧同步靠的是「Rust 测试守住 fixture」而不是「运行期向 Rust 取声明」; 后者是代码里已备好但未启用的路径。
 
 ## Loop 区域在 TS 里的重复推导
 
@@ -170,6 +190,8 @@ core 的不变量写在模块头(`model/core.ts#L1-L15`), 并在 `core.test.ts` 
 | 点击「校验」 | 是(只读) | `validate_native_rule_document` |
 | 切换预览里的 provenance | 是(只读) | `get_native_rule_provenance` |
 | 新建 / 导入 | 是 | `create_native_rule_document`(blank/template/import) |
+| 跑一次预览运行(live 或 replay) | 是 | `execute`; 事件经 `rule-execution-event` 推回, 取消走 `cancel_execution`(见执行页) |
+| 打开编辑器加载节点声明 | 是(只读), 但**当前无调用方** | `list_rule_node_descriptors`(见上文未接线说明) |
 
 工具栏只调 session 的 action(`src/features/rules/EditorToolbar.tsx#L33-L111`): 保存成功后弹 `rules_saved`, 失败弹 `sessionErrorText`; 校验按钮在 `hasUnsaved` 时禁用, 因为它校验的是**已保存的 revision**(`model/session.ts#L321-L345`: 语义有未保存变更或冲突时直接抛 `document_semantic_unsaved`)。
 
@@ -188,7 +210,7 @@ core 的不变量写在模块头(`model/core.ts#L1-L15`), 并在 `core.test.ts` 
 | 判定 | 谁做 | 何时 |
 | --- | --- | --- |
 | 句柄存在性、端口类型、自环、重复边、回边、单入边、焦点外连接 | 前端门禁(纯 TS) | 连接瞬间, 即时反馈 |
-| 端口矩阵的具体内容(哪些类型可接) | 前端矩阵 + 编译器各自一份 | 连接时 / 保存时 |
+| 端口矩阵的具体内容(哪些类型可接) | descriptor 声明(Rust) → 前端 fixture / 注册表; 编译器读同一份声明 | 连接时(前端) / 保存时(编译器) |
 | Loop 区域成员与越界 | 前端投影(只显示) + 编译器(权威) | 编辑时 / 保存与校验时 |
 | Definition 结构、意图导出、必需输入、capability、Loop 嵌套 | **仅编译器** | 保存 / 显式校验 |
 | `definition_hash` / `plan_hash` | **仅编译器** | 保存 |
@@ -197,7 +219,7 @@ core 的不变量写在模块头(`model/core.ts#L1-L15`), 并在 `core.test.ts` 
 
 ## 遗留术语与边界
 
-- `flow-adapter.ts`、`connection-gate.ts`、`core.ts` 的注释仍写「Svelte Flow」「无 runes」「.svelte.ts」(`flow-adapter.ts#L1-L4`、`connection-gate.ts#L12-L18`、`core.ts#L1-L4`), 而实现早已切到 `@xyflow/react`(`EditorSurface.tsx#L6`)。这些是 React 迁移的历史残留, 不影响行为, 但会误导读者。
-- 编辑器只能创作与保存; **没有从编辑器发起执行或安装的入口**(见 IPC 页与规则文档生命周期页的命令/路径缺口)。
+- `flow-adapter.ts`、`connection-gate.ts`、`core.ts` 的注释仍写「Svelte Flow」「无 runes」「.svelte.ts」(分别是 `flow-adapter.ts#L1-L8`、`#L44-L97`, `connection-gate.ts#L1-L11`, `core.ts#L3`), 而实现早已切到 `@xyflow/react`(`EditorSurface.tsx#L6`)。另外 `connection-gate.ts#L46-L47` 的 `incompatible-ports` 注释仍指向已经不存在的 `PORT_CONTRACT 矩阵`。这些是 React 迁移与 descriptor 改造的历史残留, 不影响行为, 但会误导读者。
+- 编辑器**可以**发起执行了: 工具栏的 `ExecutionPreview` 抽屉跑 live 或 replay 预览(`src/features/rules/EditorToolbar.tsx#L84-L92`); 仍然缺的是「保存的文档 → 已安装来源」这一段(见规则文档生命周期页)。
 - 连接门禁只作用于画布交互; 通过导入(JSON)得到的定义可以绕过它, 由编译器兜底——这是有意的分层, 不是漏洞。
-- 前端矩阵/区域推导与编译器的一致性没有自动化断言, 属 未验证。
+- descriptor 声明的两侧一致性有 golden 测试守门(`descriptor_test.rs#L291-L308`), 但 **Loop 区域推导**仍是 TS 独有的第二份实现, 没有跨语言断言(见上文)。
