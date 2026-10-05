@@ -56,7 +56,7 @@ type ImportPhase =
 type PreparedSource = { candidate: InstallCandidate; item: CatalogItem };
 
 function candidateRequestsSystem(candidate: InstallCandidate) {
-  const { env, fs, process } = candidate.required_grant.system;
+  const { env, fs, process } = candidate.required_grant;
   return env || fs || process;
 }
 
@@ -132,7 +132,6 @@ export function SourcesHome() {
     [catalog, selectedIds],
   );
   const requestsSystem = prepared.some((entry) => candidateRequestsSystem(entry.candidate));
-  const requestsNetwork = prepared.some((entry) => entry.candidate.required_grant.network);
 
   const closeImport = useCallback(() => {
     setSearchParams((current) => {
@@ -173,10 +172,7 @@ export function SourcesHome() {
     const results = await Promise.all(
       prepared.map(async (entry) => {
         try {
-          await installPreparedSource(
-            entry.candidate.id,
-            requestsNetwork ? 'network_only' : 'none',
-          );
+          await installPreparedSource(entry.candidate.id);
           return { entry, error: undefined };
         } catch (caught) {
           return { entry, error: caught instanceof Error ? caught.message : String(caught) };
@@ -417,10 +413,6 @@ export function SourcesHome() {
                   <Icon name="shield-check" className="mt-0.5 text-base" />
                   {m.sources_install_system_unsupported()}
                 </p>
-              ) : null}
-
-              {requestsNetwork && !requestsSystem ? (
-                <p className="text-ink-muted">{m.sources_deeplink_network_required_notice()}</p>
               ) : null}
 
               {importError ? (

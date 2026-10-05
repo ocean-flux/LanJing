@@ -22,7 +22,6 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import {
   type SourceWorkflowAdapter,
   availableSourceGroups,
-  candidateRequestsNetwork,
   candidateRequestsSystem,
   createSourceWorkflow,
 } from './workflow';
@@ -92,16 +91,12 @@ function errorLabel(code: string | null, m: ReturnType<typeof useMessages>): str
   }
 }
 
-function grantLabel(value: boolean, m: ReturnType<typeof useMessages>): string {
-  return value ? m.sources_install_network_required() : m.sources_install_network_not_required();
-}
-
 function listValue(value: string[] | null | undefined, empty: string): string {
   return value && value.length > 0 ? value.join(', ') : empty;
 }
 
 function systemValue(
-  value: InstalledSource['grant']['system'],
+  value: InstalledSource['grant'],
   empty: string,
   m: ReturnType<typeof useMessages>,
 ): string {
@@ -144,9 +139,8 @@ function SourceUpdateDiff({
   const groupChanged = previous.profile.group !== candidate.profile.group;
   const intentsChanged =
     previous.profile.supported_intents.join(',') !== candidate.profile.supported_intents.join(',');
-  const networkChanged = previous.grant.network !== candidate.required_grant.network;
-  const currentSystem = systemValue(previous.grant.system, m.sources_value_none(), m);
-  const candidateSystem = systemValue(candidate.required_grant.system, m.sources_value_none(), m);
+  const currentSystem = systemValue(previous.grant, m.sources_value_none(), m);
+  const candidateSystem = systemValue(candidate.required_grant, m.sources_value_none(), m);
   const systemChanged = currentSystem !== candidateSystem;
 
   return (
@@ -159,14 +153,6 @@ function SourceUpdateDiff({
           {candidate.profile.version ?? m.sources_value_none()}{' '}
           <Badge variant={versionChanged ? 'default' : 'outline'}>
             {changeLabel(versionChanged, m)}
-          </Badge>
-        </dd>
-        <dt className="text-ink-muted">{m.sources_install_current_grant()}</dt>
-        <dd>
-          {m.sources_inspector_network()}: {grantLabel(previous.grant.network, m)}{' '}
-          <Icon name="arrow-right" /> {grantLabel(candidate.required_grant.network, m)}{' '}
-          <Badge variant={networkChanged ? 'default' : 'outline'}>
-            {changeLabel(networkChanged, m)}
           </Badge>
         </dd>
         <dt className="text-ink-muted">{m.sources_inspector_system()}</dt>
@@ -234,7 +220,6 @@ export function SourceInstallDialog({
     [groupFilter, state.catalog],
   );
   const requestsSystem = state.prepared.some((entry) => candidateRequestsSystem(entry.candidate));
-  const requestsNetwork = state.prepared.some((entry) => candidateRequestsNetwork(entry.candidate));
   const localizedError = errorLabel(state.errorCode, m);
 
   const readFile = async (file: File) => {
@@ -440,11 +425,6 @@ export function SourceInstallDialog({
               >
                 <Icon name="shield-check" className="mt-0.5 text-base" />
                 {m.sources_install_system_unsupported()}
-              </p>
-            ) : null}
-            {requestsNetwork && !requestsSystem ? (
-              <p className="text-ui-sm text-ink-muted">
-                {m.sources_install_network_required_notice()}
               </p>
             ) : null}
           </div>

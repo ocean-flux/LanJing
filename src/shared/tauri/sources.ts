@@ -1,6 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 
-export type CapabilityGrantPreset = 'none' | 'network_only';
 export type SourcePrepareRequest =
   | { kind: 'legado'; source_json: string }
   | { kind: 'maccms_json'; url: string }
@@ -46,9 +45,15 @@ export interface InstalledSource {
   revision: number;
 }
 
+/**
+ * 安装时批准的能力 grant：只覆盖应用暴露的系统 API。
+ *
+ * 网络不受 capability 控制，因此不出现在这里（规则可以访问任意 http(s) 目标）。
+ */
 export interface CapabilityGrant {
-  network: boolean;
-  system: { env: boolean; fs: boolean; process: boolean };
+  fs: boolean;
+  env: boolean;
+  process: boolean;
 }
 
 export interface SourceRevision {
@@ -104,12 +109,9 @@ export function prepareSourceInstall(
   });
 }
 
-export function installPreparedSource(
-  candidateId: string,
-  grant: CapabilityGrantPreset,
-): Promise<InstalledSource> {
+export function installPreparedSource(candidateId: string): Promise<InstalledSource> {
   return invoke<InstalledSource>('install', {
-    request: { candidate_id: candidateId, grant },
+    request: { candidate_id: candidateId },
   });
 }
 

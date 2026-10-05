@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createSourceWorkflow, type SourceWorkflowAdapter } from '@/features/sources/workflow';
 import type { InstallCandidate, InstalledSource, SourceOperation } from '@/shared/tauri/sources';
 
-const NO_SYSTEM_GRANT: InstallCandidate['required_grant']['system'] = {
+const NO_GRANT: InstallCandidate['required_grant'] = {
   env: false,
   fs: false,
   process: false,
@@ -13,7 +13,7 @@ function installedSource(sourceId = 'source:legado:one'): InstalledSource {
     source_id: sourceId,
     version: 'v1',
     revision: 4,
-    grant: { network: false, system: NO_SYSTEM_GRANT },
+    grant: NO_GRANT,
     profile: {
       id: sourceId,
       title: '已有来源',
@@ -28,9 +28,8 @@ function installedSource(sourceId = 'source:legado:one'): InstalledSource {
 
 function candidate(
   sourceId = 'source:legado:one',
-  network = false,
   operation: SourceOperation = 'install',
-  system: InstallCandidate['required_grant']['system'] = NO_SYSTEM_GRANT,
+  grant: InstallCandidate['required_grant'] = NO_GRANT,
 ): InstallCandidate {
   return {
     id: `candidate:${sourceId}`,
@@ -45,7 +44,7 @@ function candidate(
       supported_intents: ['Search'],
       risk_notes: [],
     },
-    required_grant: { network, system },
+    required_grant: grant,
     diagnostics: [],
     definition_hash: 'definition-hash',
     plan_hash: 'plan-hash',
@@ -69,7 +68,7 @@ describe('source workflow', () => {
       adapter({
         prepare: async (request) => {
           requests.push(request);
-          return candidate('source:maccms:example', true);
+          return candidate('source:maccms:example');
         },
       }),
     );
@@ -86,7 +85,7 @@ describe('source workflow', () => {
     });
   });
 
-  it('parses pasted JSON locally without a network or prepare call', async () => {
+  it('parses pasted JSON locally without a prepare call', async () => {
     let prepared = false;
     const workflow = createSourceWorkflow(
       adapter({
@@ -130,7 +129,7 @@ describe('source workflow', () => {
     const workflow = createSourceWorkflow(
       adapter({
         listSources: async () => [],
-        prepare: async () => candidate(undefined, false, 'update'),
+        prepare: async () => candidate(undefined, 'update'),
       }),
     );
     await workflow.refreshSources();
@@ -147,7 +146,7 @@ describe('source workflow', () => {
   it('marks an existing identity as an update and returns to pick after a stale install', async () => {
     const workflow = createSourceWorkflow(
       adapter({
-        prepare: async () => candidate(undefined, true, 'update'),
+        prepare: async () => candidate(undefined, 'update'),
         install: async () => {
           const stale = new Error('stale') as Error & { code: string };
           stale.code = 'candidate_stale';
@@ -174,24 +173,23 @@ describe('source workflow', () => {
     });
   });
 
-  it('grants network_only without a consent step when the candidate requires network', async () => {
-    const grants: string[] = [];
+  it('installs a candidate with its id only and no grant parameter', async () => {
+    const installCalls: string[] = [];
     const workflow = createSourceWorkflow(
       adapter({
-        prepare: async () => candidate(undefined, true),
-        install: async (_candidateId, grant) => {
-          grants.push(grant);
+        install: async (candidateId) => {
+          installCalls.push(candidateId);
           return installedSource();
         },
       }),
     );
-    workflow.setInput(JSON.stringify({ bookSourceName: '联网来源' }));
+    workflow.setInput(JSON.stringify({ bookSourceName: '本地来源' }));
     await workflow.prepareInput();
     await workflow.prepareSelected();
 
     await workflow.install();
 
-    expect(grants).toEqual(['network_only']);
+    expect(installCalls).toEqual(['candidate:source:legado:one']);
     expect(workflow.getState()).toMatchObject({ phase: 'done', errorCode: null });
   });
 
@@ -200,7 +198,7 @@ describe('source workflow', () => {
     const workflow = createSourceWorkflow(
       adapter({
         prepare: async () =>
-          candidate(undefined, false, 'install', { env: false, fs: true, process: false }),
+          candidate(undefined, 'install', { env: false, fs: true, process: false }),
         install: async () => {
           installed = true;
           return installedSource();

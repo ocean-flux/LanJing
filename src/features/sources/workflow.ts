@@ -7,7 +7,6 @@ import {
   installPreparedSource,
   listInstalledSources,
   prepareSourceInstall,
-  type CapabilityGrantPreset,
   type InstallCandidate,
   type InstalledSource,
   type SourcePrepareRequest,
@@ -16,7 +15,7 @@ import {
 export interface SourceWorkflowAdapter {
   listSources: () => Promise<InstalledSource[]>;
   prepare: (request: SourcePrepareRequest) => Promise<InstallCandidate>;
-  install: (candidateId: string, grant: CapabilityGrantPreset) => Promise<InstalledSource>;
+  install: (candidateId: string) => Promise<InstalledSource>;
 }
 
 export interface PreparedSource {
@@ -148,12 +147,8 @@ function initialState(): SourceWorkflowState {
 }
 
 export function candidateRequestsSystem(candidate: InstallCandidate): boolean {
-  const { env, fs, process } = candidate.required_grant.system;
+  const { env, fs, process } = candidate.required_grant;
   return env || fs || process;
-}
-
-export function candidateRequestsNetwork(candidate: InstallCandidate): boolean {
-  return candidate.required_grant.network;
 }
 
 export function availableSourceGroups(items: CatalogItem[]): string[] {
@@ -360,10 +355,7 @@ export function createSourceWorkflow(adapter: SourceWorkflowAdapter = tauriSourc
         try {
           return {
             entry,
-            installed: await adapter.install(
-              entry.candidate.id,
-              entry.candidate.required_grant.network ? 'network_only' : 'none',
-            ),
+            installed: await adapter.install(entry.candidate.id),
             failure: null,
           };
         } catch (error) {

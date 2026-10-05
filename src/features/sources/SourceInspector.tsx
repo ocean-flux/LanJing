@@ -17,17 +17,16 @@ import {
   installPreparedSource,
   listSourceRevisions,
   prepareSourceRollback,
-  type CapabilityGrantPreset,
   type InstallCandidate,
   type InstalledSource,
   type SourceRevision,
 } from '@/shared/tauri/sources';
-import { candidateRequestsNetwork, candidateRequestsSystem } from './workflow';
+import { candidateRequestsSystem } from './workflow';
 
 export interface SourceInspectorAdapter {
   listRevisions: (sourceId: string) => Promise<SourceRevision[]>;
   prepareRollback: (sourceId: string, revision: number) => Promise<InstallCandidate>;
-  install: (candidateId: string, grant: CapabilityGrantPreset) => Promise<InstalledSource>;
+  install: (candidateId: string) => Promise<InstalledSource>;
 }
 
 const tauriSourceInspectorAdapter: SourceInspectorAdapter = {
@@ -54,15 +53,11 @@ function formatTimestamp(value: number): string {
   }).format(new Date(value));
 }
 
-function grantLabel(value: boolean, m: ReturnType<typeof useMessages>): string {
-  return value ? m.sources_install_network_required() : m.sources_install_network_not_required();
-}
-
 function systemGrantLabel(
   grant: InstalledSource['grant'],
   m: ReturnType<typeof useMessages>,
 ): string {
-  const values = Object.entries(grant.system)
+  const values = Object.entries(grant)
     .filter(([, enabled]) => enabled)
     .map(([name]) => {
       switch (name) {
@@ -115,7 +110,7 @@ function rollbackErrorLabel(code: string | null, m: ReturnType<typeof useMessage
       return m.sources_error_source_revision_not_found();
     }
     case 'grant_insufficient': {
-      return m.sources_install_network_required_notice();
+      return m.sources_install_system_unsupported();
     }
     case 'system_grant_unsupported': {
       return m.sources_install_system_unsupported();
@@ -183,9 +178,6 @@ export function SourceInspector({
   const candidateNeedsSystem = rollbackCandidate
     ? candidateRequestsSystem(rollbackCandidate)
     : false;
-  const candidateNeedsNetwork = rollbackCandidate
-    ? candidateRequestsNetwork(rollbackCandidate)
-    : false;
   const rollbackErrorLabelText = rollbackErrorLabel(rollbackError, m);
 
   const prepareRollback = async (revision: SourceRevision) => {
@@ -218,7 +210,7 @@ export function SourceInspector({
     setRollbackError(null);
     setRollbackDetail('');
     try {
-      await adapter.install(rollbackCandidate.id, candidateNeedsNetwork ? 'network_only' : 'none');
+      await adapter.install(rollbackCandidate.id);
       toast.success(m.sources_inspector_rollback_success());
       onInstalled();
       onOpenChange(false);
@@ -269,10 +261,6 @@ export function SourceInspector({
                   <div className="flex min-h-(--density-row) items-center justify-between gap-4">
                     <dt className="text-ink-muted">{m.sources_inspector_revision()}</dt>
                     <dd className="font-mono tabular-nums">{source.revision}</dd>
-                  </div>
-                  <div className="flex min-h-(--density-row) items-center justify-between gap-4">
-                    <dt className="text-ink-muted">{m.sources_inspector_grant()}</dt>
-                    <dd>{grantLabel(source.grant.network, m)}</dd>
                   </div>
                   <div className="flex min-h-(--density-row) items-center justify-between gap-4">
                     <dt className="text-ink-muted">{m.sources_inspector_system()}</dt>
@@ -439,11 +427,6 @@ export function SourceInspector({
                           className="border border-danger bg-danger-soft p-2 text-danger"
                         >
                           {m.sources_install_system_unsupported()}
-                        </p>
-                      ) : null}
-                      {candidateNeedsNetwork && !candidateNeedsSystem ? (
-                        <p className="text-ink-muted">
-                          {m.sources_install_network_required_notice()}
                         </p>
                       ) : null}
                     </div>
