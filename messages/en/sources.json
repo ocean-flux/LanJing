@@ -121,8 +121,6 @@
   "sources_deeplink_selected_summary": "{count} sources ready to install",
   "sources_deeplink_install_selected": "Install selected",
   "sources_deeplink_back_to_pick": "Back to list",
-  "sources_deeplink_network_consent_notice": "Fetching this import link needs network access. Turn on the “Allow network access” switch below to continue; while it is off no request is sent.",
-  "sources_deeplink_network_consent_switch": "Allow network access",
   "sources_deeplink_network_required_notice": "One or more selected sources require network access. Choose the network-only grant before installing.",
   "sources_deeplink_install_success": "Installed {count} sources.",
   "sources_deeplink_install_partial": "Installed {ok}, failed {fail}.",

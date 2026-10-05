@@ -158,27 +158,6 @@ export function candidateRequestsNetwork(candidate: InstallCandidate): boolean {
   return candidate.required_grant.network;
 }
 
-/**
- * 深链导入在未授权联网时的稳定码。
- *
- * 用户可见的「允许联网」开关只有一个: 同一个 `allowNetwork` 既拦导入抓取, 也拦安装时的
- * network grant, 不再出现同一条链路两种含义。
- */
-export const NETWORK_CONSENT_REQUIRED = 'network_consent_required';
-
-/** 深链导入的第一步: 可以抓取, 或先请用户打开联网开关。 */
-export type DeepLinkImportStep = 'fetch' | typeof NETWORK_CONSENT_REQUIRED;
-
-/**
- * 判定深链导入能否先抓取。
- *
- * 开关为关时不发起请求, 只返回 [`NETWORK_CONSENT_REQUIRED`]; 待导入链接仍留在 `?import=`
- * 查询参数上, 用户打开开关后同一步即可继续。
- */
-export function deepLinkImportStep(allowNetwork: boolean): DeepLinkImportStep {
-  return allowNetwork ? 'fetch' : NETWORK_CONSENT_REQUIRED;
-}
-
 export function availableSourceGroups(items: CatalogItem[]): string[] {
   return [
     ...new Set(items.map((item) => item.group).filter((group): group is string => Boolean(group))),

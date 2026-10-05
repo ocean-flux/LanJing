@@ -121,8 +121,6 @@
   "sources_deeplink_selected_summary": "将安装 {count} 个来源",
   "sources_deeplink_install_selected": "安装所选",
   "sources_deeplink_back_to_pick": "返回列表",
-  "sources_deeplink_network_consent_notice": "此导入链接需要联网抓取。请勾选下面的「允许联网访问」开关后再继续；不勾选就不会发出任何请求。",
-  "sources_deeplink_network_consent_switch": "允许联网访问",
   "sources_deeplink_network_required_notice": "所选来源中有需要网络访问的项。安装前请明确选择“仅授权网络访问”。",
   "sources_deeplink_install_success": "已安装 {count} 个来源。",
   "sources_deeplink_install_partial": "成功 {ok}，失败 {fail}。",
