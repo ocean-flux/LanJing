@@ -165,7 +165,7 @@ pub(crate) async fn process_stage_source_rollback(
         .map_err(candidate_contract_artifact_error)?;
     let profile = deserialize::<SourceProfile>(historical.profile_json.as_bytes())
         .map_err(|_| StorageError::CandidateTampered)?;
-    let required_grant = deserialize::<PolicyCapabilities>(historical.grant_json.as_bytes())
+    let required_grant = deserialize::<SystemCapabilities>(historical.grant_json.as_bytes())
         .map_err(|_| StorageError::CandidateTampered)?;
     let source_identity = package.source_identity().id.as_str();
     if source_identity != request.source_identity

@@ -251,9 +251,9 @@ fn control_plan(definition: &RuleDefinition) -> ExecutionPlan {
             effects: vec![EffectDeclaration {
                 node_id: id(1),
                 kind: EffectKind::Http,
-                required_capabilities: vec!["network".to_string()],
+                required_capabilities: vec!["fs".to_string()],
             }],
-            capability_requirements: vec!["network".to_string()],
+            capability_requirements: vec!["fs".to_string()],
             control_regions: vec![ControlRegion::Loop(LoopControlRegion {
                 loop_node: id(7),
                 body_entry: FlowPortRef::new(id(2), LINEAR_INPUT_HANDLE),

@@ -9,7 +9,7 @@ use std::time::Duration;
 use lj_capability::IntentInput;
 use lj_node_http::processor::{HttpEffectAdapter, convert_response};
 use lj_node_http::util::{parse_charset, render_url_template};
-use lj_rule_model::{Error, InvocationPath, PolicyCapabilities};
+use lj_rule_model::{Error, InvocationPath};
 use lj_runtime::{
     CancellationHandle, EffectCapture, EffectCaptureMaterialSensitivity, EffectErrorCode,
     EffectInput, EffectOutput, EffectWitness, HttpDnsTargetKind, HttpEffectErrorKind,
@@ -679,10 +679,6 @@ fn http_effect_request(url: String) -> HttpEffectRequest {
             expected_type: lj_rule_model::ExpectedDataType::Html,
         },
         input: EffectInput::Intent(IntentInput::Query("typed".to_string())),
-        capabilities: PolicyCapabilities {
-            network: true,
-            ..PolicyCapabilities::default()
-        },
         base_url: String::new(),
         credentials: HttpExecutionCredentials::default(),
     }

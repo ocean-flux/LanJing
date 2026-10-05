@@ -4,7 +4,7 @@
   "source_identity": {
     "id": "source:core-out-rule-package"
   },
-  "version": "accb44ed888efe9ce0c2de746edf01b987b1c0a063bffe8fb7cc1735efbfb1f6",
+  "version": "d23f39349ce50ca48f19e843ebf95a84a7444cfbc466dd7935e3d0f0152c3810",
   "definition": {
     "contract": "rule_definition",
     "schema_version": 1,
@@ -161,12 +161,9 @@
     },
     "capability_manifest": {
       "required": {
-        "network": true,
-        "system": {
-          "fs": false,
-          "env": false,
-          "process": false
-        }
+        "fs": false,
+        "env": false,
+        "process": false
       }
     },
     "source_id_rules": [

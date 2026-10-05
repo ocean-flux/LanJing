@@ -42,7 +42,7 @@ pub(in crate::compiler) fn analyze(definition: &RuleDefinition) -> Analysis {
             ));
             continue;
         }
-        validate_node_configuration(node, definition, &mut diagnostics);
+        validate_node_configuration(node, &mut diagnostics);
         ports.insert(node.id, ports_for_node(node));
         nodes.insert(node.id, node);
     }

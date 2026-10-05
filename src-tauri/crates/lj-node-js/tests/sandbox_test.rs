@@ -7,7 +7,7 @@
 
 use lj_capability::IntentInput;
 use lj_node_js::processor::QuickJsEffectAdapter;
-use lj_rule_model::{JsBudget, PolicyCapabilities};
+use lj_rule_model::JsBudget;
 use lj_runtime::{
     CancellationHandle, EffectInput, EffectOutput, QuickJsEffectHandler, QuickJsEffectRequest,
     QuickJsOutput,
@@ -162,10 +162,6 @@ async fn run_quickjs(code: &str, input: EffectInput) -> QuickJsOutput {
         code: code.to_string(),
         budgets: JsBudget::default(),
         input,
-        capabilities: PolicyCapabilities {
-            network: true,
-            ..PolicyCapabilities::default()
-        },
     };
     let captured = QuickJsEffectAdapter
         .execute_quickjs(request, CancellationHandle::new().token())

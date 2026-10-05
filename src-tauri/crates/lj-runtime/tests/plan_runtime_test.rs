@@ -23,8 +23,8 @@ use lj_rule_model::{
     ForEachConfig, HttpMethod, HttpSpec, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE,
     LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE,
     LOOP_YIELD_HANDLE, MAX_LOOP_ITERATIONS, MergeConfig, MergeInput, MergeInputActivation,
-    MergeStrategy, PlanNode, PlanNodeConfig, PolicyCapabilities, RuleDefinition, SourceIdentity,
-    SystemCapabilities, TypedLiteral, execution_plan_hash, read_execution_plan,
+    MergeStrategy, PlanNode, PlanNodeConfig, RuleDefinition, SourceIdentity, SystemCapabilities,
+    TypedLiteral, execution_plan_hash, read_execution_plan,
 };
 use lj_runtime::effect_registry::{EffectHandler, EffectRegistry, FrozenEffectRegistry, builtin};
 use lj_runtime::{
@@ -887,10 +887,7 @@ fn request(
         intent: StandardIntent::Search,
         input: IntentInput::Query("capture".to_string()),
         mode,
-        capabilities: PolicyCapabilities {
-            network: true,
-            system: SystemCapabilities::default(),
-        },
+        capabilities: SystemCapabilities::default(),
         base_url: "https://example.invalid".to_string(),
         credentials: HttpExecutionCredentials::default(),
     }
@@ -971,10 +968,7 @@ fn compiler_definition() -> RuleDefinition {
             edges: vec![linear_edge(http, extract), linear_edge(extract, mapper)],
         },
         CapabilityManifest {
-            required: PolicyCapabilities {
-                network: true,
-                system: SystemCapabilities::default(),
-            },
+            required: SystemCapabilities::default(),
         },
         vec!["url".to_string()],
     )
@@ -1009,10 +1003,7 @@ fn quickjs_definition() -> RuleDefinition {
             edges: vec![linear_edge(quickjs, mapper)],
         },
         CapabilityManifest {
-            required: PolicyCapabilities {
-                network: true,
-                system: SystemCapabilities::default(),
-            },
+            required: SystemCapabilities::default(),
         },
         vec!["url".to_string()],
     )
@@ -1193,10 +1184,7 @@ fn control_definition(
         BTreeMap::from([(StandardIntent::Search, IntentExport::new(entry, mapper))]),
         FlowGraph { nodes, edges },
         CapabilityManifest {
-            required: PolicyCapabilities {
-                network: true,
-                system: SystemCapabilities::default(),
-            },
+            required: SystemCapabilities::default(),
         },
         vec!["url".to_string()],
     )

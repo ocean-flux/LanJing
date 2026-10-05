@@ -11,8 +11,8 @@ use lj_capability::{IntentInput, StandardIntent};
 use lj_media::{MediaAssetKind, MediaAssetLocator, MediaGraphDelta, MediaKind};
 use lj_rule_system::test_support::{TempRuleSystem, init_mock_keyring};
 use lj_rule_system::{
-    CapabilityGrant, ExecuteRequest, ExecutionEventKind, ExecutionMode, InstallCandidate,
-    LibraryEntryUpdate, LibraryProgress, RuleErrorStage, RuleInput, RuleSystem,
+    ExecuteRequest, ExecutionEventKind, ExecutionMode, InstallCandidate, LibraryEntryUpdate,
+    LibraryProgress, RuleErrorStage, RuleInput, RuleSystem,
 };
 use sea_orm::{ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, Statement, Value};
 use serde_json::json;
@@ -79,8 +79,12 @@ async fn tamper_candidate_row(path: &Path, candidate: &InstallCandidate, tamper:
                 .bind(&candidate_id)
         }
         CandidateTamper::RequiredGrant => {
-            let grant_json = serde_json::to_string(&CapabilityGrant::none())
-                .expect("grant 可序列化");
+            // 写入 Definition 未声明的系统能力；应用从未授予它。
+            let grant_json = serde_json::to_string(&lj_rule_model::SystemCapabilities {
+                fs: true,
+                ..lj_rule_model::SystemCapabilities::default()
+            })
+            .expect("grant 可序列化");
             TestStatement::new("UPDATE candidate_projection SET required_grant_json = ? WHERE candidate_id = ?")
                 .bind(&grant_json)
                 .bind(&candidate_id)
@@ -502,7 +506,11 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
             .supported_intents
             .contains(&StandardIntent::Discover)
     );
-    assert!(candidate.required_grant.requires_network());
+    assert_eq!(
+        serde_json::to_value(&candidate.required_grant).expect("grant 可作为 wire 值序列化"),
+        json!({"fs": false, "env": false, "process": false}),
+        "网络不再是受控能力，导入的 Maccms 来源不声明任何系统能力"
+    );
     assert_eq!(candidate.definition_hash.len(), 64);
     assert_eq!(candidate.plan_hash.len(), 64);
     assert_eq!(
@@ -517,25 +525,19 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
     let tampered_id = serde_json::from_value(json!(Uuid::new_v4().to_string()))
         .expect("opaque candidate ID 的 wire 值可被外部反序列化");
     let tampered = system
-        .install(tampered_id, CapabilityGrant::network_only())
+        .install(tampered_id)
         .await
         .expect_err("篡改 candidate token 必须被拒绝");
     assert_eq!(tampered.stage, RuleErrorStage::Candidate);
 
-    let insufficient = system
-        .install(candidate.id.clone(), CapabilityGrant::none())
-        .await
-        .expect_err("缺少 network grant 的 Maccms candidate 不得安装");
-    assert_eq!(insufficient.stage, RuleErrorStage::Capability);
-
     let consumed_candidate_id = candidate.id.clone();
     let first = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("有效 candidate 应安装");
     assert_eq!(first.version, expected_source_version);
     let consumed = system
-        .install(consumed_candidate_id, CapabilityGrant::network_only())
+        .install(consumed_candidate_id)
         .await
         .expect_err("已消费 candidate 不得再次安装");
     assert_eq!(consumed.stage, RuleErrorStage::Candidate);
@@ -545,7 +547,7 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
         .expect("同 identity 可准备新版本");
     assert_eq!(replacement.expected_installed_revision, first.revision);
     let second = system
-        .install(replacement.id, CapabilityGrant::network_only())
+        .install(replacement.id)
         .await
         .expect("同 identity 安装应追加 source revision");
     assert_eq!(second.version, first.version);
@@ -562,7 +564,7 @@ async fn candidate_boundary_is_opaque_and_rejects_tampering_expiry_and_insuffici
         .expect("可创建待过期 candidate");
     tokio::time::sleep(Duration::from_millis(40)).await;
     let expiry_error = expiry_system
-        .install(expired.id, CapabilityGrant::network_only())
+        .install(expired.id)
         .await
         .expect_err("过期 candidate 不得安装");
     assert_eq!(expiry_error.stage, RuleErrorStage::Candidate);
@@ -594,7 +596,7 @@ async fn candidate_install_revalidates_event_metadata_after_restart() {
 
         let reopened = temp.reopen_after_drop(Duration::from_mins(1)).await;
         let error = reopened
-            .install(candidate.id, CapabilityGrant::network_only())
+            .install(candidate.id)
             .await
             .expect_err("重启后 candidate durable metadata 篡改必须被拒绝");
         assert_eq!(error.stage, RuleErrorStage::Candidate);
@@ -613,7 +615,7 @@ async fn source_revision_history_and_rollback_require_a_new_reviewed_candidate()
         .await
         .expect("first source candidate");
     let first = system
-        .install(first_candidate.id.clone(), CapabilityGrant::network_only())
+        .install(first_candidate.id.clone())
         .await
         .expect("first source install");
     let second_candidate = system
@@ -621,7 +623,7 @@ async fn source_revision_history_and_rollback_require_a_new_reviewed_candidate()
         .await
         .expect("source update candidate");
     let second = system
-        .install(second_candidate.id, CapabilityGrant::network_only())
+        .install(second_candidate.id)
         .await
         .expect("source update install");
 
@@ -645,13 +647,8 @@ async fn source_revision_history_and_rollback_require_a_new_reviewed_candidate()
     assert_eq!(rollback.profile.version, first.profile.version);
     assert_eq!(rollback.definition_hash, first_candidate.definition_hash);
     assert_ne!(rollback.id, first_candidate.id);
-    let denied_rollback = system
-        .install(rollback.id.clone(), CapabilityGrant::none())
-        .await
-        .expect_err("回退 candidate 仍必须重新获得 network grant");
-    assert_eq!(denied_rollback.stage, RuleErrorStage::Capability);
     let restored = system
-        .install(rollback.id, CapabilityGrant::network_only())
+        .install(rollback.id)
         .await
         .expect("reviewed rollback install");
     assert!(restored.revision > second.revision);
@@ -666,11 +663,11 @@ async fn source_revision_history_and_rollback_require_a_new_reviewed_candidate()
         .await
         .expect("candidate after rollback");
     system
-        .install(update_after_rollback.id, CapabilityGrant::network_only())
+        .install(update_after_rollback.id)
         .await
         .expect("install after rollback");
     let stale = system
-        .install(stale_rollback.id, CapabilityGrant::network_only())
+        .install(stale_rollback.id)
         .await
         .expect_err("stale rollback must not overwrite current source");
     assert_eq!(stale.code, "candidate_stale");
@@ -704,7 +701,7 @@ async fn maccms_json_four_intents_live_and_replay_use_only_rule_system() {
         .await
         .expect("Maccms JSON candidate");
     let source = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("Maccms JSON source install");
     let source_profile_id = source.profile.id.clone();
@@ -794,7 +791,7 @@ async fn stream_drop_does_not_cancel_and_cancel_and_catch_up_are_idempotent_and_
         .await
         .expect("Maccms JSON candidate");
     let source = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("Maccms JSON install");
 
@@ -1055,7 +1052,7 @@ async fn safe_query_facade_lists_sources_projects_library_and_catches_up() {
         .await
         .expect("Maccms JSON candidate");
     let installed = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("Maccms JSON install");
 

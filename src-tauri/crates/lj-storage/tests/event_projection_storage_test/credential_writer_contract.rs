@@ -30,7 +30,7 @@ async fn candidate_bound_runtime_credential_survives_restart_and_is_consumed() {
     storage
         .install_candidate(InstallCandidateRequest {
             candidate_id,
-            grant: PolicyCapabilities::default(),
+            grant: SystemCapabilities::default(),
             event_id: Uuid::new_v4(),
             trace_id: "trace-install-recovered-source-secret".to_string(),
             occurred_at_ms: now + 2,
@@ -130,7 +130,7 @@ async fn missing_candidate_runtime_secret_never_downgrades_to_credential_free() 
         storage
             .install_candidate(InstallCandidateRequest {
                 candidate_id,
-                grant: PolicyCapabilities::default(),
+                grant: SystemCapabilities::default(),
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-missing-runtime-secret".to_string(),
                 occurred_at_ms: now + 2,

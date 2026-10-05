@@ -12,8 +12,9 @@ use crate::database::OptionalResultExt;
 use crate::database::statement;
 use lj_media::SourceProfile;
 use lj_rule_model::{
-    ArtifactRef, EventType, ExecutionPlan, PolicyCapabilities, RulePackage, SchemaReadError,
-    SecretRef, definition_hash, execution_plan_hash, read_execution_plan, read_rule_package,
+    ArtifactRef, EventType, ExecutionPlan, RulePackage, SchemaReadError, SecretRef,
+    SystemCapabilities, definition_hash, execution_plan_hash, read_execution_plan,
+    read_rule_package,
 };
 use sea_orm::FromQueryResult;
 use uuid::Uuid;

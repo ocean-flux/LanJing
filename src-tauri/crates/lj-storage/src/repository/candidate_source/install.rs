@@ -261,7 +261,7 @@ async fn load_and_validate_candidate_artifacts(
         RulePackage,
         ExecutionPlan,
         SourceProfile,
-        PolicyCapabilities,
+        SystemCapabilities,
     ),
     StorageError,
 > {
@@ -291,7 +291,7 @@ async fn load_and_validate_candidate_artifacts(
         return Err(StorageError::CandidateTampered);
     }
     let required_grant =
-        deserialize::<PolicyCapabilities>(candidate.required_grant_json.as_bytes())
+        deserialize::<SystemCapabilities>(candidate.required_grant_json.as_bytes())
             .map_err(|_| StorageError::CandidateTampered)?;
     if required_grant != package.definition().capability_manifest().required {
         return Err(StorageError::CandidateTampered);

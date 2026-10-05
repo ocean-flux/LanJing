@@ -211,7 +211,11 @@ mod tests {
         let definition = definition(MaccmsFormat::Json, "https://hnyun.com/api.php/provide/vod/");
         assert_eq!(definition.flow().nodes.len(), 8);
         assert_eq!(definition.flow().edges.len(), 6);
-        assert!(definition.capability_manifest().required.network);
+        assert_eq!(
+            definition.capability_manifest().required,
+            lj_rule_model::SystemCapabilities::default(),
+            "导入器不得为网络或任何系统能力声明需求"
+        );
         for intent in [
             StandardIntent::Discover,
             StandardIntent::ResolveItem,

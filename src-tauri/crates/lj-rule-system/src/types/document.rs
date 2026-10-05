@@ -228,7 +228,7 @@ pub struct ValidateNativeRuleDocumentPreview {
     /// 稳定来源资料；Definition 无效时为空。
     pub profile: Option<lj_media::SourceProfile>,
     /// 所需最小能力。
-    pub capability: lj_rule_model::PolicyCapabilities,
+    pub capability: lj_rule_model::SystemCapabilities,
 }
 
 /// native rule document 摘要（镜像 storage `DocumentSummary`）。

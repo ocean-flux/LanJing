@@ -74,7 +74,7 @@ mod tests {
     use lj_rule_model::{
         CapabilityManifest, ControlledMapper, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig,
         FlowPortRef, JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
-        MapperOutputKind, PolicyCapabilities, RuleDefinition, SourceIdentity, SystemCapabilities,
+        MapperOutputKind, RuleDefinition, SourceIdentity, SystemCapabilities,
     };
     use sea_orm::{ConnectionTrait, Database, DatabaseBackend, FromQueryResult, Statement};
     use sea_orm_migration::MigratorTrait;
@@ -125,10 +125,7 @@ mod tests {
                 )],
             },
             CapabilityManifest {
-                required: PolicyCapabilities {
-                    network: true,
-                    system: SystemCapabilities::default(),
-                },
+                required: SystemCapabilities::default(),
             },
             vec!["url".to_string()],
         );

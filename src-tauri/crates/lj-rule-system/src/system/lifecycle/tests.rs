@@ -11,18 +11,17 @@ use lj_rule_model::{
     CapabilityManifest, ConditionConfig, ControlExpression, ControlledMapper, DiagnosticSeverity,
     FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, JsBudget, JsConfig, JsOutputKind,
     LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MERGE_OUTPUT_HANDLE, MergeConfig, MergeInput,
-    MergeInputActivation, MergeStrategy, PolicyCapabilities, RuleDefinition, RulePackage,
-    SourceIdentity, SystemCapabilities, UnavailableNodeConfig, definition_hash,
+    MergeInputActivation, MergeStrategy, RuleDefinition, RulePackage, SourceIdentity,
+    SystemCapabilities, UnavailableNodeConfig, definition_hash,
 };
 use uuid::Uuid;
 
 use super::super::RuleSystem;
 use super::prepare_install::PreparedRuleInput;
 use crate::{
-    CapabilityGrant, CreateMode, CreateNativeRuleDocumentRequest, ExecuteRequest,
-    ExecutionEventKind, ExecutionMode, ExpectedDataType, GetNativeRuleDocumentRequest,
-    RuleErrorStage, RuleInput, RuleSystemConfig, SaveNativeRuleDocumentRequest, SemanticSave,
-    SourceId, SourceOperation,
+    CreateMode, CreateNativeRuleDocumentRequest, ExecuteRequest, ExecutionEventKind, ExecutionMode,
+    ExpectedDataType, GetNativeRuleDocumentRequest, RuleErrorStage, RuleInput, RuleSystemConfig,
+    SaveNativeRuleDocumentRequest, SemanticSave, SourceId, SourceOperation,
 };
 
 fn init_mock_keyring() {
@@ -127,13 +126,45 @@ fn current_control_definition() -> RuleDefinition {
             ],
         },
         CapabilityManifest {
-            required: PolicyCapabilities {
-                network: true,
-                system: SystemCapabilities::default(),
-            },
+            required: SystemCapabilities::default(),
         },
         vec!["url".to_string()],
     )
+}
+
+#[tokio::test]
+async fn install_refuses_candidate_declaring_system_capabilities() {
+    init_mock_keyring();
+    let root = std::env::temp_dir().join(format!("lj-rule-system-system-grant-{}", Uuid::new_v4()));
+    fs::create_dir_all(&root).expect("create fixture root");
+    let system = RuleSystem::open(
+        RuleSystemConfig::desktop(root.join("event-store.db"), root.join("artifacts"))
+            .with_keyring_service(format!("lanjing.rule-system.test.{}", Uuid::new_v4())),
+    )
+    .await
+    .expect("open RuleSystem");
+    let mut definition = current_control_definition();
+    definition.capability_manifest_mut().required.fs = true;
+    let candidate = system
+        .stage_prepared_candidate(
+            PreparedRuleInput {
+                definition,
+                runtime_credentials: None,
+                display_title: None,
+                display_group: None,
+                diagnostics: Vec::new(),
+            },
+            0,
+            "trace-system-grant-candidate",
+        )
+        .await
+        .expect("stage candidate requiring a system capability");
+    let error = system
+        .install(candidate.id)
+        .await
+        .expect_err("声明 fs 能力的 candidate 不得安装：应用不授予任何系统能力");
+    assert_eq!(error.stage, RuleErrorStage::Capability);
+    assert_eq!(error.code, "grant_insufficient");
 }
 
 #[tokio::test]
@@ -162,7 +193,7 @@ async fn current_control_candidate_passes_gate_and_installs_executes_and_replays
         .await
         .expect("stage current candidate");
     let installed = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("install candidate");
 
@@ -406,10 +437,7 @@ async fn candidate_declares_install_for_unknown_source_and_update_for_installed_
         .expect("首次安装必须可准备");
     assert_eq!(first.operation, SourceOperation::Install);
     assert_eq!(first.expected_installed_revision, 0);
-    let installed = system
-        .install(first.id, CapabilityGrant::network_only())
-        .await
-        .expect("首次安装必须提交");
+    let installed = system.install(first.id).await.expect("首次安装必须提交");
 
     let update = system
         .prepare_install(package_input(&definition, "v2"))
@@ -428,10 +456,7 @@ async fn rollback_candidate_is_declared_as_update_of_installed_revision() {
         .prepare_install(package_input(&definition, "v1"))
         .await
         .expect("首次安装必须可准备");
-    system
-        .install(first.id, CapabilityGrant::network_only())
-        .await
-        .expect("首次安装必须提交");
+    system.install(first.id).await.expect("首次安装必须提交");
     let source_id = SourceId::from_identity(first.profile.id.0.clone());
 
     let rollback = system
@@ -459,12 +484,12 @@ async fn stale_candidate_is_rejected_after_source_revision_moves_on() {
         .expect("第二个 candidate 必须可准备");
 
     system
-        .install(first.id, CapabilityGrant::network_only())
+        .install(first.id)
         .await
         .expect("首个 candidate 必须提交");
 
     let error = system
-        .install(second.id, CapabilityGrant::network_only())
+        .install(second.id)
         .await
         .expect_err("过期 candidate 不得提交");
 
@@ -728,7 +753,7 @@ async fn install_definition(
         .await
         .expect("JS 结局 fixture 必须可通过 gate");
     system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("JS 结局 fixture 必须可安装")
         .revision
@@ -966,7 +991,7 @@ async fn js_effect_cannot_reach_plaintext_source_credentials() {
         .await
         .expect("带 runtime credential 的 candidate 必须可暂存");
     let installed = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("candidate 必须可安装");
     let session = system

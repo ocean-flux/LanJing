@@ -3,8 +3,8 @@
 use super::{
     BTreeSet, CollectionSelector, CompilerError, ConditionConfig, ControlExpression, ControlRegion,
     EffectDeclaration, EffectKind, ExecutionPlan, ExecutionPlanParts, FlowNode, FlowNodeConfig,
-    IntentEntry, LoopIterationLimit, NETWORK_CAPABILITY, NodePorts, PlanEdge, PlanForEachConfig,
-    PlanNode, PlanNodeConfig, RuleDefinition, definition_hash, ports_for_node,
+    IntentEntry, LoopIterationLimit, NodePorts, PlanEdge, PlanForEachConfig, PlanNode,
+    PlanNodeConfig, RuleDefinition, definition_hash, ports_for_node,
     unavailable_capability_diagnostic,
 };
 
@@ -66,15 +66,10 @@ fn lower_nodes(
     let mut nodes = Vec::with_capacity(definition.flow().nodes.len());
     for flow_node in &definition.flow().nodes {
         if let Some(kind) = effect_kind(&flow_node.config) {
-            let required_capabilities = if matches!(&kind, EffectKind::Http | EffectKind::QuickJs) {
-                vec![NETWORK_CAPABILITY.to_string()]
-            } else {
-                Vec::new()
-            };
             effects.push(EffectDeclaration {
                 node_id: flow_node.id,
                 kind,
-                required_capabilities,
+                required_capabilities: Vec::new(),
             });
         }
         let NodePorts { inputs, outputs } = ports_for_node(flow_node);

@@ -217,20 +217,21 @@ async fn effect_error_becomes_one_failed_terminal_with_attribution() {
 }
 
 #[tokio::test]
-async fn missing_network_capability_fails_before_any_effect_with_stable_code() {
+async fn undeclared_system_capability_fails_before_any_effect_with_stable_code() {
     let runtime = runtime(4);
     let archive = Arc::new(DurableFileArchive::new());
     let http_calls = Arc::new(AtomicUsize::new(0));
     let extract_calls = Arc::new(AtomicUsize::new(0));
-    let mut denied = request(
-        sample_plan(),
-        Uuid::new_v4(),
-        lj_runtime::ExecutionMode::Live,
+    // 安装 grant 恒为空，因此任何声明系统能力的 Plan 都不得触碰外部 handler。
+    let denied_plan = rewrite_plan(
+        &sample_plan(),
+        |value| {
+            value["effects"][0]["required_capabilities"] = serde_json::json!(["fs"]);
+            value["capability_requirements"] = serde_json::json!(["fs"]);
+        },
+        true,
     );
-    denied.capabilities = PolicyCapabilities {
-        network: false,
-        system: SystemCapabilities::default(),
-    };
+    let denied = request(denied_plan, Uuid::new_v4(), lj_runtime::ExecutionMode::Live);
     let events = collect_events(
         runtime
             .execute(

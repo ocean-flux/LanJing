@@ -1,8 +1,7 @@
-pub(crate) fn grant_covers(grant: &PolicyCapabilities, required: &PolicyCapabilities) -> bool {
-    (!required.network || grant.network)
-        && (!required.system.fs || grant.system.fs)
-        && (!required.system.env || grant.system.env)
-        && (!required.system.process || grant.system.process)
+pub(crate) fn grant_covers(grant: &SystemCapabilities, required: &SystemCapabilities) -> bool {
+    (!required.fs || grant.fs)
+        && (!required.env || grant.env)
+        && (!required.process || grant.process)
 }
 
 /// 读取唯一 current `RulePackage` artifact，并保留 schema 与损坏 JSON 的区别。

@@ -122,7 +122,7 @@ fn source_revision_from_row(row: SourceRevisionRow) -> Result<SourceRevisionReco
         source_revision: from_i64(row.source_revision, "source revision")?,
         version: row.version,
         profile,
-        grant: deserialize::<PolicyCapabilities>(row.grant_json.as_bytes())?,
+        grant: deserialize::<SystemCapabilities>(row.grant_json.as_bytes())?,
         definition_hash: row.definition_hash,
         plan_hash: row.plan_hash,
         installed_at_ms: row.installed_at_ms,
@@ -142,7 +142,7 @@ fn installed_source_record_from_row(
         source_identity: row.source_identity,
         version: row.version,
         profile,
-        grant: deserialize::<PolicyCapabilities>(row.grant_json.as_bytes())?,
+        grant: deserialize::<SystemCapabilities>(row.grant_json.as_bytes())?,
         source_revision: from_i64(row.revision, "source revision")?,
     })
 }

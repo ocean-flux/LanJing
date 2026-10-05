@@ -10,8 +10,7 @@ use lj_rule_model::definition::MapperOutputKind;
 use lj_rule_model::{
     CapabilityManifest, ControlledMapper, ExpectedDataType, ExtractRule, ExtractSpec, ExtractType,
     FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec,
-    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, PolicyCapabilities, RuleDefinition, SourceIdentity,
-    SystemCapabilities,
+    LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, RuleDefinition, SourceIdentity, SystemCapabilities,
 };
 use uuid::Uuid;
 
@@ -118,10 +117,7 @@ pub(crate) fn definition_with_headers(
         intent_exports,
         FlowGraph { nodes, edges },
         CapabilityManifest {
-            required: PolicyCapabilities {
-                network: true,
-                system: SystemCapabilities::default(),
-            },
+            required: SystemCapabilities::default(),
         },
         vec![VOD_ID_FIELD.to_string()],
     )

@@ -2,13 +2,15 @@
 
 use super::{
     Arc, CapturedEffectOutput, EffectCancellation, EffectDeclaration, EffectError, EffectErrorCode,
-    EffectFailure, EffectInput, EffectKind, EffectOutput, ExtractEffectRequest, HttpEffectRequest,
-    JsBudget, MediaResourceId, OwnedSemaphorePermit, PlanExecutionRequest, PlanNode,
-    PlanNodeConfig, PolicyCapabilities, QuickJsEffectRequest, QuickJsOutput, RunOutcome,
-    RuntimeFailureCode, Uuid, effective_js_budget, failed,
+    EffectFailure, EffectInput, EffectOutput, ExtractEffectRequest, HttpEffectRequest, JsBudget,
+    MediaResourceId, OwnedSemaphorePermit, PlanExecutionRequest, PlanNode, PlanNodeConfig,
+    QuickJsEffectRequest, QuickJsOutput, RunOutcome, RuntimeFailureCode, SystemCapabilities, Uuid,
+    effective_js_budget, failed,
 };
 
+use crate::capability::check_capability;
 use crate::effect_registry::EffectHandler;
+use lj_rule_model::Capability;
 
 pub(in crate::plan_runtime::scheduler) async fn acquire_permit(
     semaphore: Arc<tokio::sync::Semaphore>,
@@ -52,7 +54,6 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
                     trace_id: request.trace_id.clone(),
                     spec: spec.clone(),
                     input,
-                    capabilities: request.capabilities.clone(),
                     base_url: request.base_url.clone(),
                     credentials: request.credentials.clone(),
                 },
@@ -73,7 +74,6 @@ pub(in crate::plan_runtime::scheduler) async fn invoke_live_effect(
                         code,
                         budgets,
                         input,
-                        capabilities: request.capabilities.clone(),
                     },
                     cancellation,
                 )
@@ -168,17 +168,16 @@ pub(in crate::plan_runtime::scheduler) fn source_media_id(source_id: &str) -> Me
 
 pub(in crate::plan_runtime::scheduler) fn enforce_capabilities(
     declaration: &EffectDeclaration,
-    capabilities: &PolicyCapabilities,
+    capabilities: &SystemCapabilities,
 ) -> Result<(), &'static str> {
     for capability in &declaration.required_capabilities {
-        match capability.as_str() {
-            "network" if capabilities.network => {}
-            "network" => return Err("安装 grant 未允许 network capability"),
+        let capability = match capability.as_str() {
+            "fs" => Capability::Fs,
+            "env" => Capability::Env,
+            "process" => Capability::Process,
             _ => return Err("Plan 声明了 runtime 不支持的 capability"),
-        }
-    }
-    if matches!(declaration.kind, EffectKind::Http | EffectKind::QuickJs) && !capabilities.network {
-        return Err("安装 grant 未允许 network capability");
+        };
+        check_capability(capabilities, capability).map_err(|_| "安装 grant 未允许该 capability")?;
     }
     Ok(())
 }

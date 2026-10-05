@@ -8,7 +8,7 @@ use std::time::Duration;
 use lj_capability::IntentInput;
 use lj_node_js::execute_js_blocking_cancellable;
 use lj_node_js::processor::QuickJsEffectAdapter;
-use lj_rule_model::{JsBudget, PolicyCapabilities};
+use lj_rule_model::JsBudget;
 use lj_runtime::{
     CancellationHandle, EffectErrorCode, EffectInput, EffectOutput, EffectWitness,
     QuickJsEffectHandler, QuickJsEffectRequest, QuickJsHostCall, QuickJsOutput,
@@ -385,9 +385,5 @@ fn quickjs_effect_request(code: &str) -> QuickJsEffectRequest {
         code: code.to_string(),
         budgets: JsBudget::default(),
         input: EffectInput::Intent(IntentInput::Query("typed".to_string())),
-        capabilities: PolicyCapabilities {
-            network: true,
-            ..PolicyCapabilities::default()
-        },
     }
 }

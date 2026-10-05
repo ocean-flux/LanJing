@@ -17,8 +17,8 @@ use lj_rule_model::{
     CapabilityManifest, ControlledMapper, Error, ExpectedDataType, ExtractRule, ExtractSpec,
     FieldRules, FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, HttpMethod, HttpSpec,
     JsConfig, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, OutputTarget,
-    PolicyCapabilities, RequestHeaderDisposition, RuleDefinition, SensitiveNamePolicy,
-    SourceIdentity, SystemCapabilities,
+    RequestHeaderDisposition, RuleDefinition, SensitiveNamePolicy, SourceIdentity,
+    SystemCapabilities,
 };
 use serde::de::{Deserializer, MapAccess, Visitor};
 use uuid::Uuid;
@@ -157,10 +157,7 @@ pub(crate) fn definition(
             edges: builder.edges,
         },
         CapabilityManifest {
-            required: PolicyCapabilities {
-                network: true,
-                system: SystemCapabilities::default(),
-            },
+            required: SystemCapabilities::default(),
         },
         vec!["bookUrl".to_string(), "chapterUrl".to_string()],
     ))

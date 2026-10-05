@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// 系统级沙箱能力（文件系统/环境变量/进程）。
 ///
-/// 与 `PolicyCapabilities.network` 分开以不超过 clippy `struct_excessive_bools` 阈值。
+/// 网络不属于受控能力：应用总是允许联网，只有我们提供的系统 API 走 capability 控制。
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SystemCapabilities {
@@ -16,21 +16,9 @@ pub struct SystemCapabilities {
     pub process: bool,
 }
 
-/// 策略能力配置（安装 grant / 执行沙箱边界）。
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PolicyCapabilities {
-    /// 是否允许网络请求。
-    pub network: bool,
-    /// 系统级能力（fs/env/process）。
-    pub system: SystemCapabilities,
-}
-
 /// 能力类别枚举（用于 `CapabilityBlocked` 错误）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Capability {
-    /// 网络。
-    Network,
     /// 文件系统。
     Fs,
     /// 环境变量。

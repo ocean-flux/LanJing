@@ -15,9 +15,9 @@ use lj_rule_system::test_support::{
     TempRuleSystem, init_mock_keyring, open_test_database, wipe_vault_key,
 };
 use lj_rule_system::{
-    CapabilityGrant, EffectWitnessCaptureForTest, EffectWitnessForTest, ExecuteRequest,
-    ExecutionEvent, ExecutionEventKind, ExecutionId, ExecutionMode, HttpDnsTargetKindForTest,
-    HttpMethodForTest, QuickJsHostCallForTest, RuleErrorStage, RuleInput, RuleSystem, SourceId,
+    EffectWitnessCaptureForTest, EffectWitnessForTest, ExecuteRequest, ExecutionEvent,
+    ExecutionEventKind, ExecutionId, ExecutionMode, HttpDnsTargetKindForTest, HttpMethodForTest,
+    QuickJsHostCallForTest, RuleErrorStage, RuleInput, RuleSystem, SourceId,
 };
 use sea_orm::{ConnectionTrait, DatabaseBackend, FromQueryResult, Statement};
 use serde_json::{Value, json};
@@ -668,9 +668,9 @@ async fn legado_six_intents_live_and_offline_replay_are_equivalent_and_secure() 
         );
     }
     let installed = system
-        .install(source.id, CapabilityGrant::network_only())
+        .install(source.id)
         .await
-        .expect("network grant should install Legado source");
+        .expect("Legado candidate should install");
 
     let search = execute_live(
         &system,
@@ -822,7 +822,7 @@ async fn legado_replay_refuses_lost_master_key_before_effects() {
         .await
         .expect("credential-bearing Legado candidate");
     let installed = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("credential-bearing Legado source");
     let live = execute_live(
@@ -871,7 +871,7 @@ async fn legado_replay_refuses_tampered_effect_body_without_live_fallback() {
         .await
         .expect("credential-bearing Legado candidate");
     let installed = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("credential-bearing Legado source");
     let live = execute_live(
@@ -928,7 +928,7 @@ async fn legado_replay_refuses_missing_effect_secret_without_live_fallback() {
         .await
         .expect("credential-free Legado candidate");
     let installed = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
         .expect("credential-free Legado source");
     let live = execute_live(
@@ -985,10 +985,7 @@ async fn legado_continue_action_rejects_cross_source_schema_and_expiry_before_ef
         .prepare_install(legado_input(&server.uri()))
         .await
         .expect("first Legado candidate");
-    let first = system
-        .install(first.id, CapabilityGrant::network_only())
-        .await
-        .expect("first Legado source");
+    let first = system.install(first.id).await.expect("first Legado source");
     let discover = execute_live(
         &system,
         &first.source_id,
@@ -1018,7 +1015,7 @@ async fn legado_continue_action_rejects_cross_source_schema_and_expiry_before_ef
         .await
         .expect("second distinct Legado candidate");
     let second = system
-        .install(second_candidate.id, CapabilityGrant::network_only())
+        .install(second_candidate.id)
         .await
         .expect("second Legado source");
     let Err(cross_source) = system

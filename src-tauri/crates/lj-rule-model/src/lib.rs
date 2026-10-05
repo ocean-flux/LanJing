@@ -49,6 +49,6 @@ pub use plan::{
     MERGE_OUTPUT_HANDLE, PlanEdge, PlanForEachConfig, PlanNode, PlanNodeConfig, PlanNodeKind,
     PlanPort, PortValueKind, PortValueType, execution_plan_hash, read_execution_plan,
 };
-pub use policy::{Capability, CapabilityError, PolicyCapabilities, SystemCapabilities};
+pub use policy::{Capability, CapabilityError, SystemCapabilities};
 pub use schema::{RULE_CONTRACT_SCHEMA_VERSION, SchemaContract, SchemaReadError};
 pub use sensitive::{RequestHeaderDisposition, SensitiveNamePolicy};

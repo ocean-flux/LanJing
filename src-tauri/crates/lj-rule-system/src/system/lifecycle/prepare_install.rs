@@ -6,7 +6,7 @@ use lj_importer::maccms::MaccmsImporter;
 use lj_importer::{ImportDiagnostic, ImportedNativeRule};
 use lj_media::{MediaResourceId, SourceProfile};
 use lj_node_http::ImportFetchError;
-use lj_rule_model::{Diagnostic, RulePackage, SourceSpan};
+use lj_rule_model::{Diagnostic, RulePackage, SourceSpan, SystemCapabilities};
 use lj_storage::{
     CandidateDraft, CandidateSummary, InstallCandidateRequest,
     InstalledSource as StorageInstalledSource, RuntimeCredentialMaterial, SourceRollbackRequest,
@@ -302,21 +302,20 @@ impl RuleSystem {
 
     /// 原子消费 candidate。
     ///
+    /// 应用不授予任何系统能力，因此安装 grant 恒为空；规则声明 fs/env/process 的
+    /// candidate 会被 storage 的 grant 覆盖校验拒绝。
+    ///
     /// # Errors
     ///
     /// candidate、schema、grant、source baseline 或 transaction 失败时返回 `RuleError`。
-    pub async fn install(
-        &self,
-        candidate_id: CandidateId,
-        grant: CapabilityGrant,
-    ) -> Result<InstalledSource, RuleError> {
+    pub async fn install(&self, candidate_id: CandidateId) -> Result<InstalledSource, RuleError> {
         let trace_id = super::super::trace_id();
         let installed = self
             .state
             .storage
             .install_candidate(InstallCandidateRequest {
                 candidate_id: candidate_id.as_uuid(),
-                grant: grant.policy().clone(),
+                grant: SystemCapabilities::default(),
                 event_id: Uuid::new_v4(),
                 trace_id: trace_id.clone(),
                 occurred_at_ms: now_millis(&trace_id)?,
@@ -367,6 +366,6 @@ pub(super) fn source_profile(
         version: Some(version.to_string()),
         group: display_group,
         supported_intents: definition.intent_exports().keys().copied().collect(),
-        risk_notes: vec!["该来源可能按已声明的 capability 发起外部请求".to_string()],
+        risk_notes: vec!["该来源会发起外部网络请求".to_string()],
     }
 }

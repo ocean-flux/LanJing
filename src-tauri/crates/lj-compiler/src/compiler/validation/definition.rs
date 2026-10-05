@@ -45,7 +45,6 @@ pub(in crate::compiler) fn validate_definition_header(
 
 pub(in crate::compiler) fn validate_node_configuration(
     node: &FlowNode,
-    definition: &RuleDefinition,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     match &node.config {
@@ -58,7 +57,6 @@ pub(in crate::compiler) fn validate_node_configuration(
                     "/url",
                 ));
             }
-            require_network(node, definition, diagnostics);
         }
         FlowNodeConfig::Js(config) => {
             if config.code.trim().is_empty() {
@@ -69,7 +67,6 @@ pub(in crate::compiler) fn validate_node_configuration(
                     "/code",
                 ));
             }
-            require_network(node, definition, diagnostics);
         }
         FlowNodeConfig::Extract(_) => {}
         FlowNodeConfig::Unavailable(config) => {
@@ -79,9 +76,6 @@ pub(in crate::compiler) fn validate_node_configuration(
         FlowNodeConfig::Merge(config) => validate_merge_config(node, config, diagnostics),
         FlowNodeConfig::Condition(config) => {
             validate_condition_config(node, config, diagnostics);
-            if matches!(config.expression, ControlExpression::Js { .. }) {
-                require_network(node, definition, diagnostics);
-            }
         }
         FlowNodeConfig::Loop(config) => {
             match &config.collection {
@@ -104,7 +98,6 @@ pub(in crate::compiler) fn validate_node_configuration(
                             "/collection/code",
                         ));
                     }
-                    require_network(node, definition, diagnostics);
                 }
             }
             if config.item_binding.trim().is_empty()
@@ -324,23 +317,5 @@ pub(in crate::compiler) fn validate_condition_config(
                 ));
             }
         }
-    }
-}
-
-pub(in crate::compiler) fn require_network(
-    node: &FlowNode,
-    definition: &RuleDefinition,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if !definition.capability_manifest().required.network {
-        diagnostics.push(node_diagnostic(
-            "CAPABILITY_MISMATCH",
-            format!(
-                "节点 {} 需要 network 能力，但 capability manifest 未声明",
-                node.id
-            ),
-            node,
-            "",
-        ));
     }
 }

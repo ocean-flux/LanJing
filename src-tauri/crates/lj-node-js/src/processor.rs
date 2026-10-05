@@ -13,8 +13,7 @@ use rquickjs::allocator::{Allocator, RustAllocator};
 use rquickjs::prelude::Func;
 use rquickjs::{Context, Runtime as JsRuntime};
 
-use lj_rule_model::{Capability, JsBudget};
-use lj_runtime::check_capability;
+use lj_rule_model::JsBudget;
 use lj_runtime::{
     CapturedEffectOutput, EffectCancellation, EffectError, EffectErrorCode, EffectInput,
     EffectOutput, EffectWitness, QuickJsEffectHandler, QuickJsEffectRequest, QuickJsEffectWitness,
@@ -63,13 +62,6 @@ impl QuickJsEffectHandler for QuickJsEffectAdapter {
                 "QuickJS effect 已取消",
             ));
         }
-        check_capability(&request.capabilities, Capability::Network).map_err(|_| {
-            EffectError::new(
-                EffectErrorCode::CapabilityDenied,
-                "安装 grant 未允许 network capability",
-            )
-        })?;
-
         let script_hash = quickjs_script_hash(&request.code);
         let input_hash = effect_input_hash(&request.input).map_err(|_| {
             EffectError::new(EffectErrorCode::Internal, "QuickJS 输入 hash 计算失败")

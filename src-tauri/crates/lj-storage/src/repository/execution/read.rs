@@ -152,7 +152,7 @@ async fn load_source_version(
         &row.plan_artifact_hash,
     ).await?)?;
     let profile = deserialize::<SourceProfile>(row.profile_json.as_bytes())?;
-    let grant = deserialize::<PolicyCapabilities>(row.grant_json.as_bytes())?;
+    let grant = deserialize::<SystemCapabilities>(row.grant_json.as_bytes())?;
     if package.source_identity().id != source_identity
         || package.version() != row.version
         || package.definition().base_url() != row.base_url

@@ -52,8 +52,6 @@ use validation::{
 /// 默认 compiler 身份；其值参与 Plan hash。
 pub const DEFAULT_COMPILER_VERSION: &str = concat!("lj-compiler@", env!("CARGO_PKG_VERSION"));
 
-const NETWORK_CAPABILITY: &str = "network";
-
 /// 纯 Definition compiler。
 #[derive(Debug, Clone)]
 pub struct Compiler {

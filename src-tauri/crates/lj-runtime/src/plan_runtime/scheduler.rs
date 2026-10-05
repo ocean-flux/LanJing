@@ -9,10 +9,10 @@ use std::sync::Arc;
 
 use lj_media::MediaResourceId;
 use lj_rule_model::{
-    CollectionSelector, ControlExpression, ControlTrace, EffectDeclaration, EffectKind,
-    FlowPortRef, InvocationPath, JsBudget, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
+    CollectionSelector, ControlExpression, ControlTrace, EffectDeclaration, FlowPortRef,
+    InvocationPath, JsBudget, JsOutputKind, LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE,
     LOOP_COLLECTION_HANDLE, LOOP_DONE_HANDLE, LoopInvocationSegment, MAX_LOOP_ITERATIONS,
-    MERGE_OUTPUT_HANDLE, PlanNode, PlanNodeConfig, PlanNodeKind, PolicyCapabilities,
+    MERGE_OUTPUT_HANDLE, PlanNode, PlanNodeConfig, PlanNodeKind, SystemCapabilities,
 };
 use tokio::sync::{OwnedSemaphorePermit, mpsc};
 use tracing::Instrument;

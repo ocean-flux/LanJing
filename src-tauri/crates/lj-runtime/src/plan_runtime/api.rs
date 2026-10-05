@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex, Weak};
 use futures::stream::{self, BoxStream, StreamExt};
 use lj_capability::{IntentInput, StandardIntent};
 use lj_media::MediaGraphDelta;
-use lj_rule_model::{EffectKind, ExecutionPlan, InvocationPath, PolicyCapabilities};
+use lj_rule_model::{EffectKind, ExecutionPlan, InvocationPath, SystemCapabilities};
 use tokio::sync::{Semaphore, mpsc};
 use tracing::Instrument;
 use uuid::Uuid;
@@ -237,7 +237,7 @@ pub struct PlanExecutionRequest {
     /// live 或指定 archive 的 replay。
     pub mode: ExecutionMode,
     /// 安装 grant 后有效的能力。
-    pub capabilities: PolicyCapabilities,
+    pub capabilities: SystemCapabilities,
     /// 已安装来源的 base URL。
     pub base_url: String,
     /// execution-only source 凭据；runtime 不会将其放入 tracing、事件或 effect fingerprint。

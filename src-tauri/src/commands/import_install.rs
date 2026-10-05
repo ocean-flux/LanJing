@@ -1,8 +1,7 @@
 //! 来源导入、candidate 准备与安装 command。
 
 use lj_rule_system::{
-    CandidateId, CapabilityGrant, InstallCandidate, InstalledSource, RuleError, RuleInput,
-    RuleSystem, SourceId,
+    CandidateId, InstallCandidate, InstalledSource, RuleError, RuleInput, RuleSystem, SourceId,
 };
 use serde::Deserialize;
 use tauri::State;
@@ -14,11 +13,13 @@ pub(crate) struct FetchImportSrcRequest {
     pub url: String,
 }
 
+/// 安装请求。
+///
+/// 应用不再携带 grant：网络不受 capability 控制，系统能力（fs/env/process）永不授予。
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct InstallRequest {
     pub candidate_id: CandidateId,
-    pub grant: CapabilityGrantPreset,
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,22 +27,6 @@ pub(crate) struct InstallRequest {
 pub(crate) struct SourceRollbackRequest {
     pub source_id: SourceId,
     pub revision: u64,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum CapabilityGrantPreset {
-    None,
-    NetworkOnly,
-}
-
-impl CapabilityGrantPreset {
-    fn into_grant(self) -> CapabilityGrant {
-        match self {
-            Self::None => CapabilityGrant::none(),
-            Self::NetworkOnly => CapabilityGrant::network_only(),
-        }
-    }
 }
 
 #[tauri::command]
@@ -73,8 +58,5 @@ pub(crate) async fn install(
     state: State<'_, AppState>,
     request: InstallRequest,
 ) -> Result<InstalledSource, RuleError> {
-    state
-        .system
-        .install(request.candidate_id, request.grant.into_grant())
-        .await
+    state.system.install(request.candidate_id).await
 }

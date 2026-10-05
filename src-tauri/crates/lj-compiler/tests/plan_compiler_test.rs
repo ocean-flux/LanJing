@@ -12,9 +12,9 @@ use lj_rule_model::{
     LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, LOOP_BODY_HANDLE, LOOP_COLLECTION_HANDLE,
     LOOP_DONE_HANDLE, LOOP_YIELD_HANDLE, LoopIterationLimit, MAX_LOOP_ITERATIONS,
     MERGE_OUTPUT_HANDLE, MapperOutputKind, MergeConfig, MergeInput, MergeInputActivation,
-    MergeStrategy, OutputTarget, PlanNode, PlanNodeConfig, PolicyCapabilities, PortValueKind,
-    PortValueType, RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SourceIdentity, SourceSpan,
-    SystemCapabilities, TypedLiteral, UnavailableNodeConfig,
+    MergeStrategy, OutputTarget, PlanNode, PlanNodeConfig, PortValueKind, PortValueType,
+    RULE_CONTRACT_SCHEMA_VERSION, RuleDefinition, SourceIdentity, SourceSpan, SystemCapabilities,
+    TypedLiteral, UnavailableNodeConfig,
 };
 use serde_json::json;
 use uuid::Uuid;
@@ -91,10 +91,7 @@ fn loop_config() -> ForEachConfig {
 
 fn manifest() -> CapabilityManifest {
     CapabilityManifest {
-        required: PolicyCapabilities {
-            network: true,
-            system: SystemCapabilities::default(),
-        },
+        required: SystemCapabilities::default(),
     }
 }
 
@@ -400,7 +397,10 @@ fn good_seven_node_graph_compiles_typed_configs_edges_ports_and_loop_region() {
             .iter()
             .any(|effect| { effect.node_id == id(EXTRACT) && effect.kind == EffectKind::Extract })
     );
-    assert_eq!(plan.capability_requirements(), ["network"]);
+    assert!(
+        plan.capability_requirements().is_empty(),
+        "HTTP/QuickJS 节点不再声明 network 能力"
+    );
 }
 
 #[test]
@@ -450,16 +450,19 @@ fn control_script_source_is_not_echoed_in_diagnostics() {
     let mut definition = seven_node_definition(ControlExpression::Js {
         code: secret_source.to_string(),
     });
-    definition.capability_manifest_mut().required.network = false;
+    let FlowNodeConfig::Condition(config) = &mut node_mut(&mut definition, CONDITION).config else {
+        panic!("fixture Condition exists");
+    };
+    config.branches = vec!["alpha".to_string(), "alpha".to_string()];
 
     let error = Compiler::default()
         .compile(&definition)
-        .expect_err("missing control capability must be rejected");
+        .expect_err("duplicate control branch must be rejected");
     assert!(
         error
             .diagnostics()
             .iter()
-            .any(|diagnostic| diagnostic.code == "CAPABILITY_MISMATCH")
+            .any(|diagnostic| diagnostic.code == "CONDITION_BRANCH_DUPLICATE")
     );
     assert!(error.diagnostics().iter().all(|diagnostic| {
         !diagnostic.message.contains(secret_source)
@@ -679,10 +682,6 @@ fn bad_config_handle_port_intent_and_capability_contracts_have_stable_paths() {
         .expect("Search export exists")
         .flow_entry = id(CONDITION);
     assert_rejects(&invalid_entry, "INTENT_ENTRY_PORT_MISMATCH");
-
-    let mut capability = linear_definition();
-    capability.capability_manifest_mut().required.network = false;
-    assert_rejects(&capability, "CAPABILITY_MISMATCH");
 }
 
 #[test]

@@ -11,7 +11,7 @@ pub(crate) mod mapper_fields;
 pub mod node_data;
 pub mod plan_runtime;
 
-pub use capability::{check_capability, default_capabilities, effective_js_budget, merge};
+pub use capability::{check_capability, effective_js_budget};
 pub use effect::{
     ArchivedEffectCapture, CancellationHandle, CapturedEffectOutput, ControlReplayLookup,
     ControlTraceCapture, ControlTraceReceipt, DurableCaptureReceipt, EffectArchive,

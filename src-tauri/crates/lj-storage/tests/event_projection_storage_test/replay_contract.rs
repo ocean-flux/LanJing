@@ -385,7 +385,7 @@ async fn replay_pin_survives_restart_and_rejects_tampered_snapshot() {
         .await
         .expect("restart preserves current source snapshot");
     assert_eq!(pin.profile.title, "测试来源");
-    assert_eq!(pin.grant, PolicyCapabilities::default());
+    assert_eq!(pin.grant, SystemCapabilities::default());
     assert_eq!(pin.base_url, "https://example.test");
 
     let conn = open_test_connection(&database_url).await;

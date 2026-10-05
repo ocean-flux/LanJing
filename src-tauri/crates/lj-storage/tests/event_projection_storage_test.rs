@@ -17,8 +17,8 @@ use lj_media::{
 use lj_rule_model::{
     CapabilityManifest, ControlTrace, Diagnostic, DiagnosticSeverity, EffectKind, EventType,
     ExecutionPlan, ExecutionPlanParts, FlowGraph, HttpMethod, InvocationPath,
-    LoopInvocationSegment, PolicyCapabilities, RuleDefinition, RulePackage, SourceIdentity,
-    SystemCapabilities, definition_hash, read_execution_plan,
+    LoopInvocationSegment, RuleDefinition, RulePackage, SourceIdentity, SystemCapabilities,
+    definition_hash, read_execution_plan,
 };
 use lj_runtime::{
     ArchivedEffectCapture, CapturedEffectOutput, ControlReplayLookup, ControlTraceCapture,
@@ -224,7 +224,7 @@ fn package_plan(
     source_identity: &str,
     version: &str,
     base_url: &str,
-    network: bool,
+    fs: bool,
 ) -> (RulePackage, ExecutionPlan) {
     let definition = RuleDefinition::new(
         SourceIdentity {
@@ -237,9 +237,9 @@ fn package_plan(
             edges: Vec::new(),
         },
         CapabilityManifest {
-            required: PolicyCapabilities {
-                network,
-                system: SystemCapabilities::default(),
+            required: SystemCapabilities {
+                fs,
+                ..SystemCapabilities::default()
             },
         },
         vec!["stable-id".to_string()],
@@ -277,7 +277,7 @@ fn candidate(now_ms: i64) -> CandidateDraft {
             supported_intents: Vec::new(),
             risk_notes: Vec::new(),
         },
-        required_grant: PolicyCapabilities::default(),
+        required_grant: SystemCapabilities::default(),
         diagnostics: Vec::new(),
         runtime_credentials: None,
         expected_installed_revision: 0,
@@ -294,7 +294,7 @@ fn updated_candidate(now_ms: i64) -> CandidateDraft {
         package_plan("source:test", "v2", "https://updated.example.test", true);
     draft.profile.title = "更新后的测试来源".to_string();
     draft.profile.version = Some("v2".to_string());
-    draft.required_grant.network = true;
+    draft.required_grant.fs = true;
     draft
 }
 
@@ -307,12 +307,12 @@ fn candidate_for_source(now_ms: i64, source_identity: &str) -> CandidateDraft {
     draft
 }
 
-fn require_network_capability(draft: &mut CandidateDraft) {
+fn require_system_capability(draft: &mut CandidateDraft) {
     let source_identity = draft.package.source_identity().id.clone();
     let version = draft.package.version().to_string();
     let base_url = draft.package.definition().base_url().to_string();
     (draft.package, draft.plan) = package_plan(&source_identity, &version, &base_url, true);
-    draft.required_grant.network = true;
+    draft.required_grant.fs = true;
 }
 
 fn plan_with_hash(plan: &ExecutionPlan, plan_hash: String) -> ExecutionPlan {
@@ -332,7 +332,7 @@ async fn install_source(storage: &EventProjectionStorage, now_ms: i64) {
     storage
         .install_candidate(InstallCandidateRequest {
             candidate_id,
-            grant: PolicyCapabilities::default(),
+            grant: SystemCapabilities::default(),
             event_id: Uuid::new_v4(),
             trace_id: "trace-install".to_string(),
             occurred_at_ms: now_ms + 1,
@@ -346,7 +346,7 @@ async fn install_draft(
     storage: &EventProjectionStorage,
     mut draft: CandidateDraft,
     expected_installed_revision: u64,
-    grant: PolicyCapabilities,
+    grant: SystemCapabilities,
     occurred_at_ms: i64,
 ) {
     draft.expected_installed_revision = expected_installed_revision;
@@ -439,7 +439,7 @@ async fn candidate_hashes_are_verified_before_staging_and_installation() {
         storage
             .install_candidate(InstallCandidateRequest {
                 candidate_id,
-                grant: PolicyCapabilities::default(),
+                grant: SystemCapabilities::default(),
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-tampered-candidate".to_string(),
                 occurred_at_ms: now + 1,
@@ -537,11 +537,11 @@ async fn candidate_summary_round_trips_safe_preview_and_rejects_insufficient_gra
     let storage = temp.open().await;
     let now = 1_750_000_700_000;
     let mut draft = candidate(now);
-    require_network_capability(&mut draft);
+    require_system_capability(&mut draft);
     draft.diagnostics = vec![Diagnostic {
-        code: "CAPABILITY_NETWORK".to_string(),
+        code: "CAPABILITY_FS".to_string(),
         severity: DiagnosticSeverity::Warning,
-        message: "安装需要 network capability".to_string(),
+        message: "安装需要 fs capability".to_string(),
         span: None,
     }];
     let candidate_id = draft.candidate_id;
@@ -567,7 +567,7 @@ async fn candidate_summary_round_trips_safe_preview_and_rejects_insufficient_gra
         storage
             .install_candidate(InstallCandidateRequest {
                 candidate_id,
-                grant: PolicyCapabilities::default(),
+                grant: SystemCapabilities::default(),
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-insufficient-grant".to_string(),
                 occurred_at_ms: now + 1,
@@ -588,7 +588,7 @@ async fn candidate_summary_round_trips_safe_preview_and_rejects_insufficient_gra
         })
         .await
         .expect("install candidate with covering grant");
-    assert!(installed.grant.network);
+    assert!(installed.grant.fs);
     storage.shutdown().await.expect("writer shutdown");
 }
 
@@ -617,9 +617,9 @@ async fn stale_candidate_baseline_is_rejected_and_installed_source_is_untouched(
         storage
             .install_candidate(InstallCandidateRequest {
                 candidate_id,
-                grant: PolicyCapabilities {
-                    network: true,
-                    ..PolicyCapabilities::default()
+                grant: SystemCapabilities {
+                    fs: true,
+                    ..SystemCapabilities::default()
                 },
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-stale-candidate".to_string(),

@@ -110,7 +110,7 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
     let alpha_grant = alpha.required_grant.clone();
     install_draft(&storage, alpha, 0, alpha_grant, now + 1).await;
     let mut beta = candidate_for_source(now + 2, "source:beta");
-    require_network_capability(&mut beta);
+    require_system_capability(&mut beta);
     let beta_grant = beta.required_grant.clone();
     install_draft(&storage, beta, 0, beta_grant, now + 3).await;
 
@@ -130,8 +130,8 @@ async fn safe_source_and_library_projection_queries_are_ordered_and_revisioned()
             && source.source_revision == 1
             && !source.version.is_empty()
     }));
-    assert!(!sources[0].grant.network);
-    assert!(sources[1].grant.network);
+    assert!(!sources[0].grant.fs);
+    assert!(sources[1].grant.fs);
 
     let empty_library = storage
         .get_library_projection()
@@ -318,7 +318,7 @@ async fn policy_gc_expires_candidates_and_honors_pins() {
         storage
             .install_candidate(InstallCandidateRequest {
                 candidate_id: expired_id,
-                grant: PolicyCapabilities::default(),
+                grant: SystemCapabilities::default(),
                 event_id: Uuid::new_v4(),
                 trace_id: "trace-expired".to_string(),
                 occurred_at_ms: now,

@@ -4,7 +4,7 @@
 //! 所有 plaintext carrier 都不实现 `Debug`、`Clone` 或 serde。
 
 use lj_media::SourceProfile;
-use lj_rule_model::{Diagnostic, ExecutionPlan, PolicyCapabilities, RulePackage};
+use lj_rule_model::{Diagnostic, ExecutionPlan, RulePackage, SystemCapabilities};
 use uuid::Uuid;
 
 /// 当前 durable candidate schema 版本。
@@ -50,7 +50,7 @@ pub struct CandidateDraft {
     /// 用于预览与安装的来源 profile。
     pub profile: SourceProfile,
     /// candidate 所需 grant。
-    pub required_grant: PolicyCapabilities,
+    pub required_grant: SystemCapabilities,
     /// 导入、校验、编译诊断。
     pub diagnostics: Vec<Diagnostic>,
     /// runtime 使用的 opaque credential snapshot。
@@ -79,7 +79,7 @@ pub struct CandidateSummary {
     /// 仅用于预览的来源资料；不含作者包或执行计划。
     pub profile: SourceProfile,
     /// staging 时固定、安装时必须覆盖的能力需求。
-    pub required_grant: PolicyCapabilities,
+    pub required_grant: SystemCapabilities,
     /// 导入、校验与编译诊断。
     pub diagnostics: Vec<Diagnostic>,
     /// Definition BLAKE3 hash；只是一致性字段，不是 source revision identity。
@@ -96,7 +96,7 @@ pub struct InstallCandidateRequest {
     /// 要消费的 opaque candidate。
     pub candidate_id: Uuid,
     /// 用户批准后的能力 grant。
-    pub grant: PolicyCapabilities,
+    pub grant: SystemCapabilities,
     /// 可重试安装事件 ID。
     pub event_id: Uuid,
     /// 安全 trace 标识。
@@ -121,7 +121,7 @@ pub struct InstalledSource {
     /// 来源展示资料。
     pub profile: SourceProfile,
     /// 已批准能力。
-    pub grant: PolicyCapabilities,
+    pub grant: SystemCapabilities,
     /// 安装事务生成的权威 source revision。
     pub source_revision: u64,
 }
@@ -136,7 +136,7 @@ pub struct InstalledSourceRecord {
     /// 来源展示资料。
     pub profile: SourceProfile,
     /// 当前已批准的能力。
-    pub grant: PolicyCapabilities,
+    pub grant: SystemCapabilities,
     /// 当前权威 source revision。
     pub source_revision: u64,
 }
@@ -153,7 +153,7 @@ pub struct SourceRevisionRecord {
     /// 来源展示资料。
     pub profile: SourceProfile,
     /// 该 revision 安装时批准的 capability。
-    pub grant: PolicyCapabilities,
+    pub grant: SystemCapabilities,
     /// canonical Definition BLAKE3。
     pub definition_hash: String,
     /// immutable Plan BLAKE3。

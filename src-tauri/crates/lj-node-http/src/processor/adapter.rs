@@ -6,7 +6,6 @@
 
 use std::time::Instant;
 
-use lj_rule_model::Capability;
 use lj_runtime::{
     CapturedEffectOutput, EffectCancellation, EffectError, EffectErrorCode, EffectFailure,
     EffectOutput, EffectWitness, HttpEffectHandler, HttpEffectRequest, HttpEffectWitness,
@@ -63,12 +62,6 @@ impl HttpEffectHandler for HttpEffectAdapter {
                 "HTTP effect 已取消",
             ));
         }
-        lj_runtime::check_capability(&request.capabilities, Capability::Network).map_err(|_| {
-            EffectError::new(
-                EffectErrorCode::CapabilityDenied,
-                "安装 grant 未允许 network capability",
-            )
-        })?;
         let started = Instant::now();
 
         let HttpEffectRequest {

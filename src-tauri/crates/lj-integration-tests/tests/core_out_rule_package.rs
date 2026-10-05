@@ -18,7 +18,7 @@ use lj_media::{MediaGraphDelta, MediaResourceId};
 use lj_rule_model::DiagnosticSeverity;
 use lj_rule_system::test_support::{TempRuleSystem, init_mock_keyring};
 use lj_rule_system::{
-    CapabilityGrant, EffectWitnessForTest, ExecuteRequest, ExecutionEventKind, ExecutionMode,
+    EffectWitnessForTest, ExecuteRequest, ExecutionEventKind, ExecutionMode,
     QuickJsErrorKindForTest, RuleErrorStage, RuleInput, RuleSystem, SourceId,
 };
 use serde_json::{Value, json};
@@ -341,9 +341,9 @@ async fn controlled_js_timeout_is_archived_with_its_stable_code_before_failing()
         .await
         .expect("超时 fixture 候选");
     let source = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
-        .expect("network grant 后必须完成安装");
+        .expect("candidate 安装必须完成");
 
     let session = system
         .execute(ExecuteRequest {
@@ -423,9 +423,9 @@ async fn core_out_rule_package_covers_source_rules_and_controlled_js_live_and_re
         .await
         .expect("核心外 Rule Package 候选");
     let source = system
-        .install(candidate.id, CapabilityGrant::network_only())
+        .install(candidate.id)
         .await
-        .expect("用户批准 network grant 后必须完成安装与 Source Revision");
+        .expect("candidate 安装必须完成并产生 Source Revision");
     assert_eq!(source.revision, 1);
 
     let search = run_live(

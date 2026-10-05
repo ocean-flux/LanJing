@@ -11,7 +11,7 @@ use crate::database::DatabaseSession;
 use crate::database::OptionalResultExt;
 use crate::database::statement;
 use lj_media::SourceProfile;
-use lj_rule_model::{EventType, PolicyCapabilities};
+use lj_rule_model::{EventType, SystemCapabilities};
 use lj_runtime::ExecutionMode;
 use sea_orm::FromQueryResult;
 use uuid::Uuid;

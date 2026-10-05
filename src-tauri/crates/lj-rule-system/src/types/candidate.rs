@@ -3,7 +3,7 @@
 use std::fmt;
 
 use lj_media::SourceProfile;
-use lj_rule_model::{Diagnostic, PolicyCapabilities};
+use lj_rule_model::{Diagnostic, SystemCapabilities};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -107,36 +107,19 @@ impl SourceId {
 /// 用户批准的 capability 集合。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct CapabilityGrant(PolicyCapabilities);
+pub struct CapabilityGrant(SystemCapabilities);
 
 impl CapabilityGrant {
     /// 创建空 grant。
+    ///
+    /// 应用不授予任何系统能力（fs/env/process），因此这是唯一的生产 grant。
     #[must_use]
     pub fn none() -> Self {
-        Self(PolicyCapabilities::default())
+        Self(SystemCapabilities::default())
     }
 
-    /// 创建仅 network grant。
-    #[must_use]
-    pub fn network_only() -> Self {
-        Self(PolicyCapabilities {
-            network: true,
-            system: lj_rule_model::SystemCapabilities::default(),
-        })
-    }
-
-    /// 是否包含 network capability。
-    #[must_use]
-    pub fn requires_network(&self) -> bool {
-        self.0.network
-    }
-
-    pub(crate) fn from_policy(value: PolicyCapabilities) -> Self {
+    pub(crate) fn from_policy(value: SystemCapabilities) -> Self {
         Self(value)
-    }
-
-    pub(crate) fn policy(&self) -> &PolicyCapabilities {
-        &self.0
     }
 }
 

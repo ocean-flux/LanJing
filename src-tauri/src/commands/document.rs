@@ -173,7 +173,7 @@ mod tests {
                         "base_url": "https://e.test",
                         "intent_exports": {},
                         "flow": {"nodes": [], "edges": []},
-                        "capability_manifest": {"required": {"network": false, "system": {"fs": false, "env": false, "process": false}}},
+                        "capability_manifest": {"required": {"fs": false, "env": false, "process": false}},
                         "source_id_rules": []
                     },
                     "credential_mutations": [

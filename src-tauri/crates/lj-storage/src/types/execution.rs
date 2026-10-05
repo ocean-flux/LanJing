@@ -5,7 +5,7 @@
 //! serde；replay 只消费可证明的历史 revision pin。
 
 use lj_media::SourceProfile;
-use lj_rule_model::{ExecutionPlan, PolicyCapabilities, RulePackage};
+use lj_rule_model::{ExecutionPlan, RulePackage, SystemCapabilities};
 use lj_runtime::ExecutionMode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -252,7 +252,7 @@ pub struct InstalledSourceSnapshot {
     /// 固定 revision 的 profile。
     pub profile: SourceProfile,
     /// 固定 revision 的用户 grant。
-    pub grant: PolicyCapabilities,
+    pub grant: SystemCapabilities,
     /// 固定 revision 的 canonical base URL。
     pub base_url: String,
     /// 固定 revision 的作者包。
@@ -288,7 +288,7 @@ pub struct ExecutionReplayPin {
     /// 固定 source revision 的展示资料。
     pub profile: SourceProfile,
     /// 固定 source revision 的已批准能力。
-    pub grant: PolicyCapabilities,
+    pub grant: SystemCapabilities,
     /// 固定 source revision 的 canonical base URL。
     pub base_url: String,
     /// source package body artifact 的 BLAKE3 ref。

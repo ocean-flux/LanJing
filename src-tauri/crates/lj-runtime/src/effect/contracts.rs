@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use lj_capability::IntentInput;
-use lj_rule_model::{EffectKind, ExtractSpec, HttpSpec, JsBudget, PolicyCapabilities};
+use lj_rule_model::{EffectKind, ExtractSpec, HttpSpec, JsBudget};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -195,8 +195,6 @@ pub struct HttpEffectRequest {
     pub spec: HttpSpec,
     /// Plan 上游输入。
     pub input: EffectInput,
-    /// 安装 grant 后的有效能力。
-    pub capabilities: PolicyCapabilities,
     /// 已安装来源的 base URL。
     pub base_url: String,
     /// execution-only source 凭据；不得写入 tracing、事件或 effect fingerprint。
@@ -222,8 +220,6 @@ pub struct QuickJsEffectRequest {
     pub budgets: JsBudget,
     /// Plan 上游输入。
     pub input: EffectInput,
-    /// 安装 grant 后的有效能力。
-    pub capabilities: PolicyCapabilities,
 }
 
 /// Extract handler 的执行请求。

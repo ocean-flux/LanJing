@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use futures::{StreamExt, stream};
 use lj_importer::legado::LegadoImporter;
-use lj_rule_model::PolicyCapabilities;
+use lj_rule_model::SystemCapabilities;
 use lj_runtime::{
     ExecutionMode as RuntimeExecutionMode, HttpExecutionCredentials, PlanExecutionRequest,
 };
@@ -30,7 +30,7 @@ use crate::{
 struct ExecutionSnapshot {
     source_identity: String,
     plan: lj_rule_model::ExecutionPlan,
-    grant: PolicyCapabilities,
+    grant: SystemCapabilities,
     base_url: String,
     credentials: HttpExecutionCredentials,
     mode: RuntimeExecutionMode,

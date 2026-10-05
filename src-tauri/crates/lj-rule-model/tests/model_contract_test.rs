@@ -59,7 +59,7 @@ fn sample_plan(definition_hash: &str) -> ExecutionPlan {
             edges: vec![],
             intent_entries,
             effects: vec![],
-            capability_requirements: vec!["network".to_string()],
+            capability_requirements: vec!["fs".to_string()],
             control_regions: vec![],
         },
     )
@@ -362,20 +362,25 @@ fn event_envelope_has_required_fields_without_rule_schema_cutover() {
 }
 
 #[test]
-fn policy_and_capability_manifest_roundtrip() {
-    use lj_rule_model::{PolicyCapabilities, SystemCapabilities};
-    let capabilities = PolicyCapabilities {
-        network: true,
-        system: SystemCapabilities {
-            fs: false,
-            env: false,
-            process: false,
-        },
+fn system_capabilities_roundtrip_uses_the_system_only_wire_shape() {
+    use lj_rule_model::SystemCapabilities;
+    let capabilities = SystemCapabilities {
+        fs: true,
+        env: false,
+        process: false,
     };
     let json = serde_json::to_string(&capabilities).unwrap();
+    assert_eq!(json, r#"{"fs":true,"env":false,"process":false}"#);
     assert_eq!(
-        serde_json::from_str::<PolicyCapabilities>(&json).unwrap(),
+        serde_json::from_str::<SystemCapabilities>(&json).unwrap(),
         capabilities
+    );
+    assert!(
+        serde_json::from_str::<SystemCapabilities>(
+            r#"{"network":true,"system":{"fs":false,"env":false,"process":false}}"#
+        )
+        .is_err(),
+        "网络不再是受控能力，旧 shape 必须被拒绝"
     );
 }
 

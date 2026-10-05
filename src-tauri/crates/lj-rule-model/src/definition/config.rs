@@ -8,7 +8,7 @@ use crate::budget::JsBudget;
 use crate::endpoint::HttpSpec;
 use crate::extract_rule::ExtractSpec;
 use crate::literal::TypedLiteral;
-use crate::policy::PolicyCapabilities;
+use crate::policy::SystemCapabilities;
 
 /// 单个 Loop 配置允许的全局 hard ceiling。
 pub const MAX_LOOP_ITERATIONS: u32 = 256;
@@ -38,7 +38,7 @@ pub struct SourceSpan {
 #[serde(deny_unknown_fields)]
 pub struct CapabilityManifest {
     /// 声明所需能力。
-    pub required: PolicyCapabilities,
+    pub required: SystemCapabilities,
 }
 
 /// 受控 Mapper 输出类型。
