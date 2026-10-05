@@ -84,14 +84,11 @@ function validFlow(value: unknown): boolean {
 }
 
 function validCapabilityManifest(value: unknown): boolean {
-  if (!isObject(value) || !isObject(value.required) || !isObject(value.required.system)) {
-    return false;
-  }
+  if (!isObject(value) || !isObject(value.required)) return false;
   return (
-    hasBoolean(value.required, 'network') &&
-    hasBoolean(value.required.system, 'fs') &&
-    hasBoolean(value.required.system, 'env') &&
-    hasBoolean(value.required.system, 'process')
+    hasBoolean(value.required, 'fs') &&
+    hasBoolean(value.required, 'env') &&
+    hasBoolean(value.required, 'process')
   );
 }
 

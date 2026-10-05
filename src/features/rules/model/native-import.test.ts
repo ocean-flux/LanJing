@@ -9,7 +9,7 @@ const definition = {
   intent_exports: {},
   flow: { nodes: [], edges: [] },
   capability_manifest: {
-    required: { network: false, system: { fs: false, env: false, process: false } },
+    required: { fs: false, env: false, process: false },
   },
   source_id_rules: [],
 };

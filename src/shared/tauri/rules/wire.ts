@@ -34,15 +34,9 @@ export interface SystemCapabilities {
   process: boolean;
 }
 
-/** 策略能力配置（PolicyCapabilities serde 镜像）。 */
-export interface PolicyCapabilities {
-  network: boolean;
-  system: SystemCapabilities;
-}
-
-/** 能力清单（CapabilityManifest）。 */
+/** 能力清单（CapabilityManifest）：只声明规则所需的系统能力。 */
 export interface CapabilityManifest {
-  required: PolicyCapabilities;
+  required: SystemCapabilities;
 }
 
 /** 标准意图导出（IntentExport：Flow 入口 + Mapper 输出节点）。 */
@@ -199,7 +193,7 @@ export interface ValidateNativeRuleDocumentPreview {
   plan_hash: string | null;
   diagnostics: InstallDiagnostic[];
   profile: SourceProfile | null;
-  capability: PolicyCapabilities;
+  capability: SystemCapabilities;
 }
 
 export interface GetNativeRuleDocumentRequest {

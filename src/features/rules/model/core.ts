@@ -301,7 +301,7 @@ export type AuthoringAction =
 /** 空能力清单（对应 Rust `CapabilityManifest::default()`）。 */
 export function defaultCapabilityManifest(): CapabilityManifest {
   return {
-    required: { network: false, system: { fs: false, env: false, process: false } },
+    required: { fs: false, env: false, process: false },
   };
 }
 

@@ -450,7 +450,7 @@ describe('createRuleEditorSession', () => {
         },
       ],
       profile: null,
-      capability: { network: false, system: { fs: false, env: false, process: false } },
+      capability: { fs: false, env: false, process: false },
     });
 
     const preview = await state().validate();
@@ -670,7 +670,7 @@ describe('createRuleEditorSession', () => {
         supported_intents: [],
         risk_notes: [],
       },
-      capability: { network: false, system: { fs: false, env: false, process: false } },
+      capability: { fs: false, env: false, process: false },
     });
 
     const preview = await state().validate();
@@ -702,7 +702,7 @@ describe('createRuleEditorSession', () => {
       plan_hash: 'hash:plan',
       diagnostics: [],
       profile: null,
-      capability: { network: false, system: { fs: false, env: false, process: false } },
+      capability: { fs: false, env: false, process: false },
     });
     await pending;
     expect(state().core.validation.status).toBe('stale');

@@ -128,7 +128,7 @@ describe('native rule wire invoke wrappers', () => {
         supported_intents: ['Search'],
         risk_notes: [],
       },
-      capability: { network: false, system: { fs: false, env: false, process: false } },
+      capability: { fs: false, env: false, process: false },
     });
 
     await validateNativeRuleDocument({ document_id: 'doc:1', revision: 1 });
@@ -349,7 +349,7 @@ function makeDefinition() {
       edges: [],
     },
     capability_manifest: {
-      required: { network: false, system: { fs: false, env: false, process: false } },
+      required: { fs: false, env: false, process: false },
     },
     source_id_rules: [],
   };
