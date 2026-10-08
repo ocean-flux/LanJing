@@ -99,7 +99,9 @@ impl SourceId {
         Self(identity)
     }
 
-    pub(crate) fn as_identity(&self) -> &str {
+    /// 稳定来源身份；交付层据此命名导出的 Rule Package 文件。
+    #[must_use]
+    pub fn as_identity(&self) -> &str {
         &self.0
     }
 }

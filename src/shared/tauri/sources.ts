@@ -123,3 +123,10 @@ export function prepareSourceRollback(
     request: { source_id: sourceId, revision },
   });
 }
+
+/** 导出已安装来源的 Rule Package 文件；用户取消保存时返回 null。 */
+export function exportRulePackage(sourceId: string): Promise<string | null> {
+  return invoke<string | null>('export_rule_package', {
+    request: { source_id: sourceId },
+  });
+}

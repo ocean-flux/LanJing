@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { useMessages } from '@/shared/i18n/messages';
 import {
+  exportRulePackage,
   installPreparedSource,
   listSourceRevisions,
   prepareSourceRollback,
@@ -27,12 +28,14 @@ export interface SourceInspectorAdapter {
   listRevisions: (sourceId: string) => Promise<SourceRevision[]>;
   prepareRollback: (sourceId: string, revision: number) => Promise<InstallCandidate>;
   install: (candidateId: string) => Promise<InstalledSource>;
+  exportPackage: (sourceId: string) => Promise<string | null>;
 }
 
 const tauriSourceInspectorAdapter: SourceInspectorAdapter = {
   listRevisions: listSourceRevisions,
   prepareRollback: prepareSourceRollback,
   install: installPreparedSource,
+  exportPackage: exportRulePackage,
 };
 
 interface SourceInspectorProps {
@@ -141,6 +144,7 @@ export function SourceInspector({
   const [rollbackPhase, setRollbackPhase] = useState<RollbackPhase>('idle');
   const [rollbackError, setRollbackError] = useState<string | null>(null);
   const [rollbackDetail, setRollbackDetail] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!open || !source) return;
@@ -198,6 +202,19 @@ export function SourceInspector({
     }
   };
 
+  const exportPackage = async () => {
+    if (!source) return;
+    setExporting(true);
+    try {
+      const path = await adapter.exportPackage(source.source_id);
+      if (path !== null) toast.success(m.sources_inspector_export_success({ path }));
+    } catch (error) {
+      toast.error(m.sources_inspector_export_failed(), { description: errorDetail(error) });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const installRollback = async () => {
     if (!rollbackCandidate) return;
     if (candidateNeedsSystem) {
@@ -244,10 +261,21 @@ export function SourceInspector({
                   <h3 id="source-inspector-current" className="font-medium">
                     {m.sources_inspector_current()}
                   </h3>
-                  <Button variant="outline" size="sm" onClick={onRequestUpdate}>
-                    <Icon name="arrow-clockwise" />
-                    {m.sources_inspector_update()}
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={exporting}
+                      onClick={() => void exportPackage()}
+                    >
+                      <Icon name="download-simple" />
+                      {m.sources_inspector_export()}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={onRequestUpdate}>
+                      <Icon name="arrow-clockwise" />
+                      {m.sources_inspector_update()}
+                    </Button>
+                  </div>
                 </div>
                 <dl className="divide-y divide-hairline border-y border-hairline text-ui-sm">
                   <div className="flex min-h-(--density-row) items-center justify-between gap-4">

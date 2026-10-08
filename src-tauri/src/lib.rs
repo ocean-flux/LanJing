@@ -18,6 +18,7 @@ macro_rules! lanjing_commands {
                 prepare_install => commands::import_install::prepare_install,
                 prepare_source_rollback => commands::import_install::prepare_source_rollback,
                 install => commands::import_install::install,
+                export_rule_package => commands::export::export_rule_package,
                 execute => commands::execution::execute,
                 cancel_execution => commands::execution::cancel_execution,
                 catch_up_execution => commands::execution::catch_up_execution,
@@ -128,6 +129,7 @@ mod tests {
             "prepare_install",
             "prepare_source_rollback",
             "install",
+            "export_rule_package",
             "execute",
             "cancel_execution",
             "catch_up_execution",
@@ -162,7 +164,7 @@ mod tests {
             "Tauri command 注册不得重复"
         );
         // #61 新增 list_rule_node_descriptors：descriptor 声明经 IPC 暴露给编辑器。
-        assert_eq!(EXPECTED.len(), 26, "facade 命令注册必须恰为 26 项");
+        assert_eq!(EXPECTED.len(), 27, "facade 命令注册必须恰为 27 项");
         assert!(
             REGISTERED_COMMAND_NAMES
                 .iter()

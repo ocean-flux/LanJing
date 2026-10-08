@@ -12,7 +12,7 @@ use lj_rule_model::{
     FlowEdge, FlowGraph, FlowNode, FlowNodeConfig, FlowPortRef, JsBudget, JsConfig, JsOutputKind,
     LINEAR_INPUT_HANDLE, LINEAR_OUTPUT_HANDLE, MERGE_OUTPUT_HANDLE, MergeConfig, MergeInput,
     MergeInputActivation, MergeStrategy, RuleDefinition, RulePackage, SourceIdentity,
-    SystemCapabilities, UnavailableNodeConfig, definition_hash,
+    SystemCapabilities, UnavailableNodeConfig, definition_hash, read_rule_package,
 };
 use uuid::Uuid;
 
@@ -400,6 +400,61 @@ async fn prepare_install_imports_valid_package_as_candidate() {
             .iter()
             .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Error)
     );
+    drop(system);
+}
+
+#[tokio::test]
+async fn export_rule_package_round_trips_installed_package_through_import() {
+    let system = open_package_test_system().await;
+    let definition = current_control_definition();
+    let candidate = system
+        .prepare_install(package_input(&definition, "v1"))
+        .await
+        .expect("合法 package 必须可导入");
+    let installed_definition_hash = candidate.definition_hash.clone();
+    let installed = system
+        .install(candidate.id)
+        .await
+        .expect("candidate 必须可安装");
+
+    let exported = system
+        .export_rule_package(installed.source_id)
+        .await
+        .expect("已安装来源必须可导出");
+    let package =
+        read_rule_package(exported.as_bytes()).expect("导出内容必须通过 package 合同校验");
+    assert_eq!(
+        package.source_identity().id,
+        "source:rule-system-control-test"
+    );
+    // 安装把 package version 定为 content-addressed 的 canonical Definition hash。
+    assert_eq!(package.version(), installed_definition_hash);
+    assert_eq!(
+        definition_hash(package.definition()).expect("canonical Definition hash"),
+        installed_definition_hash
+    );
+
+    // 导出文件必须能重新进入导入链；同一来源已安装，因此声明为 update。
+    let reimported = system
+        .prepare_install(RuleInput::Package {
+            source_json: exported,
+        })
+        .await
+        .expect("导出的 package 必须可重新导入");
+    assert_eq!(reimported.operation, SourceOperation::Update);
+    drop(system);
+}
+
+#[tokio::test]
+async fn export_rule_package_reports_source_not_installed() {
+    let system = open_package_test_system().await;
+
+    let error = system
+        .export_rule_package(SourceId::from_identity("source:unknown".to_string()))
+        .await
+        .expect_err("未安装来源不得导出");
+
+    assert_eq!(error.code, "source_not_installed");
     drop(system);
 }
 

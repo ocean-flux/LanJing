@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { listSourceRevisions, prepareSourceInstall, prepareSourceRollback } from './sources';
+import {
+  exportRulePackage,
+  listSourceRevisions,
+  prepareSourceInstall,
+  prepareSourceRollback,
+} from './sources';
 
 const tauriBoundary = vi.hoisted(() => ({
   invoke: vi.fn<(command: string, args?: unknown) => Promise<unknown>>(),
@@ -36,6 +41,17 @@ describe('source IPC adapter', () => {
     await prepareSourceRollback('source.example', 4);
     expect(tauriBoundary.invoke).toHaveBeenCalledWith('prepare_source_rollback', {
       request: { source_id: 'source.example', revision: 4 },
+    });
+  });
+
+  it('exports an installed source through the request envelope', async () => {
+    tauriBoundary.invoke.mockResolvedValueOnce('/tmp/source.example.rule-package.json');
+
+    await expect(exportRulePackage('source.example')).resolves.toBe(
+      '/tmp/source.example.rule-package.json',
+    );
+    expect(tauriBoundary.invoke).toHaveBeenCalledWith('export_rule_package', {
+      request: { source_id: 'source.example' },
     });
   });
 });
