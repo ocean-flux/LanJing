@@ -59,6 +59,7 @@
     "@commitlint/config-conventional": "catalog:",
     "@iconify-json/ph": "catalog:",
     "@iconify/tailwind4": "catalog:",
+    "@shadcn/lint": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@tauri-apps/cli": "catalog:",
     "@testing-library/dom": "catalog:",

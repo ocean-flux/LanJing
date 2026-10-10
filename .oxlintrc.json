@@ -13,7 +13,7 @@
     "jsx-a11y",
     "vitest"
   ],
-  "jsPlugins": ["oxlint-tailwindcss"],
+  "jsPlugins": ["oxlint-tailwindcss", "@shadcn/lint"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
