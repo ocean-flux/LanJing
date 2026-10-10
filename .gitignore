@@ -80,3 +80,6 @@ lefthook-local.yml
 # Agent Directory
 .pi
 .claude
+
+# Impeccable 引擎二进制由 launcher 按版本下载并校验 sha256, 不入库
+.agents/skills/impeccable/scripts/bin/
