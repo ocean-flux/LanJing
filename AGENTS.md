@@ -55,3 +55,13 @@ UI 单测只在用户可观察合同无法由逻辑或公共集成边界证明�
 ### Domain docs
 
 使用单上下文领域文档：根 `CONTEXT.md` 与 `docs/adr/`。见 `docs/agents/domain.md`。
+
+### Design docs
+
+设计 skill 为 `impeccable`（`.agents/skills/impeccable`）。引擎二进制不入库，首次运行由 launcher 下载并校验到 `~/.impeccable/bin/`。
+
+根 `PRODUCT.md` 记录产品真相：受众、用途、定位、运营情境、能力与约束、品牌承诺、现有证据、产品原则。它是设计工作的输入，不是视觉方向。
+
+- 视觉方向以 `src/index.css` 的 appearance pack 与 `docs/adr/` 为准，不写进 `PRODUCT.md`。
+- 领域术语以 `CONTEXT.md` 为准。
+- 受众、定位、硬约束或品牌承诺变化时同步更新 `PRODUCT.md`。
