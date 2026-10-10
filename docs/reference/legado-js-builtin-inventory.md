@@ -1,12 +1,12 @@
 # Legado 内置 JS 函数清单（源码考证版）
 
-> 来源：`.tmp/legado` 仓库（gedoor/legado），Rhino v1.8.0 引擎。
+> 来源：本地克隆 `C:/Users/wuhy/workspace/_research/legado`（LegadoTeam/legado 浅克隆）。JS 引擎是 HtmlUnit Core JS 5.3.0-legado.4（Rhino 兼容），不是 Mozilla Rhino 1.8.0（`app/src/main/assets/web/help/md/jsHelp.md:1`）。
 > 本文档逐条从 Rust 落地视角考证 legado 注入到 JS 运行时的变量、对象、函数，作为我们自研宿主 API（见 `docs/plans/proposal-own-js-host-api-namespace.md`）的输入与对齐基准。
 > 仓库内同步参考 legado 自带帮助：`app/src/main/assets/web/help/md/jsHelp.md`（注意官方文档多处标注「部分函数」，本清单以源码为准，补全全部）。
 
 ## 0. 注入机制总览
 
-legado 在 `AnalyzeRule.evalJS`（`app/src/main/java/io/legado/app/model/analyzeRule/AnalyzeRule.kt:774`）中通过 `buildScriptBindings` 向 JS 作用域注入以下顶层变量：
+legado 在 `AnalyzeRule.evalJS`（`app/src/main/java/io/legado/app/model/analyzeRule/AnalyzeRule.kt:896-914`）中通过 `buildScriptBindings` 向 JS 作用域注入以下顶层变量：
 
 | 变量名           | 绑定来源                                                            | 可调方法集                                                                                                                                         |
 | ---------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -14,14 +14,17 @@ legado 在 `AnalyzeRule.evalJS`（`app/src/main/java/io/legado/app/model/analyze
 | `cookie`         | `CookieStore`（单例）                                               | getCookie / getKey / setCookie / replaceCookie / removeCookie                                                                                      |
 | `cache`          | `CacheManager`（单例）                                              | get / put / delete / putFile / getFile / putMemory / getFromMemory / deleteMemory（及类型化 get）                                                  |
 | `source`         | 当前 `BaseSource`                                                   | getKey / getVariable / setVariable / getLoginHeader(Map) / putLoginHeader / removeLoginHeader / getLoginInfo(Map) / removeLoginInfo / getHeaderMap |
-| `book`           | 当前 `Book` 实体                                                    | 全部公有属性（见 §9）                                                                                                                              |
-| `chapter`        | 当前 `BookChapter`                                                  | 全部公有属性（见 §10）                                                                                                                             |
+| `book`           | `ruleData as? BaseBook`（可空）                                     | 全部公有属性（见 §14）                                                                                                                             |
+| `chapter`        | 当前 `BookChapter`                                                  | 全部公有属性（见 §14）                                                                                                                             |
 | `rssArticle`     | 当前 `RssArticle`                                                   | 全部公有属性（订阅源正文规则）                                                                                                                     |
 | `result`         | 上一步解析结果                                                      | 读写，JS 内可覆盖回传                                                                                                                              |
 | `baseUrl`        | 当前页 URL（String）                                                | 只读                                                                                                                                               |
 | `title`          | `chapter?.title`                                                    | 只读                                                                                                                                               |
 | `src`            | 当前 `content`（请求返回源码）                                      | 只读                                                                                                                                               |
 | `nextChapterUrl` | 下一章 URL                                                          | 只读                                                                                                                                               |
+| `chapters`       | `batchContext?.chapters`（批量正文场景）                            | 只读，本批章节数组                                                                                                                                  |
+| `fromBookInfo`   | 详情页刷新标记                                                      | 只读布尔                                                                                                                                            |
+| `paraIndex` / `paraData` / `page` | 局部绑定（段评 / 页码）                              | 按需注入，只读                                                                                                                                      |
 
 **关键警示**：legado 已把顶层 `java` 变量重定向为自家宿主对象（见 `jsHelp.md:12`「注意 `java` 变量指向已经被阅读修改，如果想要调用 `java.*` 下的包，请使用 `Packages.java.*`」）。我们自研运行时（rquickjs）**不存在这个历史包袱**，因此命名空间可彻底脱离 `java.` 前缀（见提案文档）。
 
@@ -49,6 +52,8 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | `head(urlStr: String, headers: Map<String,String>): Connection.Response`               | jsoup HEAD                    | Network  |
 | `post(urlStr: String, body: String, headers: Map<String,String>): Connection.Response` | jsoup POST                    | Network  |
 
+> 另有带 `callTimeout` 的 `ajax` / `connect` 重载、`ajaxAll(skipRateLimit)`、`ajaxTestAll(urlList, timeout)`、`get` / `head` / `post` 的 `timeout` 重载；`headers` 实参可传 Map 或 JSON 字符串（`app/src/main/java/io/legado/app/help/JsExtensions.kt:176-260, 575-650`）。
+
 ## 2. `java.*` WebView / 浏览器（JsExtensions #webview）
 
 | 签名                                                                                                 | 说明                                       |
@@ -62,6 +67,8 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | `getVerificationCode(imageUrl: String): String`                                                      | 阻塞获取用户手输验证码                     |
 
 > WebView/浏览器类能力依赖系统 WebView 渲染 Gerente，本地优先、无系统组件可用的桌面单机环境下属 **可选能力**，提案将以独立 capability 门控。
+
+> `webView` 系列有 `cacheFirst` / `delayTime` 重载；`startBrowser` / `startBrowserAwait` 有 `html` 参数，`startBrowserAwait(url, title)` 两参重载的 `refetchAfterSuccess` 为 true（`JsExtensions.kt:279-450`）。
 
 ## 3. `java.*` 编码 / 字节（JsExtensions #编码, JsEncodeUtils #摘要/签名）
 
@@ -140,12 +147,12 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | ------------------------------------------------------------- | --------------------------------------------------------- |
 | `timeFormatUTC(time: Long, format: String, sh: Int): String?` | 按时区偏移 sh、format 格式化时间                          |
 | `timeFormat(time: Long): String`                              | 默认格式化时间                                            |
-| `htmlFormat(str: String): String`                             | HTML 净化（去标签/转义处理）                              |
+| `htmlFormat(str: String): String` / `htmlFormat(str, redirectUrl)` | HTML 净化（去标签/转义处理）；第二参按页面地址补全相对图片地址 |
 | `t2s(text: String): String`                                   | 繁体转简体（ChineseUtils）                                |
 | `s2t(text: String): String`                                   | 简体转繁体                                                |
 | `getWebViewUA(): String`                                      | 返回系统 WebView User-Agent                               |
 | `randomUUID(): String`                                        | UUID                                                      |
-| `androidId(): String`                                         | 设备 android_id（首刀桌面无对应，提案以稳定机器标识替代） |
+| `androidId(): String`                                         | 设备 android_id（桌面平台无对应，提案以稳定机器标识替代） |
 | `toURL(urlStr: String): JsURL`                                | 字符串包装成 JsURL                                        |
 | `toURL(url: String, baseUrl: String?): JsURL`                 | 相对 url + baseUrl 解析                                   |
 | `toNumChapter(s: String?): String?`                           | 文本章节号归一（阿拉伯数字）                              |
@@ -181,6 +188,14 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | `toast(msg: Any?)` / `longToast(msg: Any?)`                       | 短/长吐司                                                     |
 | `openUrl(url: String)` / `openUrl(url, mimeType: String?)`        | 跳转外部链接/应用                                             |
 | `getCookie(tag: String): String` / `getCookie(tag, key?): String` | 取 cookie（JsExtensions 上的便捷别名，与 `cookie.` 对象重复） |
+| `cacheContent(chapter: Any?, content: String): Boolean` | 批量正文回存，仅 contentBatch 规则内（`JsExtensions.kt:149`） |
+| `refreshBookInfo()` / `refreshBookToc()` / `refreshContent()` | 详情 / 目录 / 正文刷新事件（`JsExtensions.kt:157-165`） |
+| `openVideoPlayer(url, title[, isFloat])` | 内置视频播放器（`JsExtensions.kt:378-389`） |
+| `showBrowser(url, html?, preloadJs?, config?)` | 底部 WebView 对话框（`JsExtensions.kt:1268-1275`） |
+| `singleFlight(name, action[, timeoutMs])` / `lock(...)` / `tick(name)` | 源内并发合并 / 互斥锁 / 轮询计数（`JsExtensions.kt:1305-1348`） |
+| `getReadBookConfig()` / `getReadBookConfigMap()` | 阅读配置（`JsExtensions.kt:1360-1364`） |
+| `getThemeMode()` / `getThemeConfig()` / `getThemeConfigMap()` | 主题配置（`JsExtensions.kt:1372-1385`） |
+| `queryTTF(data, useCache)` / `queryTTF(data)` | 字体反查新接口（`queryBase64TTF` 已弃用）（`JsExtensions.kt:1063-1107`） |
 
 ## 8. `java.*` AnalyzeRule 规则解析（仅书源规则上下文，`java.` 直调）
 
@@ -216,14 +231,19 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | `put(key, value)` / `get(key)`                                                                                                                                                                             | 变量读写                                                             |
 | setter/getter：`setMethod/getMethod` `setCharset/getCharset` `setOrigin/getOrigin` `setRetry/getRetry` `setType/getType` `setHeaders/getHeaderMap` `setBody/getBody` `setWebJs/getWebJs` `useWebView(...)` | 运行时改写 url 配置                                                  |
 
-## 10. RssJsExtensions（仅订阅源 `shouldOverrideUrlLoading` 规则）
+## 10. RssJsExtensions（订阅源跳转拦截等 UI 场景）
 
-源：`RssJsExtensions.kt`，实现 `JsExtensions`，额外两个方法。
+源：`app/src/main/java/io/legado/app/ui/rss/read/RssJsExtensions.kt`，实现 `JsExtensions`，并委托一个 AnalyzeRule（`setContent` / `setBaseUrl` / `setRedirectUrl` / `getStringList` / `getString` / `getElement` / `getElements` 可直调）。
 
-| 签名                       | 说明                       |
-| -------------------------- | -------------------------- |
-| `searchBook(key: String)`  | 触发阅读内搜索（变量 url） |
-| `addBook(bookUrl: String)` | 加入书架                   |
+| 签名 | 说明 |
+| --- | --- |
+| `put(key, value)` / `get(key)` | 源变量读写（委托 `source.put/get`） |
+| `searchBook(key[, searchScope])` / `searchBook(key, source)` | 触发阅读内搜索 |
+| `addBook(bookUrl: String)` | 加入书架 |
+| `showPhoto(src: String)` | 展示图片 |
+| `open(name, url?, title?, origin?)` | 打开源界面（login / sort / rss / search / explore） |
+
+另：`SourceLoginJsExtensions`（`app/src/main/java/io/legado/app/ui/login/SourceLoginJsExtensions.kt`）在登录按钮 / 界面回调 / 发现按钮 / 图片 click / 购买规则中替换 `java`，额外有 `showBrowser` / `copyText` / `upLoginData` / `reLoginView` / `refreshBookInfo` / `refreshBookToc` / `refreshContent` / `clearTtsCache` / `refreshExplore`（`jsHelp.md:74` 起）。
 
 ## 11. `cookie` 对象（CookieStore）
 
@@ -234,6 +254,8 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | `setCookie(url: String, cookie: String?)`    | 设置 cookie          |
 | `replaceCookie(url: String, cookie: String)` | 替换 cookie          |
 | `removeCookie(url: String)`                  | 删除 cookie          |
+| `setWebCookie(url: String, cookie: String)`                    | 设置内置浏览器 cookie |
+| `cookieToMap(cookie)` / `mapToCookie(map)`                     | cookie 串与 Map 互转   |
 | `clear()`                                    | 清空（内部用）       |
 
 ## 12. `cache` 对象（CacheManager）
@@ -241,7 +263,7 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | 签名                                                                   | 说明                        |
 | ---------------------------------------------------------------------- | --------------------------- |
 | `put(key: String, value: Any, saveTime: Int = 0)`                      | 保存（saveTime 秒，0 永久） |
-| `get(key: String): String?`                                            | 读取（字符串）              |
+| `get(key: String): String?`                                            | 读取（字符串）；`get(key, onlyDisk: Boolean)` 可只读磁盘              |
 | `getInt/getLong/getDouble/getFloat/getByteArray(key)`                  | 类型化读取                  |
 | `delete(key: String)`                                                  | 删除                        |
 | `putFile(key: String, value: String, saveTime: Int = 0)`               | 存为缓存文件（50M 上限）    |
@@ -257,17 +279,19 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------ |
 | `getKey(): String`                                                                                                          | 书源 url（唯一键） |
 | `getTag(): String`                                                                                                          | 书源标签           |
-| `getVariable(): String` / `setVariable(variable: String?)`                                                                  | 书源变量读写       |
+| `getVariable(): String` / `setVariable(variable: String?)` / `putVariable(variable: String?)`                                                                  | 书源变量读写       |
 | `getHeaderMap(hasLoginHeader = false)`                                                                                      | 取请求头           |
 | `getLoginHeader(): String?` / `getLoginHeaderMap(): Map<String,String>?` / `putLoginHeader(header)` / `removeLoginHeader()` | 登录头操作         |
 | `getLoginInfo(): String?` / `getLoginInfoMap(): Map<String,String>?` / `removeLoginInfo()`                                  | 登录信息操作       |
 | `getLoginJs(): String?`                                                                                                     | 取登录 JS          |
+| `put(key, value)` / `get(key)`                                  | 自定义源变量读写   |
+| `putLoginInfo(info)` / `refreshExplore()` / `refreshJSLib()` / `putConcurrent(str)` | 登录信息保存 / 刷新发现 / 刷新 jsLib / 改并发率 |
 
 ## 14. `book` / `chapter` / `rssArticle` 对象（只读属性）
 
-`book`（Book.kt）：`bookUrl tocUrl origin originName name author kind customTag coverUrl customCoverUrl intro customIntro charset type group latestChapterTitle latestChapterTime lastCheckTime lastCheckCount totalChapterNum durChapterTitle durChapterIndex durChapterPos durChapterTime canUpdate order originOrder variable`
+`book`（Book.kt）：`bookUrl tocUrl origin originName name author kind customTag coverUrl customCoverUrl intro customIntro charset type group latestChapterTitle latestChapterTime lastCheckTime lastCheckCount totalChapterNum durChapterTitle durChapterIndex durChapterPos durChapterTime canUpdate order originOrder variable`，另有 `persistedCoverUrl`（Book.kt:129）以及 `durVolumeIndex chapterInVolumeIndex readConfig syncTime downloadUrls` 等字段（Book.kt:100-160）
 
-`chapter`（BookChapter.kt）：`url title baseUrl bookUrl index resourceUrl tag start end variable`
+`chapter`（BookChapter.kt）：`url title baseUrl bookUrl index resourceUrl tag start end variable`，另有 `putLyric(value)` / `putImgUrl(value)` 函数
 
 `rssArticle`：订阅源正文上下文只读属性，随 RssJsExtensions 注入。
 
@@ -275,4 +299,4 @@ Rhino 自带顶层（与 `java` 无关，由 Rhino 的 `ImporterTopLevel` 提供
 
 - legado 靠 Rhino 的 `ImporterTopLevel` 暴露 `Packages`/`importClass`/`JavaAdapter`，书源偶有 `importClass(java.util.HashMap)`/`new java.util.HashMap()` 写法；rquickjs 无此能力，导入器需识别并降级到我们自研对应对象或标注不兼容。
 - legado 重定向了顶层 `java`，源里 `java.xxx` 等价其宿主 API；而真正调 Java 包用的是 `Packages.java.xxx`。我们无此歧义。
-- `const` 块级作用域在 Rhino 实现有 bug（`jsHelp.md:20` 提示循环内用 `var`），rquickjs/QuickJS 语义正确，源里见到的 `var` 习惯仅历史遗留。
+- `const` 块级作用域在 Rhino 实现有 bug（未验证；`ruleHelp.md` jsLib 节只要求全局变量用 `var`），rquickjs/QuickJS 语义正确，源里见到的 `var` 习惯仅历史遗留。
