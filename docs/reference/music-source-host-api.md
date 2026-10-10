@@ -201,6 +201,50 @@ any-listen 出自 lx-music 同一作者 lyswhut。一手证据：
 
 lx-music 的**源脚本** API 始终只有 3 个 action（`musicUrl` / `lyric` / `pic`，见 §2.3），没有跟着扩张。所以 any-listen 是把 lx-music 的内置源实现搬成了可安装扩展，并把原本只在应用内部的 action 面公开出去。
 
+### 1.8 真实插件生态：`any-listen-extension-online-metadata`
+
+官方在线元数据扩展（`any-listen/any-listen-extension-online-metadata`，Apache-2.0，v0.4.7 / 2026-10-06）。这是"插件生态"的本体：把 §1.7 说的 lx-music 内置源实现，按平台拆成可安装扩展。
+
+**规模**：`src/onlineResource/` 共 7,690 行，5 个平台目录 —— `kg` 酷狗 / `kw` 酷我 / `mg` 咪咕 / `tx` QQ 音乐 / `wy` 网易云。
+
+**真实插件消费的宿主能力面**（`src/shared/hostApi.ts` 全文，9 个）：
+
+| 成员 | 用途 |
+| --- | --- |
+| `api.request` | HTTP |
+| `api.utils.crypto` | 签名与摘要 |
+| `api.utils.iconv` | 编码转换 |
+| `api.utils.zlib` | 压缩解压 |
+| `api.utils.dataConverter` | 数据结构转换 |
+| `api.logcat` | 日志 |
+| `api.env.version` | 引擎版本 |
+| `api.t` | i18n |
+| `api.registerResourceAction` | 注册动作处理器 |
+
+这里**没有**文件系统、WebView、播放器控制、cookie 存储。§3.2 的 12 个口子是 API 面的并集，真实插件的用度是它的子集。
+
+**注册的动作**（`src/onlineResource/index.ts`，14 个）：
+
+`musicSearch` `musicPic` `musicLyric` `songlistSearch` `songlistDetail` `songlistTags` `songlistSorts` `songlist` `topSongs` `topSongsDate` `topSongsDetail` `tipSearch` `hotSearch` `musicComment`
+
+另有 2 个被注释未实现：`musicPicSearch` `lyricSearch`。
+
+**维护负担的形状**。`publish/version.json` 的 history 有 24 个版本（v0.2.2 / 2025-05-27 → v0.4.7 / 2026-10-06），几乎每条日志都是"修某个平台的某个动作"：
+
+```
+v0.2.6  fix kw music pic url
+v0.2.7  fix wy music search
+v0.2.11 fix kg search
+v0.3.2  fix kg songlist turn page
+v0.3.3  fix tx songlist load
+v0.4.2  fix kg song list details names decode
+v0.4.3  fix tx music search
+v0.4.6  fix kg songlist load
+```
+
+单平台单动作的实现量也大：`kg/songlistDetail.ts` 19.1K、`tx/qrcDecode.ts` 13.9K（QQ 加密歌词）、`kg/topSongs.ts` 13.5K、`tx/songlist.ts` 12.4K、`wy/topSongs.ts` 12.4K。
+
+**含义**：宿主 API 面小且稳定（9 个成员，一年没变），成本全在适配器。5 个平台各自持续漂移，扩展方要一直跟。LanJing 若支持这个生态，接的是"5 个持续漂移的平台适配器"，不是"一个稳定的插件规范"。
 ## 2. lx-music（已考证）
 
 ### 2.1 源 API 的调用形状
