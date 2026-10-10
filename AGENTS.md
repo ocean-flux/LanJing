@@ -56,12 +56,24 @@ UI 单测只在用户可观察合同无法由逻辑或公共集成边界证明�
 
 使用单上下文领域文档：根 `CONTEXT.md` 与 `docs/adr/`。见 `docs/agents/domain.md`。
 
-### Design docs
+### Design work
 
 设计 skill 为 `impeccable`（`.agents/skills/impeccable`）。引擎二进制不入库，首次运行由 launcher 下载并校验到 `~/.impeccable/bin/`。
 
-根 `PRODUCT.md` 记录产品真相：受众、用途、定位、运营情境、能力与约束、品牌承诺、现有证据、产品原则。它是设计工作的输入，不是视觉方向。
+改 `src/` 下 UI、样式、组件或 `src/index.css` 之前，先加载该 skill 的对应 reference。这是硬规则，不是建议。
 
-- 视觉方向以 `src/index.css` 的 appearance pack 与 `docs/adr/` 为准，不写进 `PRODUCT.md`。
-- 领域术语以 `CONTEXT.md` 为准。
-- 受众、定位、硬约束或品牌承诺变化时同步更新 `PRODUCT.md`。
+- 工作台层（境场、来源、规则、资料库、设置）按 `Operate`：`reference/operate.md` 与 `reference/craft-floor.md`。
+- 应用面层（`/apps` 下的沉浸式体验面）按 `Read` 或 `Experience`。ADR 0004 优先于 `craft-floor.md`：应用面不受 base-lyra 直角、`text-xs` 基线、32px 控件约束。
+- base-lyra 母版与 `src/components/ui/**` 优先于 skill 的 Refuse 清单。
+- UI 改动收尾跑一次 `./.agents/skills/impeccable/scripts/impeccable detect --json <改动文件>`，与 `pnpm verify` 的既有门禁并列。
+
+### Doc ownership
+
+四份文档各有唯一作者，不留差异：
+
+- `PRODUCT.md`：由 impeccable 的 `init` 维护，记产品真相（受众、用途、定位、运营情境、能力与约束、品牌承诺、现有证据、产品原则）。受众、定位、硬约束或品牌承诺变化时同步更新。
+- `DESIGN.md`：出现时由 impeccable 的 `document` 维护，记视觉方向。它不得与 `src/index.css` 的 appearance pack 和 `docs/adr/` 冲突。
+- `CONTEXT.md`：领域术语的唯一出处。`PRODUCT.md` 与 `DESIGN.md` 引用它，不复制术语表。
+- `docs/adr/`：架构决策的唯一出处。
+
+视觉方向与领域术语的最终真相仍是 `src/index.css`、`docs/adr/` 与 `CONTEXT.md`。

@@ -52,6 +52,14 @@ pnpm verify       # check + cargo clippy --all-features -D warnings + cargo test
 - 全部任务收尾、合并前跑 `pnpm verify`。
 - 想手动对齐推送门禁就跑 `pnpm run static:web` 加那条 clippy。
 
+UI 改动额外跑一次设计检测：
+
+```bash
+./.agents/skills/impeccable/scripts/impeccable detect --json <改动文件>
+```
+
+引擎二进制不入库，首次运行由 launcher 下载并校验 sha256 到 `~/.impeccable/bin/`。
+
 ### 已知陷阱
 
 - **worktree 与共享 `CARGO_TARGET_DIR`**：本仓所有 worktree 共用主检出的 target 目录，而集成测试把 fixture 路径按**编译期**的 `CARGO_MANIFEST_DIR` 写死。删掉 worktree 之后，仍被当成“新鲜”的测试二进制会去读已不存在的路径，报出 `os error 3` 这类**假红**。所以删 worktree 必须排在最终验证之后；换 worktree 后先 `find src-tauri/crates src-tauri/src -name lib.rs | xargs touch` 再重编。
@@ -87,6 +95,7 @@ project.inlang/          # Paraglide 项目配置
 - UI 原语用 Base UI（`@base-ui/react`），组件从 shadcn `base-lyra` registry 取（`npx shadcn@latest add <name>`）。不引入 `radix-ui`。
 - 图标统一走 Iconify，只用 `src/components/Icon.tsx` 的白名单（映射到 `icon-[ph--*]`）；类名必须是字面量，模板拼接不会被 Tailwind 扫描到。
 - 颜色、间距、层级、圆角一律引用 `src/index.css` 的 token；不写字面量 `z-50`、`rounded-md` 或裸色值。
+- 改 UI 前先加载 `.agents/skills/impeccable` 的对应 reference：工作台层按 `Operate`，应用面层按 `Read` 或 `Experience`。
 - 交互控件必须具备可访问名称和 `focus-visible` 状态。
 - 跨组件状态用 zustand，需要持久化或跨窗口同步的偏好走 `@tauri-store/zustand`。
 - 前端保持本地优先，不新增登录、云同步或云端后端假设。
