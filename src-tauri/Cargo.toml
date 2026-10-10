@@ -42,38 +42,38 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-zustand = "1"
-tauri-plugin-mcp-bridge = "0.13.0"
+tauri-plugin-mcp-bridge = "0.13.1"
 # 第三方依赖统一在 workspace.dependencies 钉版本；子 crate 仅 { workspace = true }
 # tauri 系用主版本轨解析最新兼容版。
 # keyring v4 生态：生产用 keyring-core + 平台 store；测试用 keyring-core::mock。
 sea-orm = { version = "2", default-features = false, features = ["macros", "runtime-tokio", "sqlx-sqlite", "with-json", "with-uuid", "schema-sync"] }
 sea-orm-migration = { version = "2", default-features = false, features = ["runtime-tokio", "sqlx-sqlite"] }
-reqwest = { version = "0.13.4", features = ["cookies", "gzip", "brotli"] }
+reqwest = { version = "0.13.5", features = ["cookies", "gzip", "brotli"] }
 rquickjs = "0.14.0"
-blake3 = "1.8.5"
-aes-gcm = { version = "0.11.0", features = ["getrandom"] }
-zstd = "0.14.0"
+blake3 = "1.8.7"
+aes-gcm = { version = "0.11.1", features = ["getrandom"] }
+zstd = "0.14.1"
 keyring-core = "1.0.0"
 windows-native-keyring-store = "1.1.0"
-apple-native-keyring-store = { version = "1.0.1", features = ["keychain", "protected"] }
+apple-native-keyring-store = { version = "1.0.2", features = ["keychain", "protected"] }
 android-native-keyring-store = "1.0.0"
-zbus-secret-service-keyring-store = "1.0.0"
-async-trait = "0.1.91"
+zbus-secret-service-keyring-store = "1.0.1"
+async-trait = "0.1.92"
 wiremock = "0.6.5"
-tokio = { version = "1.53.0", features = ["full"] }
+tokio = { version = "1.53.2", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 async-stream = "0.3.6"
-futures = "0.3.33"
-uuid = { version = "1.24.0", features = ["v4", "serde"] }
+futures = "0.3.34"
+uuid = { version = "1.28.0", features = ["v4", "serde"] }
 url = "2.5.8"
-hickory-resolver = { version = "0.26.1", features = ["tokio", "system-config"] }
+hickory-resolver = { version = "0.26.3", features = ["tokio", "system-config"] }
 scraper = "0.27.0"
 xmloxide = "0.5.0"
-jsonpath-rust = "1.0.5"
+jsonpath-rust = "1.0.11"
 regex = "1.13.1"
-encoding_rs = "0.8.35"
-thiserror = "2.0.19"
+encoding_rs = "0.8.42"
+thiserror = "2.0.21"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 
