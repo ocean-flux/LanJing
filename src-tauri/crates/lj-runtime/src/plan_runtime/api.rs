@@ -282,7 +282,7 @@ impl ExecutionSession {
     }
 
     /// 取得消费 session 事件的有界流。
-    #[must_use]
+    #[must_use = "the stream must be consumed to observe execution events"]
     pub fn into_events(self) -> BoxStream<'static, ExecutionEvent> {
         self.events
     }
