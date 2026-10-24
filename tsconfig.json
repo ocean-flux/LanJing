@@ -16,9 +16,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] },
-    "ignoreDeprecations": "6.0",
+    "paths": { "@/*": ["./src/*"] },
     "types": ["vitest/globals", "node", "vite/client"]
   },
   "include": ["src", "vite.config.js"]
