@@ -2,7 +2,8 @@
 //!
 //! `#[sea_orm::model]` 展开的 async trait impl 只返回 ready future，clippy 1.98 的 pedantic
 //! `unused_async_trait_impl` 会给 57 处；这些 impl 由 derive 宏生成，不在本仓库源码里。
-#![allow(clippy::unused_async_trait_impl)]
+//! `unknown_lints` 让当前更旧的工具链把它当未知 lint 忽略，而不是在 `-D warnings` 下报错。
+#![allow(unknown_lints, clippy::unused_async_trait_impl)]
 
 pub mod archive;
 pub mod artifact;
