@@ -70,11 +70,6 @@ lanjing_commands!(declare_registered_command_names);
 pub fn run() {
     let builder = tauri::Builder::default();
 
-    #[cfg(all(debug_assertions, desktop))]
-    let builder = builder.plugin(tauri_plugin_mcp_bridge::init_with_config(
-        tauri_plugin_mcp_bridge::Config::localhost_only(),
-    ));
-
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
         // `deep-link` feature 已先把静态 scheme argv 转成 plugin 事件；这里只聚焦既有窗口。
