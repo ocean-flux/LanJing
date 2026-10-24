@@ -78,8 +78,18 @@ lefthook-local.yml
 .lefthookrc
 
 # Agent Directory
-.pi
+.pi*
 .claude
-
-# Impeccable 引擎二进制由 launcher 按版本下载并校验 sha256, 不入库
-.agents/skills/impeccable/scripts/bin/
+.codex
+.opencode
+.trellis
+.agents
+.playwright-mcp
+.impeccable
+.llm-wiki/
+.workbuddy/
+.codebase-index
+.mcp.json
+/skills-lock.json
+**/AGENTS.md
+**/CLAUDE.md
