@@ -28,13 +28,14 @@ jobs:
       # vitest 会生成 src/shared/paraglide（gitignore 的产物），typecheck 依赖它
       - run: pnpm run test:web
       - run: pnpm run static:web
+      - run: pnpm run build
 
   rust:
     name: Rust (fmt / clippy / test)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.96.0
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
