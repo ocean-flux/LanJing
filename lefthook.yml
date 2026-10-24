@@ -1,7 +1,7 @@
 # LanJing git hooks
 # - pre-commit: staged 快路径（FE 与 cargo fmt 并行）
 # - commit-msg: conventional commits
-# - pre-push: 全量门禁（web ∥ rust）
+# 全量门禁（lint / clippy / test）由 .github/workflows/ci.yml 在 push 与 PR 上跑。
 
 pre-commit:
   parallel: true
@@ -50,16 +50,3 @@ commit-msg:
   jobs:
     - name: commitlint
       run: pnpm exec commitlint --edit {1}
-
-pre-push:
-  parallel: true
-  jobs:
-    # 只跑静态检查，测试不挡推送：每个提交单元跑定向测试，全部任务收尾时跑
-    # `pnpm verify`（静态检查 + 全量测试）。
-    - name: web
-      run: pnpm run static:web
-
-    - name: rust
-      run: >
-        cargo clippy --manifest-path src-tauri/Cargo.toml --workspace
-        --all-targets --all-features -- -D warnings
